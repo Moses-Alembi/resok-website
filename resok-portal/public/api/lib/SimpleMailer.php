@@ -107,16 +107,14 @@ class SimpleMailer
         }
         stream_set_timeout($socket, 15);
 
-        $ok = true;
-        $greeting = fgets($socket, 515);
-        if ($greeting === false || substr($greeting, 0, 3) !== '220') {
-            error_log('SMTP greeting failed: ' . trim((string)$greeting));
-            $ok = false;
-        }
-
         $send = static function (string $command) use ($socket): void {
             fwrite($socket, $command . "\r\n");
         };
+
+        // Greeting can be multi-line (banner + a spam/bulk-mail policy notice); must be
+        // consumed the same continuation-aware way as every other response, or the
+        // leftover lines get misread as the reply to the next command (EHLO).
+        $ok = $this->expect($socket, 220, 'greeting');
 
         if ($ok) {
             $send('EHLO resok.org');

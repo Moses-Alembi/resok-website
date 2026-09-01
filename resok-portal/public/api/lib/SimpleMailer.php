@@ -17,13 +17,13 @@ class SimpleMailer
     }
 
     /** @param array<int, array{filename:string, content:string, mime:string}> $attachments */
-    public function send(string $to, string $subject, string $textBody, array $attachments = []): bool
+    public function send(string $to, string $subject, string $textBody, array $attachments = [], ?string $htmlBody = null): bool
     {
         $host = trim((string)($this->config['smtp_host'] ?? ''));
         if ($host !== '') {
-            return $this->sendSmtp($host, $to, $subject, $textBody, $attachments);
+            return $this->sendSmtp($host, $to, $subject, $textBody, $attachments, $htmlBody);
         }
-        return $this->sendPhpMail($to, $subject, $textBody, $attachments);
+        return $this->sendPhpMail($to, $subject, $textBody, $attachments, $htmlBody);
     }
 
     private function fromAddress(): string
@@ -37,18 +37,39 @@ class SimpleMailer
         return '=?UTF-8?B?' . base64_encode($value) . '?=';
     }
 
-    private function buildMime(string $to, string $subject, string $textBody, array $attachments, string $from): string
+    private function buildMime(string $to, string $subject, string $textBody, array $attachments, string $from, ?string $htmlBody = null): string
     {
-        $boundary = 'resok-' . bin2hex(random_bytes(12));
         $headers = [
             'From: Respiratory Society of Kenya <' . $from . '>',
             'To: ' . $to,
             'Subject: ' . $this->encodeHeader($subject),
-            'MIME-Version: 1.0',
-            'Content-Type: multipart/mixed; boundary="' . $boundary . '"'
+            'MIME-Version: 1.0'
         ];
 
-        $body = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$textBody}\r\n";
+        if ($htmlBody !== null) {
+            $altBoundary = 'resok-alt-' . bin2hex(random_bytes(12));
+            $bodyContent = "--{$altBoundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$textBody}\r\n";
+            $bodyContent .= "--{$altBoundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$htmlBody}\r\n";
+            $bodyContent .= "--{$altBoundary}--\r\n";
+            $bodyContentType = 'multipart/alternative; boundary="' . $altBoundary . '"';
+        } else {
+            $bodyContent = $textBody . "\r\n";
+            $bodyContentType = 'text/plain; charset=UTF-8';
+        }
+
+        if (!$attachments) {
+            $headers[] = 'Content-Type: ' . $bodyContentType;
+            if ($htmlBody === null) $headers[] = 'Content-Transfer-Encoding: 8bit';
+            return implode("\r\n", $headers) . "\r\n\r\n" . $bodyContent;
+        }
+
+        $boundary = 'resok-' . bin2hex(random_bytes(12));
+        $headers[] = 'Content-Type: multipart/mixed; boundary="' . $boundary . '"';
+
+        $body = "--{$boundary}\r\nContent-Type: {$bodyContentType}\r\n";
+        if ($htmlBody === null) $body .= "Content-Transfer-Encoding: 8bit\r\n";
+        $body .= "\r\n{$bodyContent}\r\n";
+
         foreach ($attachments as $attachment) {
             $body .= "--{$boundary}\r\n";
             $body .= 'Content-Type: ' . $attachment['mime'] . '; name="' . $attachment['filename'] . "\"\r\n";
@@ -61,14 +82,14 @@ class SimpleMailer
         return implode("\r\n", $headers) . "\r\n\r\n" . $body;
     }
 
-    private function sendPhpMail(string $to, string $subject, string $textBody, array $attachments): bool
+    private function sendPhpMail(string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null): bool
     {
         $from = $this->fromAddress();
-        if (!$attachments) {
+        if (!$attachments && $htmlBody === null) {
             $headers = "From: Respiratory Society of Kenya <{$from}>\r\nContent-Type: text/plain; charset=UTF-8";
             return @mail($to, $subject, $textBody, $headers);
         }
-        $message = $this->buildMime($to, $subject, $textBody, $attachments, $from);
+        $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody);
         [$headerBlock, $bodyBlock] = explode("\r\n\r\n", $message, 2);
         $extraHeaders = trim((string)preg_replace('/^(To|Subject):.*$/mi', '', $headerBlock));
         return @mail($to, $subject, $bodyBlock, $extraHeaders);
@@ -92,7 +113,7 @@ class SimpleMailer
         return true;
     }
 
-    private function sendSmtp(string $host, string $to, string $subject, string $textBody, array $attachments): bool
+    private function sendSmtp(string $host, string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null): bool
     {
         $port = (int)($this->config['smtp_port'] ?? 587);
         $user = (string)($this->config['smtp_user'] ?? '');
@@ -148,7 +169,7 @@ class SimpleMailer
         if ($ok) { $send('DATA'); $ok = $this->expect($socket, 354, 'DATA'); }
 
         if ($ok) {
-            $message = $this->buildMime($to, $subject, $textBody, $attachments, $from);
+            $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody);
             $escaped = preg_replace('/^\./m', '..', $message);
             fwrite($socket, $escaped . "\r\n.\r\n");
             $ok = $this->expect($socket, 250, 'message body');

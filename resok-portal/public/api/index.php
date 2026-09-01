@@ -26,6 +26,32 @@ function respond(int $status, array $payload): void {
     exit;
 }
 
+// Used for links people land on by clicking an email (verification, etc.) - a browser
+// visits these directly, so they get a branded page instead of raw JSON.
+function respondHtmlPage(int $status, string $title, string $message, bool $isError = false, ?string $ctaText = null, ?string $ctaUrl = null): void {
+    http_response_code($status);
+    header_remove('Content-Type');
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Cache-Control: no-store');
+    $accent = $isError ? '#bc0b22' : '#00932e';
+    $icon = $isError ? '&#10060;' : '&#9989;';
+    $cta = '';
+    if ($ctaText !== null && $ctaUrl !== null) {
+        $cta = '<a href="' . htmlspecialchars($ctaUrl, ENT_QUOTES) . '" style="display:inline-block;margin-top:24px;background:' . $accent . ';color:#fff;text-decoration:none;font-weight:700;padding:14px 32px;border-radius:6px;font-size:15px;font-family:Segoe UI,Arial,sans-serif;">' . htmlspecialchars($ctaText, ENT_QUOTES) . '</a>';
+    }
+    echo '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . htmlspecialchars($title, ENT_QUOTES) . ' - ReSoK</title></head>'
+        . '<body style="margin:0;padding:0;background:#f5f7fa;font-family:Segoe UI,Arial,sans-serif;color:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh;">'
+        . '<div style="max-width:440px;width:90%;background:#fff;border-radius:12px;box-shadow:0 14px 40px rgba(15,23,42,.10);overflow:hidden;text-align:center;">'
+        . '<div style="background:' . $accent . ';height:6px;"></div>'
+        . '<div style="padding:40px 32px;">'
+        . '<div style="font-size:44px;line-height:1;margin-bottom:16px;">' . $icon . '</div>'
+        . '<h1 style="margin:0 0 12px;font-size:22px;">' . htmlspecialchars($title, ENT_QUOTES) . '</h1>'
+        . '<p style="margin:0;color:#667085;font-size:15px;line-height:1.6;">' . htmlspecialchars($message, ENT_QUOTES) . '</p>'
+        . $cta
+        . '</div></div></body></html>';
+    exit;
+}
+
 function input(): array {
     $raw = file_get_contents('php://input');
     if (!$raw) return $_POST ?: [];
@@ -505,12 +531,15 @@ try {
     }
 
     if (preg_match('#^auth/verify/([A-Za-z0-9]+)$#', $route, $m) && $method === 'GET') {
+        $loginUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/') . '/login';
         $stmt = $pdo->prepare('SELECT id FROM users WHERE verification_token = ? LIMIT 1');
         $stmt->execute([$m[1]]);
         $user = $stmt->fetch();
-        if (!$user) respond(400, ['error' => 'Invalid or expired verification link']);
+        if (!$user) {
+            respondHtmlPage(400, 'Invalid or Expired Link', 'This verification link is invalid or has already been used. If you still need to verify your account, try registering again or contact support.', true, 'Go to Login', $loginUrl);
+        }
         $pdo->prepare('UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?')->execute([(int)$user['id']]);
-        respond(200, ['message' => 'Email verified. You can now log in.']);
+        respondHtmlPage(200, 'Email Verified', 'Your ReSoK account is now active. You can log in and continue your membership application.', false, 'Log In Now', $loginUrl);
     }
 
     if ($route === 'auth/login' && $method === 'POST') {

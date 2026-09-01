@@ -74,14 +74,22 @@ class SimpleMailer
         return @mail($to, $subject, $bodyBlock, $extraHeaders);
     }
 
-    private function expect(mixed $socket, int $code): bool
+    private function expect(mixed $socket, int $code, string $stage): bool
     {
         $line = '';
         do {
             $line = fgets($socket, 515);
-            if ($line === false) return false;
+            if ($line === false) {
+                error_log("SMTP {$stage} failed: connection closed / no response");
+                return false;
+            }
         } while (isset($line[3]) && $line[3] === '-');
-        return (int)substr($line, 0, 3) === $code;
+        $actual = (int)substr($line, 0, 3);
+        if ($actual !== $code) {
+            error_log("SMTP {$stage} failed: expected {$code}, got: " . trim($line));
+            return false;
+        }
+        return true;
     }
 
     private function sendSmtp(string $host, string $to, string $subject, string $textBody, array $attachments): bool
@@ -94,52 +102,63 @@ class SimpleMailer
 
         $socket = @fsockopen(($implicitTls ? 'ssl://' : '') . $host, $port, $errno, $errstr, 15);
         if (!$socket) {
-            error_log("SMTP connect failed: {$errstr}");
+            error_log("SMTP connect failed to {$host}:{$port} - [{$errno}] {$errstr}");
             return false;
         }
         stream_set_timeout($socket, 15);
 
         $ok = true;
         $greeting = fgets($socket, 515);
-        $ok = $ok && $greeting !== false && substr($greeting, 0, 3) === '220';
+        if ($greeting === false || substr($greeting, 0, 3) !== '220') {
+            error_log('SMTP greeting failed: ' . trim((string)$greeting));
+            $ok = false;
+        }
 
         $send = static function (string $command) use ($socket): void {
             fwrite($socket, $command . "\r\n");
         };
 
-        $send('EHLO resok.org');
-        $ok = $ok && $this->expect($socket, 250);
+        if ($ok) {
+            $send('EHLO resok.org');
+            $ok = $this->expect($socket, 250, 'EHLO');
+        }
 
         if ($ok && !$implicitTls) {
             $send('STARTTLS');
-            $ok = $this->expect($socket, 220);
-            $ok = $ok && stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            $ok = $this->expect($socket, 220, 'STARTTLS');
+            if ($ok) {
+                $ok = stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+                if (!$ok) error_log('SMTP STARTTLS failed: stream_socket_enable_crypto returned false');
+            }
             if ($ok) {
                 $send('EHLO resok.org');
-                $ok = $this->expect($socket, 250);
+                $ok = $this->expect($socket, 250, 'EHLO after STARTTLS');
             }
         }
 
         if ($ok && $user !== '') {
             $send('AUTH LOGIN');
-            $ok = $this->expect($socket, 334);
-            if ($ok) { $send(base64_encode($user)); $ok = $this->expect($socket, 334); }
-            if ($ok) { $send(base64_encode($pass)); $ok = $this->expect($socket, 235); }
+            $ok = $this->expect($socket, 334, 'AUTH LOGIN');
+            if ($ok) { $send(base64_encode($user)); $ok = $this->expect($socket, 334, 'AUTH username'); }
+            if ($ok) { $send(base64_encode($pass)); $ok = $this->expect($socket, 235, 'AUTH password'); }
+        } elseif ($ok && $user === '') {
+            error_log('SMTP warning: smtp_user is empty, skipping AUTH - most servers will reject this');
         }
 
-        if ($ok) { $send('MAIL FROM:<' . $from . '>'); $ok = $this->expect($socket, 250); }
-        if ($ok) { $send('RCPT TO:<' . $to . '>'); $ok = $this->expect($socket, 250); }
-        if ($ok) { $send('DATA'); $ok = $this->expect($socket, 354); }
+        if ($ok) { $send('MAIL FROM:<' . $from . '>'); $ok = $this->expect($socket, 250, 'MAIL FROM'); }
+        if ($ok) { $send('RCPT TO:<' . $to . '>'); $ok = $this->expect($socket, 250, 'RCPT TO'); }
+        if ($ok) { $send('DATA'); $ok = $this->expect($socket, 354, 'DATA'); }
 
         if ($ok) {
             $message = $this->buildMime($to, $subject, $textBody, $attachments, $from);
             $escaped = preg_replace('/^\./m', '..', $message);
             fwrite($socket, $escaped . "\r\n.\r\n");
-            $ok = $this->expect($socket, 250);
+            $ok = $this->expect($socket, 250, 'message body');
         }
 
         $send('QUIT');
         fclose($socket);
+        if ($ok) error_log("SMTP send OK to {$to}");
         return $ok;
     }
 }

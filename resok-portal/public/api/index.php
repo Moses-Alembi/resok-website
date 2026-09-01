@@ -480,7 +480,13 @@ try {
         $pdo->commit();
 
         if (!$verified && $verificationToken) {
-            try { sendVerificationEmail($config, (string)$data['email'], $verificationToken); } catch (Throwable $mailError) { error_log('Verification email failed: ' . $mailError->getMessage()); }
+            try {
+                if (!sendVerificationEmail($config, (string)$data['email'], $verificationToken)) {
+                    error_log('Verification email to ' . $data['email'] . ' returned false - see SMTP log lines above for the specific stage that failed.');
+                }
+            } catch (Throwable $mailError) {
+                error_log('Verification email threw: ' . $mailError->getMessage());
+            }
         }
 
         $payload = ['message' => $verified ? 'Registration successful.' : 'Registration successful! Please check your email to verify your account before logging in.', 'userId' => $userId, 'requiresVerification' => !$verified];

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clinical Knowledge Hub | Respiratory Society of Kenya</title>
+  <meta name="description" content="ReSoK clinical knowledge hub for asthma, COPD, TB, lung cancer, pleural disease, pulmonary hypertension, sleep, paediatric lung health, and environmental lung health." />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#bc0b22">
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="partials/site.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}:root{--green:#00932e;--red:#bc0b22;--ink:#111f35;--muted:#667085;--bg:#f5f7fa;--line:#e7ebef;--deep:#0a2e38;--heading:'Mulish','Poppins',sans-serif;--body:'Poppins','Segoe UI',sans-serif}body{font-family:var(--body);background:var(--bg);color:var(--ink);line-height:1.65}a{color:inherit}.hero{min-height:430px;background:linear-gradient(rgba(5,15,21,.35),rgba(5,15,21,.76)),url("assets/img/Gallery/R4.jpg") center/cover no-repeat;color:#fff;display:flex;align-items:flex-end}.hero-inner,.section-inner{width:min(1180px,90vw);margin:0 auto}.hero-inner{padding:84px 0}.eyebrow{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.14);border-radius:999px;padding:8px 12px;font-weight:900;text-transform:uppercase;font-size:.76rem;letter-spacing:.08em}.hero h1{font-family:var(--heading);font-size:clamp(2.3rem,5vw,5.5rem);line-height:.96;margin:18px 0 14px}.hero p{max-width:820px;color:rgba(255,255,255,.9);font-size:1.04rem}.section{padding:74px 0}.section-head{margin-bottom:26px}.kicker{color:var(--red);font-weight:900;text-transform:uppercase;font-size:.76rem;letter-spacing:.12em}.title{font-family:var(--heading);font-size:clamp(1.5rem,2.4vw,2.35rem);line-height:1.05;text-transform:uppercase;margin-top:8px}.copy{max-width:850px;color:var(--muted);margin-top:10px}.disease-grid,.tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:0 10px 28px rgba(15,23,42,.07)}.card i{width:44px;height:44px;display:grid;place-items:center;border-radius:8px;background:rgba(0,147,46,.1);color:var(--green);font-size:20px;margin-bottom:14px}.card h3{font-family:var(--heading);font-size:1.12rem;margin-bottom:8px}.card p{color:var(--muted);font-size:.9rem}.card ul{margin:12px 0 0 18px;color:var(--muted);font-size:.86rem}.pathway{background:var(--deep);color:#fff}.pathway .kicker{color:#9be7b2}.pathway .copy{color:rgba(255,255,255,.76)}.pathway .card{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);box-shadow:none}.pathway .card h3{color:#fff}.pathway .card p,.pathway .card ul{color:rgba(255,255,255,.76)}.cta{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.cta-box{display:flex;align-items:center;justify-content:space-between;gap:22px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:6px;background:var(--red);color:#fff;text-decoration:none;font-family:var(--heading);font-weight:900}@media(max-width:980px){.disease-grid,.tool-grid{grid-template-columns:1fr 1fr}.cta-box{display:grid}}@media(max-width:640px){.disease-grid,.tool-grid{grid-template-columns:1fr}.hero{min-height:390px}.section{padding:54px 0}}
+  </style>
+</head>
+<body>
+<?php $activeNav = 'knowledge'; include __DIR__ . '/partials/header.php'; ?>
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow"><i class="fas fa-book-medical"></i> Clinical Knowledge Hub</span>
+      <h1>Practical lung health knowledge for Kenya.</h1>
+      <p>Clear, structured topic areas for clinicians, patients, partners, and communities working to improve prevention, early diagnosis, treatment, and long-term respiratory care.</p>
+    </div>
+  </header>
+  <main>
+    <section class="section">
+      <div class="section-inner">
+        <div class="section-head"><div class="kicker">Disease areas</div><h2 class="title">Core respiratory topics</h2><p class="copy">Each topic can grow into a deeper resource page with Kenyan context, patient education, clinical tools, and links to guidelines or training.</p></div>
+        <div class="disease-grid">
+          <article class="card"><i class="fas fa-wind"></i><h3>Asthma</h3><p>Diagnosis, control assessment, inhaler technique, triggers, severe asthma referral, and school/community education.</p><ul><li>Inhaler guides</li><li>Acute attack action plans</li><li>Patient FAQs</li></ul></article>
+          <article class="card"><i class="fas fa-lungs"></i><h3>COPD</h3><p>Early detection, spirometry confirmation, smoking cessation, pulmonary rehabilitation, exacerbation prevention, and long-term care.</p><ul><li>Spirometry basics</li><li>Exacerbation warning signs</li><li>Rehabilitation resources</li></ul></article>
+          <article class="card"><i class="fas fa-bacteria"></i><h3>TB and Post-TB Lung Disease</h3><p>Integrated TB care, prevention, post-TB complications, chronic breathlessness, stigma reduction, and continuity of care.</p><ul><li>Screening pathways</li><li>Post-TB follow-up</li><li>Community education</li></ul></article>
+          <article class="card"><i class="fas fa-ribbon"></i><h3>Lung Cancer</h3><p>Warning signs, diagnostic pathways, bronchoscopy, biopsy, staging, multidisciplinary care, and patient navigation.</p><ul><li>Early symptoms</li><li>Referral checklist</li><li>Biopsy information</li></ul></article>
+          <article class="card"><i class="fas fa-circle-nodes"></i><h3>Pleural Disease</h3><p>Pleural effusion evaluation, thoracic ultrasound, pleuroscopy, drainage safety, malignancy workup, and follow-up.</p><ul><li>Ultrasound learning</li><li>Pleuroscopy overview</li><li>Patient aftercare</li></ul></article>
+          <article class="card"><i class="fas fa-heart-pulse"></i><h3>Pulmonary Hypertension</h3><p>Recognition, referral, echocardiography pathways, specialist assessment, and chronic care for patients with unexplained breathlessness.</p><ul><li>Red flags</li><li>Referral pathways</li><li>Patient counselling</li></ul></article>
+          <article class="card"><i class="fas fa-bed"></i><h3>Sleep and Breathing</h3><p>Obstructive sleep apnoea, sleep-related hypoventilation, screening tools, referral pathways, and sleep-health education.</p><ul><li>OSA symptoms</li><li>Screening questions</li><li>CPAP education</li></ul></article>
+          <article class="card"><i class="fas fa-child-reaching"></i><h3>Paediatric Lung Health</h3><p>Childhood asthma, pneumonia prevention, chronic cough, neonatal lung conditions, school health, and family education.</p><ul><li>Child asthma plans</li><li>Warning signs</li><li>Caregiver guides</li></ul></article>
+          <article class="card"><i class="fas fa-smog"></i><h3>Environmental and Occupational Lung Health</h3><p>Air pollution, tobacco exposure, workplace hazards, clean air advocacy, household energy, and prevention messaging.</p><ul><li>Clean air education</li><li>Smoking cessation</li><li>Workplace risk</li></ul></article>
+        </div>
+      </div>
+    </section>
+    <section class="section pathway">
+      <div class="section-inner">
+        <div class="section-head"><div class="kicker">What to build next</div><h2 class="title">Knowledge pathways</h2><p class="copy">These pathways mirror strong international respiratory society models while keeping ReSoK focused on Kenyan practice and patient needs.</p></div>
+        <div class="tool-grid">
+          <article class="card"><i class="fas fa-file-medical"></i><h3>Guideline summaries</h3><p>Short, practical summaries of national and international guidance with links to source documents and clinical checklists.</p></article>
+          <article class="card"><i class="fas fa-user-group"></i><h3>Patient resources</h3><p>Plain-language guides, FAQs, warning signs, and downloadable patient education sheets for clinics and communities.</p></article>
+          <article class="card"><i class="fas fa-graduation-cap"></i><h3>CPD learning</h3><p>Topic-linked webinars, case discussions, videos, and workshop recordings for member professional development.</p></article>
+        </div>
+      </div>
+    </section>
+    <section class="section cta">
+      <div class="section-inner cta-box">
+        <div><div class="kicker">Continue building</div><h2 class="title">Turn knowledge into action.</h2><p class="copy">Connect this hub to guidelines, patient resources, research, assemblies, and learning content as each area grows.</p></div>
+        <a class="btn" href="guidelines.html"><i class="fas fa-arrow-right"></i> View Guidelines</a>
+      </div>
+    </section>
+  </main>
+<?php include __DIR__ . '/partials/footer.php'; ?>
+</body>
+</html>

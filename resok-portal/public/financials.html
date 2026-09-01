@@ -1,0 +1,278 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Financials - ReSoK Members' Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#253141;--muted:#667085;--bg:#f5f7fa;--card:#fff;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);--radius:8px}
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text-dark)}a{text-decoration:none;color:inherit}
+    .topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(15,23,42,.03)}.topbar-inner{max-width:1180px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-weight:700}.brand img{height:42px}.user-chip{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--brand-primary);color:#fff;display:grid;place-items:center;font-weight:800}
+    .layout{max-width:1180px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:220px 1fr;gap:22px}.sidebar{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;align-self:start;position:sticky;top:94px}.sidebar a{display:flex;align-items:center;gap:10px;padding:12px;border-radius:6px;color:#475467;font-weight:600;font-size:14px}.sidebar a.active,.sidebar a:hover{background:rgba(0,147,46,.08);color:var(--brand-primary)}.sidebar .logout{color:var(--brand-secondary)}.nav-section{padding:14px 12px 6px;color:#d39b09;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+    .main{display:grid;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}.panel h1{font-size:24px;margin-bottom:8px}.panel h2{font-size:18px;margin-bottom:16px}.panel p{color:var(--muted);line-height:1.55}.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.summary-card{border:1px solid var(--line);border-radius:var(--radius);padding:16px}.summary-card span{display:block;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:7px}.summary-card strong{font-size:22px}.doc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.doc-card{border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:grid;gap:14px;align-content:start}.doc-head{display:flex;align-items:flex-start;gap:12px}.doc-icon{width:40px;height:40px;border-radius:6px;background:rgba(188,11,34,.1);color:var(--brand-secondary);display:grid;place-items:center;font-size:18px;flex:0 0 auto}.doc-card h3{font-size:17px;margin-bottom:4px}.btn{border:0;border-radius:6px;padding:11px 14px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}.btn-primary{background:var(--brand-primary);color:#fff}.btn-secondary{background:var(--brand-secondary);color:#fff}.btn-muted{background:#eef2f7;color:#344054}.receipt-list{display:grid;gap:10px}.receipt-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--radius);padding:14px}.receipt-row strong{display:block}.receipt-row span{display:block;color:var(--muted);font-size:13px;margin-top:3px}.empty{border:1px dashed #cbd5e1;border-radius:var(--radius);padding:20px;color:var(--muted);text-align:center}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow:auto}.sidebar a{white-space:nowrap}.nav-section{display:none}.summary-grid,.doc-grid{grid-template-columns:1fr}}@media(max-width:520px){.topbar-inner{padding:0 14px}.brand span,.user-name{display:none}.layout{padding:16px 14px}.panel{padding:18px}.receipt-row{grid-template-columns:1fr}.btn{width:100%}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="dashboard" class="brand"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <div class="user-chip"><div class="user-avatar">RM</div><span class="user-name">Member</span></div>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <a href="dashboard"><i class="fas fa-home"></i> Dashboard</a>
+      <a href="profile"><i class="fas fa-user"></i> My Profile</a>
+      <a href="payment"><i class="fas fa-credit-card"></i> Payment Proof</a>
+      <a href="card"><i class="fas fa-id-card"></i> Membership Card</a>
+      <div class="nav-section">Financials</div>
+      <a href="financials" class="active"><i class="fas fa-file-invoice-dollar"></i> Fee Statement</a>
+      <a href="financials#receipts" class="active"><i class="fas fa-receipt"></i> Receipts</a>
+      <a href="#" class="logout" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </aside>
+
+    <main class="main">
+      <section class="panel">
+        <h1>Financials</h1>
+        <p>Download your current fee statement and official payment receipts for ReSoK membership records.</p>
+      </section>
+
+      <section class="summary-grid">
+        <div class="summary-card"><span>Amount Due</span><strong id="amountDue">KES 0</strong></div>
+        <div class="summary-card"><span>Total Paid</span><strong id="totalPaid">KES 0</strong></div>
+        <div class="summary-card"><span>Balance</span><strong id="balanceDue">KES 0</strong></div>
+      </section>
+
+      <section class="doc-grid">
+        <article class="doc-card">
+          <div class="doc-head">
+            <div class="doc-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div>
+              <h3>Fee Statement</h3>
+              <p>Membership charges, payments received, and any outstanding balance.</p>
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="downloadStatement"><i class="fas fa-download"></i> Download Fee Statement</button>
+        </article>
+
+        <article class="doc-card">
+          <div class="doc-head">
+            <div class="doc-icon"><i class="fas fa-receipt"></i></div>
+            <div>
+              <h3>Receipts</h3>
+              <p>Download individual payment receipts from your submitted payment history.</p>
+            </div>
+          </div>
+          <a class="btn btn-muted" href="#receipts"><i class="fas fa-list"></i> View Receipts</a>
+        </article>
+      </section>
+
+      <section class="panel" id="receipts">
+        <h2>Receipts</h2>
+        <div class="receipt-list" id="receiptRows"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/portal-state.js?v=financials-20260522"></script>
+  <script>
+    let statementAmount = 5000;
+
+    document.getElementById("logoutLink").addEventListener("click", (event) => {
+      event.preventDefault();
+      window.ResokPortal.logout();
+    });
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function money(value) {
+      return `KES ${Number(value || 0).toLocaleString()}`;
+    }
+
+    function paymentKey(payment, index) {
+      return payment.id || payment.reference || index;
+    }
+
+    function memberName(member) {
+      if (typeof window.ResokPortal.memberName === "function") {
+        return window.ResokPortal.memberName(member);
+      }
+      return [member.title, member.firstName, member.middleName, member.surname].filter(Boolean).join(" ").trim();
+    }
+
+    function paymentNumber(payment, index) {
+      return payment.reference || payment.mpesaCode || "RESOK-" + String(payment.id || index + 1).padStart(4, "0");
+    }
+
+    function downloadSvg(svg, filename) {
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function fallbackReceiptSvg(payment, member, index) {
+      const amount = Number(payment.amount || 0);
+      const reference = paymentNumber(payment, index);
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="720" viewBox="0 0 1040 720">
+  <rect width="1040" height="720" fill="#ffffff"/>
+  <rect x="58" y="48" width="924" height="624" fill="#ffffff" stroke="#d0d5dd" stroke-width="2"/>
+  <text x="92" y="104" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#00932e">ReSoK</text>
+  <text x="194" y="88" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#253141">RESPIRATORY</text>
+  <text x="194" y="108" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#253141">SOCIETY OF KENYA</text>
+  <text x="92" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#253141">PAYMENT RECEIPT</text>
+  <text x="716" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#667085">Receipt No.</text>
+  <rect x="814" y="66" width="124" height="42" fill="#ffffff" stroke="#e89aaa" stroke-width="2"/>
+  <text x="876" y="94" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#253141">${esc(reference)}</text>
+  <text x="716" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#667085">Date</text>
+  <rect x="814" y="124" width="124" height="42" fill="#ffffff" stroke="#e89aaa" stroke-width="2"/>
+  <text x="876" y="152" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#253141">${esc(payment.date || new Date().toLocaleDateString("en-GB"))}</text>
+  <text x="92" y="244" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Received from:</text>
+  <text x="248" y="244" font-family="Segoe UI, Arial, sans-serif" font-size="23" font-weight="700" fill="#253141">${esc(memberName(member) || "ReSoK Member")}</text>
+  <line x1="248" y1="254" x2="920" y2="254" stroke="#d0d5dd"/>
+  <text x="92" y="314" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Being payment of:</text>
+  <text x="292" y="314" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#253141">${esc(payment.type || "Membership Registration / Renewal")}</text>
+  <line x1="292" y1="324" x2="920" y2="324" stroke="#d0d5dd"/>
+  <text x="92" y="384" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Amount in words:</text>
+  <text x="292" y="384" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#253141">Kenya Shillings ${amount.toLocaleString()} only</text>
+  <line x1="292" y1="394" x2="920" y2="394" stroke="#d0d5dd"/>
+  <text x="92" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Payment Method:</text>
+  <text x="292" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#253141">${esc(payment.method || "M-Pesa Paybill")}</text>
+  <text x="646" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Amount in Figures:</text>
+  <rect x="814" y="438" width="124" height="48" fill="#ffffff" stroke="#d0d5dd" stroke-width="2"/>
+  <text x="876" y="469" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#253141">${amount.toLocaleString()}</text>
+  <text x="646" y="536" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Ref No:</text>
+  <rect x="814" y="506" width="124" height="48" fill="#ffffff" stroke="#d0d5dd" stroke-width="2"/>
+  <text x="876" y="537" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#253141">${esc(reference)}</text>
+  <rect x="692" y="558" width="178" height="74" rx="6" fill="none" stroke="#1d4ed8" stroke-width="3" transform="rotate(-18 781 595)"/>
+  <text x="780" y="590" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="19" font-weight="800" fill="#1d4ed8" transform="rotate(-18 780 590)">ReSoK PAID</text>
+  <text x="92" y="626" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#667085">This receipt was generated from the ReSoK Members' Portal.</text>
+</svg>`;
+    }
+
+    function fallbackStatementSvg(state) {
+      const totalPaid = state.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const balance = Math.max(statementAmount - totalPaid, 0);
+      const rows = (state.payments.length ? state.payments : [{ date: "", reference: "No payment recorded", method: "", amount: 0 }]).slice(0, 8).map((payment, index) => {
+        const y = 454 + index * 46;
+        return `<text x="72" y="${y}" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#344054">${esc(payment.date || "-")}</text>
+  <text x="250" y="${y}" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#344054">${esc(paymentNumber(payment, index))}</text>
+  <text x="516" y="${y}" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#344054">${esc(payment.method || "-")}</text>
+  <text x="838" y="${y}" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="20" fill="#344054">${money(payment.amount)}</text>`;
+      }).join("");
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="920" height="1040" viewBox="0 0 920 1040">
+  <rect width="920" height="1040" fill="#ffffff"/>
+  <rect width="920" height="126" fill="#00932e"/>
+  <rect y="104" width="920" height="22" fill="#bc0b22"/>
+  <text x="60" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="31" font-weight="700" fill="#ffffff">Respiratory Society of Kenya</text>
+  <text x="60" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="17" fill="#ffffff">Member Fee Statement</text>
+  <text x="60" y="184" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Member</text>
+  <text x="60" y="222" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#253141">${esc(memberName(state.member) || "ReSoK Member")}</text>
+  <text x="60" y="258" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#667085">Membership ID: ${esc(state.member.membershipId || "Pending")} | Category: ${esc(state.member.category || "Member")}</text>
+  <rect x="60" y="294" width="792" height="72" rx="8" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="96" y="326" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#667085">AMOUNT DUE</text>
+  <text x="96" y="352" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#253141">${money(statementAmount)}</text>
+  <text x="376" y="326" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#667085">TOTAL PAID</text>
+  <text x="376" y="352" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#00932e">${money(totalPaid)}</text>
+  <text x="654" y="326" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#667085">BALANCE</text>
+  <text x="654" y="352" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#bc0b22">${money(balance)}</text>
+  <text x="72" y="416" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#667085">DATE</text>
+  <text x="250" y="416" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#667085">REFERENCE</text>
+  <text x="516" y="416" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#667085">METHOD</text>
+  <text x="838" y="416" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#667085">AMOUNT</text>
+  ${rows}
+  <text x="60" y="968" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#667085">Generated from the ReSoK Members' Portal.</text>
+</svg>`;
+    }
+
+    function downloadReceipt(paymentId) {
+      if (typeof window.ResokPortal.downloadReceipt === "function") {
+        window.ResokPortal.downloadReceipt(paymentId);
+        return;
+      }
+      const state = window.ResokPortal.getState();
+      const index = state.payments.findIndex((payment) => String(paymentKey(payment, 0)) === String(paymentId));
+      const payment = index >= 0 ? state.payments[index] : state.payments[0];
+      if (!payment) throw new Error("No receipt is available yet.");
+      downloadSvg(fallbackReceiptSvg(payment, state.member, Math.max(index, 0)), paymentNumber(payment, Math.max(index, 0)) + "-receipt.svg");
+    }
+
+    function downloadFeeStatement() {
+      if (typeof window.ResokPortal.downloadFeeStatement === "function") {
+        window.ResokPortal.downloadFeeStatement({ amountDue: statementAmount });
+        return;
+      }
+      const state = window.ResokPortal.getState();
+      const filenameId = state.member.membershipId || "resok-member";
+      downloadSvg(fallbackStatementSvg(state), filenameId + "-fee-statement.svg");
+    }
+
+    function renderFinancials() {
+      const state = window.ResokPortal.getState();
+      const totalPaid = state.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const balance = Math.max(statementAmount - totalPaid, 0);
+      document.getElementById("amountDue").textContent = money(statementAmount);
+      document.getElementById("totalPaid").textContent = money(totalPaid);
+      document.getElementById("balanceDue").textContent = money(balance);
+
+      document.getElementById("receiptRows").innerHTML = state.payments.length ? state.payments.map((payment, index) => `
+        <div class="receipt-row">
+          <div>
+            <strong>${esc(payment.reference || "Receipt " + (index + 1))}</strong>
+            <span>${esc(payment.date || "Pending date")} | ${esc(payment.method || "Payment")} | ${money(payment.amount)}</span>
+          </div>
+          <button class="btn btn-primary receipt-download" data-payment-id="${esc(paymentKey(payment, index))}"><i class="fas fa-download"></i> Download</button>
+        </div>
+      `).join("") : '<div class="empty">No receipts are available yet. Receipts will appear after you submit payment proof.</div>';
+
+      document.querySelectorAll(".receipt-download").forEach((button) => {
+        button.addEventListener("click", () => {
+          try {
+            downloadReceipt(button.dataset.paymentId);
+          } catch (error) {
+            alert(error.message);
+          }
+        });
+      });
+    }
+
+    document.getElementById("downloadStatement").addEventListener("click", () => {
+      downloadFeeStatement();
+    });
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!(await window.ResokPortal.requireAuthForProtectedPage())) return;
+      try {
+        await window.ResokPortal.refreshFromApi();
+      } catch (error) {
+        console.warn(error.message || "Could not refresh financial records.");
+      }
+      try {
+        const instructions = await window.ResokPortal.paymentInstructions();
+        statementAmount = Number(instructions.amount || statementAmount);
+      } catch (error) {
+        console.warn(error.message || "Could not load fee amount.");
+      }
+      window.ResokPortal.hydrateShell();
+      renderFinancials();
+    });
+  </script>
+</body>
+</html>
+

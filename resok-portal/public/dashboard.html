@@ -1,0 +1,175 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - ReSoK Members' Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#253141;--muted:#667085;--bg:#f5f7fa;--card:#fff;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);--radius:8px}
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text-dark)}a{text-decoration:none;color:inherit}
+    .topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(15,23,42,.03)}.topbar-inner{max-width:1180px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-weight:700}.brand img{height:42px}.user-chip{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--brand-primary);color:#fff;display:grid;place-items:center;font-weight:800}
+    .layout{max-width:1180px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:220px 1fr;gap:22px}.sidebar{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;align-self:start;position:sticky;top:94px}.sidebar a{display:flex;align-items:center;gap:10px;padding:12px;border-radius:6px;color:#475467;font-weight:600;font-size:14px}.sidebar a.active,.sidebar a:hover{background:rgba(0,147,46,.08);color:var(--brand-primary)}.sidebar .logout{color:var(--brand-secondary)}.nav-section{padding:14px 12px 6px;color:#d39b09;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+    .main{display:grid;gap:20px}.hero{background:linear-gradient(90deg,#9f071b 0%,var(--brand-secondary) 58%,#d41d34 100%);border:0;border-radius:var(--radius);box-shadow:0 14px 32px rgba(188,11,34,.22);padding:24px;display:flex;justify-content:space-between;gap:18px;align-items:flex-start;color:#fff}.hero h1{font-size:26px;margin-bottom:8px;color:#fff}.hero p{color:rgba(255,255,255,.88);line-height:1.5}.status-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font-weight:800;font-size:13px;white-space:nowrap;border:1px solid rgba(255,255,255,.28)}.status-pill.active{background:#fff;color:var(--brand-secondary);border-color:#fff}.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}.panel h2{font-size:18px;margin-bottom:16px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.fact{border:1px solid var(--line);border-radius:var(--radius);padding:14px}.fact span{display:block;color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;margin-bottom:6px}.fact strong{font-size:16px;word-break:break-word}.card-preview{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fff}.card-preview svg{display:block;width:100%;height:auto}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.btn{border:0;border-radius:6px;padding:11px 14px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.btn-primary{background:var(--brand-primary);color:#fff}.btn-secondary{background:var(--brand-secondary);color:#fff}.btn-muted{background:#eef2f7;color:#344054}.empty-card{border:1px dashed #cbd5e1;border-radius:var(--radius);padding:26px;text-align:center;color:var(--muted);line-height:1.5}.payment-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:12px 0;font-size:14px}.payment-row:last-child{border-bottom:0}.payment-row strong{display:block}.payment-row span{color:var(--muted)}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow:auto}.sidebar a{white-space:nowrap}.nav-section{display:none}.grid{grid-template-columns:1fr}.hero{flex-direction:column}.facts{grid-template-columns:1fr}}@media(max-width:520px){.topbar-inner{padding:0 14px}.brand span,.user-name{display:none}.layout{padding:16px 14px}.hero,.panel{padding:18px}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="dashboard" class="brand"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <div class="user-chip"><div class="user-avatar">RM</div><span class="user-name">Member</span></div>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <a href="dashboard" class="active"><i class="fas fa-home"></i> Dashboard</a>
+      <a href="profile"><i class="fas fa-user"></i> My Profile</a>
+      <a href="payment"><i class="fas fa-credit-card"></i> Payment Proof</a>
+      <a href="card"><i class="fas fa-id-card"></i> Membership Card</a>
+      <div class="nav-section">Financials</div>
+      <a href="financials"><i class="fas fa-file-invoice-dollar"></i> Fee Statement</a>
+      <a href="financials#receipts"><i class="fas fa-receipt"></i> Receipts</a>
+      <a href="#" class="logout" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div>
+          <h1 id="welcomeTitle">Welcome back</h1>
+          <p id="welcomeCopy">Manage your ReSoK membership profile, payment proof, and membership card from one place.</p>
+        </div>
+        <div class="status-pill" id="statusPill"><i class="fas fa-clock"></i><span>Payment required</span></div>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>Membership Card</h2>
+          <div id="cardMount" class="card-preview"></div>
+          <div class="actions">
+            <button class="btn btn-primary" id="downloadCard"><i class="fas fa-download"></i> Download Card</button>
+            <a class="btn btn-muted" href="payment" id="paymentCta"><i class="fas fa-upload"></i> Upload Payment Proof</a>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Profile Summary</h2>
+          <div class="facts">
+            <div class="fact"><span>Name</span><strong id="factName">Member</strong></div>
+            <div class="fact"><span>Membership ID</span><strong id="factId">Pending</strong></div>
+            <div class="fact"><span>Category</span><strong id="factCategory">Not set</strong></div>
+            <div class="fact"><span>Renewal Due</span><strong id="factRenewal">Pending</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>CPD Activity Log <span style="color:var(--muted);font-weight:600;font-size:14px" id="cpdTotal"></span></h2>
+        <div id="cpdRows"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Recent Payments</h2>
+        <div id="paymentRows"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/portal-state.js?v=membership-background-20260524-gold-bg"></script>
+  <script>
+    document.getElementById("logoutLink").addEventListener("click", (event) => {
+      event.preventDefault();
+      window.ResokPortal.logout();
+    });
+
+    function labelStatus(status) {
+      return String(status || "payment_required").replace(/_/g, " ");
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    async function render() {
+      const state = window.ResokPortal.getState();
+      const member = state.member;
+      const active = member.status === "active";
+      window.ResokPortal.hydrateShell();
+
+      document.getElementById("welcomeTitle").textContent = `Welcome back, ${member.firstName || "Member"}`;
+      document.getElementById("statusPill").classList.toggle("active", active);
+      document.getElementById("statusPill").innerHTML = `<i class="fas ${active ? "fa-check-circle" : "fa-clock"}"></i><span>${esc(labelStatus(member.status))}</span>`;
+      document.getElementById("factName").textContent = window.ResokPortal.memberName(member) || "Member";
+      document.getElementById("factId").textContent = member.membershipId || "Pending";
+      document.getElementById("factCategory").textContent = member.category || "Not set";
+      document.getElementById("factRenewal").textContent = member.renewalDue || "Pending";
+
+      const cardMount = document.getElementById("cardMount");
+      if (member.membershipId) {
+        const assets = await window.ResokPortal.membershipCardImageAssets(member);
+        cardMount.className = "card-preview";
+        cardMount.innerHTML = window.ResokPortal.membershipCardSvg(member, assets);
+        document.getElementById("downloadCard").disabled = false;
+      } else {
+        cardMount.className = "empty-card";
+        cardMount.innerHTML = "Your card will appear here after an admin reviews your payment proof and issues your membership ID.";
+        document.getElementById("downloadCard").disabled = true;
+      }
+
+      document.getElementById("paymentCta").style.display = active ? "none" : "inline-flex";
+      const rows = state.payments.length ? state.payments.map((payment) => `
+        <div class="payment-row">
+          <div><strong>${esc(payment.reference || "Payment")}</strong><span>${esc(payment.date)} | ${esc(payment.method)}</span></div>
+          <div><strong>KES ${Number(payment.amount).toLocaleString()}</strong><span>${esc(payment.status)}</span></div>
+        </div>
+      `).join("") : "<p style='color:#667085'>No payment proof has been submitted yet.</p>";
+      document.getElementById("paymentRows").innerHTML = rows;
+    }
+
+    document.getElementById("downloadCard").addEventListener("click", async () => {
+      try {
+        await window.ResokPortal.downloadMembershipCard();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    async function renderCpd() {
+      const box = document.getElementById("cpdRows");
+      try {
+        const activities = await window.ResokPortal.cpdLedger();
+        const total = activities.reduce((sum, item) => sum + Number(item.points || 0), 0);
+        document.getElementById("cpdTotal").textContent = `— ${total} points`;
+        box.innerHTML = activities.length ? activities.map((item) => `
+          <div class="payment-row">
+            <div><strong>${esc(item.description)}</strong><span>${esc(item.date || "")}</span></div>
+            <div><strong>${item.points > 0 ? "+" : ""}${esc(item.points)} pts</strong></div>
+          </div>
+        `).join("") : "<p style='color:#667085'>No CPD activities recorded yet.</p>";
+      } catch (error) {
+        box.innerHTML = `<p style='color:#667085'>${esc(error.message || "Could not load CPD activity.")}</p>`;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!(await window.ResokPortal.requireAuthForProtectedPage())) return;
+      try {
+        await window.ResokPortal.refreshFromApi();
+      } catch (error) {
+        console.warn(error.message || "Could not refresh dashboard data.");
+      }
+      await render();
+      await renderCpd();
+    });
+  </script>
+</body>
+</html>
+
+

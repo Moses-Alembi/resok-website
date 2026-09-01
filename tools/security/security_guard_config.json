@@ -1,0 +1,51 @@
+{
+  "exclude_dirs": [
+    ".git",
+    "node_modules",
+    "vendor",
+    "uploads",
+    "resok-portal/uploads"
+  ],
+  "scan_extensions": [
+    ".js",
+    ".php",
+    ".html",
+    ".css",
+    ".json",
+    ".md",
+    ".sql"
+  ],
+  "max_file_size_bytes": 1048576,
+  "required_node_env": [
+    "DB_HOST",
+    "DB_USER",
+    "DB_NAME",
+    "JWT_SECRET",
+    "FRONTEND_URL",
+    "REQUIRE_EMAIL_VERIFICATION",
+    "SMTP_HOST",
+    "MAIL_FROM"
+  ],
+  "required_php_config_keys": [
+    "db_host",
+    "db_name",
+    "db_user",
+    "db_pass",
+    "jwt_secret",
+    "upload_dir",
+    "max_file_size",
+    "portal_base_url",
+    "mail_from"
+  ],
+  "allowed_upload_extensions": [
+    "pdf",
+    "jpg",
+    "jpeg",
+    "png"
+  ],
+  "allowed_upload_mimes": [
+    "application/pdf",
+    "image/jpeg",
+    "image/png"
+  ]
+}

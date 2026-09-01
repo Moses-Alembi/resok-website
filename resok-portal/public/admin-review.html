@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Portal - ReSoK Members</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text:#253141;--muted:#667085;--bg:#f5f7fa;--card:#fff;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);--radius:8px}
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text)}a{text-decoration:none;color:inherit}
+    .topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(15,23,42,.03)}.topbar-inner{max-width:1280px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-weight:800}.brand img{height:42px}.admin-chip{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}.avatar{width:36px;height:36px;border-radius:50%;background:var(--brand-secondary);color:#fff;display:grid;place-items:center;font-weight:900}
+    .page{max-width:1280px;margin:0 auto;padding:24px 20px;display:grid;gap:18px}.hero{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.hero h1{font-size:25px;margin-bottom:6px}.hero p{color:var(--muted)}.btn{border:0;border-radius:6px;padding:10px 13px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.btn-primary{background:var(--brand-primary);color:#fff}.btn-secondary{background:#eef2f7;color:#344054}.btn-danger{background:var(--brand-secondary);color:#fff}.btn:disabled{background:#98a2b3;cursor:not-allowed}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}.stat span{display:block;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:6px}.stat strong{font-size:24px}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start}.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.toolbar input,.toolbar select{border:1px solid #d0d5dd;border-radius:6px;padding:10px 12px;font-size:14px}.toolbar input{flex:1;min-width:220px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius)}table{width:100%;border-collapse:collapse;background:#fff}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}th{background:#f8fafc;color:#475467;font-size:12px;text-transform:uppercase;letter-spacing:.02em}tr{cursor:pointer}tr:hover{background:#f8fafc}tr.selected{background:#edf9f0}.status{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;text-transform:capitalize}.status.active{background:#eaf7ee;color:#166534}.status.payment_required{background:#fff7ed;color:#c2410c}.status.under_review{background:#eff6ff;color:#1d4ed8}.status.rejected{background:#fff1f2;color:#a10d23}.status.expired{background:#f2f4f7;color:#475467}
+    .detail-empty{color:var(--muted);line-height:1.55}.detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.detail-head h2{font-size:19px;margin-bottom:4px}.detail-head p{color:var(--muted);font-size:14px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.fact{border:1px solid var(--line);border-radius:var(--radius);padding:11px}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:900;margin-bottom:5px}.fact strong{font-size:14px;word-break:break-word}.payments{display:grid;gap:10px;margin-top:12px}.payment{border:1px solid var(--line);border-radius:var(--radius);padding:11px;display:flex;justify-content:space-between;gap:10px}.payment span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.note{display:none;border-radius:6px;padding:11px 13px;margin-bottom:12px;font-size:14px}.note.show{display:block}.note.error{background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}.note.success{background:#eaf7ee;color:#166534;border:1px solid #bbebc8}
+    .site-footer{margin-top:22px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{flex-direction:column}}@media(max-width:560px){.brand span,.admin-name{display:none}.page{padding:16px 14px}.stats{grid-template-columns:1fr}.facts{grid-template-columns:1fr}.toolbar input,.toolbar select{width:100%;min-width:0}.hero,.panel{padding:16px}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="admin-review" class="brand"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <div class="admin-chip"><div class="avatar">A</div><span class="admin-name">Admin</span></div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>Registered Members</h1>
+        <p>View all registered members, payment status, membership numbers, and payment proof records.</p>
+      </div>
+      <div>
+        <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-rotate"></i> Refresh</button>
+        <button class="btn btn-danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><span>Total Members</span><strong id="totalMembers">0</strong></div>
+      <div class="stat"><span>Active</span><strong id="activeMembers">0</strong></div>
+      <div class="stat"><span>Payment Required</span><strong id="paymentRequired">0</strong></div>
+      <div class="stat"><span>Paid Total</span><strong id="paidTotal">KES 0</strong></div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <div id="adminNote" class="note"></div>
+        <div class="toolbar">
+          <input id="searchBox" type="search" placeholder="Search by name, email, phone, membership ID" />
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="payment_required">Payment required</option>
+            <option value="under_review">Under review</option>
+            <option value="rejected">Rejected</option>
+            <option value="expired">Expired</option>
+          </select>
+          <button class="btn btn-secondary" id="exportCsvBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
+        </div>
+        <div class="toolbar" id="bulkToolbar" style="display:none">
+          <span id="bulkCount" style="align-self:center;color:var(--muted);font-size:14px"></span>
+          <button class="btn btn-primary" id="bulkApproveBtn"><i class="fas fa-check-double"></i> Approve Selected</button>
+          <button class="btn btn-danger" id="bulkRejectBtn"><i class="fas fa-ban"></i> Reject Selected</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th><input type="checkbox" id="selectAllRows" /></th><th>Member</th><th>Contact</th><th>Status</th><th>Membership ID</th><th>Paid</th></tr>
+            </thead>
+            <tbody id="memberRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="panel" id="detailPanel">
+        <p class="detail-empty">Select a member to see their full details and payment records.</p>
+      </aside>
+    </section>
+
+    <section class="panel">
+      <div class="detail-head">
+        <div>
+          <h2 style="font-size:19px">Admin Audit Log</h2>
+          <p>Every approve, reject, and CPD-points action taken from this screen.</p>
+        </div>
+        <button class="btn btn-secondary" id="loadAuditBtn"><i class="fas fa-rotate"></i> Load Recent Activity</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Member ID</th><th>Reason / Detail</th></tr></thead>
+          <tbody id="auditRows"><tr><td colspan="5" class="detail-empty">Click "Load Recent Activity" to view the audit log.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand-row">
+          <img src="assets/img/logo.png" alt="ReSoK logo">
+        </div>
+
+        <div class="site-footer-top-social" aria-label="Social links">
+          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+
+        <div class="site-footer-donate">
+          <a href="./">Membership</a>
+        </div>
+      </div>
+
+      <div class="site-footer-mid">
+        <div>
+          <h3 class="site-footer-head">Sign Up For A Newsletter</h3>
+          <p class="site-footer-text">
+            Get membership updates, projects, and announcements directly in your inbox.
+          </p>
+          <form class="site-footer-subscribe" action="#" method="post">
+            <input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address">
+            <button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button>
+          </form>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Society</h4>
+          <div class="site-footer-divider"></div>
+          <ul class="site-footer-list">
+            <li><a href="./">Home</a></li>
+            <li><a href="../../about">About</a></li>
+            <li><a href="./">Membership</a></li>
+            <li><a href="https://www.resok.org/faqs" target="_blank" rel="noopener">FAQs</a></li>
+          </ul>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Get In Touch</h4>
+          <div class="site-footer-divider"></div>
+          <ul class="site-footer-list">
+            <li><a href="../../contact">Contact Us</a></li>
+            <li><a href="../../blog">Blog</a></li>
+            <li><a href="../../contact">Location</a></li>
+          </ul>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Resources</h4>
+          <div class="site-footer-divider"></div>
+          <ul class="site-footer-list">
+            <li><a href="../../projects">Projects</a></li>
+            <li><a href="../../learning">Learning</a></li>
+            <li><a href="https://youtube.com/@respiratorysocietykenya" target="_blank" rel="noopener">YouTube</a></li>
+          </ul>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Our Gallery</h4>
+          <div class="site-footer-divider"></div>
+          <div class="site-footer-gallery-grid">
+            <img src="assets/img/footer/F1.jpg" alt="Gallery 1" loading="lazy">
+            <img src="assets/img/footer/F2.jpg" alt="Gallery 2" loading="lazy">
+            <img src="assets/img/footer/F3.jpg" alt="Gallery 3" loading="lazy">
+            <img src="assets/img/footer/F4.jpeg" alt="Gallery 4" loading="lazy">
+            <img src="assets/img/footer/F5.png" alt="Gallery 5" loading="lazy">
+            <img src="assets/img/footer/F6.png" alt="Gallery 6" loading="lazy">
+            <img src="assets/img/footer/F7.jpg" alt="Gallery 7" loading="lazy">
+            <img src="assets/img/footer/F8.jpg" alt="Gallery 8" loading="lazy">
+</div>
+        </div>
+      </div>
+
+      <div class="site-footer-bottom">
+        &copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/portal-state.js"></script>
+  <script>
+    let members = [];
+    let selectedMember = null;
+    const selectedIds = new Set();
+
+    function isLocalPreview() {
+      return ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
+    }
+
+    function useLocalPreviewData() {
+      return isLocalPreview() && !stateToken();
+    }
+
+    function demoMembers() {
+      return [
+        {
+          id: 1,
+          title: "Dr.",
+          firstName: "Jane",
+          middleName: "",
+          surname: "Doe",
+          email: "jane.doe@resok.test",
+          mobile: "+254700000001",
+          county: "Nairobi",
+          division: "NAIROBI",
+          category: "Medical Practitioner",
+          membershipStatus: "under_review",
+          membershipId: "",
+          renewalDue: "Pending payment",
+          paidTotal: 3500
+        },
+        {
+          id: 2,
+          title: "Prof.",
+          firstName: "Local",
+          middleName: "",
+          surname: "Preview",
+          email: "admin.preview@resok.test",
+          mobile: "+254700000002",
+          county: "Mombasa",
+          division: "COAST",
+          category: "Medical Practitioner",
+          membershipStatus: "active",
+          membershipId: "RESOK0002",
+          renewalDue: "31 Dec 2026",
+          paidTotal: 5000
+        }
+      ];
+    }
+
+    function stateToken() {
+      return localStorage.getItem("token") || window.ResokPortal.getState().token;
+    }
+
+    function showNote(message, type = "success") {
+      const note = document.getElementById("adminNote");
+      note.textContent = message;
+      note.className = `note show ${type}`;
+      if (message) setTimeout(() => note.className = "note", 4000);
+    }
+
+    function memberName(member) {
+      return [member.title, member.firstName, member.middleName, member.surname].filter(Boolean).join(" ") || "Unnamed member";
+    }
+
+    function statusLabel(status) {
+      return String(status || "payment_required").replace(/_/g, " ");
+    }
+
+    function money(value) {
+      return `KES ${Number(value || 0).toLocaleString()}`;
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function statusClass(value) {
+      return String(value || "payment_required").replace(/[^a-z0-9_-]/gi, "");
+    }
+
+    function filteredMembers() {
+      const query = document.getElementById("searchBox").value.trim().toLowerCase();
+      const status = document.getElementById("statusFilter").value;
+      return members.filter((member) => {
+        const text = [memberName(member), member.email, member.mobile, member.membershipId, member.category, member.county].join(" ").toLowerCase();
+        return (!query || text.includes(query)) && (!status || member.membershipStatus === status);
+      });
+    }
+
+    function renderStats() {
+      document.getElementById("totalMembers").textContent = members.length;
+      document.getElementById("activeMembers").textContent = members.filter((m) => m.membershipStatus === "active").length;
+      document.getElementById("paymentRequired").textContent = members.filter((m) => m.membershipStatus === "payment_required").length;
+      document.getElementById("paidTotal").textContent = money(members.reduce((sum, member) => sum + Number(member.paidTotal || 0), 0));
+    }
+
+    function updateBulkToolbar() {
+      const toolbar = document.getElementById("bulkToolbar");
+      toolbar.style.display = selectedIds.size ? "flex" : "none";
+      document.getElementById("bulkCount").textContent = `${selectedIds.size} selected`;
+    }
+
+    function renderRows() {
+      const rows = filteredMembers();
+      document.getElementById("memberRows").innerHTML = rows.length ? rows.map((member) => `
+        <tr data-id="${esc(member.id)}" class="${selectedMember?.id === member.id ? "selected" : ""}">
+          <td><input type="checkbox" class="row-select" data-id="${esc(member.id)}" ${selectedIds.has(String(member.id)) ? "checked" : ""} /></td>
+          <td><strong>${esc(memberName(member))}</strong><br><span style="color:#667085">${esc(member.category || "No category")}</span></td>
+          <td>${esc(member.email || "")}<br><span style="color:#667085">${esc(member.mobile || "")}</span></td>
+          <td><span class="status ${statusClass(member.membershipStatus)}">${esc(statusLabel(member.membershipStatus))}</span></td>
+          <td>${esc(member.membershipId || "Pending")}</td>
+          <td>${money(member.paidTotal)}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="6">No members match this view.</td></tr>`;
+
+      document.querySelectorAll("#memberRows tr[data-id]").forEach((row) => {
+        row.addEventListener("click", (event) => {
+          if (event.target.closest(".row-select")) return;
+          selectedMember = members.find((member) => String(member.id) === row.dataset.id);
+          renderRows();
+          renderDetail();
+        });
+      });
+      document.querySelectorAll("#memberRows .row-select").forEach((checkbox) => {
+        checkbox.addEventListener("click", (event) => event.stopPropagation());
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) selectedIds.add(checkbox.dataset.id);
+          else selectedIds.delete(checkbox.dataset.id);
+          updateBulkToolbar();
+        });
+      });
+      updateBulkToolbar();
+    }
+
+    async function bulkApprove() {
+      if (!selectedIds.size) return;
+      if (!confirm(`Approve ${selectedIds.size} selected member(s)? This issues membership IDs and sends welcome emails.`)) return;
+      try {
+        const result = await window.ResokPortal.api("/api/members/bulk-approve", { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds) }) });
+        showNote(`Approved ${result.approved.length} member(s).${result.errors.length ? ` ${result.errors.length} failed.` : ""}`);
+        selectedIds.clear();
+        await loadMembers();
+      } catch (error) {
+        showNote(error.message || "Bulk approve failed.", "error");
+      }
+    }
+
+    async function bulkReject() {
+      if (!selectedIds.size) return;
+      const reason = prompt("Reason for rejecting the selected members", "Payment proof could not be verified.");
+      if (reason === null) return;
+      try {
+        const result = await window.ResokPortal.api("/api/members/bulk-reject", { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds), reason }) });
+        showNote(`Rejected ${result.rejected.length} member(s).`);
+        selectedIds.clear();
+        await loadMembers();
+      } catch (error) {
+        showNote(error.message || "Bulk reject failed.", "error");
+      }
+    }
+
+    function exportCsv() {
+      const columns = ["id", "membershipId", "membershipStatus", "category", "county", "division", "mobile", "email", "paidTotal", "renewalDue"];
+      const header = ["ID", "Membership ID", "Status", "Category", "County", "Division", "Mobile", "Email", "Paid Total", "Renewal Due"];
+      const escCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+      const lines = [header.join(",")].concat(
+        members.map((member) => columns.map((col) => escCsv(col === "membershipId" ? (member[col] || "Pending") : member[col])).join(","))
+      );
+      const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `resok-members-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function renderDetail() {
+      const panel = document.getElementById("detailPanel");
+      if (!selectedMember) {
+        panel.innerHTML = '<p class="detail-empty">Select a member to see their full details and payment records.</p>';
+        return;
+      }
+
+      panel.innerHTML = `
+        <div class="detail-head">
+          <div>
+            <h2>${esc(memberName(selectedMember))}</h2>
+            <p>${esc(selectedMember.email || "")}</p>
+          </div>
+          <span class="status ${statusClass(selectedMember.membershipStatus)}">${esc(statusLabel(selectedMember.membershipStatus))}</span>
+        </div>
+        <div class="facts">
+          <div class="fact"><span>Membership ID</span><strong>${esc(selectedMember.membershipId || "Pending")}</strong></div>
+          <div class="fact"><span>Mobile</span><strong>${esc(selectedMember.mobile || "Not set")}</strong></div>
+          <div class="fact"><span>County</span><strong>${esc(selectedMember.county || "Not set")}</strong></div>
+          <div class="fact"><span>Division</span><strong>${esc(selectedMember.division || "Not set")}</strong></div>
+          <div class="fact"><span>Profession</span><strong>${esc(selectedMember.profession || "Not set")}</strong></div>
+          <div class="fact"><span>Specialization</span><strong>${esc(selectedMember.specialization || "Not set")}</strong></div>
+          <div class="fact"><span>Institution</span><strong>${esc(selectedMember.institution || "Not set")}</strong></div>
+          <div class="fact"><span>Physical Address</span><strong>${esc(selectedMember.physicalAddress || "Not set")}</strong></div>
+          <div class="fact"><span>Paying As</span><strong>${esc(selectedMember.payerType || "Individual")}</strong></div>
+          <div class="fact"><span>Membership Category</span><strong>${esc(selectedMember.category || "Not set")}</strong></div>
+          <div class="fact"><span>Renewal Due</span><strong>${esc(selectedMember.renewalDue || "Pending")}</strong></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <button class="btn btn-primary" id="approveBtn"><i class="fas fa-check"></i> Approve / Issue ID</button>
+          <button class="btn btn-danger" id="rejectBtn"><i class="fas fa-xmark"></i> Reject</button>
+        </div>
+        <h3 style="font-size:16px;margin:14px 0 8px">Payments</h3>
+        <div class="payments" id="memberPayments"><p class="detail-empty">Loading payments...</p></div>
+
+        <h3 style="font-size:16px;margin:14px 0 8px">Add CPD Points</h3>
+        <form id="cpdForm" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <input id="cpdDescription" placeholder="Activity description" style="flex:1;min-width:160px;border:1px solid #d0d5dd;border-radius:6px;padding:9px 11px;font-size:13px" required />
+          <input id="cpdPoints" type="number" placeholder="Points" style="width:90px;border:1px solid #d0d5dd;border-radius:6px;padding:9px 11px;font-size:13px" required />
+          <button class="btn btn-primary" type="submit"><i class="fas fa-plus"></i> Add</button>
+        </form>
+      `;
+
+      document.getElementById("approveBtn").addEventListener("click", approveSelectedMember);
+      document.getElementById("rejectBtn").addEventListener("click", rejectSelectedMember);
+      document.getElementById("cpdForm").addEventListener("submit", addCpdPoints);
+      await loadPayments(selectedMember.id);
+    }
+
+    async function addCpdPoints(event) {
+      event.preventDefault();
+      if (!selectedMember) return;
+      const description = document.getElementById("cpdDescription").value.trim();
+      const points = Number(document.getElementById("cpdPoints").value);
+      if (!description || !points) return;
+      try {
+        await window.ResokPortal.api(`/api/members/${selectedMember.id}/cpd`, { method: "POST", body: JSON.stringify({ description, points }) });
+        showNote("CPD points added.");
+        await loadMembers();
+      } catch (error) {
+        showNote(error.message || "Could not add CPD points.", "error");
+      }
+    }
+
+    async function loadAuditLog() {
+      const box = document.getElementById("auditRows");
+      box.innerHTML = '<tr><td colspan="5" class="detail-empty">Loading...</td></tr>';
+      try {
+        const entries = await window.ResokPortal.api("/api/admin/audit-log");
+        box.innerHTML = entries.length ? entries.map((entry) => `
+          <tr>
+            <td>${esc(entry.date || "")}</td>
+            <td>${esc(entry.adminEmail || "Unknown admin")}</td>
+            <td>${esc(entry.action)}</td>
+            <td>${esc(entry.targetMemberProfileId ?? "-")}</td>
+            <td>${esc(entry.reason || "-")}</td>
+          </tr>
+        `).join("") : '<tr><td colspan="5" class="detail-empty">No audit entries yet.</td></tr>';
+      } catch (error) {
+        box.innerHTML = `<tr><td colspan="5" class="detail-empty">${esc(error.message || "Could not load audit log.")}</td></tr>`;
+      }
+    }
+
+    async function loadPayments(memberId) {
+      const box = document.getElementById("memberPayments");
+      if (useLocalPreviewData()) {
+        box.innerHTML = `
+          <div class="payment">
+            <div><strong>LOCAL-PREVIEW-${esc(memberId)}</strong><span>M-Pesa Paybill | Local preview</span></div>
+            <div><strong>${money(selectedMember?.paidTotal || 0)}</strong><span>Pending</span></div>
+          </div>
+        `;
+        return;
+      }
+      try {
+        const payments = await window.ResokPortal.api(`/api/payments/member/${memberId}`);
+        box.innerHTML = payments.length ? payments.map((payment) => `
+          <div class="payment">
+            <div><strong>${esc(payment.reference)}</strong><span>${esc(payment.method)} | ${esc(payment.date || "")}</span>${payment.proofDownloadUrl ? `<span><a href="${esc(payment.proofDownloadUrl)}" target="_blank" rel="noopener">View proof</a></span>` : ""}</div>
+            <div><strong>${money(payment.amount)}</strong><span>${esc(payment.status)}</span></div>
+          </div>
+        `).join("") : '<p class="detail-empty">No payments recorded.</p>';
+      } catch (error) {
+        box.innerHTML = `<p class="detail-empty">${esc(error.message || "Could not load payments.")}</p>`;
+      }
+    }
+
+    async function approveSelectedMember() {
+      if (!selectedMember) return;
+      if (useLocalPreviewData()) {
+        selectedMember.membershipStatus = "active";
+        selectedMember.membershipId = selectedMember.membershipId || `RESOK${String(selectedMember.id).padStart(4, "0")}`;
+        selectedMember.renewalDue = "31 Dec 2026";
+        members = members.map((member) => member.id === selectedMember.id ? selectedMember : member);
+        showNote("Local preview: member approved.");
+        renderStats();
+        renderRows();
+        await renderDetail();
+        return;
+      }
+      try {
+        await window.ResokPortal.api(`/api/members/${selectedMember.id}/approve`, { method: "POST" });
+        showNote("Member approved and membership ID ensured.");
+        await loadMembers();
+      } catch (error) {
+        showNote(error.message || "Could not approve member.", "error");
+      }
+    }
+
+    async function rejectSelectedMember() {
+      if (!selectedMember) return;
+      const reason = prompt("Reason for rejection", selectedMember.reviewReason || "Payment proof could not be verified.");
+      if (reason === null) return;
+      if (useLocalPreviewData()) {
+        selectedMember.membershipStatus = "rejected";
+        selectedMember.reviewReason = reason;
+        members = members.map((member) => member.id === selectedMember.id ? selectedMember : member);
+        showNote("Local preview: member rejected.");
+        renderStats();
+        renderRows();
+        await renderDetail();
+        return;
+      }
+      try {
+        await window.ResokPortal.api(`/api/members/${selectedMember.id}/reject`, {
+          method: "POST",
+          body: JSON.stringify({ reason })
+        });
+        showNote("Member rejected.");
+        await loadMembers();
+      } catch (error) {
+        showNote(error.message || "Could not reject member.", "error");
+      }
+    }
+
+    async function loadMembers() {
+      if (useLocalPreviewData()) {
+        if (!members.length) members = demoMembers();
+        if (selectedMember) selectedMember = members.find((member) => member.id === selectedMember.id) || null;
+        renderStats();
+        renderRows();
+        await renderDetail();
+        return;
+      }
+      members = await window.ResokPortal.api("/api/members");
+      if (selectedMember) selectedMember = members.find((member) => member.id === selectedMember.id) || null;
+      renderStats();
+      renderRows();
+      await renderDetail();
+    }
+
+    document.getElementById("searchBox").addEventListener("input", renderRows);
+    document.getElementById("statusFilter").addEventListener("change", renderRows);
+    document.getElementById("refreshBtn").addEventListener("click", () => loadMembers().catch((error) => showNote(error.message, "error")));
+    document.getElementById("logoutBtn").addEventListener("click", () => window.ResokPortal.logout());
+    document.getElementById("exportCsvBtn").addEventListener("click", exportCsv);
+    document.getElementById("bulkApproveBtn").addEventListener("click", bulkApprove);
+    document.getElementById("bulkRejectBtn").addEventListener("click", bulkReject);
+    document.getElementById("loadAuditBtn").addEventListener("click", loadAuditLog);
+    document.getElementById("selectAllRows").addEventListener("change", (event) => {
+      selectedIds.clear();
+      if (event.target.checked) filteredMembers().forEach((member) => selectedIds.add(String(member.id)));
+      renderRows();
+    });
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Session lives in the httpOnly resok_token cookie, so there's no client-readable
+      // flag to gate on up front — attempt the admin-only call and redirect only on a
+      // real 401/"missing token" response from the server.
+      try {
+        await loadMembers();
+      } catch (error) {
+        const message = error.message || "";
+        if (!isLocalPreview() && /token|unauthorized/i.test(message)) {
+          window.location.href = "login";
+          return;
+        }
+        showNote(message || "Admin access required. Please log in as an admin.", "error");
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+

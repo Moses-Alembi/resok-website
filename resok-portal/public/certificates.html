@@ -1,0 +1,94 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Certificates - ReSoK Members' Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#2c3e50;--bg-light:#f8f9fa;--card-shadow:0 2px 12px rgba(0,0,0,0.06);--radius:12px}
+    *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg-light);color:var(--text-dark)}
+    .dashboard-nav{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.03)}.dashboard-nav-inner{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:70px}.dashboard-logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text-dark)}.dashboard-logo img{height:40px}.dashboard-logo span{font-weight:600;font-size:18px}.user-menu{display:flex;align-items:center;gap:10px;cursor:pointer}.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--brand-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px}.dashboard-container{max-width:1400px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:240px 1fr;gap:24px}.dashboard-sidebar{background:#fff;border-radius:var(--radius);padding:20px 0;box-shadow:var(--card-shadow);height:fit-content;position:sticky;top:94px}.sidebar-nav{list-style:none;padding:0;margin:0}.sidebar-nav li a{display:flex;align-items:center;gap:12px;padding:14px 24px;color:#555;text-decoration:none;font-weight:500;font-size:14px;transition:all .2s;border-left:3px solid transparent}.sidebar-nav li a:hover,.sidebar-nav li a.active{background:rgba(0,147,46,0.08);color:var(--brand-primary);border-left-color:var(--brand-primary)}.sidebar-nav li a i{width:20px;text-align:center}.sidebar-divider{height:1px;background:#eee;margin:12px 24px}.sidebar-logout{color:var(--brand-secondary)!important}.sidebar-logout:hover{background:rgba(188,11,34,0.08)!important;border-left-color:var(--brand-secondary)!important}.dashboard-main{display:flex;flex-direction:column;gap:24px}.dashboard-section{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--card-shadow)}.section-title{font-size:18px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #eee}
+    .cert-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}.member-card{background:linear-gradient(135deg,#fff,#f8f9fa);border-radius:var(--radius);padding:24px;border:1px solid #eee;position:relative;overflow:hidden}.member-card::before{content:'';position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--brand-primary),var(--brand-secondary))}.mc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.mc-title{font-size:14px;color:#666;text-transform:uppercase;letter-spacing:1px}.mc-name{font-size:22px;font-weight:700;color:var(--text-dark);margin:8px 0}.mc-id{font-size:14px;color:#555;font-family:monospace;background:#f0f0f0;padding:4px 8px;border-radius:4px;display:inline-block}.mc-meta{margin-top:16px;font-size:13px;color:#666;line-height:1.6}.mc-actions{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap}.cert-table{width:100%;border-collapse:collapse}.cert-table th,.cert-table td{padding:14px 12px;text-align:left;border-bottom:1px solid #eee}.cert-table th{font-size:13px;text-transform:uppercase;color:#777;font-weight:600;background:#f9f9f9}.cert-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;background:#f0f7ff;color:#0056b3;font-size:13px;font-weight:500}.btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px}.btn-primary{background:var(--brand-primary);color:#fff}.btn-primary:hover{background:#007a26}.btn-outline{background:#fff;border:1px solid #ddd;color:#555}.btn-outline:hover{border-color:var(--brand-primary);color:var(--brand-primary)}@media(max-width:1024px){.dashboard-container{grid-template-columns:1fr}.cert-grid{grid-template-columns:1fr}.dashboard-sidebar{position:static;display:flex;overflow-x:auto;padding:12px 0}.sidebar-nav{display:flex;gap:4px;white-space:nowrap;padding:0 16px}.sidebar-nav li a{padding:12px 16px;border-left:none;border-bottom:3px solid transparent}.sidebar-nav li a:hover,.sidebar-nav li a.active{border-left:none;border-bottom-color:var(--brand-primary)}.sidebar-divider{display:none}}@media(max-width:640px){.dashboard-nav-inner{padding:0 16px}.mc-name{font-size:18px}}
+  </style>
+</head>
+<body>
+  <nav class="dashboard-nav"><div class="dashboard-nav-inner"><a href="dashboard" class="dashboard-logo"><img src="assets/img/logo.png" alt="ReSoK"/></a><div class="user-menu"><div class="user-avatar">JD</div><span style="font-weight:500;font-size:14px;color:var(--text-dark)">Dr. Jane Doe</span></div></div></nav>
+  <div class="dashboard-container">
+    <aside class="dashboard-sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="dashboard"><i class="fas fa-home"></i> Dashboard</a></li><li><a href="profile"><i class="fas fa-user"></i> My Profile</a></li><li><a href="document"><i class="fas fa-file-upload"></i> Documents</a></li><li><a href="payment"><i class="fas fa-credit-card"></i> Payments</a></li><li class="sidebar-divider"></li><li><a href="events"><i class="fas fa-calendar-alt"></i> Events & CMEs</a></li><li><a href="certificates" class="active"><i class="fas fa-certificate"></i> Certificates</a></li><li><a href="renew"><i class="fas fa-sync-alt"></i> Renew Membership</a></li><li class="sidebar-divider"></li><li><a href="login" class="sidebar-logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+      </ul>
+    </aside>
+    <main class="dashboard-main">
+      <div class="cert-grid">
+        <div class="member-card">
+          <div class="mc-header"><span class="mc-title">Digital Membership Card</span><i class="fas fa-qrcode" style="font-size:32px;color:#333"></i></div>
+          <div class="mc-name">Dr. Jane A. Doe</div>
+          <span class="mc-id">RESOK0001</span>
+          <div class="mc-meta">
+            <div><i class="fas fa-user-md"></i> Medical Practitioner &bull; Nairobi Division</div>
+            <div><i class="fas fa-calendar-check"></i> Valid Until: 31 Dec 2026</div>
+            <div><i class="fas fa-shield-alt"></i> Status: <span style="color:var(--brand-primary);font-weight:600">Active</span></div>
+          </div>
+          <div class="mc-actions">
+            <button class="btn btn-primary" onclick="alert('Demo: PDF membership card downloading...')"><i class="fas fa-download"></i> Download PDF</button>
+            <button class="btn btn-outline" onclick="alert('Demo: Added to Apple/Google Wallet')"><i class="fas fa-wallet"></i> Add to Wallet</button>
+          </div>
+        </div>
+
+        <div class="dashboard-section">
+          <h3 class="section-title" style="border:none;padding:0;margin-bottom:16px"><i class="fas fa-award" style="color:#f39c12"></i> CPD & Event Certificates</h3>
+          <table class="cert-table">
+            <thead><tr><th>Event / Course</th><th>Date</th><th>Points</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td>Tuberculosis Management CME</td><td>15 Mar 2025</td><td>6 CPD</td><td><button class="btn btn-outline download-cert"><i class="fas fa-file-pdf"></i> PDF</button></td></tr>
+              <tr><td>Pediatric Asthma Webinar</td><td>22 Jan 2025</td><td>2 CPD</td><td><button class="btn btn-outline download-cert"><i class="fas fa-file-pdf"></i> PDF</button></td></tr>
+              <tr><td>Respiratory Nursing Symposium</td><td>10 Nov 2024</td><td>8 CPD</td><td><button class="btn btn-outline download-cert"><i class="fas fa-file-pdf"></i> PDF</button></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:16px;padding:12px;background:#f8f9fa;border-radius:8px;font-size:13px;color:#666">
+            <i class="fas fa-info-circle"></i> Total CPD Points Earned: <strong style="color:var(--brand-primary)">24 / 30 Required</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-section">
+        <h3 class="section-title">Payment Receipts & Official Letters</h3>
+        <table class="cert-table">
+          <thead><tr><th>Document</th><th>Issued</th><th>Type</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Membership Renewal Receipt 2025</td><td>12 Dec 2025</td><td><span class="cert-badge"><i class="fas fa-receipt"></i> Payment</span></td><td><button class="btn btn-outline"><i class="fas fa-download"></i> Download</button></td></tr>
+            <tr><td>Good Standing Certificate</td><td>05 Feb 2026</td><td><span class="cert-badge" style="background:#e8f5e9;color:#2e7d32"><i class="fas fa-check-circle"></i> Official</span></td><td><button class="btn btn-outline"><i class="fas fa-download"></i> Download</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <footer class="site-footer"><div class="site-footer-inner"><div class="site-footer-bottom">&copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT</div></div></footer>
+  <script src="js/portal-state.js"></script>
+  <script>
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    document.addEventListener('DOMContentLoaded',function(){
+      const state=window.ResokPortal.getState();
+      const member=state.member;
+      document.querySelector('.mc-name').textContent=window.ResokPortal.memberName(member);
+      document.querySelector('.mc-id').textContent=member.membershipId || 'Pending approval';
+      document.querySelector('.mc-meta').innerHTML=`<div><i class="fas fa-user-md"></i> ${esc(member.category || 'Member')} &bull; ${esc(member.division || 'Division')} Division</div><div><i class="fas fa-calendar-check"></i> Valid Until: ${esc(member.renewalDue || 'Pending approval')}</div><div><i class="fas fa-shield-alt"></i> Status: <span style="color:var(--brand-primary);font-weight:600">${esc(String(member.status || 'payment_required').replace('_',' '))}</span></div>`;
+      document.querySelector('strong[style*="brand-primary"]').textContent=`${member.cpdPoints || 0} / 30 Required`;
+    });
+    document.querySelectorAll('.download-cert').forEach(b=>b.addEventListener('click',()=>{b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Generating...';setTimeout(()=>{b.innerHTML='<i class="fas fa-file-pdf"></i> PDF';alert('Demo: CPD Certificate PDF downloaded!')},800)}));
+  </script>
+</body>
+</html>
+
+

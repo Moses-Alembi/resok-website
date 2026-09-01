@@ -1,0 +1,34 @@
+# All of assets/img/ - none of it is new (nothing added/changed this session), it's
+# pre-existing site content already sitting on the live server. Excluding it entirely
+# from git for now (repeated cPanel clone attempts kept stalling around ~5GB total);
+# it can be uploaded/managed separately if it's ever missing on the live server.
+assets/img/
+
+# Runtime-generated member uploads (profile photos, payment proofs). User data, not code -
+# also likely contains PII that shouldn't sit in git history.
+resok-portal/uploads/
+
+# Real secrets belong in config.local.php on the server (gitignored, never pulled/overwritten)
+# or in hosting-panel environment variables - never in a committed file.
+resok-portal/public/api/config.local.php
+resok-portal/server/.env
+
+# Node dependencies (the Node backend is unused in production, but just in case)
+resok-portal/node_modules/
+
+# OS / editor / Office cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+~$*
+*.crdownload
+
+# Local one-off setup scripts
+_git_setup_step1.ps1
+_git_push_step2.ps1
+_git_push_step3.ps1
+_git_push_chunked.ps1
+_batch_files.txt
+_git_code_only.ps1
+

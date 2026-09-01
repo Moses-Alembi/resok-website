@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /tools/
+Disallow: /resok-portal/
+
+Sitemap: https://www.resok.org/sitemap.xml

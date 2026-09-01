@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ReSoK Blog</title>
+  <meta name="description" content="ReSoK blog article." />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#bc0b22">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
+  </script>
+
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <link rel="shortcut icon" href="favicon.jpg" type="image/jpeg" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand-primary: #00932e;
+      --brand-secondary: #bc0b22;
+      --text-dark: #2c3e50;
+      --bg-light: #f5f7fa;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+      --heading-font: 'Mulish', 'Poppins', sans-serif;
+    }
+    body {
+      font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text-dark);
+      background: linear-gradient(135deg, var(--bg-light) 0%, #e4edf9 100%);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+    }
+    .topbar-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+      font-family: var(--heading-font);
+      font-weight: 900;
+    }
+    .brand img { width: 42px; height: 42px; object-fit: contain; }
+
+    .navlinks {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .navlinks a {
+      text-decoration: none;
+      font-weight: 800;
+      color: rgba(44, 62, 80, 0.9);
+      padding: 8px 10px;
+      border-radius: 999px;
+    }
+    .navlinks a:hover {
+      background: rgba(0, 147, 46, 0.10);
+    }
+    .navlinks a.cta {
+      background: linear-gradient(135deg, rgba(0, 147, 46, 0.16), rgba(188, 11, 34, 0.14));
+      border: 1px solid rgba(0, 0, 0, 0.10);
+    }
+
+    .hero {
+      padding: 54px 18px 18px;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      background:
+        radial-gradient(1000px 420px at 10% 0%, rgba(0, 147, 46, 0.18), transparent 60%),
+        radial-gradient(900px 360px at 90% 20%, rgba(188, 11, 34, 0.18), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.65), rgba(255,255,255,0.12));
+    }
+    .hero-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-family: 'Poppins', 'Mulish', sans-serif;
+      font-weight: 900;
+      font-size: clamp(2.8rem, 1.65rem + 4.2vw, 5rem);
+      line-height: 1.12;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      color: #050b12;
+      text-shadow: none;
+    }
+    .hero p {
+      margin-top: 10px;
+      max-width: 70ch;
+      color: rgba(44, 62, 80, 0.85);
+    }
+
+    .wrap {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 18px 18px 56px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 18px;
+      align-items: start;
+    }
+    .card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(0,0,0,0.09);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .cover {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      display: block;
+    }
+    .content {
+      padding: 16px;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      color: rgba(44, 62, 80, 0.75);
+      font-size: 0.92rem;
+      margin-bottom: 10px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(0, 147, 46, 0.10);
+      border: 1px solid rgba(0, 147, 46, 0.18);
+      font-weight: 900;
+      color: rgba(10, 46, 56, 0.92);
+    }
+    .content h2 {
+      font-family: 'Poppins', 'Mulish', sans-serif;
+      font-weight: 900;
+      line-height: 1.12;
+      font-size: clamp(2.35rem, 1.45rem + 2.7vw, 3.75rem);
+      margin-bottom: 10px;
+    }
+    .content .body {
+      color: rgba(44, 62, 80, 0.90);
+      line-height: 1.75;
+      font-size: 1rem;
+    }
+    .content .body p { margin: 0 0 12px; }
+    .content .body h2 {
+      font-family: 'Poppins', 'Mulish', sans-serif;
+      font-weight: 900;
+      font-size: clamp(1.65rem, 1.05rem + 1.45vw, 2.35rem);
+      line-height: 1.25;
+      margin: 22px 0 8px;
+      color: #050b12;
+    }
+    .content .body ul { margin: 0 0 12px 18px; }
+    .content .body blockquote {
+      margin: 0 0 16px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--brand-secondary);
+      background: rgba(188, 11, 34, 0.06);
+      color: rgba(44, 62, 80, 0.92);
+      font-weight: 700;
+    }
+
+    .side {
+      padding: 14px;
+    }
+    .side h3 {
+      font-family: 'Poppins', 'Mulish', sans-serif;
+      font-weight: 900;
+      font-size: 1.25rem;
+      margin-bottom: 10px;
+    }
+    .hero h1,
+    .content > h2,
+    .content .body h2,
+    .side h3 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 100%;
+      color: #050b12;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      text-shadow: none !important;
+      filter: none !important;
+      white-space: nowrap;
+      overflow: visible;
+    }
+    .hero h1::before,
+    .content > h2::before,
+    .content .body h2::before,
+    .side h3::before {
+      content: "";
+      width: 5px;
+      height: 0.95em;
+      border-radius: 3px;
+      background: var(--brand-secondary);
+      flex: 0 0 5px;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+    .side a {
+      display: block;
+      text-decoration: none;
+      font-weight: 800;
+      color: rgba(44, 62, 80, 0.92);
+      padding: 10px 10px;
+      border-radius: 12px;
+    }
+    .side a:hover { background: rgba(0, 147, 46, 0.10); }
+
+    @media (max-width: 980px) {
+      .wrap { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html" aria-label="Go to homepage">
+        <img src="assets/img/logo.png" alt="ReSoK logo" />
+        <span>ReSoK</span>
+      </a>
+      <nav class="navlinks" aria-label="Primary navigation">
+        <a href="blog.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Blog</a>
+        <a href="projects.html">Projects</a>
+        <a href="sponsors.html">Partners</a>
+        <a class="cta" href="contact.html#donate">Donate</a>
+      </nav>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="hero-inner">
+      <h1 id="postTitle">Blog post</h1>
+      <p id="postSubtitle">ReSoK resources and updates.</p>
+    </div>
+  </header>
+
+  <section class="wrap" aria-label="Blog post content">
+    <article class="card">
+      <img id="postImage" class="cover" src="assets/img/Gallery/B6.jpg" alt="" loading="lazy" />
+      <div class="content">
+        <div class="meta">
+          <span class="badge" id="postCategory"><i class="fas fa-bookmark" aria-hidden="true"></i> Article</span>
+          <span id="postDate"><i class="far fa-calendar-alt" aria-hidden="true"></i> </span>
+          <span id="postAuthor"><i class="far fa-user" aria-hidden="true"></i> </span>
+        </div>
+        <h2 id="postHeading"></h2>
+        <div class="body" id="postBody"></div>
+      </div>
+    </article>
+
+    <aside class="card side" aria-label="More links">
+      <h3>More from ReSoK</h3>
+      <a href="blog.html">Browse all posts</a>
+      <a href="https://youtube.com/@respiratorysocietykenya" target="_blank" rel="noopener">YouTube channel</a>
+      <a href="resok-portal/public/">Membership</a>
+      <a href="contact.html">Contact us</a>
+    </aside>
+  </section>
+
+  <script>
+    const posts = {
+      "advanced-thoracic-ultrasound": {
+        title: "Advanced Thoracic Ultrasound Workshop in Nairobi",
+        subtitle: "Online theory, supervised hands-on training, interventional ultrasound, and certification.",
+        date: "2025",
+        author: "Programs Team",
+        category: "CME",
+        icon: "fa-chalkboard-teacher",
+        image: "assets/img/Gallery/B3.jpg",
+        imageAlt: "Thoracic ultrasound and respiratory training",
+        body: [
+          "Join a comprehensive training program led by a certified expert in thoracic ultrasound. The workshop is designed to help clinicians gain hands-on experience in diagnostic and interventional techniques that elevate clinical practice.",
+          "<h2>Step 1: Theory (Online - 8 Weeks)</h2><ul><li>Live sessions twice a week.</li><li>Coverage of physics, anatomy, pathology, and image interpretation.</li><li>Free lifetime access to the full thoracic ultrasound textbook.</li></ul>",
+          "<h2>Step 2: Hands-On Training (Nairobi)</h2><ul><li>Supervised volunteer scans.</li><li>Expert demonstrations.</li><li>Case portfolio submission.</li></ul>",
+          "<h2>Step 3: Interventional Ultrasound</h2><p>Participants learn ultrasound-guided procedures as part of the advanced practical component.</p>",
+          "<h2>Step 4: Certification</h2><p>Participants can earn recognition as certified thoracic ultrasound physicians.</p>",
+          "<h2>Fees (Step 1 - Online Theory)</h2><ul><li>Mar 1-Apr 30: $425.</li><li>May 1-Jul 14: $475.</li><li>Jul 15-Jul 31: $502, including a $27 late fee.</li></ul>",
+          "<h2>Hospital Group Offer</h2><p>Hospitals registering five or more people from the same institution receive $50 off per person, based on registration date. Offer valid until July 15, 2025.</p>",
+          "<h2>Inquiries</h2><p>Email: lung.art622@gmail.com<br>WhatsApp: +201102069714<br>PayPal: Angel_rizk@hotmail.com</p>"
+        ]
+      },
+      "pleuroscopy-camp": {
+        title: "Advancing Lung Health: Highlights from Our Two-Day Pleuroscopy Camp",
+        subtitle: "A successful camp supporting better diagnosis and care for patients with pleural disease.",
+        date: "2025",
+        author: "ReSoK Programs",
+        category: "Clinical",
+        icon: "fa-stethoscope",
+        image: "assets/img/Gallery/B5.jpg",
+        imageAlt: "Pleuroscopy camp respiratory procedure team",
+        body: [
+          "<blockquote>The good physician treats the disease; the great physician treats the patient who has the disease. - William Osler</blockquote>",
+          "ReSoK is proud to share highlights from a successful Two-Day Pleuroscopy Camp, an important step forward in the mission to advance lung health and respiratory care.",
+          "The camp brought together a team of skilled specialists dedicated to providing life-changing interventions for patients with pleural diseases. Through minimally invasive pleuroscopy procedures, the team improved diagnostic accuracy and provided timely treatment for conditions such as unexplained pleural effusions and malignancies.",
+          "Over the two days, expert teams worked with dedication to ensure each patient received personalized, high-quality care. Beyond the procedures themselves, the camp represented a broader commitment to early detection, better patient outcomes, and stronger healthcare capacity in the fight against respiratory diseases.",
+          "ReSoK extends deep gratitude to the dedicated medical professionals, support teams, and patients who entrusted the team with their care.",
+          "AstraZeneca, Kenyatta National Hospital, Respiratory Society of Kenya, Johns Hopkins Hospital, Jacqueline Wanjiku Kagima MD, PhD, Christine Argento, Victoria Gonzalez, Andrew Owuor, Joan Kagema, Kevin Kiptoo, Joseph Mutie, and other collaborators helped make this initiative a success.",
+          "Together, we are building a healthier future, one breath at a time."
+        ]
+      },
+      "light-writing-workshop": {
+        title: "Advancing TB Research Capacity in Kenya - LIGHT Partners Spearhead Scientific Writing Workshop",
+        subtitle: "ReSoK and AFIDEP facilitated a scientific manuscript writing workshop in Naivasha.",
+        date: "Jul 2025",
+        author: "LIGHT Consortium",
+        category: "Research",
+        icon: "fa-flask",
+        image: "assets/img/Gallery/B6.jpg",
+        imageAlt: "TB research and scientific writing workshop",
+        body: [
+          "One of the core outputs of the LIGHT consortium is capacity strengthening for individuals, institutions, and multi-stakeholder networks to produce, adapt, translate, and use evidence, and to manage research.",
+          "In line with this, LIGHT partners in Kenya, AFIDEP and the Respiratory Society of Kenya (ReSoK), facilitated a scientific manuscript writing workshop in Naivasha, Kenya from 14-18 July 2025.",
+          "Hosted by ReSoK, the workshop included participants from the Ministry of Health's Division of National Tuberculosis, Leprosy and Lung Disease Program, county government representatives, and key lung health partners including Amref Health Africa, Centre for Health Solutions - Kenya, Clinton Health Access Initiative, Kenya Medical Research Institute, and Population Services Kenya.",
+          "The workshop was officially opened by Aiban Ronoh, Head of Monitoring and Evaluation and Research at NTLD-P, on behalf of the Head of NTLD-P program. He highlighted research as an important focus area and shared NTLD-P's vision of developing a national, inclusive, and demand-driven tuberculosis research agenda.",
+          "Intensified research and innovation is the third pillar of the END TB Strategy. LIGHT supports documentation of research and bridges evidence-policy gaps through evidence-informed decision making.",
+          "As part of streamlining TB and lung health research implementation and dissemination in Kenya, NTLD-P spearheaded the formation of a TB and Lung Health research taskforce in January 2025, where LIGHT partners ReSoK and AFIDEP are committee members.",
+          "Prof. Jeremiah Chakaya, ReSoK's Chief Executive Officer and Programme Team Lead at LIGHT Consortium, gave an overview of LIGHT's research focus on gender and tuberculosis. He emphasized that age- and gender-responsive TB prevention and care policies are needed to accelerate progress toward ending TB.",
+          "Dr Beate Ringwald from the LIGHT Consortium virtually conducted a sensitisation session on publishing qualitative research findings. The interactive session covered reflexivity, trustworthiness of research data, common mistakes in documentation, and practical publishing questions.",
+          "The LIGHT Consortium aims to contribute to real-world change and leave no one affected by TB in sub-Saharan Africa behind."
+        ]
+      },
+      "inhaler-technique": {
+        title: "Inhaler technique: the 60-second checklist",
+        subtitle: "A quick, practical guide for clinicians and educators.",
+        date: "Apr 27, 2026",
+        author: "ReSoK Education",
+        category: "Clinical",
+        icon: "fa-stethoscope",
+        image: "assets/img/Gallery/B6.jpg",
+        imageAlt: "Inhaler education session",
+        body: [
+          "Good inhaler technique is one of the simplest ways to improve symptom control. A quick, structured check can prevent unnecessary step-ups in treatment.",
+          "Try this 60-second checklist during reviews:",
+          "<ul><li>Confirm the device type (MDI, DPI, spacer use).</li><li>Check preparation (shake / load dose).</li><li>Assess breathing pattern and timing.</li><li>Confirm full inhalation and breath-hold.</li><li>Rinse after inhaled steroids when appropriate.</li></ul>",
+          "Need help? Reach out via our contact page for training requests and CME updates."
+        ]
+      },
+      "clean-air": {
+        title: "Clean air and lung health: what communities can do",
+        subtitle: "Small changes that protect lungs across the lifespan.",
+        date: "Apr 20, 2026",
+        author: "Advocacy Desk",
+        category: "Advocacy",
+        icon: "fa-bullhorn",
+        image: "assets/img/Gallery/B4.jpg",
+        imageAlt: "Community health discussion",
+        body: [
+          "Air pollution affects children, adults, and older people, especially those with asthma, COPD, and heart disease.",
+          "Community actions include cleaner cooking options, reducing open burning, and supporting smoke-free environments.",
+          "Clinicians can also advocate for safer workplaces and better air quality monitoring."
+        ]
+      },
+      "membership": {
+        title: "ReSoK membership: apply or renew",
+        subtitle: "Be part of Kenya's respiratory professional community.",
+        date: "Apr 12, 2026",
+        author: "Secretariat",
+        category: "News",
+        icon: "fa-newspaper",
+        image: "assets/img/Gallery/B1.jpg",
+        imageAlt: "Members networking",
+        body: [
+          "ReSoK membership connects you with peers, learning opportunities, and society updates.",
+          "Follow our membership page for the latest requirements and announcements.",
+          "If you need support, contact us at info@resok.org."
+        ]
+      },
+      "cme-webinars": {
+        title: "CME & webinars: what to expect this quarter",
+        subtitle: "Practical updates for clinical teams.",
+        date: "Mar 28, 2026",
+        author: "Programs Team",
+        category: "CME",
+        icon: "fa-chalkboard-teacher",
+        image: "assets/img/Gallery/B2.jpg",
+        imageAlt: "Training session",
+        body: [
+          "ReSoK hosts continuing medical education sessions and webinars covering core respiratory topics.",
+          "We share schedules and joining instructions on our social channels and via the newsletter sign-up on the website.",
+          "Have a topic request? Send us a message through the contact page."
+        ]
+      },
+      "asthma-basics": {
+        title: "Asthma basics: recognizing poor control early",
+        subtitle: "A simple approach to red flags and follow-up.",
+        date: "Mar 14, 2026",
+        author: "Clinical Desk",
+        category: "Clinical",
+        icon: "fa-stethoscope",
+        image: "assets/img/Gallery/B3.jpg",
+        imageAlt: "Clinical discussion",
+        body: [
+          "Early recognition of poor control helps prevent exacerbations and avoidable admissions.",
+          "Consider symptom frequency, activity limitation, reliever use, and recent urgent care visits.",
+          "Always reassess triggers, adherence, and inhaler technique before stepping up therapy."
+        ]
+      },
+      "research-spotlight": {
+        title: "Research spotlight: turning data into better lung health",
+        subtitle: "From evidence to everyday care.",
+        date: "Feb 27, 2026",
+        author: "Research Team",
+        category: "Research",
+        icon: "fa-flask",
+        image: "assets/img/Gallery/B5.jpg",
+        imageAlt: "Research and collaboration",
+        body: [
+          "High-quality data supports better guidelines, smarter programs, and more efficient service delivery.",
+          "Implementation science bridges the gap between what works in trials and what works in real clinics.",
+          "ReSoK supports collaboration and knowledge sharing to strengthen lung health outcomes."
+        ]
+      },
+      "tobacco-control": {
+        title: "Tobacco control: what clinicians can say in 2 minutes",
+        subtitle: "A quick, compassionate script for brief interventions.",
+        date: "Feb 10, 2026",
+        author: "Advocacy Desk",
+        category: "Advocacy",
+        icon: "fa-bullhorn",
+        image: "assets/img/Gallery/B6.jpg",
+        imageAlt: "Health education outreach",
+        body: [
+          "Brief interventions can be effective, especially when repeated over time.",
+          "Ask, advise, and assist: check use, recommend quitting, and connect to local support where available.",
+          "If you run cessation programs, tell us so we can share resources across the community."
+        ]
+      },
+      "partners": {
+        title: "ReSoK partners: working together to strengthen services",
+        subtitle: "Partnerships that support training and quality improvement.",
+        date: "Jan 22, 2026",
+        author: "Partnerships",
+        category: "News",
+        icon: "fa-newspaper",
+        image: "assets/img/Gallery/B7.jpg",
+        imageAlt: "Partners collaboration",
+        body: [
+          "Partnerships help expand diagnostics access, strengthen training, and improve service quality.",
+          "We collaborate with government, facilities, academia, and implementing partners.",
+          "Interested in partnering? Visit the Partners page or contact us directly."
+        ]
+      }
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id") || "inhaler-technique";
+    const post = posts[id] || posts["inhaler-technique"];
+
+    document.title = `${post.title} | ReSoK Blog`;
+    document.getElementById("postTitle").textContent = post.title;
+    document.getElementById("postSubtitle").textContent = post.subtitle;
+    document.getElementById("postHeading").textContent = post.title;
+
+    const img = document.getElementById("postImage");
+    img.src = post.image;
+    img.alt = post.imageAlt || post.title;
+
+    const cat = document.getElementById("postCategory");
+    cat.innerHTML = `<i class="fas ${post.icon}" aria-hidden="true"></i> ${post.category}`;
+
+    document.getElementById("postDate").innerHTML = `<i class="far fa-calendar-alt" aria-hidden="true"></i> ${post.date}`;
+    document.getElementById("postAuthor").innerHTML = `<i class="far fa-user" aria-hidden="true"></i> ${post.author}`;
+
+    const body = document.getElementById("postBody");
+    body.innerHTML = post.body.map((chunk) => chunk.startsWith("<") ? chunk : `<p>${chunk}</p>`).join("");
+
+    const fitSingleLineHeading = (heading) => {
+      if (!heading) return;
+      heading.style.fontSize = "";
+      const startingSize = parseFloat(window.getComputedStyle(heading).fontSize);
+      let size = startingSize;
+      const minSize = heading.matches(".hero h1") ? 18 : 18;
+
+      while (heading.scrollWidth > heading.clientWidth && size > minSize) {
+        size -= 1;
+        heading.style.fontSize = `${size}px`;
+      }
+
+      if (heading.scrollWidth > heading.clientWidth) {
+        const ratio = heading.clientWidth / heading.scrollWidth;
+        heading.style.fontSize = `${Math.max(16, size * ratio)}px`;
+      }
+    };
+
+    const fitAllHeadings = () => {
+      document
+        .querySelectorAll(".hero h1, .content > h2, .content .body h2, .side h3")
+        .forEach(fitSingleLineHeading);
+    };
+
+    fitAllHeadings();
+    window.addEventListener("resize", fitAllHeadings);
+  </script>
+  <script src="assets/js/site-forms.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

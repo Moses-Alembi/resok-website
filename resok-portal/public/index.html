@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ReSoK Members' Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+  <!-- Brand Header -->
+  <div class="brand-header">
+    <div class="brand-wrap">
+      <a href="./" aria-label="ReSoK Home">
+        <img src="assets/img/logo.png" alt="Respiratory Society of Kenya (ReSoK) logo" />
+      </a>
+    </div>
+  </div>
+
+  <!-- Portal Entry Section -->
+  <div class="login-section">
+    <div class="login-container">
+      <div class="login-group portal-entry-copy">
+        <label>Already registered?</label>
+        <p>Sign in to manage your membership, payments, and membership card.</p>
+      </div>
+      <div class="login-group portal-entry-copy">
+        <label>Need help signing in?</label>
+        <a href="forgot-password" class="forgot-password">Reset your password</a>
+      </div>
+      <a class="login-btn" href="login">SIGN IN</a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="page-title">
+      <h2>ReSoK Members' Portal</h2>
+      <p>Welcome to the ReSoK Members' Portal</p>
+    </div>
+
+    <div class="info-bar">
+      Have you registered? If not, create an account below.
+    </div>
+
+    <div class="form-container">
+      <div class="success-message" id="successMsg">
+        <i class="fas fa-check-circle"></i> Registration successful! Please check your email for verification.
+      </div>
+
+      <form id="registrationForm">
+        <!-- Title -->
+        <div class="form-row">
+          <label class="required">Title</label>
+          <select id="title" required>
+            <option value="">--- Select Title ---</option>
+            <option>Prof</option>
+            <option>Dr</option>
+            <option>Mr</option>
+            <option>Mrs</option>
+            <option>Ms</option>
+          </select>
+        </div>
+
+        <!-- First Name -->
+        <div class="form-row">
+          <label class="required">First Name</label>
+          <input type="text" id="firstName" required placeholder="First Name" />
+        </div>
+
+        <!-- Middle Name -->
+        <div class="form-row">
+          <label>Middle Name</label>
+          <input type="text" id="middleName" placeholder="Middle Name" />
+        </div>
+
+        <!-- Surname -->
+        <div class="form-row">
+          <label class="required">Surname</label>
+          <input type="text" id="surname" required placeholder="Surname" />
+        </div>
+
+        <!-- Profession -->
+        <div class="form-row">
+          <label class="required">Profession</label>
+          <input type="text" id="profession" required placeholder="Profession" />
+        </div>
+
+        <!-- Specialization -->
+        <div class="form-row">
+          <label class="required">Specialization</label>
+          <input type="text" id="specialization" required placeholder="Specialization" />
+        </div>
+
+        <!-- Institution -->
+        <div class="form-row">
+          <label class="required">Affiliate Institution / Work Institution</label>
+          <input type="text" id="institution" required placeholder="Institution or workplace" />
+        </div>
+
+        <!-- Country -->
+        <div class="form-row">
+          <label class="required">Country</label>
+          <select id="country" required>
+            <option value="">--- Select Country ---</option>
+            <option selected>KENYA</option>
+            <option>UGANDA</option>
+            <option>TANZANIA</option>
+            <option>ETHIOPIA</option>
+            <option>SOUTH AFRICA</option>
+            <option>UNITED STATES</option>
+            <option>UNITED KINGDOM</option>
+            <!-- Add more countries as needed -->
+          </select>
+        </div>
+
+        <!-- Member Division -->
+        <div class="form-row">
+          <label class="required">Member Division</label>
+          <select id="division" required>
+            <option value="">--- Select Registration Division ---</option>
+            <option>NYERI</option>
+            <option>MACHAKOS</option>
+            <option>KISII</option>
+            <option>KAKAMEGA</option>
+            <option>EMBUNA</option>
+            <option>NAIROBI</option>
+            <option>MERU</option>
+            <option>NANYUKI</option>
+            <option>KITALE</option>
+            <option>THIKA</option>
+            <option>KISUMU</option>
+            <option>COAST</option>
+            <option>ELDORET</option>
+            <option>NAKURU</option>
+            <option>KERICHO</option>
+            <option>GARISSA</option>
+            <option>NYAHURURU</option>
+            <option>DIASPORA</option>
+          </select>
+        </div>
+
+        <!-- Physical Address -->
+        <div class="form-row">
+          <label class="required">Physical Address</label>
+          <input type="text" id="physicalAddress" required placeholder="Physical Address" />
+        </div>
+
+        <!-- County -->
+        <div class="form-row">
+          <label class="required">County</label>
+          <select id="county" required>
+            <option value="">--- Select County ---</option>
+            <option>NAIROBI</option>
+            <option>MOMBASA</option>
+            <option>KWALE</option>
+            <option>KILIFI</option>
+            <option>TANA RIVER</option>
+            <option>LAMU</option>
+            <option>TAITA TAVETA</option>
+            <option>GARISSA</option>
+            <option>WAJIR</option>
+            <option>MANDERA</option>
+            <option>MARSABIT</option>
+            <option>ISIOLO</option>
+            <option>MERU</option>
+            <option>THARAKA</option>
+            <option>EMBU</option>
+            <option>KITUI</option>
+            <option>MACHAKOS</option>
+            <option>MAKUENI</option>
+            <option>NYANDARUA</option>
+            <option>NYERI</option>
+            <option>KIRINYAGA</option>
+            <option>MURANG'A</option>
+            <option>KIAMBU</option>
+            <option>TURKANA</option>
+            <option>WEST POKOT</option>
+            <option>SAMBURU</option>
+            <option>TRANS-NZOIA</option>
+            <option>UASIN GISHU</option>
+            <option>ELGEYO MARAKWET</option>
+            <option>NANDI</option>
+            <option>BARINGO</option>
+            <option>LAIKIPIA</option>
+            <option>NAKURU</option>
+            <option>NAROK</option>
+            <option>KAJIADO</option>
+            <option>KERICHO</option>
+            <option>BOMET</option>
+            <option>KAKAMEGA</option>
+            <option>VIHIGA</option>
+            <option>BUNGOMA</option>
+            <option>BUSIA</option>
+            <option>SIAYA</option>
+            <option>KISUMU</option>
+            <option>HOMA BAY</option>
+            <option>MIGORI</option>
+            <option>KISII</option>
+            <option>NYAMIRA</option>
+            <option>UNKNOWN/DIASPORA</option>
+          </select>
+        </div>
+
+        <!-- Payer Type -->
+        <div class="form-row">
+          <label class="required">Paying As</label>
+          <select id="payerType" required>
+            <option value="">--- Select Payer Type ---</option>
+            <option>Individual</option>
+            <option>Organization</option>
+          </select>
+        </div>
+
+        <!-- Member Category -->
+        <div class="form-row">
+          <label class="required">Membership Category & Annual Subscription Fee</label>
+          <select id="category" required>
+            <option value="">--- Select Membership Category ---</option>
+            <option value="Associate Membership">Associate Membership (for allied HCPs & students): KES 2,000</option>
+            <option value="Ordinary Membership">Ordinary Membership (for individuals): KES 5,000</option>
+            <option value="Benefactor Membership - Bronze">Benefactor Membership - Bronze: KES 20,000</option>
+            <option value="Benefactor Membership - Silver">Benefactor Membership - Silver: KES 30,000</option>
+            <option value="Benefactor Membership - Gold">Benefactor Membership - Gold: KES 50,000</option>
+            <option value="Organization Membership">Organization Membership (for institutions/corporates): KES 50,000</option>
+          </select>
+        </div>
+
+        <!-- ID/Passport Number -->
+        <div class="form-row">
+          <label class="required">ID/Passport Number</label>
+          <div class="id-inline">
+            <input type="text" id="idNumber" required placeholder="ID/Passport Number" />
+            <div class="id-toggle" aria-label="ID type">
+              <label>
+                <input type="radio" name="idType" value="ID" checked />
+                ID Number
+              </label>
+              <label>
+                <input type="radio" name="idType" value="Passport" />
+                Passport
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Address -->
+        <div class="form-row">
+          <label class="required">Email Address</label>
+          <input type="email" id="email" required placeholder="Email" />
+          <div class="error-message" id="emailError">Please enter a valid email address</div>
+        </div>
+
+        <!-- Mobile Phone -->
+        <div class="form-row">
+          <label class="required">Mobile Phone (include Country Code)</label>
+          <input type="tel" id="mobile" required placeholder="Mobile Phone Number (include Country Code)" pattern="^\+[1-9][0-9]{7,14}$" />
+          <div class="error-message" id="mobileError">Enter a valid number with country code (e.g., +254712345678)</div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-row">
+          <label class="required">Set New Password</label>
+          <input type="password" id="password" required placeholder="Password" minlength="8" maxlength="64" />
+        </div>
+
+        <!-- Repeat Password -->
+        <div class="form-row">
+          <label class="required">Repeat Password</label>
+          <input type="password" id="confirmPassword" required placeholder="Repeat Password" />
+          <div class="error-message" id="passwordMatchError">Passwords do not match</div>
+        </div>
+
+        <!-- Password Requirements -->
+        <div class="password-requirements">
+          Password must be between 8 - 64 characters, must contain at least: one <strong>CAPITAL</strong>, one <strong>lowercase</strong> letter and one <strong>NUMBER</strong>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="submit-btn">
+          <i class="fas fa-save"></i> SAVE AND CONTINUE
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand-row">
+          <img src="assets/img/logo.png" alt="ReSoK logo">
+        </div>
+
+        <div class="site-footer-top-social" aria-label="Social links">
+          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+
+        <div class="site-footer-donate">
+          <a href="./">Membership</a>
+        </div>
+      </div>
+
+      <div class="site-footer-mid">
+        <div>
+          <h3 class="site-footer-head">Sign Up For A Newsletter</h3>
+          <p class="site-footer-text">
+            Get membership updates, projects, and announcements directly in your inbox.
+          </p>
+          <form class="site-footer-subscribe" action="#" method="post">
+            <input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address">
+            <button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button>
+          </form>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Society</h4>
+          <div class="site-footer-divider"></div>
+          <ul class="site-footer-list">
+            <li><a href="./">Home</a></li>
+            <li><a href="../../about">About</a></li>
+            <li><a href="./">Membership</a></li>
+            <li><a href="https://www.resok.org/faqs" target="_blank" rel="noopener">FAQs</a></li>
+          </ul>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Get In Touch</h4>
+          <div class="site-footer-divider"></div>
+          <ul class="site-footer-list">
+            <li><a href="../../contact">Contact Us</a></li>
+            <li><a href="../../blog">Blog</a></li>
+            <li><a href="../../contact">Location</a></li>
+          </ul>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Resources</h4>
+          <div class="site-footer-divider"></div>
+          <ul class="site-footer-list">
+            <li><a href="../../projects">Projects</a></li>
+            <li><a href="../../learning">Learning</a></li>
+            <li><a href="https://youtube.com/@respiratorysocietykenya" target="_blank" rel="noopener">YouTube</a></li>
+          </ul>
+        </div>
+
+        <div class="site-footer-col">
+          <h4>Our Gallery</h4>
+          <div class="site-footer-divider"></div>
+          <div class="site-footer-gallery-grid">
+            <img src="assets/img/footer/F1.jpg" alt="Gallery 1" loading="lazy">
+          <img src="assets/img/footer/F2.jpg" alt="Gallery 2" loading="lazy">
+          <img src="assets/img/footer/F3.jpg" alt="Gallery 3" loading="lazy">
+          <img src="assets/img/footer/F4.jpeg" alt="Gallery 4" loading="lazy">
+          <img src="assets/img/footer/F5.png" alt="Gallery 5" loading="lazy">
+          <img src="assets/img/footer/F6.png" alt="Gallery 6" loading="lazy">
+          <img src="assets/img/footer/F7.jpg" alt="Gallery 7" loading="lazy">
+          <img src="assets/img/footer/F8.jpg" alt="Gallery 8" loading="lazy">
+</div>
+        </div>
+      </div>
+
+      <div class="site-footer-bottom">
+        &copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/portal-state.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const membershipLink = document.querySelector('.site-footer-donate a');
+      const state = window.ResokPortal?.getState();
+      if (membershipLink && state?.loggedIn) {
+        membershipLink.href = 'dashboard';
+        membershipLink.textContent = 'My Dashboard';
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+

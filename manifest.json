@@ -1,0 +1,16 @@
+{
+  "name": "Respiratory Society of Kenya (ReSoK)",
+  "short_name": "ReSoK",
+  "description": "Advancing healthy lungs for all people in Kenya and beyond through prevention, research, education, advocacy, multidisciplinary collaboration, and policy advisory.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#bc0b22",
+  "icons": [
+    {
+      "src": "favicon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

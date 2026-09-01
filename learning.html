@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Learning & CME | Respiratory Society of Kenya</title>
+  <meta name="description" content="ReSoK Learning and CME hub for respiratory health courses, webinars, workshops, CPD tracking, and professional development." />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <link rel="canonical" href="https://www.resok.org/learning" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#bc0b22">
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <link rel="shortcut icon" href="favicon.jpg" type="image/jpeg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="image" href="assets/img/pages/learning/L3.jpg" />
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Learning & CME | Respiratory Society of Kenya" />
+  <meta property="og:description" content="ReSoK Learning and CME hub for respiratory health courses, webinars, workshops, CPD tracking, and professional development." />
+  <meta property="og:url" content="https://www.resok.org/learning" />
+  <meta property="og:image" content="https://www.resok.org/assets/img/logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Learning & CME | Respiratory Society of Kenya" />
+  <meta name="twitter:description" content="ReSoK Learning and CME hub for respiratory health courses, webinars, workshops, CPD tracking, and professional development." />
+  <meta name="twitter:image" content="https://www.resok.org/assets/img/logo.png" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--ink:#23313d;--muted:#667085;--bg:#f5f7fa;--white:#fff;--line:#e7ebef;--shadow:0 14px 40px rgba(15,23,42,.10);--heading:'Mulish','Poppins',sans-serif;--body:'Poppins','Segoe UI',sans-serif;--navbar-height:144px}
+    body{font-family:var(--body);background:var(--bg);color:var(--ink);line-height:1.6;padding-top:var(--navbar-height)}
+    a{color:inherit}
+    .navbar{position:fixed;top:0;left:0;width:100%;z-index:1000;background:rgba(255,255,255,.98);border-bottom:1px solid rgba(0,0,0,.08);box-shadow:0 6px 18px rgba(0,0,0,.12);font-family:var(--heading)}
+    .nav-shell{max-width:1200px;margin:0 auto;padding:0 5%}
+    .nav-top{display:flex;align-items:center;justify-content:space-between;min-height:40px;font-size:.88rem;font-weight:700;color:var(--ink);position:relative}
+    .nav-top-left,.nav-top-right{display:flex;align-items:center;gap:26px}
+    .nav-top a{text-decoration:none;transition:color .2s ease}.nav-top a:hover{color:var(--brand-secondary)}
+    .nav-top-item{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+    .nav-top-right a+a{padding-left:14px;border-left:1px solid rgba(0,0,0,.12)}
+    .nav-main{display:grid;grid-template-columns:auto 1fr auto;align-items:center;min-height:104px;column-gap:14px;position:relative}
+    .logo{display:inline-flex;align-items:center}.logo img{height:80px;width:auto;display:block}
+    .nav-menu{display:flex;list-style:none;gap:1.22rem;align-items:center;justify-self:center}
+    .nav-link{text-decoration:none;color:var(--ink);font-weight:800;letter-spacing:.01em;text-transform:uppercase;font-size:.66rem;transition:color .2s ease}
+    .nav-link:hover,.nav-link.is-active{color:var(--brand-secondary)}
+    .nav-cta{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:4px;background:var(--brand-secondary);color:#fff;text-decoration:none;font-weight:800;text-transform:uppercase;font-size:.68rem;letter-spacing:.02em;transition:background .2s ease,transform .2s ease}
+    .nav-cta:hover{background:var(--brand-primary);transform:translateY(-1px)}
+    .hamburger{display:none;background:none;border:0;width:34px;height:28px;cursor:pointer}.hamburger span{display:block;height:3px;background:var(--ink);margin:6px 0;border-radius:99px}
+    .learning-hero{min-height:calc(86vh - var(--navbar-height));display:flex;align-items:flex-end;position:relative;background-image:linear-gradient(rgba(5,15,21,.26),rgba(5,15,21,.66)),url("assets/img/pages/learning/L3.jpg");background-position:center top;background-size:cover;background-repeat:no-repeat;color:#fff}
+    .learning-hero-inner{width:min(1180px,90vw);margin:0 auto;padding:88px 0 68px}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.30);padding:8px 12px;border-radius:999px;font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+    .learning-hero h1{font-family:var(--heading);font-size:clamp(2.3rem,5vw,5.7rem);line-height:.96;max-width:920px;margin:18px 0 16px;font-weight:900;letter-spacing:0}
+    .learning-hero p{max-width:710px;font-size:1.05rem;color:rgba(255,255,255,.88)}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:0 18px;border-radius:4px;text-decoration:none;font-weight:900;font-family:var(--heading);border:1px solid transparent;cursor:pointer}.btn-primary{background:var(--brand-secondary);color:#fff}.btn-primary:hover{background:var(--brand-primary)}.btn-light{background:#fff;color:var(--ink)}.btn-outline{background:transparent;border-color:rgba(255,255,255,.6);color:#fff}
+    .learning-main{background:var(--bg)}
+    .section{padding:76px 0}.section-inner{width:min(1180px,90vw);margin:0 auto}.section-head{display:grid;gap:14px;margin-bottom:26px}.section-kicker{color:var(--brand-secondary);font-weight:900;text-transform:uppercase;font-size:.76rem;letter-spacing:.12em}.section-title{font-family:var(--heading);font-size:clamp(1.45rem,2.25vw,2.28rem);line-height:1.04;margin-top:7px;color:#050b12;text-transform:uppercase;font-weight:900;letter-spacing:0;display:flex;align-items:center;gap:14px;white-space:nowrap}.section-title::before{content:"";width:6px;height:.98em;background:var(--brand-secondary);border-radius:3px;flex:0 0 auto}.section-copy{max-width:720px;color:var(--muted);font-size:.95rem;margin-left:20px}
+    .featured-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:22px;align-items:stretch}.featured-card{background:#fff;border-radius:8px;box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--line)}.featured-media{min-height:330px;background:url("assets/img/pages/learning/L5.png.jpg") center/cover no-repeat;position:relative}.featured-tag{position:absolute;left:18px;top:18px;background:#fff;color:var(--brand-secondary);border-radius:4px;padding:7px 10px;font-size:.76rem;font-weight:900}.featured-body{padding:24px}.featured-body h2{font-family:var(--heading);font-size:1.65rem;line-height:1.15;margin-bottom:10px}.meta-row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:.86rem;margin:14px 0}.meta-row i{color:var(--brand-primary);margin-right:5px}.learning-panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow)}.progress-list{display:grid;gap:12px;margin-top:16px}.progress-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:6px}.progress-item i{width:34px;height:34px;display:grid;place-items:center;background:rgba(0,147,46,.10);color:var(--brand-primary);border-radius:6px}.progress-item strong{display:block;font-size:.95rem}.progress-item span{display:block;color:var(--muted);font-size:.82rem}
+    .video-section{background:#fff}.video-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 38px}.video-card{border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:var(--ink);padding:0}.video-thumb{position:relative;overflow:hidden;border-radius:3px;aspect-ratio:16/9;background:center/cover no-repeat;margin-bottom:24px}.video-thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.02),rgba(0,0,0,.20));transition:background .2s ease}.video-card:hover .video-thumb::after{background:linear-gradient(rgba(0,147,46,.18),rgba(0,0,0,.28))}.play-pill{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.92);color:var(--brand-secondary);box-shadow:0 12px 30px rgba(0,0,0,.18);transition:transform .2s ease,background .2s ease}.play-pill i{margin-left:4px}.video-card:hover .play-pill{transform:translate(-50%,-50%) scale(1.06);background:#fff}.video-card h3{font-family:var(--heading);font-size:1.25rem;line-height:1.15;font-weight:800;letter-spacing:0;margin-bottom:22px;color:#050b12}.video-card p{font-size:.96rem;color:#525866;line-height:1.65}.video-modal{position:fixed;inset:0;background:rgba(5,10,18,.78);z-index:2000;display:none;align-items:center;justify-content:center;padding:22px}.video-modal.active{display:flex}.video-dialog{width:min(860px,94vw);background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 26px 80px rgba(0,0,0,.30)}.video-stage{aspect-ratio:16/9;background:#000;display:block;position:relative;overflow:hidden}.video-stage video{width:100%;height:100%;display:block;object-fit:contain;background:#000}.video-dialog-body{padding:20px}.video-dialog-body h3{font-family:var(--heading);font-size:1.35rem;margin-bottom:6px}.video-dialog-body p{color:var(--muted)}.video-close{position:absolute;top:18px;right:18px;border:0;background:#fff;color:#111;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:18px}
+    .slides-section{background:#f7faf8}.slides-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.slide-card{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.06);text-align:left;cursor:pointer;padding:0;font:inherit;color:var(--ink)}.slide-thumb{position:relative;aspect-ratio:16/9;overflow:hidden;background:center/cover no-repeat}.slide-thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(5,10,18,.10),rgba(5,10,18,.40))}.slide-badge{position:absolute;left:14px;top:14px;z-index:2;background:#fff;color:var(--brand-secondary);border-radius:4px;padding:6px 9px;font-size:.72rem;font-weight:900}.slide-body{padding:18px;display:grid;gap:8px}.slide-body h3{font-family:var(--heading);font-size:1.12rem;line-height:1.2}.slide-body p{color:var(--muted);font-size:.88rem;line-height:1.55}.slide-modal{position:fixed;inset:0;background:rgba(5,10,18,.84);z-index:2100;display:none;align-items:center;justify-content:center;padding:22px}.slide-modal.active{display:flex}.slide-dialog{width:min(1080px,96vw);background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 26px 80px rgba(0,0,0,.30);position:relative}.slide-stage{background:#000;display:grid;place-items:center;max-height:78vh;overflow:hidden}.slide-stage img,.slide-stage iframe{width:100%;max-height:78vh;display:block;object-fit:contain;background:#000;user-select:none;-webkit-user-drag:none;border:0}.slide-stage iframe{display:none;background:#fff}.slide-dialog-body{padding:20px}.slide-dialog-body h3{font-family:var(--heading);font-size:1.35rem;margin-bottom:6px}.slide-dialog-body p{color:var(--muted)}.no-download-hint{font-size:.78rem;color:var(--muted);margin-top:6px}.slide-close{position:absolute;top:18px;right:18px;border:0;background:#fff;color:#111;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:18px}.slide-transcript-note{background:rgba(0,147,46,.08);border:1px solid rgba(0,147,46,.18);color:#1f5a30;border-radius:8px;padding:12px 14px;font-size:.88rem;line-height:1.55;margin-top:10px}.slide-transcript{margin-top:12px;max-height:42vh;overflow:auto;padding-right:4px;display:grid;gap:12px}.slide-entry{background:#f7faf8;border:1px solid var(--line);border-radius:8px;padding:14px 16px}.slide-entry strong{display:block;font-family:var(--heading);font-size:.95rem;margin-bottom:6px;color:#050b12}.slide-entry p{white-space:pre-wrap;line-height:1.6;color:#364152;font-size:.9rem}
+    .past-cme-section{background:#f7faf8}.library-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}.library-search{flex:1;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:0 14px;min-height:48px;box-shadow:0 8px 22px rgba(15,23,42,.04)}.library-search i{color:var(--brand-primary)}.library-search input{border:0;outline:0;width:100%;font:inherit;color:var(--ink);background:transparent}.library-filters{display:flex;gap:8px;flex-wrap:wrap}.filter-chip{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:10px 14px;font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}.filter-chip.active,.filter-chip:hover{background:var(--brand-primary);border-color:var(--brand-primary);color:#fff}.cme-library-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.cme-card{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.06);display:flex;flex-direction:column}.cme-thumb{height:176px;background:center/cover no-repeat;position:relative}.cme-thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.48))}.cme-badge{position:absolute;left:14px;top:14px;z-index:2;background:#fff;color:var(--brand-secondary);border-radius:4px;padding:6px 9px;font-size:.72rem;font-weight:900}.cme-duration{position:absolute;right:14px;bottom:14px;z-index:2;background:rgba(0,0,0,.72);color:#fff;border-radius:4px;padding:5px 8px;font-size:.76rem;font-weight:800}.cme-body{padding:18px;display:flex;flex-direction:column;gap:10px;flex:1}.cme-body h3{font-family:var(--heading);font-size:1.1rem;line-height:1.22}.cme-body p{color:var(--muted);font-size:.86rem}.cme-meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.78rem}.cme-meta i{color:var(--brand-primary);margin-right:5px}.cme-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:12px;border-top:1px solid var(--line)}.watch-btn{border:0;background:var(--brand-secondary);color:#fff;border-radius:4px;min-height:38px;padding:0 12px;font:inherit;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.watch-btn:hover{background:var(--brand-primary)}.cme-points{font-size:.82rem;font-weight:900;color:var(--brand-primary)}
+    .catalog-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.course-card{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.06);display:flex;flex-direction:column;min-height:100%}.course-img{height:164px;background:center/cover no-repeat}.course-body{padding:18px;display:flex;flex-direction:column;gap:10px;flex:1}.course-label{align-self:flex-start;background:rgba(188,11,34,.08);color:var(--brand-secondary);font-size:.72rem;font-weight:900;padding:5px 8px;border-radius:4px;text-transform:uppercase}.course-body h3{font-family:var(--heading);font-size:1.14rem;line-height:1.2}.course-body p{color:var(--muted);font-size:.88rem}.course-foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:10px;border-top:1px solid var(--line);font-size:.83rem;color:var(--muted)}.course-foot strong{color:var(--brand-primary)}
+    .pathways{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.pathway{background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px}.pathway i{font-size:24px;color:var(--brand-primary);margin-bottom:12px}.pathway h3{font-family:var(--heading);font-size:1rem;margin-bottom:7px}.pathway p{font-size:.84rem;color:var(--muted)}
+    .workshop-band{background:#0a2e38;color:#fff}.workshop-band .section-title{color:#fff}.workshop-band .section-copy{color:rgba(255,255,255,.74)}.workshop-band .section-title::before{background:var(--brand-secondary)}.workshop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.workshop-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden}.workshop-card img{width:100%;height:190px;object-fit:cover;display:block}.workshop-card div{padding:16px}.workshop-card h3{font-family:var(--heading);font-size:1.08rem;margin-bottom:6px}.workshop-card p{color:rgba(255,255,255,.74);font-size:.86rem}
+    .cta-strip{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.cta-box{display:flex;align-items:center;justify-content:space-between;gap:22px}.cta-box h2{font-family:var(--heading);font-size:2rem;line-height:1.1}.cta-box p{color:var(--muted);max-width:610px;margin-top:7px}
+    .site-footer{background:#000;color:#fff}.site-footer-inner{max-width:1400px;margin:0 auto;padding:0 3%}.site-footer-top{display:grid;grid-template-columns:auto auto auto;align-items:center;justify-content:center;column-gap:34px;position:relative;color:#0a2e38}.site-footer-top:before{content:"";position:absolute;inset:0;left:calc(50% - 50vw);width:100vw;background:#fff;z-index:0}.site-footer-top>*{position:relative;z-index:1}.site-footer-brand-row{padding:24px 0}.site-footer-brand-row img{height:64px;max-width:min(340px,60vw);object-fit:contain}.site-footer-top-social{display:flex;gap:14px;padding:0 18px;border-left:1px solid rgba(0,0,0,.08);border-right:1px solid rgba(0,0,0,.08)}.site-footer-top-social a{color:#0a2e38}.site-footer-donate a{display:inline-flex;align-items:center;justify-content:center;background:var(--brand-secondary);color:#fff;text-decoration:none;border-radius:4px;height:42px;min-width:110px;font-weight:800}.site-footer-mid{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr 1.35fr;gap:28px;padding:42px 0}.site-footer-head,.site-footer-col h4{font-family:var(--heading);font-size:.98rem}.site-footer-text{font-size:.78rem;color:rgba(255,255,255,.72);margin:14px 0 18px}.site-footer-subscribe{display:flex;max-width:420px}.site-footer-subscribe input{border:0;outline:0;flex:1;background:rgba(255,255,255,.08);color:#fff;padding:14px 16px}.site-footer-subscribe button{border:0;width:56px;background:var(--brand-secondary);color:#fff}.site-footer-divider{width:52px;height:1px;background:rgba(255,255,255,.22);margin:14px 0 18px}.site-footer-list{list-style:none}.site-footer-list li{margin-bottom:8px}.site-footer-list a{color:rgba(255,255,255,.8);text-decoration:none;font-size:.78rem}.site-footer-gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.site-footer-gallery-grid img{width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid rgba(255,255,255,.14)}.site-footer-bottom{text-align:center;padding:18px 0 20px;background:#000;color:#fff;font-size:.8rem;border-top:1px solid rgba(255,255,255,.14)}
+    @media(max-width:980px){:root{--navbar-height:96px}body{padding-top:var(--navbar-height)}.nav-top{display:none}.nav-main{min-height:96px}.logo img{height:64px}.hamburger{display:block;justify-self:end}.nav-menu{position:absolute;top:100%;left:0;right:0;background:#fff;display:none;flex-direction:column;align-items:stretch;gap:0;padding:10px 0;border-top:1px solid var(--line);box-shadow:0 20px 30px rgba(15,23,42,.12)}.nav-menu.active{display:flex}.nav-menu li{border-bottom:1px solid var(--line)}.nav-link,.nav-cta{display:flex;width:100%;height:auto;padding:14px 18px}.featured-grid,.catalog-grid,.workshop-grid,.cta-box{grid-template-columns:1fr;display:grid}.video-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 24px}.library-toolbar{display:grid}.cme-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pathways{grid-template-columns:repeat(2,1fr)}.section-copy{margin-top:10px;margin-left:0}.section-title{font-size:clamp(1.45rem,4.4vw,2.2rem);white-space:normal}.site-footer-top,.site-footer-mid{grid-template-columns:1fr}.site-footer-top-social{justify-content:center;border:0}.site-footer-donate{text-align:center}.site-footer-brand-row{text-align:center}}
+    @media(max-width:620px){.learning-hero{min-height:calc(78vh - var(--navbar-height))}.hero-actions{display:grid}.btn{width:100%}.section-title{gap:10px}.section-title::before{width:5px}.video-grid,.cme-library-grid{grid-template-columns:1fr}.video-thumb{margin-bottom:16px}.video-card h3{margin-bottom:12px}.library-search{min-height:44px}.filter-chip{padding:8px 11px}.pathways{grid-template-columns:1fr}.section{padding:54px 0}.featured-media{min-height:230px}.site-footer-mid{gap:22px}.site-footer-gallery-grid{grid-template-columns:repeat(4,1fr)}}
+  
+/* =============== SHARED ATS-STYLE HEADER OVERRIDE =============== */
+:root { --navbar-height: 90px; }
+.navbar{position:fixed;top:0;left:0;width:100%;z-index:1000;background:#fff;border-top:2px solid #23313d;border-bottom:0;box-shadow:0 4px 14px rgba(0,0,0,.12);font-family:var(--heading, var(--heading-font, 'Mulish','Poppins',sans-serif))}
+.nav-shell{max-width:none!important;margin:0!important;padding:0!important;display:grid!important;grid-template-columns:300px minmax(0,1fr)!important;grid-template-rows:32px 58px!important}
+.nav-top{grid-column:2!important;grid-row:1!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;min-height:32px!important;padding:0 5%!important;background:#070d38!important;color:#fff!important;font-size:.82rem!important;font-weight:700!important;position:relative!important}
+.nav-top-left,.nav-top-right{display:flex!important;align-items:center!important;gap:18px!important}.nav-top-right{margin-left:auto!important}.nav-top a{color:#fff!important;text-decoration:none!important}.nav-top a:hover{color:#dcecff!important}.nav-top-item{display:inline-flex!important;align-items:center!important;gap:8px!important;white-space:nowrap!important}.nav-top-right a+a{padding-left:0!important;border-left:0!important}
+.nav-main{grid-column:2!important;grid-row:2!important;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:58px!important;padding:0 5%!important;background:var(--brand-primary, #00932e)!important;column-gap:24px!important;position:relative!important;border-bottom-left-radius:24px!important;overflow:hidden!important}
+.logo{grid-column:1!important;grid-row:1 / 3!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;padding:0 28px!important;background:#fff!important;box-shadow:none!important}.logo img{width:100%!important;max-width:244px!important;max-height:62px!important;height:auto!important;display:block!important;object-fit:contain!important}
+.nav-menu{display:flex!important;list-style:none!important;gap:clamp(1rem,1.7vw,1.65rem)!important;margin:0!important;padding:0!important;align-items:center!important;justify-self:start!important}.nav-menu li{margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important}.nav-link{display:inline-flex!important;align-items:center!important;width:auto!important;height:auto!important;padding:0!important;text-decoration:none!important;color:#fff!important;font-weight:800!important;letter-spacing:.01em!important;text-transform:none!important;font-size:.9rem!important;text-shadow:none!important}.nav-link:hover,.nav-link.is-active{color:#dcecff!important;box-shadow:none!important}
+.nav-actions{display:flex!important;align-items:center!important;gap:18px!important;margin-left:auto!important;flex-shrink:0!important}.nav-top-action{display:inline-flex!important;align-items:center!important;gap:8px!important;color:#fff!important;font-weight:800!important;text-decoration:none!important;white-space:nowrap!important}.nav-top-action:hover,.nav-top-action:focus{text-decoration:none!important}.nav-top-action i{color:#fff!important}.nav-actions .nav-top-action:nth-child(2) i{color:var(--brand-secondary,#bc0b22)!important}.nav-top-member{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:34px!important;padding:0 18px!important;border-radius:999px!important;background:#fff!important;color:#111f35!important;font-weight:900!important;text-decoration:none!important;box-shadow:0 10px 22px rgba(0,0,0,.16)!important;white-space:nowrap!important}.nav-top-member:hover{color:#111f35!important;filter:brightness(.96);text-decoration:none!important}.hamburger span{background:#fff!important}
+@media(max-width:992px){:root{--navbar-height:90px}.nav-shell{grid-template-columns:240px minmax(0,1fr)!important;grid-template-rows:32px 58px!important}.nav-top{justify-content:flex-end!important;padding:0 16px!important;min-height:32px!important;font-size:.78rem!important}.nav-top-left{width:auto!important;justify-content:flex-end!important;gap:12px!important;flex-wrap:wrap!important}.nav-main{display:flex!important;min-height:58px!important;padding:0 16px!important}.logo img{max-width:196px!important;max-height:54px!important}.nav-actions{gap:12px!important;margin-left:0!important}.hamburger{display:flex!important;margin-left:auto!important}.nav-menu{position:fixed!important;left:-90%!important;top:0!important;bottom:0!important;height:100vh!important;flex-direction:column!important;align-items:stretch!important;background:#e9edf3!important;width:min(84vw,320px)!important;text-align:left!important;transition:left .3s ease!important;box-shadow:12px 0 24px rgba(25,35,50,.18)!important;padding:84px 12px 72px!important;gap:0!important;margin:0!important;z-index:1200!important}.nav-menu.active{left:0!important;display:flex!important}.nav-menu li{margin:0 6px 12px!important;border-radius:12px!important;background:#e9edf3!important;box-shadow:5px 5px 11px rgba(197,205,217,.95),-5px -5px 11px rgba(255,255,255,.95)!important}.nav-link{display:block!important;color:#2f3c4a!important;font-size:1.1rem!important;font-weight:600!important;line-height:1.15!important;padding:14px 16px!important;border-radius:12px!important}.nav-link.is-active,.nav-link:hover{color:#c93b3b!important;box-shadow:inset 4px 4px 9px rgba(197,205,217,.95),inset -4px -4px 9px rgba(255,255,255,.95)!important}}
+@media(max-width:720px){:root{--navbar-height:128px}.nav-shell{grid-template-columns:1fr!important;grid-template-rows:70px 30px 58px!important}.logo{grid-column:1!important;grid-row:1!important}.nav-top{grid-column:1!important;grid-row:2!important;justify-content:center!important}.nav-main{grid-column:1!important;grid-row:3!important}.nav-actions{gap:10px!important}.nav-actions .nav-top-action{font-size:.82rem!important}.nav-top-member{min-height:30px!important;padding:0 12px!important;font-size:.8rem!important}}
+@media(max-width:520px){.nav-top-item:first-child{display:none!important}.nav-actions .nav-top-action{gap:0!important;font-size:0!important}.nav-actions .nav-top-action i{font-size:.95rem!important}.nav-top-member{font-size:.76rem!important}}
+  
+/* =============== MOBILE DRAWER BRANDING OVERRIDE =============== */
+.nav-link i { display: none; }
+.nav-mobile-actions { display: none; }
+@media(max-width:992px){
+  .nav-menu{left:14px!important;top:16px!important;bottom:16px!important;height:auto!important;width:min(82vw,326px)!important;transform:translateX(calc(-100% - 28px))!important;transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .22s ease!important;background:rgba(255,255,255,.96)!important;border:1px solid rgba(225,231,239,.92)!important;border-radius:0 30px 30px 0!important;box-shadow:22px 0 42px rgba(17,31,53,.2)!important;padding:78px 20px 24px!important;gap:4px!important;opacity:0!important;overflow-y:auto!important;overflow-x:visible!important;backdrop-filter:blur(18px)!important;display:flex!important}
+  .nav-menu:before{content:"";position:absolute;top:22px;left:24px;width:188px;height:44px;background:url('assets/img/logo.png') left center / contain no-repeat}
+  .nav-menu:after{content:none}
+  .nav-menu.active{left:14px!important;transform:translateX(0)!important;opacity:1!important;display:flex!important}
+  .nav-menu li{margin:0!important;border-radius:16px!important;background:transparent!important;box-shadow:none!important;position:relative!important;border:0!important}
+  .nav-menu li:last-child{background:transparent!important;box-shadow:none!important;margin-bottom:0!important}
+  .nav-menu .nav-link{display:flex!important;align-items:center!important;gap:16px!important;min-height:48px!important;width:100%!important;color:#607084!important;font-size:.9rem!important;font-weight:800!important;line-height:1.2!important;letter-spacing:0!important;padding:10px 14px!important;border-radius:15px!important;text-shadow:none!important;text-transform:none!important;position:relative!important;box-shadow:none!important;transition:background-color .2s ease,color .2s ease,transform .2s ease,box-shadow .2s ease!important}
+  .navbar.scrolled .nav-menu .nav-link{color:#607084!important}
+  .nav-menu .nav-link i{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:22px!important;min-width:22px!important;color:#b6c1cc!important;font-size:1rem!important}
+  .nav-menu .nav-link:hover{color:#15243a!important;background:rgba(188,11,34,.08)!important;box-shadow:0 10px 24px rgba(188,11,34,.08)!important;transform:translateX(2px)!important}
+  .nav-menu .nav-link.is-active{background:var(--brand-secondary,#bc0b22)!important;color:#fff!important;box-shadow:0 14px 28px rgba(188,11,34,.28)!important;transform:translateX(2px)!important}
+  .navbar.scrolled .nav-menu .nav-link:hover{color:#15243a!important}.navbar.scrolled .nav-menu .nav-link.is-active{color:#fff!important}
+  .nav-menu .nav-link:hover i,.nav-menu .nav-link.is-active i{color:currentColor!important}
+  .nav-menu .nav-link.is-active:before{content:"\f00c";position:absolute;left:-34px;top:50%;width:28px;height:28px;border-radius:50%;transform:translateY(-50%);background:#22c789;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:"Font Awesome 6 Free";font-size:.7rem;font-weight:900;box-shadow:0 10px 20px rgba(34,199,137,.28)}
+  .nav-mobile-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;margin-top:auto!important;padding-top:18px!important}
+  .nav-mobile-actions .mobile-action{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:42px!important;padding:10px 12px!important;border-radius:999px!important;color:#fff!important;font-size:.78rem!important;font-weight:900!important;line-height:1!important;text-decoration:none!important;box-shadow:0 12px 24px rgba(17,31,53,.14)!important}
+  .nav-mobile-actions .mobile-action i{font-size:.86rem!important;color:currentColor!important}.mobile-action-member{grid-column:1 / -1!important;background:#070d38!important}.mobile-action-donate{background:var(--brand-secondary,#bc0b22)!important}.mobile-action-login{background:var(--brand-primary,#00932e)!important}
+  body.mobile-nav-open{overflow:hidden!important}body.mobile-nav-open:before{content:"";position:fixed;inset:0;z-index:990;background:rgba(10,22,38,.46);backdrop-filter:blur(2px)}
+}
+@media(max-width:720px){:root{--navbar-height:72px!important}.nav-shell{grid-template-columns:minmax(0,1fr) 72px!important;grid-template-rows:72px!important}.logo{grid-column:1!important;grid-row:1!important;justify-content:flex-start!important;padding:0 18px!important}.logo img{max-width:188px!important;max-height:52px!important;height:auto!important}.nav-main{grid-column:2!important;grid-row:1!important;min-height:72px!important;justify-content:center!important;padding:0!important;border-bottom-left-radius:0!important;overflow:visible!important}.navbar.scrolled .nav-main{min-height:72px!important}.navbar.scrolled .logo img{max-height:52px!important;height:auto!important}.nav-top,.nav-actions,.nav-icons{display:none!important}.hamburger{display:flex!important;margin:0!important;align-items:center!important;justify-content:center!important;width:72px!important;height:72px!important}.hamburger span{width:28px!important;height:3px!important;border-radius:999px!important;background:#fff!important}}
+@media(max-width:520px){.logo{padding:0 14px!important}.logo img{max-width:176px!important}}
+.hamburger.active span:nth-child(1){transform:rotate(-45deg) translate(-5px,6px)!important}.hamburger.active span:nth-child(2){opacity:0!important}.hamburger.active span:nth-child(3){transform:rotate(45deg) translate(-5px,-6px)!important}
+  
+/* =============== MOBILE HEADER FINAL FIX =============== */
+@media (max-width: 720px) {
+  .navbar {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  .nav-shell {
+    width: 100% !important;
+    max-width: none !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 72px !important;
+    grid-template-rows: 72px !important;
+    align-items: stretch !important;
+    background: #fff !important;
+  }
+  .logo {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    min-width: 0 !important;
+    height: 72px !important;
+    padding: 0 14px !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+  .logo img,
+  .navbar.scrolled .logo img {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: min(176px, calc(100vw - 100px)) !important;
+    max-height: 52px !important;
+    object-fit: contain !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  .nav-main,
+  .navbar.scrolled .nav-main {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 72px !important;
+    min-width: 72px !important;
+    height: 72px !important;
+    min-height: 72px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: var(--brand-primary, #00932e) !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+  .nav-top,
+  .nav-actions,
+  .nav-icons {
+    display: none !important;
+  }
+  .hamburger,
+  .navbar.scrolled .hamburger {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 72px !important;
+    height: 72px !important;
+    min-width: 72px !important;
+    min-height: 72px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    cursor: pointer !important;
+  }
+  .hamburger span,
+  .navbar.scrolled .hamburger span {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 28px !important;
+    height: 3px !important;
+    min-height: 3px !important;
+    margin: 3px 0 !important;
+    border-radius: 999px !important;
+    background: #fff !important;
+    opacity: 1 !important;
+  }
+  .hamburger.active span:nth-child(1) {
+    transform: rotate(-45deg) translate(-5px, 6px) !important;
+  }
+  .hamburger.active span:nth-child(2) {
+    opacity: 0 !important;
+  }
+  .hamburger.active span:nth-child(3) {
+    transform: rotate(45deg) translate(-5px, -6px) !important;
+  }}
+  
+  
+  </style>
+</head>
+<body>
+    <nav class="navbar">
+    <div class="nav-shell">
+      <div class="nav-top">
+        <div class="nav-top-left">
+          <a href="contact.html" class="nav-top-item"><i class="fas fa-question-circle"></i> Ask a Question</a>
+          <a href="mailto:info@resok.org" class="nav-top-item"><i class="far fa-envelope"></i> info@resok.org</a>
+        </div>
+      </div>
+      <div class="nav-main">
+        <ul class="nav-menu" id="navMenu">
+          <li><a href="index.html" class="nav-link"><i class="fas fa-home" aria-hidden="true"></i>Home</a></li>
+          <li><a href="about.html" class="nav-link"><i class="fas fa-user-group" aria-hidden="true"></i>About</a></li>
+          <li><a href="conferences.html" class="nav-link"><i class="fas fa-calendar-check" aria-hidden="true"></i>Conferences</a></li>
+          <li><a href="projects.html" class="nav-link"><i class="fas fa-folder-open" aria-hidden="true"></i>Projects</a></li>
+          <li><a href="workshops-and-training.html" class="nav-link"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
+          <li><a href="sponsors.html" class="nav-link"><i class="fas fa-handshake" aria-hidden="true"></i>Partners</a></li>
+          <li><a href="learning.html" class="nav-link is-active"><i class="fas fa-book-open" aria-hidden="true"></i>Learning</a></li>
+          <li><a href="blog.html" class="nav-link"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
+          <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
+          <li class="nav-mobile-actions">
+            <a href="resok-portal/public/" class="mobile-action mobile-action-member"><i class="fas fa-user-plus" aria-hidden="true"></i>Become a Member</a>
+            <a href="contact.html#donate" class="mobile-action mobile-action-donate"><i class="fas fa-heart" aria-hidden="true"></i>Donate</a>
+            <a href="resok-portal/public/login" class="mobile-action mobile-action-login"><i class="fas fa-user" aria-hidden="true"></i>Login</a>
+          </li>
+        </ul>
+        <div class="nav-actions">
+          <a href="resok-portal/public/login" class="nav-top-action"><i class="fas fa-user" aria-hidden="true"></i> Login</a>
+          <a href="contact.html#donate" class="nav-top-action"><i class="fas fa-heart" aria-hidden="true"></i> Donate</a>
+          <a href="resok-portal/public/" class="nav-top-member">Become a Member</a>
+        </div>
+        <button class="hamburger" type="button" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+      </div>
+      <a href="index.html" class="logo" aria-label="ReSoK Home"><img src="assets/img/logo.png" alt="Respiratory Society of Kenya"></a>
+    </div>
+  </nav>
+
+  <header class="learning-hero">
+    <div class="learning-hero-inner">
+      <span class="eyebrow"><i class="fas fa-graduation-cap"></i> ReSoK Learning & CME</span>
+      <h1>Respiratory training built for clinical practice.</h1>
+      <p>Access webinars, hands-on workshops, CPD-bearing modules, and conference learning pathways supporting the strategic plan’s eLearning and professional development goals.</p>
+      <div class="hero-actions">
+        <a href="resok-portal/public/events" class="btn btn-primary"><i class="fas fa-calendar-check"></i> Browse CMEs</a>
+        <a href="#catalog" class="btn btn-light"><i class="fas fa-book-open"></i> View Courses</a>
+        <a href="resok-portal/public/certificates" class="btn btn-outline"><i class="fas fa-certificate"></i> My Certificates</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="learning-main">
+    <section class="section">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Featured CME</div>
+            <h2 class="section-title">LTBI and TPT updates</h2>
+          </div>
+          <p class="section-copy">A focused session on latent TB infection and tuberculosis preventive therapy, covering policy shifts, diagnostic tools, treatment regimens, and practical approaches for high-risk populations.</p>
+        </div>
+        <div class="featured-grid">
+          <article class="featured-card">
+            <div class="featured-media"><span class="featured-tag">Open for registration</span></div>
+            <div class="featured-body">
+              <h2>Stay at the forefront of TB prevention</h2>
+              <p style="color:var(--muted)">Designed for clinicians, nurses, public health officers, and allied professionals committed to ending TB through better identification and management of LTBI.</p>
+              <div class="meta-row">
+                <span><i class="far fa-clock"></i> 2 hours</span>
+                <span><i class="fas fa-star"></i> CPD eligible</span>
+                <span><i class="fas fa-video"></i> Webinar</span>
+              </div>
+              <a href="resok-portal/public/events" class="btn btn-primary"><i class="fas fa-ticket-alt"></i> Register Now</a>
+            </div>
+          </article>
+          <aside class="learning-panel">
+            <div class="section-kicker">Member learning record</div>
+            <h2 style="font-family:var(--heading);font-size:1.5rem;line-height:1.15;margin-top:8px">Track learning from enrollment to certificate through the member portal.</h2>
+            <div class="progress-list">
+              <div class="progress-item"><i class="fas fa-user-check"></i><div><strong>Register or sign in</strong><span>Use the member portal to keep your CPD profile together.</span></div></div>
+              <div class="progress-item"><i class="fas fa-chalkboard-user"></i><div><strong>Attend learning activities</strong><span>Webinars, workshops, conferences, and online modules.</span></div></div>
+              <div class="progress-item"><i class="fas fa-award"></i><div><strong>Download certificates</strong><span>Completed activities appear in your certificate area.</span></div></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="section video-section" id="asthma-videos">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Video library</div>
+            <h2 class="section-title">Asthma Education Videos</h2>
+          </div>
+          <p class="section-copy">Short patient and provider education videos for asthma awareness, inhaler technique, lived experience, pharmacy care, and health system support.</p>
+        </div>
+        <div class="video-grid">
+          <button class="video-card" type="button" data-video-title="Childhood asthma with Professor Elizabeth Obimbo." data-video-desc="Understanding the early signs, triggers, and best care practices for our little ones. Let's breathe easier, together." data-video-src="assets/img/recordings/Proffessor%20Obimbo%20.mp4">
+            <div class="video-thumb" style="background-image:url('assets/img/pages/learning/prof Obimbo.png')"><span class="play-pill"><i class="fas fa-play"></i></span></div>
+            <h3>Childhood asthma with Professor Elizabeth Obimbo.</h3>
+            <p>Understanding the early signs, triggers, and best care practices for our little ones. Let's breathe easier, together.</p>
+          </button>
+          <button class="video-card" type="button" data-video-title="Uncover the intricacies of asthma with Professor Jeremiah Chakaya" data-video-desc="From triggers to treatment, gain expert insights that empower better breathing." data-video-src="assets/img/recordings/Proffessor%20Chakaya%20.mp4">
+            <div class="video-thumb" style="background-image:url('assets/img/pages/learning/prof chakaya.png')"><span class="play-pill"><i class="fas fa-play"></i></span></div>
+            <h3>Uncover the intricacies of asthma with Professor Jeremiah Chakaya</h3>
+            <p>From triggers to treatment, gain expert insights that empower better breathing.</p>
+          </button>
+          <button class="video-card" type="button" data-video-title="Inhaler Mastery: Your Step-by-Step Visual Guide to MDI Asthma Management." data-video-desc="Because proper technique makes all the difference." data-video-src="assets/img/recordings/John%20Ndungu%20.mp4">
+            <div class="video-thumb" style="background-image:url('assets/img/pages/learning/MDI.png')"><span class="play-pill"><i class="fas fa-play"></i></span></div>
+            <h3>Inhaler Mastery: Your Step-by-Step Visual Guide to MDI Asthma Management.</h3>
+            <p>Because proper technique makes all the difference.</p>
+          </button>
+          <button class="video-card" type="button" data-video-title="Hear from Idah Onyango as she shares her experiences living with asthma." data-video-desc="The challenges, the triumphs, and the hope." data-video-src="assets/img/recordings/Iddah%20Onyango%20.mp4">
+            <div class="video-thumb" style="background-image:url('assets/img/pages/learning/Onyango.png')"><span class="play-pill"><i class="fas fa-play"></i></span></div>
+            <h3>Hear from Idah Onyango as she shares her experiences living with asthma.</h3>
+            <p>The challenges, the triumphs, and the hope.</p>
+          </button>
+          <button class="video-card" type="button" data-video-title="The Role of Pharmacists in Health Care" data-video-desc="Discover how pharmacists are key players in patient care, from medication management to promoting overall wellness." data-video-src="assets/img/recordings/Dr%20Michael%20Mungoma%20.mp4">
+            <div class="video-thumb" style="background-image:url('assets/img/pages/learning/pharmacist.png')"><span class="play-pill"><i class="fas fa-play"></i></span></div>
+            <h3>The Role of Pharmacists in Health Care</h3>
+            <p>Discover how pharmacists are key players in patient care, from medication management to promoting overall wellness.</p>
+          </button>
+          <button class="video-card" type="button" data-video-title="A Health System Approach to Asthma Care." data-video-desc="Learn how integrated care, from diagnosis to management, ensures better outcomes for those living with asthma." data-video-src="assets/img/recordings/Final%20long%20video%20.mp4">
+            <div class="video-thumb" style="background-image:linear-gradient(rgba(0,147,46,.46),rgba(0,147,46,.46)),url('assets/img/pages/learning/L5.png.jpg')"><span class="play-pill"><i class="fas fa-play"></i></span></div>
+            <h3>A Health System Approach to Asthma Care.</h3>
+            <p>Learn how integrated care, from diagnosis to management, ensures better outcomes for those living with asthma.</p>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section slides-section" id="slides">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Slide library</div>
+            <h2 class="section-title">Presentation slides</h2>
+          </div>
+          <p class="section-copy">Preview the slide decks inside the page. Download controls are not exposed here, and we can harden access later when you deploy.</p>
+        </div>
+        <div class="slides-grid" id="slidesGrid"></div>
+      </div>
+    </section>
+
+    <section class="section past-cme-section" id="past-cmes">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Recorded learning archive</div>
+            <h2 class="section-title">Past CMEs Library</h2>
+          </div>
+          <p class="section-copy">A replay library for recorded ReSoK CMEs, webinars, and conference teaching sessions. These cards are ready for YouTube links when the recordings are uploaded.</p>
+        </div>
+        <div class="library-toolbar">
+          <label class="library-search" for="cmeSearch">
+            <i class="fas fa-search"></i>
+            <input id="cmeSearch" type="search" placeholder="Search past CMEs by title, topic, or speaker">
+          </label>
+          <div class="library-filters" aria-label="Past CME filters">
+            <button class="filter-chip active" type="button" data-cme-filter="all">All</button>
+            <button class="filter-chip" type="button" data-cme-filter="asthma">Asthma</button>
+            <button class="filter-chip" type="button" data-cme-filter="tb">TB</button>
+            <button class="filter-chip" type="button" data-cme-filter="procedures">Procedures</button>
+            <button class="filter-chip" type="button" data-cme-filter="systems">Systems</button>
+          </div>
+        </div>
+        <div class="cme-library-grid" id="cmeLibrary">
+          <article class="cme-card" data-cme-topic="asthma" data-cme-search="asthma management guidelines pediatric adult care">
+            <div class="cme-thumb" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"><span class="cme-badge">Asthma</span><span class="cme-duration">1h 12m</span></div>
+            <div class="cme-body"><h3>Asthma Management Guidelines Update</h3><p>Recorded CME covering current approaches to asthma diagnosis, control assessment, treatment escalation, and patient education.</p><div class="cme-meta"><span><i class="far fa-calendar"></i> Mar 2026</span><span><i class="fas fa-user-md"></i> ReSoK Faculty</span></div><div class="cme-actions"><button class="watch-btn" type="button" data-video-title="Asthma Management Guidelines Update" data-video-desc="This recorded CME will link to the ReSoK YouTube replay once available."><i class="fas fa-play"></i> Watch Replay</button><span class="cme-points">2 CPD</span></div></div>
+          </article>
+          <article class="cme-card" data-cme-topic="tb" data-cme-search="ltbi tpt tuberculosis preventive therapy tb updates">
+            <div class="cme-thumb" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"><span class="cme-badge">TB</span><span class="cme-duration">58m</span></div>
+            <div class="cme-body"><h3>LTBI and TPT Updates</h3><p>Replay of practical updates on latent TB infection, tuberculosis preventive therapy, diagnostics, and implementation for high-risk groups.</p><div class="cme-meta"><span><i class="far fa-calendar"></i> Feb 2026</span><span><i class="fas fa-user-md"></i> TB Faculty</span></div><div class="cme-actions"><button class="watch-btn" type="button" data-video-title="LTBI and TPT Updates" data-video-desc="This recorded CME will link to the ReSoK YouTube replay once available."><i class="fas fa-play"></i> Watch Replay</button><span class="cme-points">2 CPD</span></div></div>
+          </article>
+          <article class="cme-card" data-cme-topic="procedures" data-cme-search="pleural bronchoscopy ultrasound procedure workshop">
+            <div class="cme-thumb" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"><span class="cme-badge">Procedures</span><span class="cme-duration">1h 34m</span></div>
+            <div class="cme-body"><h3>Pleural and Bronchoscopy Case Review</h3><p>Recorded faculty discussion on pleural procedures, bronchoscopy workflow, patient selection, and clinical decision-making.</p><div class="cme-meta"><span><i class="far fa-calendar"></i> Jan 2026</span><span><i class="fas fa-user-md"></i> Workshop Faculty</span></div><div class="cme-actions"><button class="watch-btn" type="button" data-video-title="Pleural and Bronchoscopy Case Review" data-video-desc="This recorded CME will link to the ReSoK YouTube replay once available."><i class="fas fa-play"></i> Watch Replay</button><span class="cme-points">3 CPD</span></div></div>
+          </article>
+          <article class="cme-card" data-cme-topic="systems" data-cme-search="health system integrated care asthma diagnosis management">
+            <div class="cme-thumb" style="background-image:linear-gradient(rgba(0,147,46,.44),rgba(0,147,46,.44)),url('assets/img/pages/learning/L5.png.jpg')"><span class="cme-badge">Systems</span><span class="cme-duration">46m</span></div>
+            <div class="cme-body"><h3>Health System Approach to Asthma Care</h3><p>A recorded discussion on integrated asthma care, referral pathways, medicines access, and continuity from diagnosis to follow-up.</p><div class="cme-meta"><span><i class="far fa-calendar"></i> Dec 2025</span><span><i class="fas fa-hospital"></i> Systems Panel</span></div><div class="cme-actions"><button class="watch-btn" type="button" data-video-title="Health System Approach to Asthma Care" data-video-desc="This recorded CME will link to the ReSoK YouTube replay once available."><i class="fas fa-play"></i> Watch Replay</button><span class="cme-points">1 CPD</span></div></div>
+          </article>
+          <article class="cme-card" data-cme-topic="asthma" data-cme-search="inhaler technique mdi asthma pharmacist medication">
+            <div class="cme-thumb" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"><span class="cme-badge">Asthma</span><span class="cme-duration">39m</span></div>
+            <div class="cme-body"><h3>Inhaler Technique and Medicines Counseling</h3><p>Replay focused on MDI technique, patient counseling, adherence checks, and the pharmacy role in respiratory care.</p><div class="cme-meta"><span><i class="far fa-calendar"></i> Nov 2025</span><span><i class="fas fa-prescription-bottle-medical"></i> Pharmacy Session</span></div><div class="cme-actions"><button class="watch-btn" type="button" data-video-title="Inhaler Technique and Medicines Counseling" data-video-desc="This recorded CME will link to the ReSoK YouTube replay once available."><i class="fas fa-play"></i> Watch Replay</button><span class="cme-points">1 CPD</span></div></div>
+          </article>
+          <article class="cme-card" data-cme-topic="tb" data-cme-search="post tb lung disease pulmonary rehabilitation chronic respiratory symptoms">
+            <div class="cme-thumb" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"><span class="cme-badge">TB</span><span class="cme-duration">1h 05m</span></div>
+            <div class="cme-body"><h3>Post-TB Lung Disease and Rehabilitation</h3><p>Recorded CME on post-TB disability, chronic respiratory symptoms, pulmonary rehabilitation, and long-term support.</p><div class="cme-meta"><span><i class="far fa-calendar"></i> Oct 2025</span><span><i class="fas fa-lungs"></i> PTLD Faculty</span></div><div class="cme-actions"><button class="watch-btn" type="button" data-video-title="Post-TB Lung Disease and Rehabilitation" data-video-desc="This recorded CME will link to the ReSoK YouTube replay once available."><i class="fas fa-play"></i> Watch Replay</button><span class="cme-points">2 CPD</span></div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="catalog" style="padding-top:0">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Course catalog</div>
+            <h2 class="section-title">Core respiratory learning pathways</h2>
+          </div>
+          <p class="section-copy">A practical catalog for repeated professional development, built around the society's focus on education, training, research, and implementation support.</p>
+        </div>
+        <div class="catalog-grid">
+          <article class="course-card">
+            <div class="course-img" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"></div>
+            <div class="course-body"><span class="course-label">TB & lung health</span><h3>TB prevention, diagnosis, and integrated care</h3><p>Guideline updates, prevention therapy, screening, referral, and chronic lung disease integration.</p><div class="course-foot"><span>Online + CME</span><strong>6 CPD</strong></div></div>
+          </article>
+          <article class="course-card">
+            <div class="course-img" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"></div>
+            <div class="course-body"><span class="course-label">Procedures</span><h3>Pleural and advanced bronchoscopy skills</h3><p>Case-based preparation for hands-on workshops in bronchoscopy, pleural care, and ultrasound-assisted practice.</p><div class="course-foot"><span>Workshop</span><strong>12 CPD</strong></div></div>
+          </article>
+          <article class="course-card">
+            <div class="course-img" style="background-image:url('assets/img/pages/learning/L5.png.jpg')"></div>
+            <div class="course-body"><span class="course-label">Asthma & COPD</span><h3>Chronic respiratory disease management</h3><p>Approaches for diagnosis, inhaler technique, exacerbation prevention, rehabilitation, and follow-up.</p><div class="course-foot"><span>Module series</span><strong>8 CPD</strong></div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0">
+      <div class="section-inner">
+        <div class="pathways">
+          <div class="pathway"><i class="fas fa-lungs"></i><h3>Clinical Updates</h3><p>Short learning blocks for new recommendations, tools, and treatment pathways.</p></div>
+          <div class="pathway"><i class="fas fa-microscope"></i><h3>Research Skills</h3><p>Scientific writing, abstracts, publication, data use, and implementation learning.</p></div>
+          <div class="pathway"><i class="fas fa-people-group"></i><h3>Multidisciplinary Care</h3><p>Learning for clinicians, nurses, pharmacists, clinical officers, and public health teams.</p></div>
+          <div class="pathway"><i class="fas fa-certificate"></i><h3>CPD Records</h3><p>Member certificates and learning records connect to the ReSoK portal workflow.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section workshop-band">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker" style="color:#9be7b2">Workshops & training</div>
+            <h2 class="section-title">Hands-on respiratory practice</h2>
+          </div>
+          <p class="section-copy">From spirometry to thoracic ultrasound and bronchoscopy, ReSoK learning supports practical skill development alongside conferences and webinars.</p>
+        </div>
+        <div class="workshop-grid">
+          <article class="workshop-card"><img src="assets/img/pages/learning/L5.png.jpg" alt="Bronchoscopy workshop"><div><h3>Bronchoscopy workshops</h3><p>Structured skills sessions for procedural confidence and patient-centered care.</p></div></article>
+          <article class="workshop-card"><img src="assets/img/pages/learning/L5.png.jpg" alt="Clinical training workshop"><div><h3>Pleural and ultrasound training</h3><p>Practical respiratory imaging and pleural care learning for multidisciplinary teams.</p></div></article>
+          <article class="workshop-card"><img src="assets/img/pages/learning/L5.png.jpg" alt="TB learning session"><div><h3>TB symposium learning</h3><p>Updates on TB prevention, diagnosis, treatment, and post-TB lung health.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section cta-strip">
+      <div class="section-inner cta-box">
+        <div>
+          <div class="section-kicker">Ready to continue?</div>
+          <h2>Use the member portal to register, earn CPD, and download certificates.</h2>
+          <p>Learning activity registration and certificates are connected to the membership flow we are building.</p>
+        </div>
+        <a href="resok-portal/public/" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Open Member Portal</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand-row"><img src="assets/img/logo.png" alt="ReSoK logo"></div>
+      <div class="site-footer-top-social" aria-label="Social links">
+        <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+        <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+        <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+        <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+        <a href="https://www.instagram.com/respiratorysocietyofkenya" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+      </div><div class="site-footer-donate"><a href="resok-portal/public/">Membership</a></div>
+      </div>
+      <div class="site-footer-mid">
+        <div>
+          <h3 class="site-footer-head">Sign Up For A Newsletter</h3>
+          <p class="site-footer-text">Get updates on CMEs, webinars, projects, and announcements directly in your inbox.</p>
+          <form class="site-footer-subscribe" action="mailto:info@resok.org?subject=ReSoK%20Newsletter%20Signup" method="post" enctype="text/plain"><input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address"><button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button></form>
+        </div>
+        <div class="site-footer-col"><h4>Society</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="resok-portal/public/">Membership</a></li><li><a href="learning.html">Learning</a></li></ul></div>
+        <div class="site-footer-col"><h4>Get In Touch</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="contact.html">Contact Us</a></li><li><a href="blog.html">Blog</a></li><li><a href="contact.html">Location</a></li></ul></div>
+        <div class="site-footer-col"><h4>Resources</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="projects.html">Projects</a></li><li><a href="workshops-and-training.html">Workshops</a></li><li><a href="learning.html">Learning</a></li></ul></div>
+        <div class="site-footer-col"><h4>Our Gallery</h4><div class="site-footer-divider"></div><div class="site-footer-gallery-grid">
+<img src="assets/img/footer/F1.jpg" alt="Gallery 1" loading="lazy">
+<img src="assets/img/footer/F2.jpg" alt="Gallery 2" loading="lazy">
+<img src="assets/img/footer/F3.jpg" alt="Gallery 3" loading="lazy">
+<img src="assets/img/footer/F4.jpeg" alt="Gallery 4" loading="lazy">
+<img src="assets/img/footer/F5.png" alt="Gallery 5" loading="lazy">
+<img src="assets/img/footer/F6.png" alt="Gallery 6" loading="lazy">
+<img src="assets/img/footer/F7.jpg" alt="Gallery 7" loading="lazy">
+<img src="assets/img/footer/F8.jpg" alt="Gallery 8" loading="lazy">
+</div></div>
+      </div>
+      <div class="site-footer-bottom">&copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT</div>
+    </div>
+  </footer>
+  <div class="video-modal" id="videoModal" aria-hidden="true">
+    <button class="video-close" type="button" id="videoClose" aria-label="Close video"><i class="fas fa-times"></i></button>
+    <div class="video-dialog" role="dialog" aria-modal="true" aria-labelledby="videoModalTitle">
+      <div class="video-stage">
+        <video id="videoPlayer" controls playsinline preload="metadata" poster="assets/img/pages/learning/L5.png.jpg"></video>
+      </div>
+      <div class="video-dialog-body">
+        <h3 id="videoModalTitle">Asthma Education Video</h3>
+        <p id="videoModalDesc">Choose a video to start playback.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-modal" id="slideModal" aria-hidden="true">
+    <button class="slide-close" type="button" id="slideClose" aria-label="Close slides"><i class="fas fa-times"></i></button>
+    <div class="slide-dialog" role="dialog" aria-modal="true" aria-labelledby="slideModalTitle">
+      <div class="slide-stage">
+        <img id="slidePreviewImage" src="assets/img/slides/previews/deck-cover.svg" alt="Slide preview" draggable="false" oncontextmenu="return false;">
+        <iframe id="slidePreviewFrame" title="Slide preview" loading="lazy" hidden></iframe>
+      </div>
+      <div class="slide-dialog-body">
+        <h3 id="slideModalTitle">Slide deck</h3>
+        <p id="slideModalDesc">Preview-only slides open here.</p>
+        <div class="slide-transcript-note" id="slideTranscriptNote">Click a slide card to read the deck content below.</div>
+        <div class="slide-transcript" id="slideTranscript" aria-label="Slide transcript"></div>
+        <div class="no-download-hint">Preview only. Download controls are not exposed in the UI.</div>
+      </div>
+    </div>
+  </div>
+  <script src="assets/js/slides-manifest.js"></script>
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const navMenu = document.getElementById('navMenu');
+    if (hamburger && navMenu) {
+      hamburger.addEventListener('click', () => navMenu.classList.toggle('active'));
+      document.querySelectorAll('.nav-link').forEach((link) => link.addEventListener('click', () => navMenu.classList.remove('active')));
+    }
+    const videoModal = document.getElementById('videoModal');
+    const videoClose = document.getElementById('videoClose');
+    const videoTitle = document.getElementById('videoModalTitle');
+    const videoDesc = document.getElementById('videoModalDesc');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const slideModal = document.getElementById('slideModal');
+    const slideClose = document.getElementById('slideClose');
+    const slidePreviewImage = document.getElementById('slidePreviewImage');
+    const slidePreviewFrame = document.getElementById('slidePreviewFrame');
+    const slideTitle = document.getElementById('slideModalTitle');
+    const slideDesc = document.getElementById('slideModalDesc');
+    const slideTranscript = document.getElementById('slideTranscript');
+    const slideTranscriptNote = document.getElementById('slideTranscriptNote');
+    const slidesGrid = document.getElementById('slidesGrid');
+    const slideDecks = Array.isArray(window.SLIDE_DECKS) ? window.SLIDE_DECKS : [];
+    if (slidesGrid) {
+      slidesGrid.replaceChildren();
+      slideDecks.forEach((deck) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'slide-card';
+        card.dataset.slideTitle = deck.title;
+        card.dataset.slideDesc = `Preview of ${deck.title}`;
+        card.dataset.slideSrc = deck.src;
+        card.dataset.slideThumb = deck.thumb;
+        card.dataset.slideMode = deck.previewMode;
+
+        const thumb = document.createElement('div');
+        thumb.className = 'slide-thumb';
+        thumb.style.backgroundImage = `url('${deck.thumb}')`;
+
+        const badge = document.createElement('span');
+        badge.className = 'slide-badge';
+        badge.textContent = deck.type.toUpperCase();
+        thumb.appendChild(badge);
+
+        const body = document.createElement('div');
+        body.className = 'slide-body';
+
+        const title = document.createElement('h3');
+        title.textContent = deck.title;
+
+        const copy = document.createElement('p');
+        copy.textContent = 'Tap to preview this deck inside the page.';
+
+        body.appendChild(title);
+        body.appendChild(copy);
+        card.appendChild(thumb);
+        card.appendChild(body);
+        slidesGrid.appendChild(card);
+      });
+    }
+
+    document.querySelectorAll('.video-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        videoTitle.textContent = card.dataset.videoTitle;
+        videoDesc.textContent = card.dataset.videoDesc;
+        if (videoPlayer) {
+          videoPlayer.src = card.dataset.videoSrc;
+          videoPlayer.load();
+          videoPlayer.play().catch(() => {});
+        }
+        videoModal.classList.add('active');
+        videoModal.setAttribute('aria-hidden', 'false');
+      });
+    });
+    document.querySelectorAll('.watch-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        videoTitle.textContent = button.dataset.videoTitle;
+        videoDesc.textContent = button.dataset.videoDesc;
+        videoModal.classList.add('active');
+        videoModal.setAttribute('aria-hidden', 'false');
+      });
+    });
+    document.querySelectorAll('.slide-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        slideTitle.textContent = card.dataset.slideTitle;
+        slideDesc.textContent = card.dataset.slideDesc;
+        const mode = card.dataset.slideMode || 'image';
+        const thumb = card.dataset.slideThumb || 'assets/img/slides/previews/deck-cover.svg';
+        const src = card.dataset.slideSrc || '';
+        const deck = slideDecks.find((item) => item.title === card.dataset.slideTitle);
+        slideTranscript.replaceChildren();
+        if (deck?.slides && deck.slides.length) {
+          slideTranscriptNote.textContent = 'Reading mode: scroll through the extracted slide text below.';
+          deck.slides.forEach((slide) => {
+            const entry = document.createElement('article');
+            entry.className = 'slide-entry';
+            const heading = document.createElement('strong');
+            heading.textContent = `Slide ${slide.number}`;
+            const body = document.createElement('p');
+            body.textContent = slide.text || 'No extracted text found for this slide.';
+            entry.appendChild(heading);
+            entry.appendChild(body);
+            slideTranscript.appendChild(entry);
+          });
+        } else if (mode === 'pdf') {
+          slideTranscriptNote.textContent = 'PDF preview: use the document pane above to read the deck.';
+        } else {
+          slideTranscriptNote.textContent = 'No transcript was extracted for this deck yet.';
+        }
+        if (mode === 'pdf') {
+          slidePreviewImage.hidden = true;
+          slidePreviewFrame.hidden = false;
+          slidePreviewFrame.src = `${encodeURI(src)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+        } else {
+          slidePreviewFrame.hidden = true;
+          slidePreviewFrame.src = 'about:blank';
+          slidePreviewImage.hidden = false;
+          slidePreviewImage.src = encodeURI(thumb);
+        }
+        slideModal.classList.add('active');
+        slideModal.setAttribute('aria-hidden', 'false');
+      });
+    });
+    const cmeSearch = document.getElementById('cmeSearch');
+    const cmeCards = Array.from(document.querySelectorAll('.cme-card'));
+    const cmeFilters = document.querySelectorAll('[data-cme-filter]');
+    let activeCmeFilter = 'all';
+    function applyCmeFilters() {
+      const query = (cmeSearch?.value || '').trim().toLowerCase();
+      cmeCards.forEach((card) => {
+        const matchesFilter = activeCmeFilter === 'all' || card.dataset.cmeTopic === activeCmeFilter;
+        const matchesSearch = !query || card.dataset.cmeSearch.includes(query) || card.textContent.toLowerCase().includes(query);
+        card.style.display = matchesFilter && matchesSearch ? '' : 'none';
+      });
+    }
+    cmeSearch?.addEventListener('input', applyCmeFilters);
+    cmeFilters.forEach((filter) => {
+      filter.addEventListener('click', () => {
+        cmeFilters.forEach((item) => item.classList.remove('active'));
+        filter.classList.add('active');
+        activeCmeFilter = filter.dataset.cmeFilter;
+        applyCmeFilters();
+      });
+    });
+    function closeVideoModal() {
+      if (videoPlayer) {
+        videoPlayer.pause();
+        videoPlayer.removeAttribute('src');
+        videoPlayer.load();
+      }
+      videoModal.classList.remove('active');
+      videoModal.setAttribute('aria-hidden', 'true');
+    }
+    function closeSlideModal() {
+      slidePreviewFrame.src = 'about:blank';
+      slideTranscript.replaceChildren();
+      slideModal.classList.remove('active');
+      slideModal.setAttribute('aria-hidden', 'true');
+    }
+    videoClose.addEventListener('click', closeVideoModal);
+    videoModal.addEventListener('click', (event) => {
+      if (event.target === videoModal) closeVideoModal();
+    });
+    slideClose.addEventListener('click', closeSlideModal);
+    slideModal.addEventListener('click', (event) => {
+      if (event.target === slideModal) closeSlideModal();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeVideoModal();
+      if (event.key === 'Escape') closeSlideModal();
+    });
+  </script>
+  <script>
+    /* MOBILE DRAWER MENU SCRIPT */
+    (() => {
+      const hamburger = document.getElementById('hamburger');
+      const navMenu = document.getElementById('navMenu');
+      if (!hamburger || !navMenu) return;
+
+      const closeMobileNav = () => {
+        hamburger.classList.remove('active');
+        navMenu.classList.remove('active');
+        document.body.classList.remove('mobile-nav-open');
+      };
+
+      const openMobileNav = () => {
+        hamburger.classList.add('active');
+        navMenu.classList.add('active');
+        document.body.classList.add('mobile-nav-open');
+      };
+
+      document.addEventListener('click', (event) => {
+        if (hamburger.contains(event.target)) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (navMenu.classList.contains('active')) closeMobileNav();
+          else openMobileNav();
+          return;
+        }
+        if (!navMenu.classList.contains('active')) return;
+        if (navMenu.contains(event.target)) return;
+        closeMobileNav();
+      }, true);
+
+      navMenu.querySelectorAll('.nav-link, .mobile-action').forEach((link) => {
+        link.addEventListener('click', closeMobileNav);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeMobileNav();
+      });
+    })();
+  </script>
+  <script src="assets/js/site-forms.js" defer></script>
+</body>
+</html>
+
+
+
+
+
+
+

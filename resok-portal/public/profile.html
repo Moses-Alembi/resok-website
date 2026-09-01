@@ -1,0 +1,152 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile - ReSoK Members' Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#253141;--muted:#667085;--bg:#f5f7fa;--card:#fff;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);--radius:8px}
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text-dark)}a{text-decoration:none;color:inherit}
+    .topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(15,23,42,.03)}.topbar-inner{max-width:1180px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-weight:700}.brand img{height:42px}.user-chip{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--brand-primary);color:#fff;display:grid;place-items:center;font-weight:800}
+    .layout{max-width:1180px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:220px 1fr;gap:22px}.sidebar{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;align-self:start;position:sticky;top:94px}.sidebar a{display:flex;align-items:center;gap:10px;padding:12px;border-radius:6px;color:#475467;font-weight:600;font-size:14px}.sidebar a.active,.sidebar a:hover{background:rgba(0,147,46,.08);color:var(--brand-primary)}.sidebar .logout{color:var(--brand-secondary)}.nav-section{padding:14px 12px 6px;color:#d39b09;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}.profile-head{display:flex;gap:18px;align-items:center;margin-bottom:24px}.profile-avatar{width:86px;height:86px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:var(--shadow)}.profile-head h1{font-size:24px;margin-bottom:5px}.profile-head p{color:var(--muted)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.field{display:grid;gap:7px}.field label{font-weight:800;font-size:14px}.field input,.field select{width:100%;border:1px solid #d0d5dd;border-radius:6px;padding:12px;font-size:15px;background:#fff}.field input[readonly]{background:#f2f4f7;color:#667085}.field input:focus,.field select:focus{outline:3px solid rgba(0,147,46,.12);border-color:var(--brand-primary)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.btn{border:0;border-radius:6px;padding:12px 16px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.btn-primary{background:var(--brand-primary);color:#fff}.btn-secondary{background:#eef2f7;color:#344054}.notice{display:none;margin-bottom:18px;border-radius:6px;padding:12px 14px;font-size:14px}.notice.success{display:block;background:#eaf7ee;color:#166534;border:1px solid #bbebc8}.notice.error{display:block;background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow:auto}.sidebar a{white-space:nowrap}.nav-section{display:none}}@media(max-width:640px){.brand span,.user-name{display:none}.layout{padding:16px 14px}.panel{padding:18px}.form-grid{grid-template-columns:1fr}.profile-head{align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="dashboard" class="brand"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <div class="user-chip"><div class="user-avatar">RM</div><span class="user-name">Member</span></div>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <a href="dashboard"><i class="fas fa-home"></i> Dashboard</a>
+      <a href="profile" class="active"><i class="fas fa-user"></i> My Profile</a>
+      <a href="payment"><i class="fas fa-credit-card"></i> Payment Proof</a>
+      <a href="card"><i class="fas fa-id-card"></i> Membership Card</a>
+      <div class="nav-section">Financials</div>
+      <a href="financials"><i class="fas fa-file-invoice-dollar"></i> Fee Statement</a>
+      <a href="financials#receipts"><i class="fas fa-receipt"></i> Receipts</a>
+      <a href="#" class="logout" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </aside>
+
+    <main>
+      <section class="panel">
+        <div class="profile-head">
+          <img class="profile-avatar" id="profileAvatar" src="" alt="Profile" />
+          <div>
+            <h1 id="profileName">Member Profile</h1>
+            <p id="profileMeta">Membership ID: Pending</p>
+          </div>
+        </div>
+
+        <div id="profileNotice" class="notice"></div>
+        <form id="profileForm">
+          <div class="form-grid">
+            <div class="field"><label for="title">Title</label><input id="title" name="title" /></div>
+            <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" readonly /></div>
+            <div class="field"><label for="firstName">First Name</label><input id="firstName" name="firstName" required /></div>
+            <div class="field"><label for="middleName">Middle Name</label><input id="middleName" name="middleName" /></div>
+            <div class="field"><label for="surname">Surname</label><input id="surname" name="surname" required /></div>
+            <div class="field"><label for="profession">Profession</label><input id="profession" name="profession" /></div>
+            <div class="field"><label for="specialization">Specialization</label><input id="specialization" name="specialization" /></div>
+            <div class="field"><label for="institution">Affiliate Institution / Work Institution</label><input id="institution" name="institution" /></div>
+            <div class="field"><label for="mobile">Mobile Phone</label><input id="mobile" name="mobile" placeholder="+2547XXXXXXXX" required /></div>
+            <div class="field"><label for="country">Country</label><input id="country" name="country" /></div>
+            <div class="field"><label for="county">County</label><input id="county" name="county" /></div>
+            <div class="field"><label for="division">Division</label><input id="division" name="division" /></div>
+            <div class="field"><label for="physicalAddress">Physical Address</label><input id="physicalAddress" name="physicalAddress" /></div>
+            <div class="field"><label for="payerType">Paying As</label><input id="payerType" name="payerType" /></div>
+            <div class="field"><label for="category">Membership Category</label><input id="category" name="category" /></div>
+            <div class="field"><label for="idType">ID Type</label><input id="idType" name="idType" /></div>
+            <div class="field"><label for="idNumber">ID / Passport Number</label><input id="idNumber" name="idNumber" /></div>
+            <div class="field"><label for="avatarUpload">Membership Card Photo</label><input id="avatarUpload" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" /></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" id="saveProfile" type="submit"><i class="fas fa-save"></i> Save Profile</button>
+            <a class="btn btn-secondary" href="dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/portal-state.js"></script>
+  <script>
+    document.getElementById("logoutLink").addEventListener("click", (event) => {
+      event.preventDefault();
+      window.ResokPortal.logout();
+    });
+
+    const fields = ["title","email","firstName","middleName","surname","profession","specialization","institution","mobile","country","county","division","physicalAddress","payerType","category","idType","idNumber"];
+
+    function showNotice(message, type = "success") {
+      const notice = document.getElementById("profileNotice");
+      notice.textContent = message;
+      notice.className = `notice ${type}`;
+    }
+
+    function renderProfile() {
+      const member = window.ResokPortal.getState().member;
+      window.ResokPortal.hydrateShell();
+      document.getElementById("profileAvatar").src = window.ResokPortal.avatarUrl(member);
+      document.getElementById("profileName").textContent = window.ResokPortal.memberName(member) || "Member Profile";
+      document.getElementById("profileMeta").textContent = `Membership ID: ${member.membershipId || "Pending"} | Status: ${(member.status || "payment_required").replace(/_/g, " ")}`;
+      fields.forEach((field) => {
+        document.getElementById(field).value = member[field] || "";
+      });
+    }
+
+    document.getElementById("avatarUpload").addEventListener("change", async function () {
+      const file = this.files[0];
+      if (!file) return;
+      try {
+        await window.ResokPortal.uploadProfileImage(file);
+        renderProfile();
+        showNotice("Membership card photo updated.");
+      } catch (error) {
+        showNotice(error.message || "Could not upload profile photo.", "error");
+      } finally {
+        this.value = "";
+      }
+    });
+
+    document.getElementById("profileForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById("saveProfile");
+      const updates = {};
+      fields.filter((field) => field !== "email").forEach((field) => {
+        updates[field] = document.getElementById(field).value.trim();
+      });
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+      try {
+        await window.ResokPortal.updateProfile(updates);
+        renderProfile();
+        showNotice("Profile updated successfully.");
+      } catch (error) {
+        showNotice(error.message || "Could not save profile.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Save Profile';
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!(await window.ResokPortal.requireAuthForProtectedPage())) return;
+      try {
+        await window.ResokPortal.refreshFromApi();
+      } catch (error) {
+        showNotice(error.message || "Could not load profile.", "error");
+      }
+      renderProfile();
+    });
+  </script>
+</body>
+</html>
+
+

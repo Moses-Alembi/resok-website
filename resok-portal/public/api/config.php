@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 declare(strict_types=1);
 
 $localPath = __DIR__ . '/config.local.php';

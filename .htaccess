@@ -1,13 +1,13 @@
 DirectoryIndex index.html
 
-# Lets .html pages use <?php include 'partials/header.php'; ?> for the shared
-# nav/footer while keeping their existing .html filenames and URLs intact
-# (sitemap.xml, sw.js's cache list, and the rewrite rules below all depend on
-# those filenames staying the same). If this host's PHP runs via a different
-# SAPI/handler name (suPHP, FastCGI with a versioned handler, etc.), replace
-# the line below with whatever that host's control panel documents for
-# "run .html as PHP" -- verify by opening any converted page after deploying.
-AddType application/x-httpd-php .html
+# NOTE: previously had `AddType application/x-httpd-php .html` here to let
+# partials/header.php etc. be included via <?php ?> in the 7 converted marketing
+# pages. Removed - on this host it just labeled .html files with a MIME type
+# browsers can't render (forcing downloads) WITHOUT actually invoking PHP,
+# breaking every .html page site-wide (portal included, since this .htaccess's
+# rules cascade into subdirectories). Do not re-add without first confirming
+# the exact handler name this host's control panel documents for "run .html as
+# PHP" (e.g. AddHandler application/x-httpd-php82 .html, version-specific).
 <IfModule mod_rewrite.c>
   RewriteEngine On
 

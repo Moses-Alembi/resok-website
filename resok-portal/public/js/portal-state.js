@@ -158,7 +158,7 @@
       reference: payment.reference || "",
       amount: Number(payment.amount || 0),
       method: payment.method || "M-Pesa Paybill",
-      status: payment.status === "paid" ? "Paid" : "Pending",
+      status: payment.status === "paid" ? "Paid" : payment.status === "failed" ? "Failed" : "Pending",
       phone: payment.phone || "",
       type: payment.type || "Membership"
     };

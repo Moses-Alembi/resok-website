@@ -11,6 +11,11 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Still-under-construction pages: block access entirely (any URL form - with/without
+  # .html, with/without trailing slash) and bounce to Coming Soon. 302 (temporary) since
+  # these will be real pages again once finished - don't want this cached as permanent.
+  RewriteRule ^(conferences|projects|workshops-and-training|sponsors|learning|blog)(\.html)?/?$ /coming-soon.html [R=302,L]
+
   # Canonical URLs: /about.html -> /about and /folder/index.html -> /folder/
   RewriteCond %{THE_REQUEST} \s/+(.*/)?index\.html[\s?] [NC]
   RewriteRule ^(.*/)?index\.html$ /$1 [R=301,L]

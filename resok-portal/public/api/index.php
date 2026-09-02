@@ -758,7 +758,9 @@ try {
 
         try {
             $stk = initiateStkPush($config, $amount, $phone, $reference);
+            error_log("STK push initiated OK: paymentId={$paymentId} checkoutRequestId={$stk['checkoutRequestId']} callbackUrl=" . ($config['mpesa_callback_url'] ?? '(not set)'));
         } catch (Throwable $stkError) {
+            error_log('STK push failed to initiate: ' . $stkError->getMessage());
             $pdo->prepare('UPDATE payments SET status = "failed" WHERE id = ?')->execute([$paymentId]);
             respond(502, ['error' => $stkError->getMessage()]);
         }
@@ -778,15 +780,27 @@ try {
 
     if ($route === 'payments/mpesa/callback' && $method === 'POST') {
         ensurePaymentProofColumns($pdo);
-        $raw = json_decode(file_get_contents('php://input'), true);
+        $rawBody = file_get_contents('php://input');
+        error_log('M-Pesa callback received: ' . $rawBody);
+        $raw = json_decode($rawBody, true);
         $callback = $raw['Body']['stkCallback'] ?? null;
-        if (!is_array($callback) || empty($callback['CheckoutRequestID'])) respond(200, ['message' => 'Ignored']);
+        if (!is_array($callback) || empty($callback['CheckoutRequestID'])) {
+            error_log('M-Pesa callback ignored: no CheckoutRequestID found in payload');
+            respond(200, ['message' => 'Ignored']);
+        }
 
         $checkoutRequestId = (string)$callback['CheckoutRequestID'];
         $stmt = $pdo->prepare('SELECT * FROM payments WHERE provider_reference = ? LIMIT 1');
         $stmt->execute([$checkoutRequestId]);
         $payment = $stmt->fetch();
-        if (!$payment || $payment['status'] !== 'pending') respond(200, ['message' => 'Already processed']);
+        if (!$payment) {
+            error_log("M-Pesa callback: no payment row found for provider_reference={$checkoutRequestId}");
+            respond(200, ['message' => 'Already processed']);
+        }
+        if ($payment['status'] !== 'pending') {
+            error_log("M-Pesa callback: payment {$payment['id']} already in status {$payment['status']}, ignoring");
+            respond(200, ['message' => 'Already processed']);
+        }
 
         if ((int)($callback['ResultCode'] ?? 1) === 0) {
             $pdo->prepare('UPDATE payments SET status = "paid" WHERE id = ?')->execute([(int)$payment['id']]);

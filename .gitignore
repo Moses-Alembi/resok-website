@@ -1,8 +1,11 @@
-# All of assets/img/ - none of it is new (nothing added/changed this session), it's
-# pre-existing site content already sitting on the live server. Excluding it entirely
-# from git for now (repeated cPanel clone attempts kept stalling around ~5GB total);
-# it can be uploaded/managed separately if it's ever missing on the live server.
-assets/img/
+# Archival recordings/videos - not served by any page, too large for GitHub (some >4GB,
+# GitHub hard-rejects any file over 100MB). Untouched on the live server; not managed here.
+assets/img/Zoom Recordings/
+assets/img/recordings/
+
+# Raw slide source files - only the JPG previews in assets/img/slides/previews/ are
+# actually used on the site; the .pptx originals are large working files.
+assets/img/slides/*.pptx
 
 # Runtime-generated member uploads (profile photos, payment proofs). User data, not code -
 # also likely contains PII that shouldn't sit in git history.
@@ -31,4 +34,5 @@ _git_push_step3.ps1
 _git_push_chunked.ps1
 _batch_files.txt
 _git_code_only.ps1
+_push_compressed_images.ps1
 

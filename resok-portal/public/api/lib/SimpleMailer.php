@@ -17,13 +17,13 @@ class SimpleMailer
     }
 
     /** @param array<int, array{filename:string, content:string, mime:string}> $attachments */
-    public function send(string $to, string $subject, string $textBody, array $attachments = [], ?string $htmlBody = null): bool
+    public function send(string $to, string $subject, string $textBody, array $attachments = [], ?string $htmlBody = null, ?string $replyTo = null): bool
     {
         $host = trim((string)($this->config['smtp_host'] ?? ''));
         if ($host !== '') {
-            return $this->sendSmtp($host, $to, $subject, $textBody, $attachments, $htmlBody);
+            return $this->sendSmtp($host, $to, $subject, $textBody, $attachments, $htmlBody, $replyTo);
         }
-        return $this->sendPhpMail($to, $subject, $textBody, $attachments, $htmlBody);
+        return $this->sendPhpMail($to, $subject, $textBody, $attachments, $htmlBody, $replyTo);
     }
 
     private function fromAddress(): string
@@ -37,7 +37,7 @@ class SimpleMailer
         return '=?UTF-8?B?' . base64_encode($value) . '?=';
     }
 
-    private function buildMime(string $to, string $subject, string $textBody, array $attachments, string $from, ?string $htmlBody = null): string
+    private function buildMime(string $to, string $subject, string $textBody, array $attachments, string $from, ?string $htmlBody = null, ?string $replyTo = null): string
     {
         $headers = [
             'From: Respiratory Society of Kenya <' . $from . '>',
@@ -45,6 +45,9 @@ class SimpleMailer
             'Subject: ' . $this->encodeHeader($subject),
             'MIME-Version: 1.0'
         ];
+        if ($replyTo !== null && $replyTo !== '') {
+            $headers[] = 'Reply-To: ' . $replyTo;
+        }
 
         if ($htmlBody !== null) {
             $altBoundary = 'resok-alt-' . bin2hex(random_bytes(12));
@@ -82,14 +85,15 @@ class SimpleMailer
         return implode("\r\n", $headers) . "\r\n\r\n" . $body;
     }
 
-    private function sendPhpMail(string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null): bool
+    private function sendPhpMail(string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null, ?string $replyTo = null): bool
     {
         $from = $this->fromAddress();
         if (!$attachments && $htmlBody === null) {
             $headers = "From: Respiratory Society of Kenya <{$from}>\r\nContent-Type: text/plain; charset=UTF-8";
+            if ($replyTo !== null && $replyTo !== '') $headers .= "\r\nReply-To: {$replyTo}";
             return @mail($to, $subject, $textBody, $headers);
         }
-        $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody);
+        $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody, $replyTo);
         [$headerBlock, $bodyBlock] = explode("\r\n\r\n", $message, 2);
         $extraHeaders = trim((string)preg_replace('/^(To|Subject):.*$/mi', '', $headerBlock));
         return @mail($to, $subject, $bodyBlock, $extraHeaders);
@@ -113,7 +117,7 @@ class SimpleMailer
         return true;
     }
 
-    private function sendSmtp(string $host, string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null): bool
+    private function sendSmtp(string $host, string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null, ?string $replyTo = null): bool
     {
         $port = (int)($this->config['smtp_port'] ?? 587);
         $user = (string)($this->config['smtp_user'] ?? '');
@@ -169,7 +173,7 @@ class SimpleMailer
         if ($ok) { $send('DATA'); $ok = $this->expect($socket, 354, 'DATA'); }
 
         if ($ok) {
-            $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody);
+            $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody, $replyTo);
             $escaped = preg_replace('/^\./m', '..', $message);
             fwrite($socket, $escaped . "\r\n.\r\n");
             $ok = $this->expect($socket, 250, 'message body');

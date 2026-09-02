@@ -46,5 +46,54 @@
     setStatus(form, 'Your email client should open so you can send the signup request.', false);
   }
 
+  function handleContactSubmit(event) {
+    var form = event.target;
+    if (!form.matches('#contactForm')) return;
+
+    event.preventDefault();
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    var submitBtn = form.querySelector('#contactSubmitBtn, button[type="submit"]');
+    var originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Sending...';
+    }
+    setStatus(form, '', false);
+    var statusEl = form.querySelector('[data-form-status]');
+    if (statusEl) statusEl.style.display = 'none';
+
+    fetch('contact.php', {
+      method: 'POST',
+      body: new FormData(form)
+    })
+      .then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          return { ok: response.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok) throw new Error(result.data.error || 'Could not send your message. Please try again.');
+        setStatus(form, result.data.message || 'Thanks for reaching out! We will get back to you shortly.', false);
+        form.reset();
+      })
+      .catch(function (error) {
+        setStatus(form, error.message || 'Could not send your message. Please try again or email info@resok.org directly.', true);
+      })
+      .finally(function () {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+        }
+        var status = form.querySelector('[data-form-status]');
+        if (status) status.style.display = 'block';
+      });
+  }
+
   document.addEventListener('submit', handleNewsletterSubmit, true);
+  document.addEventListener('submit', handleContactSubmit, true);
 }());

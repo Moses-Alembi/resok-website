@@ -3677,7 +3677,11 @@ if ('serviceWorker' in navigator) {
               <p class="contact-form-subtitle">Fill out the form below and our team will get back to you shortly.</p>
             </div>
 
-            <form class="contact-form" action="mailto:info@resok.org?subject=ReSoK%20Contact%20Inquiry" method="post" enctype="text/plain">
+            <form class="contact-form" id="contactForm">
+              <div class="contact-field" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+                <label for="contactWebsite">Leave this field empty</label>
+                <input id="contactWebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
+              </div>
               <div class="contact-form-grid">
                 <div class="contact-field">
                   <label for="contactName">Full Name</label>
@@ -3700,9 +3704,10 @@ if ('serviceWorker' in navigator) {
               </div>
 
               <p class="contact-note">Minimum 20 characters. We respect your privacy.</p>
+              <p class="contact-note" data-form-status="" role="status" style="display:none"></p>
 
               <div class="contact-submit-row">
-                <button type="submit" class="contact-submit-btn">Submit Inquiry <i class="fas fa-arrow-right"></i></button>
+                <button type="submit" class="contact-submit-btn" id="contactSubmitBtn">Submit Inquiry <i class="fas fa-arrow-right"></i></button>
               </div>
             </form>
           </article>

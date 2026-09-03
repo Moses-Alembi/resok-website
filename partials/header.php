@@ -2,6 +2,10 @@
 /**
  * Shared site navbar. Set $activeNav before including this file to one of the
  * keys below (or leave it unset/blank on pages with no matching nav item).
+ *
+ * A fourth element on an item renders a pill after the label - used to flag
+ * Learning as members-only, since /learning is behind the portal session gate
+ * (see member-gate.php) and would otherwise look like an ordinary public page.
  */
 $navItems = [
     'home' => ['index.html', 'fa-home', 'Home'],
@@ -11,7 +15,7 @@ $navItems = [
     'workshops' => ['workshops-and-training.html', 'fa-chalkboard-user', 'Workshops'],
     'partners' => ['sponsors.html', 'fa-handshake', 'Partners'],
     'knowledge' => ['knowledge.html', 'fa-book-medical', 'Knowledge'],
-    'learning' => ['learning.html', 'fa-book-open', 'Learning'],
+    'learning' => ['learning.html', 'fa-book-open', 'Learning', 'Members'],
     'blog' => ['blog.html', 'fa-newspaper', 'Blog'],
     'contact' => ['contact.html', 'fa-envelope', 'Contact']
 ];
@@ -28,7 +32,7 @@ $active = $activeNav ?? '';
       <div class="nav-main">
         <ul class="nav-menu" id="navMenu">
 <?php foreach ($navItems as $key => $item): ?>
-          <li><a href="<?= $item[0] ?>" class="nav-link<?= $key === $active ? ' is-active' : '' ?>"><i class="fas <?= $item[1] ?>" aria-hidden="true"></i><?= $item[2] ?></a></li>
+          <li><a href="<?= $item[0] ?>" class="nav-link<?= $key === $active ? ' is-active' : '' ?>"><i class="fas <?= $item[1] ?>" aria-hidden="true"></i><?= $item[2] ?><?php if (!empty($item[3])): ?><span class="nav-badge"><?= $item[3] ?></span><?php endif; ?></a></li>
 <?php endforeach; ?>
           <li class="nav-mobile-actions">
             <a href="resok-portal/public/" class="mobile-action mobile-action-member"><i class="fas fa-user-plus" aria-hidden="true"></i>Become a Member</a>

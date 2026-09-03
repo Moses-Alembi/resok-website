@@ -1,7 +1,7 @@
 /* Minimal service worker for basic offline support.
    Bump CACHE_NAME on any deploy where CORE_ASSETS content changes, so old
    clients' caches get cleared out during the next activate cycle. */
-const CACHE_NAME = "resok-static-v18";
+const CACHE_NAME = "resok-static-v19";
 const CORE_ASSETS = [
   "index.html",
   "about.html",
@@ -12,7 +12,6 @@ const CORE_ASSETS = [
   "contact.html",
   "guidelines.html",
   "knowledge.html",
-  "learning.html",
   "media-learning.html",
   "membership.html",
   "membership-benefits.html",
@@ -60,6 +59,13 @@ self.addEventListener("fetch", (event) => {
   // membership status, payments, CPD points etc. could go stale in a way no amount
   // of reloading fixes, since the service worker (not the server) is being asked.
   if (url.pathname.includes("/api/")) return;
+
+  // Members-only pages are per-visitor and must never be written to the cache: anything
+  // stored here survives logout and is readable by the next person on a shared device.
+  // Leaving these to the network also means the server-side gate is the only thing that
+  // ever decides who sees them.
+  const path = url.pathname.replace(/\/$/, "");
+  if (path === "/learning" || path === "/learning.php" || url.pathname.startsWith("/resok-portal/")) return;
 
   const isNavigation = request.mode === "navigate" || (request.headers.get("accept") || "").includes("text/html");
 

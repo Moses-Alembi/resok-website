@@ -14,7 +14,19 @@ DirectoryIndex index.html
   # Still-under-construction pages: block access entirely (any URL form - with/without
   # .html, with/without trailing slash) and bounce to Coming Soon. 302 (temporary) since
   # these will be real pages again once finished - don't want this cached as permanent.
-  RewriteRule ^(conferences|projects|workshops-and-training|sponsors|learning|blog)(\.html)?/?$ /coming-soon.html [R=302,L]
+  RewriteRule ^(conferences|projects|workshops-and-training|sponsors|blog)(\.html)?/?$ /coming-soon.html [R=302,L]
+
+  # Learning & CME is members-only. The page moved to private/learning.html (blocked by
+  # private/.htaccess) and is emitted only by learning.php, which verifies the portal's
+  # resok_token cookie and the member's status. Internal rewrite, not a redirect, so the
+  # public URL stays /learning. Old /learning.html links hit the canonical rule below
+  # first and 301 to /learning, which lands here.
+  RewriteRule ^learning/?$ learning.php [L]
+
+  # Belt-and-braces with private/.htaccess, in case this host ever ignores overrides in
+  # subdirectories: nothing under /private/ is ever served over HTTP. learning.php reads
+  # those files off disk, so this does not affect it.
+  RewriteRule ^private/ - [F]
 
   # Canonical URLs: /about.html -> /about and /folder/index.html -> /folder/
   RewriteCond %{THE_REQUEST} \s/+(.*/)?index\.html[\s?] [NC]

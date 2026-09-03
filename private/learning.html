@@ -40,6 +40,8 @@
     .nav-main{display:grid;grid-template-columns:auto 1fr auto;align-items:center;min-height:104px;column-gap:14px;position:relative}
     .logo{display:inline-flex;align-items:center}.logo img{height:80px;width:auto;display:block}
     .nav-menu{display:flex;list-style:none;gap:1.22rem;align-items:center;justify-self:center}
+    .nav-badge{display:inline-block;margin-left:7px;padding:2px 7px;border-radius:999px;background:#bc0b22;color:#fff;font-size:.56rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;line-height:1.5;vertical-align:middle;white-space:nowrap}
+    @media(max-width:992px){.nav-badge{margin-left:auto;font-size:.6rem}}
     .nav-link{text-decoration:none;color:var(--ink);font-weight:800;letter-spacing:.01em;text-transform:uppercase;font-size:.66rem;transition:color .2s ease}
     .nav-link:hover,.nav-link.is-active{color:var(--brand-secondary)}
     .nav-cta{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:4px;background:var(--brand-secondary);color:#fff;text-decoration:none;font-weight:800;text-transform:uppercase;font-size:.68rem;letter-spacing:.02em;transition:background .2s ease,transform .2s ease}
@@ -224,7 +226,7 @@
           <li><a href="projects.html" class="nav-link"><i class="fas fa-folder-open" aria-hidden="true"></i>Projects</a></li>
           <li><a href="workshops-and-training.html" class="nav-link"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
           <li><a href="sponsors.html" class="nav-link"><i class="fas fa-handshake" aria-hidden="true"></i>Partners</a></li>
-          <li><a href="learning.html" class="nav-link is-active"><i class="fas fa-book-open" aria-hidden="true"></i>Learning</a></li>
+          <li><a href="learning.html" class="nav-link is-active"><i class="fas fa-book-open" aria-hidden="true"></i>Learning<span class="nav-badge">Members</span></a></li>
           <li><a href="blog.html" class="nav-link"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
           <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
           <li class="nav-mobile-actions">

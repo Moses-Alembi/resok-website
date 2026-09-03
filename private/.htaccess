@@ -1,0 +1,11 @@
+# Nothing in this directory may be fetched directly over HTTP. These files are only
+# ever emitted by a PHP gate script in the site root (learning.php), after it has
+# verified the visitor's portal session. Without this deny, /private/learning.html
+# would serve the members-only page to anyone who guessed the path.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

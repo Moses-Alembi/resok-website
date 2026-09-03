@@ -11,6 +11,16 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Canonical host - must stay first, before anything that gates on a session. The portal's
+  # resok_token cookie is host-only (issueAuthCookie sets no domain attribute), so a session
+  # started on www.resok.org is not sent to resok.org and vice versa: a member who logs in on
+  # one host and then follows a link carrying the other - a search result, the sitemap, an
+  # emailed portal link - is silently signed out and bounced to login, which reads as the
+  # gate breaking at random. www is canonical everywhere else (portal_base_url in the API
+  # config, sitemap.xml, every <link rel="canonical">), so send the bare domain there.
+  RewriteCond %{HTTP_HOST} ^resok\.org$ [NC]
+  RewriteRule ^(.*)$ https://www.resok.org/$1 [R=301,L]
+
   # Still-under-construction pages: block access entirely (any URL form - with/without
   # .html, with/without trailing slash) and bounce to Coming Soon. 302 (temporary) since
   # these will be real pages again once finished - don't want this cached as permanent.

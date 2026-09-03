@@ -26,12 +26,20 @@ DirectoryIndex index.html
   # these will be real pages again once finished - don't want this cached as permanent.
   RewriteRule ^(conferences|projects|workshops-and-training|sponsors|blog)(\.html)?/?$ /coming-soon.html [R=302,L]
 
-  # Learning & CME is members-only. The page moved to private/learning.html (blocked by
-  # private/.htaccess) and is emitted only by learning.php, which verifies the portal's
-  # resok_token cookie and the member's status. Internal rewrite, not a redirect, so the
-  # public URL stays /learning. Old /learning.html links hit the canonical rule below
-  # first and 301 to /learning, which lands here.
+  # Members-only pages. Each one moved to private/<name>.html (blocked by private/.htaccess)
+  # and is emitted only by its <name>.php wrapper, which verifies the portal's resok_token
+  # cookie and the member's status via member-gate.php. Internal rewrites, not redirects, so
+  # the public URLs are unchanged. Old /<name>.html links hit the canonical rule below first
+  # and 301 to /<name>, which lands here.
+  #
+  # workshops-and-training is listed here too, but the coming-soon rule above matches first
+  # and wins while that page is unfinished - the gate only takes effect once it is dropped
+  # from that list.
   RewriteRule ^learning/?$ learning.php [L]
+  RewriteRule ^media-learning/?$ media-learning.php [L]
+  RewriteRule ^assemblies/?$ assemblies.php [L]
+  RewriteRule ^research/?$ research.php [L]
+  RewriteRule ^workshops-and-training/?$ workshops-and-training.php [L]
 
   # Belt-and-braces with private/.htaccess, in case this host ever ignores overrides in
   # subdirectories: nothing under /private/ is ever served over HTTP. learning.php reads

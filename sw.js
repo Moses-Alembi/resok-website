@@ -1,25 +1,21 @@
 /* Minimal service worker for basic offline support.
    Bump CACHE_NAME on any deploy where CORE_ASSETS content changes, so old
    clients' caches get cleared out during the next activate cycle. */
-const CACHE_NAME = "resok-static-v19";
+const CACHE_NAME = "resok-static-v20";
 const CORE_ASSETS = [
   "index.html",
   "about.html",
-  "assemblies.html",
   "blog.html",
   "coming-soon.html",
   "conferences.html",
   "contact.html",
   "guidelines.html",
   "knowledge.html",
-  "media-learning.html",
   "membership.html",
   "membership-benefits.html",
   "patient-resources.html",
   "projects.html",
-  "research.html",
   "sponsors.html",
-  "workshops-and-training.html",
   "manifest.json",
   "favicon.jpg",
   "assets/img/logo.png",
@@ -65,7 +61,8 @@ self.addEventListener("fetch", (event) => {
   // Leaving these to the network also means the server-side gate is the only thing that
   // ever decides who sees them.
   const path = url.pathname.replace(/\/$/, "");
-  if (path === "/learning" || path === "/learning.php" || url.pathname.startsWith("/resok-portal/")) return;
+  const GATED = ["/learning", "/media-learning", "/assemblies", "/research", "/workshops-and-training"];
+  if (GATED.includes(path.replace(/\.php$/, "")) || url.pathname.startsWith("/resok-portal/")) return;
 
   const isNavigation = request.mode === "navigate" || (request.headers.get("accept") || "").includes("text/html");
 

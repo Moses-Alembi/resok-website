@@ -39,6 +39,7 @@ DirectoryIndex index.html
   RewriteRule ^media-learning/?$ media-learning.php [L]
   RewriteRule ^assemblies/?$ assemblies.php [L]
   RewriteRule ^research/?$ research.php [L]
+  RewriteRule ^publication/?$ publication.php [L]
   RewriteRule ^workshops-and-training/?$ workshops-and-training.php [L]
 
   # Belt-and-braces with private/.htaccess, in case this host ever ignores overrides in

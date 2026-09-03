@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Publication | ReSoK</title><meta name="description" content="A publication from the ReSoK research and publications library."><meta name="robots" content="noindex,nofollow"><link rel="icon" href="favicon.jpg" type="image/jpeg" /><link href="https://fonts.googleapis.com/css2?family=Mulish:wght@700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="partials/site.css"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+:root{--g:#00932e;--r:#bc0b22;--ink:#111f35;--muted:#667085;--bg:#f5f7fa;--line:#e7ebef;--deep:#0a2e38;--h:'Mulish','Poppins',sans-serif;--b:'Poppins','Segoe UI',sans-serif}
+body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65}
+.wrap{width:min(1180px,90vw);margin:0 auto}
+
+/* Breadcrumb band - keeps the page anchored to the library it came from. */
+.pub-crumb{background:var(--deep);color:rgba(255,255,255,.8);font-size:.82rem;font-weight:600}
+.pub-crumb .wrap{padding:14px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pub-crumb a{color:#9be7b2;text-decoration:none}
+.pub-crumb a:hover{text-decoration:underline}
+.pub-crumb i{font-size:.6rem;opacity:.6}
+
+/* Title block: the heading, then a meta line, then a rule - the reference layout, in ReSoK type. */
+.pub-head{background:#fff;border-bottom:1px solid var(--line)}
+.pub-head .wrap{padding:44px 0 30px}
+.pub-head h1{font-family:var(--h);font-size:clamp(1.6rem,3.2vw,2.6rem);line-height:1.18;margin-bottom:16px}
+.pub-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.88rem}
+.pub-meta .sep{color:var(--line)}
+.pub-tag{display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(0,147,46,.1);color:var(--g);font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+.pub-tag.oa{background:rgba(188,11,34,.08);color:var(--r)}
+
+/* Two columns: the artefact on the left, the reading on the right. */
+.pub-body{padding:44px 0 70px}
+.pub-body .wrap{display:grid;grid-template-columns:300px minmax(0,1fr);gap:48px;align-items:start}
+.pub-aside{position:sticky;top:24px;display:grid;gap:18px}
+.pub-cover{display:block;width:100%;border:1px solid var(--line);border-radius:6px;box-shadow:0 12px 30px rgba(15,23,42,.12);background:#fff}
+.pub-download{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 18px;border-radius:6px;background:var(--g);color:#fff;font-weight:800;font-size:.92rem;text-decoration:none;text-align:center}
+.pub-download:hover{background:#007d27}
+.pub-facts{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px}
+.pub-facts h2{font-family:var(--h);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px}
+.pub-facts dl{display:grid;gap:12px;font-size:.84rem}
+.pub-facts dt{color:var(--muted);font-size:.72rem;text-transform:uppercase;font-weight:800;letter-spacing:.04em}
+.pub-facts dd{word-break:break-word}
+.pub-facts a{color:var(--g);text-decoration:none}
+.pub-facts a:hover{text-decoration:underline}
+
+.pub-main h2{font-family:var(--h);font-size:1.35rem;margin-bottom:14px}
+.pub-main section+section{margin-top:38px}
+.pub-main p{margin-bottom:14px}
+.pub-abstract{font-size:1rem;line-height:1.8}
+.pub-key{background:#fff;border:1px solid var(--line);border-left:4px solid var(--g);border-radius:8px;padding:24px 26px}
+.pub-key ul{margin:0;padding-left:20px;display:grid;gap:12px}
+.pub-key li{color:var(--ink);font-size:.92rem;line-height:1.65}
+.pub-authors{color:var(--muted);font-size:.92rem}
+.pub-kenya{margin-top:14px;padding:14px 16px;border-radius:6px;background:rgba(0,147,46,.07);color:var(--ink);font-size:.88rem;font-weight:600}
+.pub-topics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.pub-topics span{padding:5px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:.78rem;color:var(--muted);font-weight:600}
+.pub-cite{background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px 22px;font-size:.86rem;color:var(--muted);line-height:1.7}
+.pub-cite strong{color:var(--ink)}
+.pub-missing{padding:70px 0;text-align:center}
+.pub-missing h1{font-family:var(--h);font-size:1.6rem;margin-bottom:10px}
+.pub-missing p{color:var(--muted);margin-bottom:20px}
+.pub-missing a{display:inline-block;padding:12px 18px;border-radius:6px;background:var(--g);color:#fff;font-weight:800;text-decoration:none}
+
+@media(max-width:900px){
+  .pub-body .wrap{grid-template-columns:1fr;gap:32px}
+  .pub-aside{position:static;max-width:320px}
+}
+</style>
+</head><body>
+<nav class="navbar">
+    <div class="nav-shell">
+      <div class="nav-top">
+        <div class="nav-top-left">
+          <a href="contact.html" class="nav-top-item"><i class="fas fa-question-circle"></i> Ask a Question</a>
+          <a href="mailto:info@resok.org" class="nav-top-item"><i class="far fa-envelope"></i> info@resok.org</a>
+        </div>
+      </div>
+      <div class="nav-main">
+        <ul class="nav-menu" id="navMenu">
+          <li><a href="index.html" class="nav-link"><i class="fas fa-home" aria-hidden="true"></i>Home</a></li>
+          <li><a href="about.html" class="nav-link"><i class="fas fa-user-group" aria-hidden="true"></i>About</a></li>
+          <li><a href="conferences.html" class="nav-link"><i class="fas fa-calendar-check" aria-hidden="true"></i>Conferences</a></li>
+          <li><a href="projects.html" class="nav-link"><i class="fas fa-folder-open" aria-hidden="true"></i>Projects</a></li>
+          <li><a href="workshops-and-training.html" class="nav-link"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
+          <li><a href="sponsors.html" class="nav-link"><i class="fas fa-handshake" aria-hidden="true"></i>Partners</a></li>
+          <li><a href="knowledge.html" class="nav-link"><i class="fas fa-book-medical" aria-hidden="true"></i>Knowledge</a></li>
+          <li><a href="learning.html" class="nav-link"><i class="fas fa-book-open" aria-hidden="true"></i>Learning<span class="nav-badge">Members</span></a></li>
+          <li><a href="blog.html" class="nav-link"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
+          <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
+          <li class="nav-mobile-actions">
+            <a href="resok-portal/public/" class="mobile-action mobile-action-member"><i class="fas fa-user-plus" aria-hidden="true"></i>Become a Member</a>
+            <a href="contact.html#donate" class="mobile-action mobile-action-donate"><i class="fas fa-heart" aria-hidden="true"></i>Donate</a>
+            <a href="resok-portal/public/login" class="mobile-action mobile-action-login"><i class="fas fa-user" aria-hidden="true"></i>Login</a>
+          </li>
+        </ul>
+        <div class="nav-actions">
+          <a href="resok-portal/public/login" class="nav-top-action"><i class="fas fa-user" aria-hidden="true"></i> Login</a>
+          <a href="contact.html#donate" class="nav-top-action"><i class="fas fa-heart" aria-hidden="true"></i> Donate</a>
+          <a href="resok-portal/public/" class="nav-top-member">Become a Member</a>
+        </div>
+        <button class="hamburger" type="button" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+      </div>
+      <a href="index.html" class="logo" aria-label="ReSoK Home"><img src="assets/img/logo.png" alt="Respiratory Society of Kenya"></a>
+    </div>
+  </nav>
+  <main id="pubRoot" hidden>
+    <nav class="pub-crumb" aria-label="Breadcrumb">
+      <div class="wrap">
+        <a href="research.html">Research &amp; Publications</a>
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        <span id="crumbTitle">Publication</span>
+      </div>
+    </nav>
+
+    <header class="pub-head">
+      <div class="wrap">
+        <h1 id="pubTitle"></h1>
+        <div class="pub-meta">
+          <span id="pubSource"></span>
+          <span class="sep" aria-hidden="true">|</span>
+          <span class="pub-tag" id="pubType"></span>
+          <span class="pub-tag oa" id="pubOa" hidden>Open access</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="pub-body">
+      <div class="wrap">
+        <aside class="pub-aside">
+          <img class="pub-cover" id="pubCover" src="" alt="" loading="lazy">
+          <a class="pub-download" id="pubDownload" href="" download>
+            <i class="fas fa-file-pdf" aria-hidden="true"></i>
+            <span id="pubDownloadLabel">Download</span>
+          </a>
+          <div class="pub-facts">
+            <h2>Publication details</h2>
+            <dl>
+              <div><dt>Published in</dt><dd id="factJournal"></dd></div>
+              <div><dt>Year</dt><dd id="factYear"></dd></div>
+              <div id="factDoiRow"><dt>DOI</dt><dd><a id="factDoi" href="" target="_blank" rel="noopener noreferrer"></a></dd></div>
+              <div><dt>Format</dt><dd id="factFormat"></dd></div>
+            </dl>
+          </div>
+        </aside>
+
+        <div class="pub-main">
+          <section>
+            <h2>Overview</h2>
+            <p class="pub-abstract" id="pubOverview"></p>
+            <div class="pub-topics" id="pubTopics"></div>
+          </section>
+
+          <section id="keySection">
+            <h2>Key messages</h2>
+            <div class="pub-key"><ul id="pubKey"></ul></div>
+          </section>
+
+          <section>
+            <h2>Authors</h2>
+            <p class="pub-authors" id="pubAuthors"></p>
+            <p class="pub-kenya" id="pubKenya" hidden></p>
+          </section>
+
+          <section>
+            <h2>How to cite</h2>
+            <p class="pub-cite" id="pubCite"></p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <main id="pubMissing" class="wrap pub-missing" hidden>
+    <h1>Publication not found</h1>
+    <p>We could not find that publication in the ReSoK library. It may have been moved or renamed.</p>
+    <a href="research.html">Back to Research &amp; Publications</a>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand-row"><img src="assets/img/logo.png" alt="ReSoK logo"></div>
+        <div class="site-footer-top-social" aria-label="Social links">
+          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.instagram.com/respiratorysocietyofkenya" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+        <div class="site-footer-donate"><a href="resok-portal/public/">Membership</a></div>
+      </div>
+      <div class="site-footer-mid">
+        <div><h3 class="site-footer-head">Sign Up For A Newsletter</h3><p class="site-footer-text">Get updates on CMEs, webinars, projects, and announcements directly in your inbox.</p><form class="site-footer-subscribe" action="mailto:info@resok.org?subject=ReSoK%20Newsletter%20Signup" method="post" enctype="text/plain"><input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address"><button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button></form></div>
+        <div class="site-footer-col"><h4>Society</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="conferences.html">Conferences</a></li><li><a href="resok-portal/public/">Membership</a></li><li><a href="https://www.resok.org/faqs" target="_blank" rel="noopener">FAQs</a></li></ul></div>
+        <div class="site-footer-col"><h4>Get In Touch</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="contact.html">Contact Us</a></li><li><a href="blog.html">Blog</a></li><li><a href="contact.html">Location</a></li></ul></div>
+        <div class="site-footer-col"><h4>Resources</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="knowledge.html">Knowledge Hub</a></li><li><a href="guidelines.html">Guidelines</a></li><li><a href="patient-resources.html">Patient Resources</a></li><li><a href="projects.html">Projects</a></li><li><a href="workshops-and-training.html">Workshops</a></li><li><a href="learning.html">Learning</a></li></ul></div>
+        <div class="site-footer-col"><h4>Our Gallery</h4><div class="site-footer-divider"></div><div class="site-footer-gallery-grid">
+<img src="assets/img/footer/F1.jpg" alt="Gallery 1" loading="lazy">
+<img src="assets/img/footer/F2.jpg" alt="Gallery 2" loading="lazy">
+<img src="assets/img/footer/F3.jpg" alt="Gallery 3" loading="lazy">
+<img src="assets/img/footer/F4.jpeg" alt="Gallery 4" loading="lazy">
+<img src="assets/img/footer/F5.png" alt="Gallery 5" loading="lazy">
+<img src="assets/img/footer/F6.png" alt="Gallery 6" loading="lazy">
+<img src="assets/img/footer/F7.jpg" alt="Gallery 7" loading="lazy">
+<img src="assets/img/footer/F8.jpg" alt="Gallery 8" loading="lazy">
+</div></div>
+      </div>
+      <div class="site-footer-bottom">&copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT</div>
+    </div>
+  </footer>
+  <div class="social-float" aria-label="Quick social links">
+    <a class="social-whatsapp" href="https://wa.me/254735700660?text=Hello%20ReSoK%20team%2C%20I%20have%20an%20inquiry." target="_blank" rel="noopener noreferrer" aria-label="Chat with us on WhatsApp" title="WhatsApp"><img src="assets/img/social/whatsapp.svg" alt="" aria-hidden="true"></a>
+    <a class="social-x" href="https://x.com/ReSoKenya" target="_blank" rel="noopener noreferrer" aria-label="Visit us on X" title="X"><img src="assets/img/social/x.svg" alt="" aria-hidden="true"></a>
+    <a class="social-linkedin" href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" rel="noopener noreferrer" aria-label="Visit us on LinkedIn" title="LinkedIn"><img src="assets/img/social/linkedin.svg" alt="" aria-hidden="true"></a>
+    <a class="social-facebook" href="https://www.facebook.com/share/1DLne8xyKQ/" target="_blank" rel="noopener noreferrer" aria-label="Visit us on Facebook" title="Facebook"><img src="assets/img/social/facebook.svg" alt="" aria-hidden="true"></a>
+  </div>
+  <script>
+    (() => {
+      const hamburger = document.getElementById('hamburger');
+      const navMenu = document.getElementById('navMenu');
+      const newsletterForm = document.querySelector('.site-footer-subscribe');
+      if (newsletterForm) newsletterForm.addEventListener('submit', (event) => event.preventDefault());
+      if (!hamburger || !navMenu) return;
+      const closeMobileNav = () => {
+        hamburger.classList.remove('active');
+        navMenu.classList.remove('active');
+        document.body.classList.remove('mobile-nav-open');
+      };
+      const openMobileNav = () => {
+        hamburger.classList.add('active');
+        navMenu.classList.add('active');
+        document.body.classList.add('mobile-nav-open');
+      };
+      document.addEventListener('click', (event) => {
+        if (hamburger.contains(event.target)) {
+          event.preventDefault();
+          event.stopPropagation();
+          navMenu.classList.contains('active') ? closeMobileNav() : openMobileNav();
+          return;
+        }
+        if (!navMenu.classList.contains('active')) return;
+        if (navMenu.contains(event.target)) return;
+        closeMobileNav();
+      }, true);
+      navMenu.querySelectorAll('.nav-link, .mobile-action').forEach((link) => link.addEventListener('click', closeMobileNav));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeMobileNav();
+      });
+    })();
+  </script>
+  <script src="assets/js/site-forms.js" defer></script>
+  <script src="assets/js/members-only.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+  <script src="assets/js/publications.js"></script>
+  <script>
+    // Renders one publication from the shared manifest, chosen by ?id=. Everything is set
+    // with textContent rather than innerHTML: the manifest holds real abstracts with
+    // author names and punctuation, and it should never be parsed as markup.
+    (() => {
+      const list = window.RESOK_PUBLICATIONS || [];
+      const id = new URLSearchParams(window.location.search).get("id");
+      const pub = list.find((entry) => entry.id === id);
+      const root = document.getElementById("pubRoot");
+      const missing = document.getElementById("pubMissing");
+
+      if (!pub) {
+        missing.hidden = false;
+        return;
+      }
+      root.hidden = false;
+
+      const set = (elementId, value) => {
+        document.getElementById(elementId).textContent = value;
+      };
+
+      document.title = `${pub.title} | ReSoK`;
+      set("crumbTitle", pub.type || "Publication");
+      set("pubTitle", pub.title);
+      set("pubSource", [pub.journal, pub.year].filter(Boolean).join(" · "));
+      set("pubType", pub.type || "Publication");
+      if (pub.openAccess) document.getElementById("pubOa").hidden = false;
+
+      const cover = document.getElementById("pubCover");
+      if (pub.cover) {
+        cover.src = pub.cover;
+        cover.alt = `Cover of ${pub.title}`;
+      } else {
+        cover.remove();
+      }
+
+      const download = document.getElementById("pubDownload");
+      download.href = pub.file;
+      set("pubDownloadLabel", pub.fileSize ? `Download (${pub.fileSize})` : "Download");
+
+      set("factJournal", pub.journal || "ReSoK");
+      set("factYear", pub.year || "");
+      set("factFormat", `PDF${pub.fileSize ? ` · ${pub.fileSize}` : ""}`);
+
+      if (pub.doi) {
+        const doi = document.getElementById("factDoi");
+        doi.textContent = pub.doi;
+        doi.href = `https://doi.org/${pub.doi}`;
+      } else {
+        document.getElementById("factDoiRow").remove();
+      }
+
+      set("pubOverview", pub.overview || "");
+
+      const topics = document.getElementById("pubTopics");
+      (pub.topics || []).forEach((topic) => {
+        const tag = document.createElement("span");
+        tag.textContent = topic;
+        topics.appendChild(tag);
+      });
+
+      const key = document.getElementById("pubKey");
+      if (pub.keyMessages && pub.keyMessages.length) {
+        pub.keyMessages.forEach((message) => {
+          const item = document.createElement("li");
+          item.textContent = message;
+          key.appendChild(item);
+        });
+      } else {
+        document.getElementById("keySection").remove();
+      }
+
+      set("pubAuthors", (pub.authors || []).join(", "));
+      if (pub.kenyaNote) {
+        const kenya = document.getElementById("pubKenya");
+        kenya.textContent = pub.kenyaNote;
+        kenya.hidden = false;
+      }
+
+      // Vancouver-style citation, which is what a respiratory journal will ask for.
+      const authors = pub.authors || [];
+      const byline = authors.length > 6 ? `${authors.slice(0, 6).join(", ")}, et al` : authors.join(", ");
+      set("pubCite", `${byline}. ${pub.title}. ${pub.journal}. ${pub.year}. doi:${pub.doi || "-"}`);
+    })();
+  </script>
+</body>
+</html>

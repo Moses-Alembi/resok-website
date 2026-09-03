@@ -20,6 +20,7 @@
     "media-learning": "the Media & Learning Channel",
     "assemblies": "Assemblies & Working Groups",
     "research": "Research & Publications",
+    "publication": "the publications library",
     "workshops-and-training": "Courses and Training"
   };
 

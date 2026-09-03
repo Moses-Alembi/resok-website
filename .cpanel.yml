@@ -1,0 +1,44 @@
+---
+# cPanel Git Version Control deployment.
+#
+# Runs when "Deploy HEAD Commit" is clicked on the Git Version Control page, from inside
+# the repository clone (/home/resokorg/repositories/resok-website). It copies the site into
+# the web root and removes the handful of files that must not survive a deploy.
+#
+# DEPLOYPATH must match this account's document root. Check it in cPanel under Domains if
+# the site ever stops updating after a deploy that reported success.
+#
+# Deliberately no --delete. The server holds files that are not in git and must survive
+# every deploy: member uploads in resok-portal/uploads, the real secrets in
+# public/api/config.local.php, and the archival Zoom recordings under assets/img (several
+# GB, gitignored because GitHub rejects files over 100MB). A --delete run would destroy all
+# of them. The cost of that choice is that files deleted from the repo linger in the web
+# root, so anything that must actually disappear is removed explicitly in the last task.
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/resokorg/public_html
+    - >
+      /usr/bin/rsync -a
+      --exclude '.git'
+      --exclude '.gitignore'
+      --exclude '.cpanel.yml'
+      --exclude '*.md'
+      --exclude 'tools/'
+      --exclude 'resok-portal/server/'
+      --exclude 'resok-portal/node_modules/'
+      --exclude 'resok-portal/package.json'
+      --exclude 'resok-portal/package-lock.json'
+      --exclude 'resok-portal/uploads/'
+      --exclude 'resok-portal/public/api/config.local.php'
+      ./ $DEPLOYPATH/
+    # Members-only pages now live in private/ and are served only through their .php
+    # wrappers. A stale copy left at the web root would be served directly by the
+    # extensionless-URL rule in .htaccess, walking straight past the gate - so these are
+    # removed on every deploy, not just the first.
+    - >
+      /bin/rm -f
+      $DEPLOYPATH/learning.html
+      $DEPLOYPATH/assemblies.html
+      $DEPLOYPATH/media-learning.html
+      $DEPLOYPATH/research.html
+      $DEPLOYPATH/workshops-and-training.html

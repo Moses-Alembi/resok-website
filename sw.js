@@ -1,21 +1,14 @@
 /* Minimal service worker for basic offline support.
    Bump CACHE_NAME on any deploy where CORE_ASSETS content changes, so old
    clients' caches get cleared out during the next activate cycle. */
-const CACHE_NAME = "resok-static-v20";
+const CACHE_NAME = "resok-static-v21";
 const CORE_ASSETS = [
   "index.html",
   "about.html",
-  "blog.html",
   "coming-soon.html",
-  "conferences.html",
   "contact.html",
-  "guidelines.html",
-  "knowledge.html",
   "membership.html",
   "membership-benefits.html",
-  "patient-resources.html",
-  "projects.html",
-  "sponsors.html",
   "manifest.json",
   "favicon.jpg",
   "assets/img/logo.png",

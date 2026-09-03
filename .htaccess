@@ -24,7 +24,7 @@ DirectoryIndex index.html
   # Still-under-construction pages: block access entirely (any URL form - with/without
   # .html, with/without trailing slash) and bounce to Coming Soon. 302 (temporary) since
   # these will be real pages again once finished - don't want this cached as permanent.
-  RewriteRule ^(conferences|projects|workshops-and-training|sponsors|blog)(\.html)?/?$ /coming-soon.html [R=302,L]
+  RewriteRule ^(conferences|projects|workshops-and-training|sponsors|blog|knowledge|guidelines|patient-resources)(\.html)?/?$ /coming-soon.html [R=302,L]
 
   # Members-only pages. Each one moved to private/<name>.html (blocked by private/.htaccess)
   # and is emitted only by its <name>.php wrapper, which verifies the portal's resok_token

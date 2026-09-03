@@ -19,6 +19,12 @@ declare(strict_types=1);
  * error blocks the page rather than leaking it.
  */
 
+// Must match RESOK_SESSION_IDLE_TIMEOUT / RESOK_SESSION_REFRESH_INTERVAL in the portal API
+// (resok-portal/public/api/index.php). Reading a gated page counts as activity and slides
+// the window forward, so a member reading Learning does not get logged out mid-article.
+const RESOK_GATE_IDLE_TIMEOUT = 20 * 60;
+const RESOK_GATE_REFRESH_INTERVAL = 60;
+
 const RESOK_GATE_LOGIN_URL = '/resok-portal/public/login';
 const RESOK_GATE_JOIN_URL = '/membership-benefits';
 const RESOK_GATE_PAYMENT_URL = '/resok-portal/public/payment';
@@ -26,11 +32,12 @@ const RESOK_GATE_DASHBOARD_URL = '/resok-portal/public/dashboard';
 
 /**
  * @return array{state:string,userId:int,email:string,role:string,status:string}
- *   state is one of: active | anonymous | inactive | unavailable
+ *   state is one of: active | anonymous | timedout | inactive | unavailable
  */
 function resok_gate_check(): array
 {
     $anonymous = ['state' => 'anonymous', 'userId' => 0, 'email' => '', 'role' => '', 'status' => ''];
+    $timedout = ['state' => 'timedout', 'userId' => 0, 'email' => '', 'role' => '', 'status' => ''];
     $unavailable = ['state' => 'unavailable', 'userId' => 0, 'email' => '', 'role' => '', 'status' => ''];
 
     $configPath = __DIR__ . '/resok-portal/public/api/config.php';
@@ -52,6 +59,18 @@ function resok_gate_check(): array
     $email = (string)($payload['email'] ?? '');
     $role = (string)($payload['role'] ?? 'member');
     if ($userId <= 0) return $anonymous;
+
+    // Idle timeout, mirroring auth() in the portal API. A token with no `seen` claim
+    // predates the timeout and is grandfathered - the refresh below stamps it.
+    $seen = (int)($payload['seen'] ?? 0);
+    $idleFor = time() - $seen;
+    if ($seen > 0 && $idleFor > RESOK_GATE_IDLE_TIMEOUT) {
+        resok_gate_clear_cookie();
+        return $timedout;
+    }
+    if ($idleFor >= RESOK_GATE_REFRESH_INTERVAL) {
+        resok_gate_refresh_cookie($payload, $secret);
+    }
 
     // Admins get in regardless of their own membership record - they need to see exactly
     // what members see when reviewing or updating the learning content.
@@ -114,6 +133,45 @@ function resok_gate_verify_token(string $token, string $secret): ?array
 }
 
 /**
+ * Re-signs the session cookie with a fresh last-activity stamp, keeping the original `exp`
+ * so the absolute 7-day cap still applies. Mirrors token() + issueAuthCookie() in the API;
+ * the cookie attributes must stay identical or the browser stores a second cookie instead
+ * of replacing the first.
+ */
+function resok_gate_refresh_cookie(array $payload, string $secret): void
+{
+    $expiresAt = (int)($payload['exp'] ?? 0);
+    if ($expiresAt <= time()) return;
+
+    unset($payload['seen']);
+    $payload['exp'] = $expiresAt;
+    $payload['seen'] = time();
+
+    $body = rtrim(strtr(base64_encode((string)json_encode($payload)), '+/', '-_'), '=');
+    $sig = rtrim(strtr(base64_encode(hash_hmac('sha256', $body, $secret, true)), '+/', '-_'), '=');
+
+    setcookie('resok_token', $body . '.' . $sig, [
+        'expires' => time() + RESOK_GATE_IDLE_TIMEOUT,
+        'path' => '/',
+        'secure' => true,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+/** Mirrors clearAuthCookie() in the API - same attributes, empty value, expiry in the past. */
+function resok_gate_clear_cookie(): void
+{
+    setcookie('resok_token', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'secure' => true,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+/**
  * Gate the current request. Serves $contentPath to active members; otherwise sends the
  * visitor to login or renders an explanatory page. Never returns to the caller unless
  * access was granted.
@@ -138,9 +196,10 @@ function resok_gate_serve(string $contentPath, string $pageName = 'this page'): 
         exit;
     }
 
-    if ($gate['state'] === 'anonymous') {
+    if ($gate['state'] === 'anonymous' || $gate['state'] === 'timedout') {
         $next = '/' . ltrim((string)strtok((string)($_SERVER['REQUEST_URI'] ?? '/'), '?'), '/');
-        header('Location: ' . RESOK_GATE_LOGIN_URL . '?next=' . rawurlencode($next), true, 302);
+        $query = 'next=' . rawurlencode($next) . ($gate['state'] === 'timedout' ? '&timeout=1' : '');
+        header('Location: ' . RESOK_GATE_LOGIN_URL . '?' . $query, true, 302);
         exit;
     }
 

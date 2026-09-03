@@ -247,6 +247,13 @@
      * off-site ("//evil.com", "https://...", a backslash Windows browsers normalise to
      * "/") is discarded, so this can't be turned into an open redirect in a phishing link.
      */
+    // Arriving from an inactivity logout - either the browser timer in portal-state.js or
+    // the gate on /learning. Without a word here, being bounced back to login just looks
+    // like the session broke.
+    if (new URLSearchParams(window.location.search).get("timeout") === "1") {
+      showAlert("You were signed out after 20 minutes of inactivity. Please log in again.");
+    }
+
     function safeNextPath() {
       const raw = new URLSearchParams(window.location.search).get("next") || "";
       if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\") || raw.includes(":")) return "";

@@ -88,8 +88,29 @@ function b64url(string $data): string {
     return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 }
 
-function token(array $payload, string $secret): string {
-    $payload['exp'] = time() + 7 * 24 * 60 * 60;
+// Absolute cap on a session: even a member who never stops clicking has to log in again
+// after this. In practice the idle timeout below almost always ends the session first.
+const RESOK_SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60;
+
+// A session ends after this long with no authenticated request. Every call through auth()
+// slides the window forward, so "activity" means any portal page that talks to the API,
+// plus /learning on the main site (member-gate.php enforces the same window - keep the
+// two constants in step if this changes).
+const RESOK_SESSION_IDLE_TIMEOUT = 20 * 60;
+
+// Re-signing the cookie on literally every request would put a Set-Cookie header on every
+// JSON response for no benefit. Refreshing at most this often keeps the sliding window
+// accurate to within a minute, which is plenty against a 20-minute timeout.
+const RESOK_SESSION_REFRESH_INTERVAL = 60;
+
+/**
+ * `exp` is the absolute end of the session and is carried over unchanged when a token is
+ * refreshed; `seen` is the last-activity stamp that auth() moves forward. Pass $expiresAt
+ * to preserve an existing session's cap; omit it when minting a brand new session.
+ */
+function token(array $payload, string $secret, ?int $expiresAt = null): string {
+    $payload['exp'] = $expiresAt ?? (time() + RESOK_SESSION_MAX_LIFETIME);
+    $payload['seen'] = time();
     $body = b64url(json_encode($payload));
     $sig = b64url(hash_hmac('sha256', $body, $secret, true));
     return $body . '.' . $sig;
@@ -100,9 +121,12 @@ function token(array $payload, string $secret): string {
 // SameSite=Lax + HttpOnly + Secure is treated as sufficient CSRF protection here — every
 // state-changing call in this API is a fetch() POST, which Lax already blocks cross-site,
 // so no separate CSRF token is issued. Don't "fix" that without re-adding one.
+// The cookie itself is given the idle window, not the 7-day cap, so a browser left closed
+// past the timeout discards the session on its own instead of sending a token the server
+// is only going to reject. Each refresh in auth() extends it again.
 function issueAuthCookie(string $token): void {
     setcookie('resok_token', $token, [
-        'expires' => time() + 7 * 24 * 60 * 60,
+        'expires' => time() + RESOK_SESSION_IDLE_TIMEOUT,
         'path' => '/',
         'secure' => true,
         'httponly' => true,
@@ -121,8 +145,10 @@ function clearAuthCookie(): void {
 }
 
 function auth(array $config): array {
+    $fromCookie = true;
     $token = $_COOKIE['resok_token'] ?? '';
     if (!$token) {
+        $fromCookie = false;
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         if (!$header && function_exists('apache_request_headers')) {
             $headers = apache_request_headers();
@@ -142,6 +168,29 @@ function auth(array $config): array {
     if (!is_array($payload) || (($payload['exp'] ?? 0) < time())) {
         respond(401, ['error' => 'Expired token']);
     }
+
+    // Idle timeout. Tokens minted before this existed carry no `seen` claim; those are
+    // grandfathered (their window starts on this request) rather than logging out every
+    // signed-in member the moment this deploys. The refresh below stamps them.
+    $seen = (int)($payload['seen'] ?? 0);
+    $idleFor = time() - $seen;
+    if ($seen > 0 && $idleFor > RESOK_SESSION_IDLE_TIMEOUT) {
+        clearAuthCookie();
+        respond(401, [
+            'error' => 'You were signed out after 20 minutes of inactivity. Please log in again.',
+            'reason' => 'idle'
+        ]);
+    }
+
+    // Slide the window forward. The original `exp` is carried over untouched, so an active
+    // session still ends at the absolute cap rather than renewing itself forever. Header
+    // callers have no cookie to refresh - they just re-authenticate.
+    if ($fromCookie && $idleFor >= RESOK_SESSION_REFRESH_INTERVAL) {
+        $refreshed = $payload;
+        unset($refreshed['exp'], $refreshed['seen']);
+        issueAuthCookie(token($refreshed, $config['jwt_secret'], (int)$payload['exp']));
+    }
+
     return $payload;
 }
 

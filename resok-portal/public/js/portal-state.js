@@ -50,6 +50,10 @@
     return localStorage.getItem(TOKEN_KEY) || getState().token || "";
   }
 
+  function pageName() {
+    return (window.location.pathname.split("/").pop() || "index").replace(/\.html$/i, "");
+  }
+
   function isLocalPreview() {
     return ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
   }
@@ -88,7 +92,13 @@
     } catch {
       data = null;
     }
-    if (!response.ok) throw new Error(data?.error || data?.message || "Request failed");
+    if (!response.ok) {
+      // The server ends a session after 20 minutes with no authenticated request. When that
+      // lands mid-page, tear the local session down and send the member to login with an
+      // explanation, rather than surfacing a bare "request failed" on whatever they clicked.
+      if (response.status === 401 && data?.reason === "idle") endSessionForInactivity();
+      throw new Error(data?.error || data?.message || "Request failed");
+    }
     return data;
   }
 
@@ -188,14 +198,23 @@
     return saveState(state);
   }
 
-  function logout() {
+  // Pass { timedOut: true } for an inactivity logout so the login page can say why. Called
+  // straight from click handlers in a few pages, hence the defensive check rather than a
+  // destructured parameter - an Event object must not read as a timeout.
+  function logout(options) {
+    const timedOut = Boolean(options && options.timedOut === true);
     api("/api/auth/logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
+    try {
+      localStorage.removeItem(ACTIVITY_KEY);
+    } catch {
+      /* private mode - nothing to clear */
+    }
     const state = getState();
     state.loggedIn = false;
     state.token = "";
     saveState(state);
-    window.location.href = "login";
+    window.location.href = timedOut ? "login?timeout=1" : "login";
   }
 
   async function registerMember(data) {
@@ -280,7 +299,7 @@
    * if it resolves false (a redirect to login is already underway in that case).
    */
   async function requireAuthForProtectedPage() {
-    const page = (window.location.pathname.split("/").pop() || "index").replace(/\.html$/i, "");
+    const page = pageName();
     const protectedPages = new Set(["dashboard", "profile", "payment", "card", "financials", "events"]);
     if (!protectedPages.has(page)) return true;
     if (isLocalPreview()) {
@@ -289,6 +308,7 @@
     }
     try {
       await api("/api/members/me");
+      startIdleWatch();
       return true;
     } catch {
       window.location.href = "login";
@@ -529,6 +549,135 @@
     downloadSvg(receiptSvg(payment, state.member, Math.max(index, 0)), `${paymentNumber(payment, Math.max(index, 0))}-receipt.svg`);
   }
 
+  /* --------------------------------------------------------------------------
+   * Inactivity timeout
+   *
+   * The server is what actually enforces this: auth() in the API rejects any token
+   * whose last-activity stamp is over 20 minutes old, and member-gate.php applies the
+   * same window to /learning. This is the browser half, which does three things the
+   * server cannot:
+   *
+   *  - closes the session on schedule instead of leaving a signed-in page sitting open
+   *    on a shared screen until someone happens to click something;
+   *  - warns a minute before, so a half-filled form is not lost without notice;
+   *  - keeps the server's window in step while the member is genuinely working - they
+   *    can spend 25 minutes typing into a form without making a single API call, and
+   *    without this their eventual save would be the request that gets rejected.
+   * -------------------------------------------------------------------------- */
+  const IDLE_TIMEOUT_MS = 20 * 60 * 1000;
+  const IDLE_WARNING_MS = 60 * 1000;
+  const IDLE_TICK_MS = 5 * 1000;
+  const KEEPALIVE_MS = 5 * 60 * 1000;
+  // In localStorage rather than a variable so that activity in any open portal tab counts
+  // for all of them - otherwise a member working in one tab is logged out by an idle one.
+  const ACTIVITY_KEY = "resok_last_activity";
+  const ACTIVITY_EVENTS = ["mousedown", "keydown", "scroll", "touchstart", "click"];
+
+  let idleTimer = null;
+  let lastKeepAlive = 0;
+  let warningEl = null;
+
+  function lastActivityAt() {
+    try {
+      const saved = Number(localStorage.getItem(ACTIVITY_KEY));
+      if (Number.isFinite(saved) && saved > 0) return saved;
+    } catch {
+      /* private mode - fall through to "active now" */
+    }
+    return Date.now();
+  }
+
+  function markActivity() {
+    try {
+      localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+    } catch {
+      /* private mode - the in-page timer below still works, just not across tabs */
+    }
+  }
+
+  function hideIdleWarning() {
+    if (!warningEl) return;
+    warningEl.remove();
+    warningEl = null;
+  }
+
+  function showIdleWarning(secondsLeft) {
+    if (!warningEl) {
+      warningEl = document.createElement("div");
+      warningEl.setAttribute("role", "alertdialog");
+      warningEl.setAttribute("aria-live", "assertive");
+      // Styled inline: this has to look the same on all ten portal pages, and they do not
+      // share a stylesheet beyond css/styles.css which not all of them load.
+      warningEl.style.cssText =
+        "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;" +
+        "display:flex;align-items:center;gap:14px;max-width:min(440px,92vw);padding:14px 18px;" +
+        "border-radius:10px;background:#fff;border:1px solid #e5e7eb;color:#253141;" +
+        "box-shadow:0 18px 40px rgba(15,23,42,.18);font-family:'Segoe UI',Tahoma,sans-serif;font-size:14px";
+
+      const text = document.createElement("span");
+      text.style.cssText = "flex:1;line-height:1.45";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "Stay signed in";
+      button.style.cssText =
+        "flex-shrink:0;border:0;border-radius:6px;padding:9px 14px;background:#00932e;" +
+        "color:#fff;font-weight:800;font-size:13px;cursor:pointer";
+      button.addEventListener("click", () => {
+        markActivity();
+        keepServerSessionAlive(true);
+        hideIdleWarning();
+      });
+
+      warningEl.append(text, button);
+      document.body.appendChild(warningEl);
+    }
+    warningEl.firstChild.textContent = `You will be signed out in ${secondsLeft}s due to inactivity.`;
+  }
+
+  function keepServerSessionAlive(force) {
+    if (!force && Date.now() - lastKeepAlive < KEEPALIVE_MS) return;
+    lastKeepAlive = Date.now();
+    // Any authenticated GET slides the server's window forward. members/me is the cheapest
+    // one and works for admins too - it just answers with an empty object when the account
+    // has no member profile.
+    api("/api/members/me").catch(() => {});
+  }
+
+  function stopIdleWatch() {
+    if (!idleTimer) return;
+    clearInterval(idleTimer);
+    idleTimer = null;
+    ACTIVITY_EVENTS.forEach((type) => window.removeEventListener(type, markActivity));
+  }
+
+  function endSessionForInactivity() {
+    stopIdleWatch();
+    hideIdleWarning();
+    logout({ timedOut: true });
+  }
+
+  function startIdleWatch() {
+    // Local preview hands itself a session in ensureLocalPreviewSession(), so timing one
+    // out would just loop; there is no server session to protect there anyway.
+    if (idleTimer || isLocalPreview()) return;
+    markActivity();
+    ACTIVITY_EVENTS.forEach((type) => window.addEventListener(type, markActivity, { passive: true }));
+    idleTimer = setInterval(() => {
+      const idleFor = Date.now() - lastActivityAt();
+      if (idleFor >= IDLE_TIMEOUT_MS) {
+        endSessionForInactivity();
+        return;
+      }
+      if (idleFor >= IDLE_TIMEOUT_MS - IDLE_WARNING_MS) {
+        showIdleWarning(Math.max(1, Math.ceil((IDLE_TIMEOUT_MS - idleFor) / 1000)));
+        return;
+      }
+      hideIdleWarning();
+      keepServerSessionAlive(false);
+    }, IDLE_TICK_MS);
+  }
+
   window.ResokPortal = {
     api,
     apiUrl,
@@ -549,6 +698,8 @@
     listEvents,
     registerForEvent,
     requireAuthForProtectedPage,
+    startIdleWatch,
+    stopIdleWatch,
     hydrateShell,
     memberName,
     initials,
@@ -561,4 +712,20 @@
     downloadFeeStatement,
     downloadReceipt
   };
+
+  // Start the watch on any portal page that already believes it has a session. Protected
+  // pages also call startIdleWatch() from requireAuthForProtectedPage() once the server has
+  // confirmed the session; this covers the rest (admin-review, certificates) without each
+  // page having to opt in. It is a no-op if already running.
+  function autoStartIdleWatch() {
+    if (["login", "forgot-password"].includes(pageName())) return;
+    if (!getState().loggedIn) return;
+    startIdleWatch();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", autoStartIdleWatch);
+  } else {
+    autoStartIdleWatch();
+  }
 })();

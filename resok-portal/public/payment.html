@@ -194,9 +194,14 @@
       const modes = Array.isArray(instructions.paymentModes) && instructions.paymentModes.length
         ? instructions.paymentModes
         : ["M-PESA Paybill"];
-      document.getElementById("proofMode").innerHTML = modes
+      const modeSelect = document.getElementById("proofMode");
+      modeSelect.innerHTML = modes
         .map((mode) => `<option value="${esc(mode)}">${esc(mode)}</option>`)
         .join("");
+      // A dropdown with one choice is just a question with no answer to give. Hide the
+      // field while M-Pesa is the only mode; the select still submits its single value, and
+      // the field reappears on its own if another mode is added back to paymentModes.
+      modeSelect.closest(".field").hidden = modes.length < 2;
 
       // Only offer the instant prompt when the server has working M-Pesa credentials.
       if (instructions.stkEnabled) {

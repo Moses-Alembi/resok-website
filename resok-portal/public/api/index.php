@@ -460,7 +460,11 @@ try {
             'accountNumber' => (string)($config['paybill_account'] ?? '2038334878'),
             'amount' => (int)($config['membership_fee'] ?? 5000),
             'currency' => 'KES',
-            'paymentModes' => ['M-PESA Paybill', 'Cheque/interbank Funds Transfer'],
+            // M-Pesa only for now. Cheque/interbank was offered here but nothing supported
+            // it: the confirmation form asks for an M-Pesa code and a phone number, both
+            // required, and the code is validated as ^[A-Z0-9-]{6,24}$, which a bank
+            // reference need not match. Adding a mode back means adapting that form first.
+            'paymentModes' => ['M-PESA Paybill'],
             'categories' => $config['membership_categories'] ?? [],
             // Lets the portal decide what to offer. Two conditions, deliberately: the keys
             // have to be present AND mpesa_enabled has to be switched on. Credentials alone

@@ -273,14 +273,14 @@ a:hover .more i,.card:hover .more i{transform:translateX(4px)}
 
       // ~200 words a minute, floored at a minute: a rough honest signal, not a promise.
       const readingTime = (post) => {
-        const words = `${post.title} ${post.excerpt || ""}`.split(/\s+/).length;
-        return Math.max(1, Math.round((post.post ? words * 6 : words) / 200));
+        const words = (post.body || [post.excerpt || ""]).reduce((n, p) => n + p.split(/\s+/).length, 0);
+        return Math.max(1, Math.round(words / 200));
       };
 
       const categories = ["All", ...Array.from(new Set(ALL.map((p) => p.category))).sort()];
 
       function hrefFor(post) {
-        return post.post ? `post.html?id=${encodeURIComponent(post.post)}` : post.external || "#";
+        return `post.html?id=${encodeURIComponent(post.id)}`;
       }
 
       function meta(post, withRead) {
@@ -307,18 +307,14 @@ a:hover .more i,.card:hover .more i{transform:translateX(4px)}
 
       function linkAttrs(anchor, post) {
         anchor.href = hrefFor(post);
-        if (!post.post && post.external) {
-          anchor.target = "_blank";
-          anchor.rel = "noopener noreferrer";
-        }
       }
 
       function readMore(post) {
         const span = document.createElement("span");
         span.className = "more";
-        span.textContent = post.post ? "Read article" : "Read on LinkedIn";
+        span.textContent = "Read article";
         const arrow = document.createElement("i");
-        arrow.className = post.post ? "fas fa-arrow-right" : "fas fa-arrow-up-right-from-square";
+        arrow.className = "fas fa-arrow-right";
         span.appendChild(arrow);
         return span;
       }

@@ -1,541 +1,473 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ReSoK Blog</title>
-  <meta name="description" content="ReSoK blog article." />
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#bc0b22">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Article | Respiratory Society of Kenya</title><meta name="description" content="News and updates from the Respiratory Society of Kenya."><link rel="icon" href="favicon.jpg" type="image/jpeg" /><link href="https://fonts.googleapis.com/css2?family=Mulish:wght@700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="partials/site.css"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#00932e;--r:#bc0b22;--ink:#111f35;--muted:#667085;--bg:#f5f7fa;--line:#e7ebef;--deep:#0a2e38;--h:'Mulish','Poppins',sans-serif;--b:'Poppins','Segoe UI',sans-serif}
+body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65}
+[hidden]{display:none!important}
+a{color:inherit;text-decoration:none}
+.wrap{width:min(1180px,90vw);margin:0 auto}
+.narrow{width:min(760px,90vw);margin:0 auto}
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js');
-      });
-    }
-  </script>
+.crumb{background:var(--deep);color:rgba(255,255,255,.82);font-size:.82rem;font-weight:600}
+.crumb .wrap{padding:13px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.crumb a{color:#9be7b2}
+.crumb a:hover{text-decoration:underline}
+.crumb i{font-size:.6rem;opacity:.6}
 
-  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
-  <link rel="shortcut icon" href="favicon.jpg" type="image/jpeg" />
+.art-head{background:#fff;border-bottom:1px solid var(--line);padding:44px 0 34px}
+.art-head .tag{display:inline-block;background:rgba(0,147,46,.1);color:var(--g);font-weight:900;
+  text-transform:uppercase;letter-spacing:.05em;font-size:.72rem;padding:5px 12px;border-radius:999px}
+.art-head h1{font-family:var(--h);font-size:clamp(1.7rem,3.6vw,2.7rem);line-height:1.15;margin:16px 0 12px}
+.art-head .standfirst{color:var(--muted);font-size:1.05rem;line-height:1.6}
+.byline{display:flex;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+.byline .who{font-weight:700;font-size:.9rem}
+.byline .when{color:var(--muted);font-size:.85rem}
 
-  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+/* The public statistics row (§33). Only ever shows figures that are real - see the
+   renderer: counts appear when the API returns them and stay hidden when it cannot. */
+.stats{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px;padding-top:18px;
+  border-top:1px solid var(--line);color:var(--muted);font-size:.86rem;font-weight:600}
+.stats span{display:inline-flex;align-items:center;gap:7px}
+.stats .sep{opacity:.4}
+.stats .ic-read{color:#475467}
+.stats .ic-like{color:var(--r)}
+.stats .ic-comment{color:#3b82f6}
+.stats .ic-time{color:var(--g)}
 
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --brand-primary: #00932e;
-      --brand-secondary: #bc0b22;
-      --text-dark: #2c3e50;
-      --bg-light: #f5f7fa;
-      --shadow: 0 4px 12px rgba(0,0,0,0.08);
-      --heading-font: 'Mulish', 'Poppins', sans-serif;
-    }
-    body {
-      font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color: var(--text-dark);
-      background: linear-gradient(135deg, var(--bg-light) 0%, #e4edf9 100%);
-      min-height: 100vh;
-    }
+.hero-media{margin:0;background:#dde3ea}
+.hero-media img{display:block;width:100%;max-height:520px;object-fit:cover}
+.hero-media figcaption{color:var(--muted);font-size:.8rem;padding:10px 0}
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: rgba(255,255,255,0.96);
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.10);
-    }
-    .topbar-inner {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-    }
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      color: inherit;
-      font-family: var(--heading-font);
-      font-weight: 900;
-    }
-    .brand img { width: 42px; height: 42px; object-fit: contain; }
+.art-body{padding:38px 0 10px;font-size:1.05rem;line-height:1.8}
+.art-body p{margin-bottom:20px}
+.art-body h2{font-family:var(--h);font-size:1.4rem;margin:34px 0 12px}
+.art-body ul,.art-body ol{margin:0 0 20px 22px}
+.art-body li{margin-bottom:8px}
+.art-body blockquote{border-left:4px solid var(--g);background:#fff;padding:16px 20px;margin:0 0 20px;
+  border-radius:0 8px 8px 0;color:#344054}
+.art-body a{color:var(--g);text-decoration:underline}
 
-    .navlinks {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-    }
-    .navlinks a {
-      text-decoration: none;
-      font-weight: 800;
-      color: rgba(44, 62, 80, 0.9);
-      padding: 8px 10px;
-      border-radius: 999px;
-    }
-    .navlinks a:hover {
-      background: rgba(0, 147, 46, 0.10);
-    }
-    .navlinks a.cta {
-      background: linear-gradient(135deg, rgba(0, 147, 46, 0.16), rgba(188, 11, 34, 0.14));
-      border: 1px solid rgba(0, 0, 0, 0.10);
-    }
+.source-note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--muted);
+  border-radius:0 8px 8px 0;padding:16px 18px;margin:6px 0 30px;color:var(--muted);font-size:.88rem}
+.source-note a{color:var(--g);font-weight:700}
 
-    .hero {
-      padding: 54px 18px 18px;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-      background:
-        radial-gradient(1000px 420px at 10% 0%, rgba(0, 147, 46, 0.18), transparent 60%),
-        radial-gradient(900px 360px at 90% 20%, rgba(188, 11, 34, 0.18), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,0.65), rgba(255,255,255,0.12));
-    }
-    .hero-inner {
-      max-width: 1240px;
-      margin: 0 auto;
-    }
-    .hero h1 {
-      font-family: 'Poppins', 'Mulish', sans-serif;
-      font-weight: 900;
-      font-size: clamp(2.8rem, 1.65rem + 4.2vw, 5rem);
-      line-height: 1.12;
-      letter-spacing: 0;
-      text-transform: uppercase;
-      color: #050b12;
-      text-shadow: none;
-    }
-    .hero p {
-      margin-top: 10px;
-      max-width: 70ch;
-      color: rgba(44, 62, 80, 0.85);
-    }
+.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:22px 0 8px;border-top:1px solid var(--line)}
+.act{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;
+  border-radius:999px;padding:9px 16px;font-family:inherit;font-size:.82rem;font-weight:700;
+  color:#475467;cursor:pointer;transition:.15s}
+.act:hover{border-color:var(--g);color:var(--g)}
+.act.liked{background:rgba(188,11,34,.08);border-color:var(--r);color:var(--r)}
+.act i{font-size:.9rem}
 
-    .wrap {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 18px 18px 56px;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 280px;
-      gap: 18px;
-      align-items: start;
-    }
-    .card {
-      background: rgba(255,255,255,0.92);
-      border: 1px solid rgba(0,0,0,0.09);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .cover {
-      width: 100%;
-      height: 280px;
-      object-fit: cover;
-      display: block;
-    }
-    .content {
-      padding: 16px;
-    }
-    .meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      color: rgba(44, 62, 80, 0.75);
-      font-size: 0.92rem;
-      margin-bottom: 10px;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      background: rgba(0, 147, 46, 0.10);
-      border: 1px solid rgba(0, 147, 46, 0.18);
-      font-weight: 900;
-      color: rgba(10, 46, 56, 0.92);
-    }
-    .content h2 {
-      font-family: 'Poppins', 'Mulish', sans-serif;
-      font-weight: 900;
-      line-height: 1.12;
-      font-size: clamp(2.35rem, 1.45rem + 2.7vw, 3.75rem);
-      margin-bottom: 10px;
-    }
-    .content .body {
-      color: rgba(44, 62, 80, 0.90);
-      line-height: 1.75;
-      font-size: 1rem;
-    }
-    .content .body p { margin: 0 0 12px; }
-    .content .body h2 {
-      font-family: 'Poppins', 'Mulish', sans-serif;
-      font-weight: 900;
-      font-size: clamp(1.65rem, 1.05rem + 1.45vw, 2.35rem);
-      line-height: 1.25;
-      margin: 22px 0 8px;
-      color: #050b12;
-    }
-    .content .body ul { margin: 0 0 12px 18px; }
-    .content .body blockquote {
-      margin: 0 0 16px;
-      padding: 14px 16px;
-      border-left: 4px solid var(--brand-secondary);
-      background: rgba(188, 11, 34, 0.06);
-      color: rgba(44, 62, 80, 0.92);
-      font-weight: 700;
-    }
+.section{padding:46px 0}
+.section h2{font-family:var(--h);text-transform:uppercase;font-size:1.3rem;margin-bottom:20px}
+.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.rel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;
+  flex-direction:column;box-shadow:0 10px 24px rgba(15,23,42,.06);transition:transform .2s ease,box-shadow .2s ease}
+.rel:hover{transform:translateY(-3px);box-shadow:0 16px 32px rgba(15,23,42,.11)}
+.rel img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#dde3ea}
+.rel div{padding:16px 16px 18px}
+.rel h3{font-family:var(--h);font-size:1rem;line-height:1.3;margin-bottom:6px}
+.rel span{color:var(--muted);font-size:.78rem}
 
-    .side {
-      padding: 14px;
-    }
-    .side h3 {
-      font-family: 'Poppins', 'Mulish', sans-serif;
-      font-weight: 900;
-      font-size: 1.25rem;
-      margin-bottom: 10px;
-    }
-    .hero h1,
-    .content > h2,
-    .content .body h2,
-    .side h3 {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      max-width: 100%;
-      color: #050b12;
-      letter-spacing: 0;
-      text-transform: uppercase;
-      text-shadow: none !important;
-      filter: none !important;
-      white-space: nowrap;
-      overflow: visible;
-    }
-    .hero h1::before,
-    .content > h2::before,
-    .content .body h2::before,
-    .side h3::before {
-      content: "";
-      width: 5px;
-      height: 0.95em;
-      border-radius: 3px;
-      background: var(--brand-secondary);
-      flex: 0 0 5px;
-      box-shadow: none !important;
-      filter: none !important;
-    }
-    .side a {
-      display: block;
-      text-decoration: none;
-      font-weight: 800;
-      color: rgba(44, 62, 80, 0.92);
-      padding: 10px 10px;
-      border-radius: 12px;
-    }
-    .side a:hover { background: rgba(0, 147, 46, 0.10); }
+.cta{background:var(--deep);color:#fff;border-radius:12px;padding:34px;display:grid;
+  grid-template-columns:1.3fr 1fr;gap:26px;align-items:center}
+.cta h2{color:#fff;margin-bottom:8px}
+.cta p{color:rgba(255,255,255,.78);font-size:.92rem}
+.cta form{display:flex;gap:0}
+.cta input{flex:1;border:0;border-radius:6px 0 0 6px;padding:14px 16px;font-family:inherit;font-size:.9rem}
+.cta button{border:0;border-radius:0 6px 6px 0;background:var(--g);color:#fff;font-family:inherit;
+  font-weight:800;padding:0 22px;cursor:pointer}
+.missing{text-align:center;padding:80px 20px}
+.missing h1{font-family:var(--h);font-size:1.6rem;margin-bottom:10px}
+.missing p{color:var(--muted);margin-bottom:20px}
+.missing a{display:inline-block;background:var(--g);color:#fff;font-weight:800;padding:12px 20px;border-radius:6px}
 
-    @media (max-width: 980px) {
-      .wrap { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="index.html" aria-label="Go to homepage">
-        <img src="assets/img/logo.png" alt="ReSoK logo" />
-        <span>ReSoK</span>
-      </a>
-      <nav class="navlinks" aria-label="Primary navigation">
-        <a href="blog.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to Blog</a>
-        <a href="projects.html">Projects</a>
-        <a href="sponsors.html">Partners</a>
-        <a class="cta" href="contact.html#donate">Donate</a>
-      </nav>
-    </div>
-  </div>
-
-  <header class="hero">
-    <div class="hero-inner">
-      <h1 id="postTitle">Blog post</h1>
-      <p id="postSubtitle">ReSoK resources and updates.</p>
-    </div>
-  </header>
-
-  <section class="wrap" aria-label="Blog post content">
-    <article class="card">
-      <img id="postImage" class="cover" src="assets/img/Gallery/B6.jpg" alt="" loading="lazy" />
-      <div class="content">
-        <div class="meta">
-          <span class="badge" id="postCategory"><i class="fas fa-bookmark" aria-hidden="true"></i> Article</span>
-          <span id="postDate"><i class="far fa-calendar-alt" aria-hidden="true"></i> </span>
-          <span id="postAuthor"><i class="far fa-user" aria-hidden="true"></i> </span>
+@media(max-width:820px){.cta{grid-template-columns:1fr}.art-head{padding:30px 0 26px}}
+</style>
+</head><body>
+<nav class="navbar">
+    <div class="nav-shell">
+      <div class="nav-top">
+        <div class="nav-top-left">
+          <a href="contact.html" class="nav-top-item"><i class="fas fa-question-circle"></i> Ask a Question</a>
+          <a href="mailto:info@resok.org" class="nav-top-item"><i class="far fa-envelope"></i> info@resok.org</a>
         </div>
-        <h2 id="postHeading"></h2>
-        <div class="body" id="postBody"></div>
       </div>
-    </article>
+      <div class="nav-main">
+        <ul class="nav-menu" id="navMenu">
+          <li><a href="index.html" class="nav-link"><i class="fas fa-home" aria-hidden="true"></i>Home</a></li>
+          <li><a href="about.html" class="nav-link"><i class="fas fa-user-group" aria-hidden="true"></i>About</a></li>
+          <li><a href="conferences.html" class="nav-link"><i class="fas fa-calendar-check" aria-hidden="true"></i>Conferences</a></li>
+          <li><a href="projects.html" class="nav-link"><i class="fas fa-folder-open" aria-hidden="true"></i>Projects</a></li>
+          <li><a href="workshops-and-training.html" class="nav-link"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
+          <li><a href="sponsors.html" class="nav-link"><i class="fas fa-handshake" aria-hidden="true"></i>Partners</a></li>
+          <li><a href="knowledge.html" class="nav-link"><i class="fas fa-book-medical" aria-hidden="true"></i>Knowledge</a></li>
+          <li><a href="learning.html" class="nav-link"><i class="fas fa-book-open" aria-hidden="true"></i>Learning<span class="nav-badge">Members</span></a></li>
+          <li><a href="blog.html" class="nav-link is-active"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
+          <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
+          <li class="nav-mobile-actions">
+            <a href="resok-portal/public/" class="mobile-action mobile-action-member"><i class="fas fa-user-plus" aria-hidden="true"></i>Become a Member</a>
+            <a href="contact.html#donate" class="mobile-action mobile-action-donate"><i class="fas fa-heart" aria-hidden="true"></i>Donate</a>
+            <a href="resok-portal/public/login" class="mobile-action mobile-action-login"><i class="fas fa-user" aria-hidden="true"></i>Login</a>
+          </li>
+        </ul>
+        <div class="nav-actions">
+          <a href="resok-portal/public/login" class="nav-top-action"><i class="fas fa-user" aria-hidden="true"></i> Login</a>
+          <a href="contact.html#donate" class="nav-top-action"><i class="fas fa-heart" aria-hidden="true"></i> Donate</a>
+          <a href="resok-portal/public/" class="nav-top-member">Become a Member</a>
+        </div>
+        <button class="hamburger" type="button" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+      </div>
+      <a href="index.html" class="logo" aria-label="ReSoK Home"><img src="assets/img/logo.png" alt="Respiratory Society of Kenya"></a>
+    </div>
+  </nav>
+  <main id="articleRoot" hidden>
+    <nav class="crumb" aria-label="Breadcrumb">
+      <div class="wrap">
+        <a href="blog.html">Blog &amp; News</a>
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        <span id="crumbCategory">Article</span>
+      </div>
+    </nav>
 
-    <aside class="card side" aria-label="More links">
-      <h3>More from ReSoK</h3>
-      <a href="blog.html">Browse all posts</a>
-      <a href="https://youtube.com/@respiratorysocietykenya" target="_blank" rel="noopener">YouTube channel</a>
-      <a href="resok-portal/public/">Membership</a>
-      <a href="contact.html">Contact us</a>
-    </aside>
-  </section>
+    <header class="art-head">
+      <div class="narrow">
+        <span class="tag" id="artCategory"></span>
+        <h1 id="artTitle"></h1>
+        <p class="standfirst" id="artStandfirst" hidden></p>
+        <div class="byline">
+          <span class="who" id="artAuthor" hidden></span>
+          <span class="when" id="artDate"></span>
+        </div>
 
+        <!-- Public statistics row. Reads, likes and comments come from the API; each stays
+             hidden until a real figure arrives, so nothing here is ever a placeholder. -->
+        <div class="stats" id="artStats">
+          <span id="statReads" hidden><i class="fas fa-eye ic-read" aria-hidden="true"></i><b></b> Reads</span>
+          <span class="sep" data-for="statReads" hidden>·</span>
+          <span id="statLikes" hidden><i class="fas fa-heart ic-like" aria-hidden="true"></i><b></b> Likes</span>
+          <span class="sep" data-for="statLikes" hidden>·</span>
+          <span id="statComments" hidden><i class="fas fa-comment ic-comment" aria-hidden="true"></i><b></b> Comments</span>
+          <span class="sep" data-for="statComments" hidden>·</span>
+          <span id="statRead"><i class="fas fa-clock ic-time" aria-hidden="true"></i><b></b> min read</span>
+          <span class="sep" id="sepUpdated" hidden>·</span>
+          <span id="statUpdated" hidden><i class="fas fa-rotate ic-time" aria-hidden="true"></i>Updated <b></b></span>
+        </div>
+      </div>
+    </header>
+
+    <figure class="hero-media" id="artFigure" hidden>
+      <img id="artImage" src="" alt="">
+    </figure>
+
+    <article class="art-body narrow" id="artBody"></article>
+
+    <div class="narrow">
+      <p class="source-note" id="artSource" hidden></p>
+
+      <div class="actions">
+        <button class="act" id="likeBtn" type="button"><i class="fas fa-heart" aria-hidden="true"></i> <span>Like</span></button>
+        <button class="act" id="shareLinkedin" type="button"><i class="fab fa-linkedin-in" aria-hidden="true"></i> Share</button>
+        <button class="act" id="shareWhatsapp" type="button"><i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp</button>
+        <button class="act" id="shareX" type="button"><i class="fab fa-x-twitter" aria-hidden="true"></i> Post</button>
+        <button class="act" id="copyLink" type="button"><i class="fas fa-link" aria-hidden="true"></i> <span>Copy link</span></button>
+      </div>
+    </div>
+
+    <section class="section" id="relatedSection" hidden>
+      <div class="wrap">
+        <h2>You may also like</h2>
+        <div class="rel-grid" id="relatedMount"></div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="cta">
+          <div>
+            <h2>Stay informed about lung health</h2>
+            <p>Research, clinical updates, events, and society news from ReSoK, straight to your inbox.</p>
+          </div>
+          <form id="ctaForm">
+            <label for="ctaEmail" style="position:absolute;left:-9999px">Email address</label>
+            <input id="ctaEmail" type="email" placeholder="Your email address" required>
+            <button type="submit">Subscribe</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main id="articleMissing" class="narrow missing" hidden>
+    <h1>Article not found</h1>
+    <p>We could not find that article. It may have been moved or renamed.</p>
+    <a href="blog.html">Back to Blog &amp; News</a>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand-row"><img src="assets/img/logo.png" alt="ReSoK logo"></div>
+        <div class="site-footer-top-social" aria-label="Social links">
+          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.instagram.com/respiratorysocietyofkenya" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+        <div class="site-footer-donate"><a href="resok-portal/public/">Membership</a></div>
+      </div>
+      <div class="site-footer-mid">
+        <div><h3 class="site-footer-head">Sign Up For A Newsletter</h3><p class="site-footer-text">Get updates on CMEs, webinars, projects, and announcements directly in your inbox.</p><form class="site-footer-subscribe" action="mailto:info@resok.org?subject=ReSoK%20Newsletter%20Signup" method="post" enctype="text/plain"><input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address"><button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button></form></div>
+        <div class="site-footer-col"><h4>Society</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="index.html">Home</a></li><li><a href="about.html">About</a></li><li><a href="conferences.html">Conferences</a></li><li><a href="resok-portal/public/">Membership</a></li><li><a href="https://www.resok.org/faqs" target="_blank" rel="noopener">FAQs</a></li></ul></div>
+        <div class="site-footer-col"><h4>Get In Touch</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="contact.html">Contact Us</a></li><li><a href="blog.html">Blog</a></li><li><a href="contact.html">Location</a></li></ul></div>
+        <div class="site-footer-col"><h4>Resources</h4><div class="site-footer-divider"></div><ul class="site-footer-list"><li><a href="knowledge.html">Knowledge Hub</a></li><li><a href="guidelines.html">Guidelines</a></li><li><a href="patient-resources.html">Patient Resources</a></li><li><a href="projects.html">Projects</a></li><li><a href="workshops-and-training.html">Workshops</a></li><li><a href="learning.html">Learning</a></li></ul></div>
+        <div class="site-footer-col"><h4>Our Gallery</h4><div class="site-footer-divider"></div><div class="site-footer-gallery-grid">
+<img src="assets/img/footer/F1.jpg" alt="Gallery 1" loading="lazy">
+<img src="assets/img/footer/F2.jpg" alt="Gallery 2" loading="lazy">
+<img src="assets/img/footer/F3.jpg" alt="Gallery 3" loading="lazy">
+<img src="assets/img/footer/F4.jpeg" alt="Gallery 4" loading="lazy">
+<img src="assets/img/footer/F5.png" alt="Gallery 5" loading="lazy">
+<img src="assets/img/footer/F6.png" alt="Gallery 6" loading="lazy">
+<img src="assets/img/footer/F7.jpg" alt="Gallery 7" loading="lazy">
+<img src="assets/img/footer/F8.jpg" alt="Gallery 8" loading="lazy">
+</div></div>
+      </div>
+      <div class="site-footer-bottom">&copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT</div>
+    </div>
+  </footer>
+  <div class="social-float" aria-label="Quick social links">
+    <a class="social-whatsapp" href="https://wa.me/254735700660?text=Hello%20ReSoK%20team%2C%20I%20have%20an%20inquiry." target="_blank" rel="noopener noreferrer" aria-label="Chat with us on WhatsApp" title="WhatsApp"><img src="assets/img/social/whatsapp.svg" alt="" aria-hidden="true"></a>
+    <a class="social-x" href="https://x.com/ReSoKenya" target="_blank" rel="noopener noreferrer" aria-label="Visit us on X" title="X"><img src="assets/img/social/x.svg" alt="" aria-hidden="true"></a>
+    <a class="social-linkedin" href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" rel="noopener noreferrer" aria-label="Visit us on LinkedIn" title="LinkedIn"><img src="assets/img/social/linkedin.svg" alt="" aria-hidden="true"></a>
+    <a class="social-facebook" href="https://www.facebook.com/share/1DLne8xyKQ/" target="_blank" rel="noopener noreferrer" aria-label="Visit us on Facebook" title="Facebook"><img src="assets/img/social/facebook.svg" alt="" aria-hidden="true"></a>
+  </div>
   <script>
-    const posts = {
-      "advanced-thoracic-ultrasound": {
-        title: "Advanced Thoracic Ultrasound Workshop in Nairobi",
-        subtitle: "Online theory, supervised hands-on training, interventional ultrasound, and certification.",
-        date: "2025",
-        author: "Programs Team",
-        category: "CME",
-        icon: "fa-chalkboard-teacher",
-        image: "assets/img/Gallery/B3.jpg",
-        imageAlt: "Thoracic ultrasound and respiratory training",
-        body: [
-          "Join a comprehensive training program led by a certified expert in thoracic ultrasound. The workshop is designed to help clinicians gain hands-on experience in diagnostic and interventional techniques that elevate clinical practice.",
-          "<h2>Step 1: Theory (Online - 8 Weeks)</h2><ul><li>Live sessions twice a week.</li><li>Coverage of physics, anatomy, pathology, and image interpretation.</li><li>Free lifetime access to the full thoracic ultrasound textbook.</li></ul>",
-          "<h2>Step 2: Hands-On Training (Nairobi)</h2><ul><li>Supervised volunteer scans.</li><li>Expert demonstrations.</li><li>Case portfolio submission.</li></ul>",
-          "<h2>Step 3: Interventional Ultrasound</h2><p>Participants learn ultrasound-guided procedures as part of the advanced practical component.</p>",
-          "<h2>Step 4: Certification</h2><p>Participants can earn recognition as certified thoracic ultrasound physicians.</p>",
-          "<h2>Fees (Step 1 - Online Theory)</h2><ul><li>Mar 1-Apr 30: $425.</li><li>May 1-Jul 14: $475.</li><li>Jul 15-Jul 31: $502, including a $27 late fee.</li></ul>",
-          "<h2>Hospital Group Offer</h2><p>Hospitals registering five or more people from the same institution receive $50 off per person, based on registration date. Offer valid until July 15, 2025.</p>",
-          "<h2>Inquiries</h2><p>Email: lung.art622@gmail.com<br>WhatsApp: +201102069714<br>PayPal: Angel_rizk@hotmail.com</p>"
-        ]
-      },
-      "pleuroscopy-camp": {
-        title: "Advancing Lung Health: Highlights from Our Two-Day Pleuroscopy Camp",
-        subtitle: "A successful camp supporting better diagnosis and care for patients with pleural disease.",
-        date: "2025",
-        author: "ReSoK Programs",
-        category: "Clinical",
-        icon: "fa-stethoscope",
-        image: "assets/img/Gallery/B5.jpg",
-        imageAlt: "Pleuroscopy camp respiratory procedure team",
-        body: [
-          "<blockquote>The good physician treats the disease; the great physician treats the patient who has the disease. - William Osler</blockquote>",
-          "ReSoK is proud to share highlights from a successful Two-Day Pleuroscopy Camp, an important step forward in the mission to advance lung health and respiratory care.",
-          "The camp brought together a team of skilled specialists dedicated to providing life-changing interventions for patients with pleural diseases. Through minimally invasive pleuroscopy procedures, the team improved diagnostic accuracy and provided timely treatment for conditions such as unexplained pleural effusions and malignancies.",
-          "Over the two days, expert teams worked with dedication to ensure each patient received personalized, high-quality care. Beyond the procedures themselves, the camp represented a broader commitment to early detection, better patient outcomes, and stronger healthcare capacity in the fight against respiratory diseases.",
-          "ReSoK extends deep gratitude to the dedicated medical professionals, support teams, and patients who entrusted the team with their care.",
-          "AstraZeneca, Kenyatta National Hospital, Respiratory Society of Kenya, Johns Hopkins Hospital, Jacqueline Wanjiku Kagima MD, PhD, Christine Argento, Victoria Gonzalez, Andrew Owuor, Joan Kagema, Kevin Kiptoo, Joseph Mutie, and other collaborators helped make this initiative a success.",
-          "Together, we are building a healthier future, one breath at a time."
-        ]
-      },
-      "light-writing-workshop": {
-        title: "Advancing TB Research Capacity in Kenya - LIGHT Partners Spearhead Scientific Writing Workshop",
-        subtitle: "ReSoK and AFIDEP facilitated a scientific manuscript writing workshop in Naivasha.",
-        date: "Jul 2025",
-        author: "LIGHT Consortium",
-        category: "Research",
-        icon: "fa-flask",
-        image: "assets/img/Gallery/B6.jpg",
-        imageAlt: "TB research and scientific writing workshop",
-        body: [
-          "One of the core outputs of the LIGHT consortium is capacity strengthening for individuals, institutions, and multi-stakeholder networks to produce, adapt, translate, and use evidence, and to manage research.",
-          "In line with this, LIGHT partners in Kenya, AFIDEP and the Respiratory Society of Kenya (ReSoK), facilitated a scientific manuscript writing workshop in Naivasha, Kenya from 14-18 July 2025.",
-          "Hosted by ReSoK, the workshop included participants from the Ministry of Health's Division of National Tuberculosis, Leprosy and Lung Disease Program, county government representatives, and key lung health partners including Amref Health Africa, Centre for Health Solutions - Kenya, Clinton Health Access Initiative, Kenya Medical Research Institute, and Population Services Kenya.",
-          "The workshop was officially opened by Aiban Ronoh, Head of Monitoring and Evaluation and Research at NTLD-P, on behalf of the Head of NTLD-P program. He highlighted research as an important focus area and shared NTLD-P's vision of developing a national, inclusive, and demand-driven tuberculosis research agenda.",
-          "Intensified research and innovation is the third pillar of the END TB Strategy. LIGHT supports documentation of research and bridges evidence-policy gaps through evidence-informed decision making.",
-          "As part of streamlining TB and lung health research implementation and dissemination in Kenya, NTLD-P spearheaded the formation of a TB and Lung Health research taskforce in January 2025, where LIGHT partners ReSoK and AFIDEP are committee members.",
-          "Prof. Jeremiah Chakaya, ReSoK's Chief Executive Officer and Programme Team Lead at LIGHT Consortium, gave an overview of LIGHT's research focus on gender and tuberculosis. He emphasized that age- and gender-responsive TB prevention and care policies are needed to accelerate progress toward ending TB.",
-          "Dr Beate Ringwald from the LIGHT Consortium virtually conducted a sensitisation session on publishing qualitative research findings. The interactive session covered reflexivity, trustworthiness of research data, common mistakes in documentation, and practical publishing questions.",
-          "The LIGHT Consortium aims to contribute to real-world change and leave no one affected by TB in sub-Saharan Africa behind."
-        ]
-      },
-      "inhaler-technique": {
-        title: "Inhaler technique: the 60-second checklist",
-        subtitle: "A quick, practical guide for clinicians and educators.",
-        date: "Apr 27, 2026",
-        author: "ReSoK Education",
-        category: "Clinical",
-        icon: "fa-stethoscope",
-        image: "assets/img/Gallery/B6.jpg",
-        imageAlt: "Inhaler education session",
-        body: [
-          "Good inhaler technique is one of the simplest ways to improve symptom control. A quick, structured check can prevent unnecessary step-ups in treatment.",
-          "Try this 60-second checklist during reviews:",
-          "<ul><li>Confirm the device type (MDI, DPI, spacer use).</li><li>Check preparation (shake / load dose).</li><li>Assess breathing pattern and timing.</li><li>Confirm full inhalation and breath-hold.</li><li>Rinse after inhaled steroids when appropriate.</li></ul>",
-          "Need help? Reach out via our contact page for training requests and CME updates."
-        ]
-      },
-      "clean-air": {
-        title: "Clean air and lung health: what communities can do",
-        subtitle: "Small changes that protect lungs across the lifespan.",
-        date: "Apr 20, 2026",
-        author: "Advocacy Desk",
-        category: "Advocacy",
-        icon: "fa-bullhorn",
-        image: "assets/img/Gallery/B4.jpg",
-        imageAlt: "Community health discussion",
-        body: [
-          "Air pollution affects children, adults, and older people, especially those with asthma, COPD, and heart disease.",
-          "Community actions include cleaner cooking options, reducing open burning, and supporting smoke-free environments.",
-          "Clinicians can also advocate for safer workplaces and better air quality monitoring."
-        ]
-      },
-      "membership": {
-        title: "ReSoK membership: apply or renew",
-        subtitle: "Be part of Kenya's respiratory professional community.",
-        date: "Apr 12, 2026",
-        author: "Secretariat",
-        category: "News",
-        icon: "fa-newspaper",
-        image: "assets/img/Gallery/B1.jpg",
-        imageAlt: "Members networking",
-        body: [
-          "ReSoK membership connects you with peers, learning opportunities, and society updates.",
-          "Follow our membership page for the latest requirements and announcements.",
-          "If you need support, contact us at info@resok.org."
-        ]
-      },
-      "cme-webinars": {
-        title: "CME & webinars: what to expect this quarter",
-        subtitle: "Practical updates for clinical teams.",
-        date: "Mar 28, 2026",
-        author: "Programs Team",
-        category: "CME",
-        icon: "fa-chalkboard-teacher",
-        image: "assets/img/Gallery/B2.jpg",
-        imageAlt: "Training session",
-        body: [
-          "ReSoK hosts continuing medical education sessions and webinars covering core respiratory topics.",
-          "We share schedules and joining instructions on our social channels and via the newsletter sign-up on the website.",
-          "Have a topic request? Send us a message through the contact page."
-        ]
-      },
-      "asthma-basics": {
-        title: "Asthma basics: recognizing poor control early",
-        subtitle: "A simple approach to red flags and follow-up.",
-        date: "Mar 14, 2026",
-        author: "Clinical Desk",
-        category: "Clinical",
-        icon: "fa-stethoscope",
-        image: "assets/img/Gallery/B3.jpg",
-        imageAlt: "Clinical discussion",
-        body: [
-          "Early recognition of poor control helps prevent exacerbations and avoidable admissions.",
-          "Consider symptom frequency, activity limitation, reliever use, and recent urgent care visits.",
-          "Always reassess triggers, adherence, and inhaler technique before stepping up therapy."
-        ]
-      },
-      "research-spotlight": {
-        title: "Research spotlight: turning data into better lung health",
-        subtitle: "From evidence to everyday care.",
-        date: "Feb 27, 2026",
-        author: "Research Team",
-        category: "Research",
-        icon: "fa-flask",
-        image: "assets/img/Gallery/B5.jpg",
-        imageAlt: "Research and collaboration",
-        body: [
-          "High-quality data supports better guidelines, smarter programs, and more efficient service delivery.",
-          "Implementation science bridges the gap between what works in trials and what works in real clinics.",
-          "ReSoK supports collaboration and knowledge sharing to strengthen lung health outcomes."
-        ]
-      },
-      "tobacco-control": {
-        title: "Tobacco control: what clinicians can say in 2 minutes",
-        subtitle: "A quick, compassionate script for brief interventions.",
-        date: "Feb 10, 2026",
-        author: "Advocacy Desk",
-        category: "Advocacy",
-        icon: "fa-bullhorn",
-        image: "assets/img/Gallery/B6.jpg",
-        imageAlt: "Health education outreach",
-        body: [
-          "Brief interventions can be effective, especially when repeated over time.",
-          "Ask, advise, and assist: check use, recommend quitting, and connect to local support where available.",
-          "If you run cessation programs, tell us so we can share resources across the community."
-        ]
-      },
-      "partners": {
-        title: "ReSoK partners: working together to strengthen services",
-        subtitle: "Partnerships that support training and quality improvement.",
-        date: "Jan 22, 2026",
-        author: "Partnerships",
-        category: "News",
-        icon: "fa-newspaper",
-        image: "assets/img/Gallery/B7.jpg",
-        imageAlt: "Partners collaboration",
-        body: [
-          "Partnerships help expand diagnostics access, strengthen training, and improve service quality.",
-          "We collaborate with government, facilities, academia, and implementing partners.",
-          "Interested in partnering? Visit the Partners page or contact us directly."
-        ]
-      }
-    };
-
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id") || "inhaler-technique";
-    const post = posts[id] || posts["inhaler-technique"];
-
-    document.title = `${post.title} | ReSoK Blog`;
-    document.getElementById("postTitle").textContent = post.title;
-    document.getElementById("postSubtitle").textContent = post.subtitle;
-    document.getElementById("postHeading").textContent = post.title;
-
-    const img = document.getElementById("postImage");
-    img.src = post.image;
-    img.alt = post.imageAlt || post.title;
-
-    const cat = document.getElementById("postCategory");
-    cat.innerHTML = `<i class="fas ${post.icon}" aria-hidden="true"></i> ${post.category}`;
-
-    document.getElementById("postDate").innerHTML = `<i class="far fa-calendar-alt" aria-hidden="true"></i> ${post.date}`;
-    document.getElementById("postAuthor").innerHTML = `<i class="far fa-user" aria-hidden="true"></i> ${post.author}`;
-
-    const body = document.getElementById("postBody");
-    body.innerHTML = post.body.map((chunk) => chunk.startsWith("<") ? chunk : `<p>${chunk}</p>`).join("");
-
-    const fitSingleLineHeading = (heading) => {
-      if (!heading) return;
-      heading.style.fontSize = "";
-      const startingSize = parseFloat(window.getComputedStyle(heading).fontSize);
-      let size = startingSize;
-      const minSize = heading.matches(".hero h1") ? 18 : 18;
-
-      while (heading.scrollWidth > heading.clientWidth && size > minSize) {
-        size -= 1;
-        heading.style.fontSize = `${size}px`;
-      }
-
-      if (heading.scrollWidth > heading.clientWidth) {
-        const ratio = heading.clientWidth / heading.scrollWidth;
-        heading.style.fontSize = `${Math.max(16, size * ratio)}px`;
-      }
-    };
-
-    const fitAllHeadings = () => {
-      document
-        .querySelectorAll(".hero h1, .content > h2, .content .body h2, .side h3")
-        .forEach(fitSingleLineHeading);
-    };
-
-    fitAllHeadings();
-    window.addEventListener("resize", fitAllHeadings);
+    (() => {
+      const hamburger = document.getElementById('hamburger');
+      const navMenu = document.getElementById('navMenu');
+      const newsletterForm = document.querySelector('.site-footer-subscribe');
+      if (newsletterForm) newsletterForm.addEventListener('submit', (event) => event.preventDefault());
+      if (!hamburger || !navMenu) return;
+      const closeMobileNav = () => {
+        hamburger.classList.remove('active');
+        navMenu.classList.remove('active');
+        document.body.classList.remove('mobile-nav-open');
+      };
+      const openMobileNav = () => {
+        hamburger.classList.add('active');
+        navMenu.classList.add('active');
+        document.body.classList.add('mobile-nav-open');
+      };
+      document.addEventListener('click', (event) => {
+        if (hamburger.contains(event.target)) {
+          event.preventDefault();
+          event.stopPropagation();
+          navMenu.classList.contains('active') ? closeMobileNav() : openMobileNav();
+          return;
+        }
+        if (!navMenu.classList.contains('active')) return;
+        if (navMenu.contains(event.target)) return;
+        closeMobileNav();
+      }, true);
+      navMenu.querySelectorAll('.nav-link, .mobile-action').forEach((link) => link.addEventListener('click', closeMobileNav));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeMobileNav();
+      });
+    })();
   </script>
   <script src="assets/js/site-forms.js" defer></script>
   <script src="assets/js/members-only.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+  <script src="assets/js/blog-posts.js"></script>
+  <script>
+    /**
+     * Renders one article from the shared manifest, chosen by ?id=.
+     *
+     * Body paragraphs are set with textContent, never innerHTML - several of these posts
+     * came out of social feeds and carry quotes, ampersands and emoji that must be read as
+     * text rather than parsed as markup.
+     *
+     * The statistics row only ever shows real figures. Reads, likes and comments come from
+     * the API and each stays hidden until a number actually arrives, so the row degrades to
+     * "6 min read" rather than displaying a fabricated zero while the backend is not live.
+     */
+    (() => {
+      const ALL = window.RESOK_BLOG_POSTS || [];
+      const id = new URLSearchParams(window.location.search).get("id");
+      const post = ALL.find((p) => p.id === id);
+      const el = (x) => document.getElementById(x);
+
+      if (!post) {
+        el("articleMissing").hidden = false;
+        return;
+      }
+      el("articleRoot").hidden = false;
+
+      const words = (post.body || []).reduce((n, p) => n + p.split(/\s+/).length, 0);
+      const minutes = Math.max(1, Math.round(words / 200));
+
+      document.title = `${post.title} | Respiratory Society of Kenya`;
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta && post.excerpt) meta.setAttribute("content", post.excerpt);
+
+      el("crumbCategory").textContent = post.category || "Article";
+      el("artCategory").textContent = post.category || "";
+      el("artTitle").textContent = post.title;
+      el("artDate").textContent = post.displayDate || post.date || "";
+
+      if (post.subtitle) {
+        el("artStandfirst").textContent = post.subtitle;
+        el("artStandfirst").hidden = false;
+      }
+      if (post.author) {
+        el("artAuthor").textContent = post.author;
+        el("artAuthor").hidden = false;
+      }
+      if (post.image) {
+        el("artImage").src = post.image;
+        el("artImage").alt = post.imageAlt || "";
+        el("artFigure").hidden = false;
+      }
+
+      el("statRead").querySelector("b").textContent = minutes;
+
+      const body = el("artBody");
+      (post.body || []).forEach((paragraph) => {
+        const p = document.createElement("p");
+        p.textContent = paragraph;
+        body.appendChild(p);
+      });
+
+      // Attribution for anything first published elsewhere. It sits under the article, so
+      // the reader gets the piece here and the credit is still visible.
+      if (post.source) {
+        const note = el("artSource");
+        note.textContent = `This post first appeared on ${post.sourceName || "another platform"}. `;
+        const link = document.createElement("a");
+        link.href = post.source;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "View the original post";
+        note.appendChild(link);
+        note.hidden = false;
+      }
+
+      /* ---------------- public statistics (§33) ---------------- */
+      function showStat(nodeId, value) {
+        if (!Number.isFinite(value) || value <= 0) return;
+        const node = el(nodeId);
+        node.querySelector("b").textContent = value.toLocaleString();
+        node.hidden = false;
+        const sep = document.querySelector(`.sep[data-for="${nodeId}"]`);
+        if (sep) sep.hidden = false;
+      }
+
+      // The API only answers once schema-blog.sql is imported; until then the row shows the
+      // reading time alone rather than inventing engagement that has not happened.
+      fetch(`resok-portal/public/api/index.php?route=blog/articles/${encodeURIComponent(post.id)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          const a = data && data.article;
+          if (!a) return;
+          showStat("statReads", Number(a.readCount));
+          showStat("statLikes", Number(a.reactions));
+          showStat("statComments", Number(a.comments));
+          if (a.updatedAt) {
+            el("statUpdated").querySelector("b").textContent =
+              new Date(a.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+            el("statUpdated").hidden = false;
+            el("sepUpdated").hidden = false;
+          }
+        })
+        .catch(() => {});
+
+      /* ---------------- sharing ---------------- */
+      const url = window.location.href;
+      const share = (target) => window.open(target, "_blank", "noopener,noreferrer,width=640,height=560");
+      el("shareLinkedin").addEventListener("click", () =>
+        share(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`));
+      el("shareWhatsapp").addEventListener("click", () =>
+        share(`https://wa.me/?text=${encodeURIComponent(post.title + " " + url)}`));
+      el("shareX").addEventListener("click", () =>
+        share(`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(url)}`));
+
+      el("copyLink").addEventListener("click", async () => {
+        const label = el("copyLink").querySelector("span");
+        try {
+          await navigator.clipboard.writeText(url);
+          label.textContent = "Link copied";
+        } catch {
+          label.textContent = "Press Ctrl+C";
+        }
+        setTimeout(() => { label.textContent = "Copy link"; }, 2000);
+      });
+
+      // A like is remembered per browser so the button reflects what this reader did. The
+      // authoritative count lives server-side; this only stops the same person re-liking.
+      const likeKey = `resok_liked_${post.id}`;
+      const likeBtn = el("likeBtn");
+      const setLiked = (on) => {
+        likeBtn.classList.toggle("liked", on);
+        likeBtn.querySelector("span").textContent = on ? "Liked" : "Like";
+      };
+      try { setLiked(localStorage.getItem(likeKey) === "1"); } catch { /* private mode */ }
+      likeBtn.addEventListener("click", () => {
+        let on = false;
+        try {
+          on = localStorage.getItem(likeKey) !== "1";
+          on ? localStorage.setItem(likeKey, "1") : localStorage.removeItem(likeKey);
+        } catch { on = !likeBtn.classList.contains("liked"); }
+        setLiked(on);
+        fetch(`resok-portal/public/api/index.php?route=blog/articles/${encodeURIComponent(post.id)}/reaction`,
+          { method: on ? "POST" : "DELETE", credentials: "same-origin" }).catch(() => {});
+      });
+
+      /* ---------------- related (§14) ---------------- */
+      const related = ALL.filter((p) => p.id !== post.id)
+        .map((p) => ({ p, score: (p.category === post.category ? 2 : 0) + (p.source ? 0 : 1) }))
+        .sort((a, b) => b.score - a.score || (a.p.date < b.p.date ? 1 : -1))
+        .slice(0, 3)
+        .map((x) => x.p);
+
+      if (related.length) {
+        const mount = el("relatedMount");
+        related.forEach((r) => {
+          const a = document.createElement("a");
+          a.className = "rel";
+          a.href = `post.html?id=${encodeURIComponent(r.id)}`;
+          if (r.image) {
+            const img = document.createElement("img");
+            img.src = r.image;
+            img.alt = "";
+            img.loading = "lazy";
+            a.appendChild(img);
+          }
+          const div = document.createElement("div");
+          const h3 = document.createElement("h3");
+          h3.textContent = r.title;
+          const span = document.createElement("span");
+          span.textContent = `${r.category} · ${r.displayDate || ""}`;
+          div.append(h3, span);
+          a.appendChild(div);
+          mount.appendChild(a);
+        });
+        el("relatedSection").hidden = false;
+      }
+
+      el("ctaForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const button = event.target.querySelector("button");
+        button.textContent = "Thank you";
+        button.disabled = true;
+      });
+    })();
+  </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,7 @@
 (function () {
   const STORAGE_KEY = "resok_portal_state";
   const TOKEN_KEY = "token";
-  const CARD_ASSET_VERSION = "20260524-gold-bg";
+  const CARD_ASSET_VERSION = "20260904-blue-bg";
   const CARD_BACKGROUND_PATH = `assets/img/membership-card-bg.png?v=${CARD_ASSET_VERSION}`;
 
   function defaultState() {
@@ -358,13 +358,12 @@
     return blobToDataUrl(await response.blob());
   }
 
-  async function membershipCardImageAssets(member = getState().member) {
-    const logo = await imageToDataUrl("assets/img/logo.png").catch(() => absoluteAssetUrl("assets/img/logo.png"));
+  // Only the background needs inlining for a download to be self-contained: the card
+  // artwork already carries the logo, and the design has no photo. Fetching either of those
+  // as well just made every download wait on two requests it never used.
+  async function membershipCardImageAssets() {
     const background = await imageToDataUrl(CARD_BACKGROUND_PATH).catch(() => absoluteAssetUrl(CARD_BACKGROUND_PATH));
-    const photo = member.profileImageUrl
-      ? await imageToDataUrl(member.profileImageUrl).catch(() => member.profileImageUrl)
-      : "";
-    return { logo, background, photo };
+    return { background };
   }
 
   function validThruLabel(value) {
@@ -379,43 +378,53 @@
     return raw;
   }
 
+  /**
+   * Draws a member's card on the ReSoK card artwork.
+   *
+   * Every coordinate below was measured from the design (Mmebership Card-01), by masking
+   * its sample text and reading back the pixel bounds - so generated text lands where the
+   * designer put it rather than where it looked about right. Baselines are the bottom of
+   * the measured ink; the design has no photo, so there is no photo slot to fill.
+   *
+   *   category    ink y 285-327, x 32-962, centred     -> baseline 327, centre 506
+   *   membership  ink y 390-441, x 56-456, left        -> baseline 441, x 56
+   *   VALID/THRU  ink y 384-441, x 638-736, two lines  -> baselines 409 and 441
+   *   valid thru  ink y 396-426, x 768-910             -> baseline 426, x 768
+   *   name        ink y 558-600, x 248-791, centred    -> baseline 600, centre 506
+   */
   function membershipCardSvg(member = getState().member, assets = {}) {
     const esc = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[char]));
-    const name = memberName(member) || "ReSoK Member";
+    const name = (memberName(member) || "ReSoK Member").toUpperCase();
     const membershipId = member.membershipId || "Pending";
     const category = (member.category || "Member").toUpperCase();
-    const renewalDue = member.renewalDue || "Annual";
-    const validThru = validThruLabel(renewalDue);
+    const validThru = validThruLabel(member.renewalDue || "Annual");
     const backgroundSrc = assets.background || absoluteAssetUrl(CARD_BACKGROUND_PATH);
-    const photoSrc = assets.photo || member.profileImageUrl || "";
+
+    // The card is a fixed size but names are not. Rather than let a long name run off the
+    // edge, shrink it until the estimated width fits - the ratios are per-family averages
+    // for capitals, which is close enough at these sizes and needs no text measurement.
+    const fit = (text, size, maxWidth, ratio, spacing = 0) => {
+      const width = (chars, px) => chars * px * ratio + Math.max(0, chars - 1) * spacing;
+      let px = size;
+      while (px > 14 && width(text.length, px) > maxWidth) px -= 1;
+      return px;
+    };
+
+    const SERIF = "Georgia, 'Times New Roman', 'Nimbus Roman', serif";
+    const TECHNO = "Consolas, 'Courier New', 'DejaVu Sans Mono', monospace";
+
+    const categorySize = fit(category, 56, 930, 0.62, 1);
+    const idSize = fit(membershipId, 52, 400, 0.62, 2);
+    const nameSize = fit(name, 46, 700, 0.62, 3);
+
     return `<svg xmlns="http://www.w3.org/2000/svg" width="1012" height="645" viewBox="0 0 1012 645">
-  <defs>
-    <clipPath id="memberPhotoClip">
-      <path d="M960 133H740C663 133 602 199 602 292C602 385 663 477 740 477H960Z"/>
-    </clipPath>
-    <linearGradient id="fieldBlend" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#e8c75c" stop-opacity=".72"/>
-      <stop offset=".55" stop-color="#caa13a" stop-opacity=".56"/>
-      <stop offset="1" stop-color="#7d6a2c" stop-opacity=".5"/>
-    </linearGradient>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="2" dy="2" stdDeviation="1.2" flood-color="#111827" flood-opacity=".55"/>
-    </filter>
-  </defs>
   <image href="${esc(backgroundSrc)}" x="0" y="0" width="1012" height="645" preserveAspectRatio="xMidYMid slice"/>
-  <rect x="18" y="250" width="560" height="152" rx="10" fill="url(#fieldBlend)" opacity=".95"/>
-  <rect x="34" y="548" width="596" height="66" rx="8" fill="#7c6a2b" opacity=".42"/>
-  <rect x="642" y="548" width="236" height="66" rx="8" fill="#7c6a2b" opacity=".38"/>
-  <rect x="602" y="133" width="358" height="344" fill="#6c5626" opacity=".18"/>
-  ${photoSrc ? `<image href="${esc(photoSrc)}" x="602" y="133" width="358" height="344" preserveAspectRatio="xMidYMid slice" clip-path="url(#memberPhotoClip)"/>` : `<path d="M960 133H740C663 133 602 199 602 292C602 385 663 477 740 477H960Z" fill="#d8c481" opacity=".78"/>
-  <text x="790" y="292" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" fill="#ffffff">UPLOAD</text>
-  <text x="790" y="328" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" fill="#ffffff">PHOTO</text>`}
-  <text x="26" y="292" font-family="Krdit, Credit, 'Credit Card', 'Courier New', Consolas, monospace" font-size="38" font-weight="800" letter-spacing="3" fill="#ffffff">${esc(category)}</text>
-  <text x="24" y="384" font-family="Krdit, Credit, 'Credit Card', 'Courier New', Consolas, monospace" font-size="76" font-weight="900" letter-spacing="4" fill="#ffffff">${esc(membershipId)}</text>
-  <text x="40" y="594" font-family="Krdit, Credit, 'Credit Card', 'Courier New', Consolas, monospace" font-size="50" font-weight="300" letter-spacing="10" fill="#ffffff">${esc(name.toUpperCase())}</text>
-  <text x="652" y="571" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff" opacity=".88">VALID</text>
-  <text x="652" y="591" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff" opacity=".88">THRU</text>
-  <text x="718" y="591" font-family="Krdit, Credit, 'Credit Card', 'Courier New', Consolas, monospace" font-size="48" font-weight="900" letter-spacing="6" fill="#e5e7eb" stroke="#374151" stroke-width="1.1" filter="url(#softShadow)">${esc(validThru)}</text>
+  <text x="506" y="327" text-anchor="middle" font-family="${SERIF}" font-size="${categorySize}" font-weight="700" letter-spacing="1" fill="#ffffff">${esc(category)}</text>
+  <text x="56" y="441" font-family="${TECHNO}" font-size="${idSize}" font-weight="700" letter-spacing="2" fill="#ffffff">${esc(membershipId)}</text>
+  <text x="736" y="409" text-anchor="end" font-family="${SERIF}" font-size="26" font-weight="700" letter-spacing="1" fill="#ffffff">VALID</text>
+  <text x="736" y="441" text-anchor="end" font-family="${SERIF}" font-size="26" font-weight="700" letter-spacing="1" fill="#ffffff">THRU</text>
+  <text x="768" y="426" font-family="${TECHNO}" font-size="42" font-weight="700" letter-spacing="2" fill="#ffffff">${esc(validThru)}</text>
+  <text x="506" y="600" text-anchor="middle" font-family="${TECHNO}" font-size="${nameSize}" font-weight="700" letter-spacing="3" fill="#ffffff">${esc(name)}</text>
 </svg>`;
   }
 

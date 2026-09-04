@@ -16,6 +16,7 @@ $config = require $configPath;
 require_once __DIR__ . '/lib/portal-mail.php';
 require_once __DIR__ . '/lib/mpesa.php';
 require_once __DIR__ . '/lib/blog.php';
+require_once __DIR__ . '/lib/social-ingest.php';
 
 $debugValue = array_key_exists('debug', $config) ? $config['debug'] : getenv('RESOK_DEBUG');
 $isDebug = filter_var($debugValue ?: false, FILTER_VALIDATE_BOOLEAN);
@@ -489,6 +490,50 @@ try {
 
     if ($route === 'blog/admin/articles' && $method === 'POST') {
         respond(201, blogSaveArticle($pdo, auth($config), input()));
+    }
+
+    // Social ingestion queue. Fetching is deliberately separate from importing: the cron
+    // fills the queue, an editor decides what becomes an article.
+    if ($route === 'blog/admin/social' && $method === 'GET') {
+        $user = auth($config);
+        blogRequireEdit($user);
+        $status = $_GET['status'] ?? 'new';
+        $stmt = $pdo->prepare('SELECT i.*, s.platform, s.label AS source_label
+                                 FROM blog_social_items i
+                                 JOIN blog_social_sources s ON s.id = i.source_id
+                                WHERE i.status = ? ORDER BY i.posted_at DESC LIMIT 100');
+        $stmt->execute([$status]);
+        respond(200, array_map(fn($r) => [
+            'id' => (int)$r['id'],
+            'platform' => $r['platform'],
+            'source' => $r['source_label'],
+            'title' => $r['title'],
+            'body' => $r['body'],
+            'permalink' => $r['permalink'],
+            'media' => $r['media_url'],
+            'mediaType' => $r['media_type'],
+            'postedAt' => $r['posted_at'],
+            'status' => $r['status'],
+            'articleId' => $r['article_id'] !== null ? (int)$r['article_id'] : null,
+        ], $stmt->fetchAll()));
+    }
+
+    if ($route === 'blog/admin/social/refresh' && $method === 'POST') {
+        $user = auth($config);
+        blogRequireEdit($user);
+        respond(200, ['sources' => socialIngestAll($pdo)]);
+    }
+
+    if (preg_match('#^blog/admin/social/(\d+)/import$#', $route, $m) && $method === 'POST') {
+        respond(201, socialImportItem($pdo, auth($config), (int)$m[1], input()));
+    }
+
+    if (preg_match('#^blog/admin/social/(\d+)/ignore$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        blogRequireEdit($user);
+        $pdo->prepare('UPDATE blog_social_items SET status = "ignored", reviewed_by = ?, reviewed_at = NOW() WHERE id = ?')
+            ->execute([(int)$user['userId'], (int)$m[1]]);
+        respond(200, ['message' => 'Post ignored']);
     }
 
     if (preg_match('#^blog/admin/articles/(\d+)$#', $route, $m)) {

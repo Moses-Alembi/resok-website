@@ -285,3 +285,55 @@ INSERT IGNORE INTO blog_categories (name, slug, sort_order) VALUES
   ('COPD','copd',4), ('Research','research',5), ('Clinical Practice','clinical-practice',6),
   ('Public Health','public-health',7), ('Policy','policy',8), ('Events','events',9),
   ('News & Updates','news-updates',10), ('Publications','publications',11), ('Other','other',12);
+
+-- ---------------------------------------------------------------------------------------
+-- Social ingestion (pulling posts in from the organisation's own channels)
+--
+-- Ingested items land in a review queue, NOT straight onto the blog. Social copy is short,
+-- hashtag-heavy and written for a different context; publishing it verbatim as an article
+-- would read badly and dilute the site. An editor turns an item into an article, and the
+-- link back to the created article is kept so the same post is never imported twice.
+-- ---------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS blog_social_sources (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  platform ENUM('youtube','facebook','instagram','linkedin','x','tiktok') NOT NULL,
+  label VARCHAR(120) NOT NULL,
+  handle VARCHAR(200) NULL,                     -- channel id, page id, or username
+  credentials JSON NULL,                        -- tokens; NULL for sources needing none
+  default_category_id INT UNSIGNED NULL,
+  is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  last_checked_at DATETIME NULL,
+  last_error VARCHAR(400) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY blog_social_source_unique (platform, handle),
+  CONSTRAINT blog_social_category_fk FOREIGN KEY (default_category_id) REFERENCES blog_categories (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS blog_social_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  source_id INT UNSIGNED NOT NULL,
+  external_id VARCHAR(200) NOT NULL,            -- the platform's own id; the dedupe key
+  permalink VARCHAR(500) NULL,
+  title VARCHAR(400) NULL,
+  body TEXT NULL,
+  media_url VARCHAR(500) NULL,
+  media_type ENUM('image','video','none') NOT NULL DEFAULT 'none',
+  posted_at DATETIME NULL,
+  status ENUM('new','imported','ignored') NOT NULL DEFAULT 'new',
+  article_id INT UNSIGNED NULL,                 -- set once an editor turns it into a post
+  reviewed_by INT UNSIGNED NULL,
+  reviewed_at DATETIME NULL,
+  fetched_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY blog_social_item_unique (source_id, external_id),
+  KEY blog_social_items_status (status, posted_at),
+  KEY blog_social_items_source (source_id, posted_at),
+  CONSTRAINT blog_social_items_source_fk FOREIGN KEY (source_id) REFERENCES blog_social_sources (id) ON DELETE CASCADE,
+  CONSTRAINT blog_social_items_article_fk FOREIGN KEY (article_id) REFERENCES blog_articles (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The one source that needs no credentials at all: YouTube publishes a public RSS feed per
+-- channel. Resolved from youtube.com/@respiratorysocietykenya.
+INSERT IGNORE INTO blog_social_sources (platform, label, handle, is_enabled) VALUES
+  ('youtube', 'ReSoK YouTube channel', 'UCnHC9MbWUPPr0PAESoPSvww', 1);

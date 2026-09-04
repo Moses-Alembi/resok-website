@@ -27,6 +27,10 @@ desktop.ini
 ~$*
 *.crdownload
 
+# Local preview copies of gated pages (served from the repo root so relative
+# asset paths resolve). Throwaway - never deploy these, they bypass the gate.
+_preview-*.html
+
 # Local one-off setup scripts
 _git_setup_step1.ps1
 _git_push_step2.ps1

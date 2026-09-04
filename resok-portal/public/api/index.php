@@ -461,7 +461,11 @@ try {
             'amount' => (int)($config['membership_fee'] ?? 5000),
             'currency' => 'KES',
             'paymentModes' => ['M-PESA Paybill', 'Cheque/interbank Funds Transfer'],
-            'categories' => $config['membership_categories'] ?? []
+            'categories' => $config['membership_categories'] ?? [],
+            // Lets the portal decide what to offer. Without real mpesa_* credentials the STK
+            // push can only fail, so the payment page hides that form and shows the paybill
+            // and confirmation flow instead of a button that always errors.
+            'stkEnabled' => mpesaConfigured($config)
         ]);
     }
 

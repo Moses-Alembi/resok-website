@@ -15,6 +15,7 @@ $config = require $configPath;
 
 require_once __DIR__ . '/lib/portal-mail.php';
 require_once __DIR__ . '/lib/mpesa.php';
+require_once __DIR__ . '/lib/blog.php';
 
 $debugValue = array_key_exists('debug', $config) ? $config['debug'] : getenv('RESOK_DEBUG');
 $isDebug = filter_var($debugValue ?: false, FILTER_VALIDATE_BOOLEAN);
@@ -451,6 +452,62 @@ try {
 
     if ($route === 'health') {
         respond(200, ['status' => 'OK', 'runtime' => 'php', 'timestamp' => gmdate('c')]);
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Blog - public reading endpoints. No auth: these serve the public site, and the
+    // queries themselves only ever return published (or due-to-publish) articles.
+    // ---------------------------------------------------------------------------------
+    if ($route === 'blog/articles' && $method === 'GET') {
+        respond(200, blogListPublic($pdo, $_GET));
+    }
+
+    if ($route === 'blog/featured' && $method === 'GET') {
+        respond(200, blogFeatured($pdo) ?? []);
+    }
+
+    if ($route === 'blog/categories' && $method === 'GET') {
+        respond(200, blogCategories($pdo));
+    }
+
+    if (preg_match('#^blog/articles/([A-Za-z0-9\-]+)$#', $route, $m) && $method === 'GET') {
+        $row = blogBySlug($pdo, $m[1]);
+        if (!$row) respond(404, ['error' => 'Article not found']);
+        respond(200, [
+            'article' => blogPublicArticle($row, true),
+            'related' => blogRelated($pdo, (int)$row['id'], $row['category_id'] !== null ? (int)$row['category_id'] : null),
+        ]);
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Blog - editorial endpoints. Permission is enforced inside lib/blog.php by role, so
+    // adding a route here cannot accidentally skip the check.
+    // ---------------------------------------------------------------------------------
+    if ($route === 'blog/admin/articles' && $method === 'GET') {
+        respond(200, blogListAdmin($pdo, auth($config), $_GET));
+    }
+
+    if ($route === 'blog/admin/articles' && $method === 'POST') {
+        respond(201, blogSaveArticle($pdo, auth($config), input()));
+    }
+
+    if (preg_match('#^blog/admin/articles/(\d+)$#', $route, $m)) {
+        $user = auth($config);
+        if ($method === 'GET') {
+            blogRequireEdit($user);
+            $stmt = $pdo->prepare(BLOG_ARTICLE_SELECT . ' WHERE a.id = ? LIMIT 1');
+            $stmt->execute([(int)$m[1]]);
+            $row = $stmt->fetch();
+            if (!$row) respond(404, ['error' => 'Article not found']);
+            respond(200, blogAdminArticle($row));
+        }
+        if ($method === 'PATCH' || $method === 'PUT') {
+            respond(200, blogSaveArticle($pdo, $user, input(), (int)$m[1]));
+        }
+        if ($method === 'DELETE') {
+            blogDeleteArticle($pdo, $user, (int)$m[1]);
+            respond(200, ['message' => 'Article deleted']);
+        }
     }
 
     if ($route === 'payment-instructions' && $method === 'GET') {

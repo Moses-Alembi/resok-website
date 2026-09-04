@@ -454,6 +454,18 @@ try {
     }
 
     if ($route === 'payment-instructions' && $method === 'GET') {
+        // Methods shown to members as planned but not yet accepted. Announcing them is a
+        // commitment, so keep this list to things actually being pursued - and move an entry
+        // out of here only when its flow genuinely works end to end, never just because the
+        // integration exists. M-Pesa Express lists itself here until mpesa_enabled is on.
+        $comingSoon = [];
+        if (!(mpesaEnabled($config) && mpesaConfigured($config))) {
+            $comingSoon[] = ['name' => 'M-Pesa Express', 'note' => 'Instant payment prompt on your phone', 'icon' => 'fas fa-mobile-screen-button'];
+        }
+        $comingSoon[] = ['name' => 'Visa & Mastercard', 'note' => 'Debit and credit card payment', 'icon' => 'fab fa-cc-visa'];
+        $comingSoon[] = ['name' => 'Pesapal', 'note' => 'Cards, mobile money, and bank options', 'icon' => 'fas fa-globe'];
+        $comingSoon[] = ['name' => 'Bank transfer', 'note' => 'Interbank transfer and cheque payment', 'icon' => 'fas fa-building-columns'];
+
         respond(200, [
             'method' => 'M-Pesa Paybill',
             'paybillNumber' => (string)($config['paybill_number'] ?? ''),
@@ -471,7 +483,8 @@ try {
             // are not consent - they can be sandbox keys, or leftovers from testing, and
             // neither should put a "Pay Now" button in front of members. Set mpesa_enabled
             // to true in config.local.php once a real STK payment has been tested end to end.
-            'stkEnabled' => mpesaEnabled($config) && mpesaConfigured($config)
+            'stkEnabled' => mpesaEnabled($config) && mpesaConfigured($config),
+            'comingSoon' => $comingSoon
         ]);
     }
 

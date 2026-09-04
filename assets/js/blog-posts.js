@@ -143,6 +143,22 @@ window.RESOK_BLOG_POSTS = [
     ]
   },
   {
+    "id": "kislhc-2026-call-for-abstracts",
+    "title": "Call for Abstracts: Kenya International Scientific Lung Health Conference 2026",
+    "category": "Events",
+    "date": "2026-01-20",
+    "displayDate": "Jan 2026",
+    "image": "assets/img/Gallery/B1.jpg",
+    "excerpt": "Call for Abstracts | Kenya International Scientific Lung Health Conference 2026.",
+    "body": [
+      "Call for Abstracts | Kenya International Scientific Lung Health Conference 2026.",
+      "Submit Your Abstract at : https://lnkd.in/dpE3Wz7u.",
+      "Convened by: Respiratory Society of Kenya | National Tuberculosis, Leprosy and Lung Disease Program | Ministry of Health, Kenya | Centre for Health Solutions - Kenya (CHS) | African Institute for Development Policy (AFIDEP) | The LIGHT Consortium | Clinton Health Access Initiative, Inc. | World Health Organization | Stop TB Partnership Kenya | Amref Health Africa | Kenyatta National Hospital. | Kenya Medical Research Institute (KEMRI)"
+    ],
+    "source": "https://www.linkedin.com/posts/respiratory-society-of-kenya-671208303_callforabstracts-lunghealth-globalhealth-activity-7420454223592493056-nIvM",
+    "sourceName": "LinkedIn"
+  },
+  {
     "id": "lung-health-awareness-month",
     "title": "Lung Cancer, COPD and Pulmonary Hypertension Awareness Month",
     "category": "Advocacy",

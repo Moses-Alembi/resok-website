@@ -458,13 +458,20 @@ try {
         // commitment, so keep this list to things actually being pursued - and move an entry
         // out of here only when its flow genuinely works end to end, never just because the
         // integration exists. M-Pesa Express lists itself here until mpesa_enabled is on.
+        // Each tile renders, in order of preference: `logo` (a file under assets/img/payments/),
+        // then `icon` (a Font Awesome brand glyph tinted with `color`), then `wordmark` (the
+        // name set in the brand's colour). Drop an official SVG from a brand's press kit into
+        // assets/img/payments/ and add `logo` to switch that tile to the real mark - which is
+        // the right way to show a trademark, rather than approximating one in CSS.
         $comingSoon = [];
         if (!(mpesaEnabled($config) && mpesaConfigured($config))) {
-            $comingSoon[] = ['name' => 'M-Pesa Express', 'note' => 'Instant payment prompt on your phone', 'icon' => 'fas fa-mobile-screen-button'];
+            $comingSoon[] = ['name' => 'M-Pesa Express', 'note' => 'Instant payment prompt on your phone', 'wordmark' => 'M-PESA', 'color' => '#00A651'];
         }
-        $comingSoon[] = ['name' => 'Visa & Mastercard', 'note' => 'Debit and credit card payment', 'icon' => 'fab fa-cc-visa'];
-        $comingSoon[] = ['name' => 'Pesapal', 'note' => 'Cards, mobile money, and bank options', 'icon' => 'fas fa-globe'];
-        $comingSoon[] = ['name' => 'Bank transfer', 'note' => 'Interbank transfer and cheque payment', 'icon' => 'fas fa-building-columns'];
+        $comingSoon[] = ['name' => 'Visa', 'note' => 'Debit and credit cards', 'icon' => 'fab fa-cc-visa', 'color' => '#1A1F71'];
+        $comingSoon[] = ['name' => 'Mastercard', 'note' => 'Debit and credit cards', 'icon' => 'fab fa-cc-mastercard', 'color' => '#EB001B'];
+        $comingSoon[] = ['name' => 'Apple Pay', 'note' => 'Pay from iPhone, iPad, or Mac', 'icon' => 'fab fa-cc-apple-pay', 'color' => '#000000'];
+        $comingSoon[] = ['name' => 'Pesapal', 'note' => 'Cards, mobile money, and bank options', 'wordmark' => 'Pesapal', 'color' => '#253141'];
+        $comingSoon[] = ['name' => 'Bank transfer', 'note' => 'Interbank transfer and cheque payment', 'icon' => 'fas fa-building-columns', 'color' => '#475467'];
 
         respond(200, [
             'method' => 'M-Pesa Paybill',

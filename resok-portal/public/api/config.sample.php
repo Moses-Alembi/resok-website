@@ -19,6 +19,9 @@ return [
 
     // M-Pesa Daraja STK push (required for the payment flow to work; sandbox
     // credentials are free from developer.safaricom.co.ke for testing).
+    // Set to true only once a real STK payment has gone through end to end. Until then
+    // the portal shows the paybill and confirmation flow instead.
+    'mpesa_enabled' => false,
     'mpesa_env' => 'sandbox',
     'mpesa_consumer_key' => '',
     'mpesa_consumer_secret' => '',

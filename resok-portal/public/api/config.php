@@ -25,6 +25,9 @@ return [
     'smtp_user' => config_value($local, 'smtp_user', 'RESOK_SMTP_USER', ''),
     'smtp_pass' => config_value($local, 'smtp_pass', 'RESOK_SMTP_PASS', ''),
 
+    // Master switch for offering STK push in the portal. Off until a real payment has
+    // been tested end to end - having credentials is not the same as being ready.
+    'mpesa_enabled' => config_value($local, 'mpesa_enabled', 'RESOK_MPESA_ENABLED', false),
     'mpesa_env' => config_value($local, 'mpesa_env', 'RESOK_MPESA_ENV', 'sandbox'),
     'mpesa_consumer_key' => config_value($local, 'mpesa_consumer_key', 'RESOK_MPESA_CONSUMER_KEY', ''),
     'mpesa_consumer_secret' => config_value($local, 'mpesa_consumer_secret', 'RESOK_MPESA_CONSUMER_SECRET', ''),

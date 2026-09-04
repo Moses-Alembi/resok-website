@@ -462,10 +462,12 @@ try {
             'currency' => 'KES',
             'paymentModes' => ['M-PESA Paybill', 'Cheque/interbank Funds Transfer'],
             'categories' => $config['membership_categories'] ?? [],
-            // Lets the portal decide what to offer. Without real mpesa_* credentials the STK
-            // push can only fail, so the payment page hides that form and shows the paybill
-            // and confirmation flow instead of a button that always errors.
-            'stkEnabled' => mpesaConfigured($config)
+            // Lets the portal decide what to offer. Two conditions, deliberately: the keys
+            // have to be present AND mpesa_enabled has to be switched on. Credentials alone
+            // are not consent - they can be sandbox keys, or leftovers from testing, and
+            // neither should put a "Pay Now" button in front of members. Set mpesa_enabled
+            // to true in config.local.php once a real STK payment has been tested end to end.
+            'stkEnabled' => mpesaEnabled($config) && mpesaConfigured($config)
         ]);
     }
 

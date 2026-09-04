@@ -13,6 +13,16 @@ function mpesaBaseUrl(array $config): string
         : 'https://sandbox.safaricom.co.ke';
 }
 
+/**
+ * Whether STK push should be offered to members at all. Separate from mpesaConfigured():
+ * keys can be present and still not be ones you want charging real members - sandbox
+ * credentials, or leftovers from testing. Defaults to off, so STK is opt-in.
+ */
+function mpesaEnabled(array $config): bool
+{
+    return filter_var($config['mpesa_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+}
+
 function mpesaConfigured(array $config): bool
 {
     return !empty($config['mpesa_consumer_key']) && !empty($config['mpesa_consumer_secret'])
@@ -50,8 +60,10 @@ function mpesaNormalizePhone(string $phone): string
 /** @return array{merchantRequestId:string, checkoutRequestId:string} */
 function initiateStkPush(array $config, float $amount, string $phone, string $reference): array
 {
-    if (!mpesaConfigured($config)) {
-        throw new RuntimeException('M-Pesa is not configured yet. Contact the ReSoK ICT team.');
+    // Checked here rather than only in the route, so hiding the form in the UI and refusing
+    // the request cannot drift apart - the button being absent is not a control on its own.
+    if (!mpesaEnabled($config) || !mpesaConfigured($config)) {
+        throw new RuntimeException('Instant M-Pesa payment is not available yet. Please pay via the paybill and submit your confirmation.');
     }
     $token = mpesaAccessToken($config);
     $shortcode = (string)$config['mpesa_shortcode'];

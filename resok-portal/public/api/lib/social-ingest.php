@@ -33,8 +33,19 @@ function socialHttpGet(string $url, array $headers = [], int $timeout = 20): ?st
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_USERAGENT => 'ReSoK-site/1.0 (+https://www.resok.org)',
         CURLOPT_HTTPHEADER => $headers,
+        // These calls carry API tokens and follow redirects, so the redirect is the risk:
+        // a redirect to file:// or gopher:// would read local files, and one to 169.254.x
+        // or localhost would reach services behind the firewall. Restricting the protocol
+        // on both the initial request and any redirect, and capping the chain, closes that
+        // without needing to resolve and vet every hop.
+        CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+        CURLOPT_MAXREDIRS => 3,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
     ]);
     $body = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);

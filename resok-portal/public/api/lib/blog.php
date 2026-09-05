@@ -91,11 +91,41 @@ function blogSanitizeHtml(string $html): string
         . '<a><img><figure><figcaption><table><thead><tbody><tr><th><td><hr><sup><sub><code><pre><span><div>';
     $html = strip_tags($html, $allowed);
 
-    // Event handlers and javascript: URLs survive strip_tags, so they are removed by hand.
+    // Event handlers survive strip_tags, so they are removed by hand - quoted, single
+    // quoted, and bare, in that order.
     $html = preg_replace('/\son[a-z]+\s*=\s*"[^"]*"/i', '', $html) ?? $html;
     $html = preg_replace("/\son[a-z]+\s*=\s*'[^']*'/i", '', $html) ?? $html;
     $html = preg_replace('/\son[a-z]+\s*=\s*[^\s>]+/i', '', $html) ?? $html;
-    $html = preg_replace('/(href|src)\s*=\s*(["\']?)\s*(javascript|vbscript|data)\s*:/i', '$1=$2#', $html) ?? $html;
+
+    // style= is dropped entirely. It is not needed for editorial formatting, and it is a
+    // route to overlaying or hiding page furniture (clickjacking) that no allowlist of
+    // tags protects against.
+    $html = preg_replace('/\sstyle\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html) ?? $html;
+
+    // URLs are checked against an allowlist of schemes rather than a blocklist. Blocking
+    // "javascript:" by name is bypassable in several ways browsers still honour -
+    // "jav&#97;script:", a tab or newline inside the scheme, or leading control bytes -
+    // whereas requiring the URL to *begin* as http/https/mailto/tel, a site-relative path,
+    // or a fragment leaves nothing to smuggle.
+    $html = preg_replace_callback(
+        '/\b(href|src)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i',
+        static function (array $m): string {
+            $attr = strtolower($m[1]);
+            $url = $m[2] !== '' ? $m[2] : ($m[3] ?? '') !== '' ? $m[3] : ($m[4] ?? '');
+            // Decode entities and strip control characters before judging the scheme, so
+            // the check sees what the browser will eventually see.
+            $probe = html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $probe = preg_replace('/[\x00-\x20]/', '', $probe) ?? $probe;
+
+            // A URL carrying a scheme must use one of ours. A URL with no scheme is
+            // relative - a path, a query, or a fragment - and cannot execute anything.
+            $hasScheme = (bool)preg_match('#^[a-z][a-z0-9+.\-]*:#i', $probe);
+            $safe = $hasScheme ? (bool)preg_match('#^(https?|mailto|tel):#i', $probe) : true;
+
+            return $attr . '="' . htmlspecialchars($safe ? $url : '#', ENT_QUOTES) . '"';
+        },
+        $html
+    ) ?? $html;
 
     return trim($html);
 }

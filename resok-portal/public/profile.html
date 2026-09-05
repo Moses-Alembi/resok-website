@@ -75,7 +75,8 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js"></script>
+  <script src="js/cropper.js"></script>
+  <script src="js/portal-state.js?v=20260905-card-photo"></script>
   <script>
     document.getElementById("logoutLink").addEventListener("click", (event) => {
       event.preventDefault();
@@ -105,7 +106,12 @@
       const file = this.files[0];
       if (!file) return;
       try {
-        await window.ResokPortal.uploadProfileImage(file);
+        // Crop before upload, not after: the member decides the framing, and the server
+        // receives one predictable 600x600 JPEG however large the phone photo was.
+        const cropped = await window.ResokCropper.open(file);
+        if (!cropped) return;
+        await window.ResokPortal.uploadProfileImage(
+          new File([cropped], "profile.jpg", { type: "image/jpeg" }));
         renderProfile();
         showNotice("Membership card photo updated.");
       } catch (error) {

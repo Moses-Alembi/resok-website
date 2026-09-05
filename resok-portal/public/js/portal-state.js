@@ -358,12 +358,14 @@
     return blobToDataUrl(await response.blob());
   }
 
-  // Only the background needs inlining for a download to be self-contained: the card
-  // artwork already carries the logo, and the design has no photo. Fetching either of those
-  // as well just made every download wait on two requests it never used.
-  async function membershipCardImageAssets() {
+  // The artwork already carries the logo, so only the background and the member's photo
+  // need inlining for a downloaded card to render on its own, away from the site.
+  async function membershipCardImageAssets(member = getState().member) {
     const background = await imageToDataUrl(CARD_BACKGROUND_PATH).catch(() => absoluteAssetUrl(CARD_BACKGROUND_PATH));
-    return { background };
+    const photo = member.profileImageUrl
+      ? await imageToDataUrl(member.profileImageUrl).catch(() => member.profileImageUrl)
+      : "";
+    return { background, photo };
   }
 
   function validThruLabel(value) {
@@ -417,8 +419,20 @@
     const idSize = fit(membershipId, 52, 400, 0.62, 2);
     const nameSize = fit(name, 46, 700, 0.62, 3);
 
+    // The photo goes in the clear band between the "MEMBERSHIP CARD" title and the category
+    // line - the only space on this artwork that no text occupies. A card with no photo
+    // simply omits it rather than showing an "upload" placeholder, so an unfinished profile
+    // still produces a card worth carrying.
+    const photoSrc = assets.photo || member.profileImageUrl || "";
+    const photo = photoSrc
+      ? `<defs><clipPath id="memberPhoto"><circle cx="856" cy="196" r="84"/></clipPath></defs>
+  <circle cx="856" cy="196" r="87" fill="#ffffff" opacity=".9"/>
+  <image href="${esc(photoSrc)}" x="772" y="112" width="168" height="168" preserveAspectRatio="xMidYMid slice" clip-path="url(#memberPhoto)"/>`
+      : "";
+
     return `<svg xmlns="http://www.w3.org/2000/svg" width="1012" height="645" viewBox="0 0 1012 645">
   <image href="${esc(backgroundSrc)}" x="0" y="0" width="1012" height="645" preserveAspectRatio="xMidYMid slice"/>
+  ${photo}
   <text x="506" y="327" text-anchor="middle" font-family="${SERIF}" font-size="${categorySize}" font-weight="700" letter-spacing="1" fill="#ffffff">${esc(category)}</text>
   <text x="56" y="441" font-family="${TECHNO}" font-size="${idSize}" font-weight="700" letter-spacing="2" fill="#ffffff">${esc(membershipId)}</text>
   <text x="736" y="409" text-anchor="end" font-family="${SERIF}" font-size="26" font-weight="700" letter-spacing="1" fill="#ffffff">VALID</text>

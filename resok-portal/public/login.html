@@ -221,7 +221,7 @@
     </section>
   </main>
 
-  <script src="js/portal-state.js"></script>
+  <script src="js/portal-state.js?v=20260905-card-photo"></script>
   <script>
     const form = document.getElementById("loginForm");
     const emailInput = document.getElementById("loginEmail");
@@ -240,13 +240,6 @@
       alertBox.className = "alert";
     }
 
-    /**
-     * Where to send the member after login. The members-only gate on the main site
-     * (member-gate.php) bounces here with ?next=/learning so they land back on the page
-     * they asked for. Only a plain same-site path is accepted - anything that could point
-     * off-site ("//evil.com", "https://...", a backslash Windows browsers normalise to
-     * "/") is discarded, so this can't be turned into an open redirect in a phishing link.
-     */
     // Arriving from an inactivity logout - either the browser timer in portal-state.js or
     // the gate on /learning. Without a word here, being bounced back to login just looks
     // like the session broke.
@@ -254,6 +247,13 @@
       showAlert("You were signed out after 20 minutes of inactivity. Please log in again.");
     }
 
+    /**
+     * Where to send the member after login. The members-only gate on the main site
+     * (member-gate.php) bounces here with ?next=/learning so they land back on the page
+     * they asked for. Only a plain same-site path is accepted - anything that could point
+     * off-site ("//evil.com", "https://...", a backslash Windows browsers normalise to
+     * "/") is discarded, so this can't be turned into an open redirect in a phishing link.
+     */
     function safeNextPath() {
       const raw = new URLSearchParams(window.location.search).get("next") || "";
       if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\") || raw.includes(":")) return "";

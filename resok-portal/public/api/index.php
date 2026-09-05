@@ -59,7 +59,7 @@ if (!function_exists('throttleCheck')) {
  * the module is absent.
  */
 if (!function_exists('mfaEnsureColumns')) {
-    function mfaEnsureColumns(PDO $pdo): void {}
+    function mfaEnsureColumns(PDO $pdo): bool { return false; }
     function mfaRequiredForRole(string $role): bool { return false; }
 }
 

@@ -36,10 +36,32 @@ const THROTTLE_RULES = [
 ];
 const THROTTLE_DEFAULT = [15, 40, 900, 900];
 
-function throttleEnsureTables(PDO $pdo): void
+/**
+ * Creates the tables on first use, and returns false if it cannot.
+ *
+ * Creating them at request time only works if the database user holds CREATE privilege,
+ * which on shared hosting it often does not. Every caller must therefore treat failure as
+ * "this control is unavailable" rather than letting the exception escape: a login that
+ * fails because rate limiting could not build its own table locks every member out of the
+ * portal to protect them from a brute-force attack that has not happened. Losing the
+ * control is bad; losing authentication is worse.
+ */
+function throttleEnsureTables(PDO $pdo): bool
 {
-    static $done = false;
-    if ($done) return;
+    static $state = null;
+    if ($state !== null) return $state;
+    try {
+        throttleCreateTables($pdo);
+        $state = true;
+    } catch (Throwable $e) {
+        error_log('Rate limiting unavailable - could not create its tables: ' . $e->getMessage());
+        $state = false;
+    }
+    return $state;
+}
+
+function throttleCreateTables(PDO $pdo): void
+{
     $pdo->exec(
         'CREATE TABLE IF NOT EXISTS auth_attempts (
             scope_key CHAR(64) NOT NULL,
@@ -71,7 +93,6 @@ function throttleEnsureTables(PDO $pdo): void
             KEY security_events_severity (severity, created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
-    $done = true;
 }
 
 function throttleScopeKey(array $config, string $action, string $scope, string $value): string
@@ -96,7 +117,7 @@ function securityLog(PDO $pdo, array $config, string $type, string $severity = '
                      ?string $action = null, ?string $detail = null, ?int $userId = null): void
 {
     try {
-        throttleEnsureTables($pdo);
+        if (!throttleEnsureTables($pdo)) return;
         $pdo->prepare('INSERT INTO security_events (event_type, action, severity, client_hash, user_id, detail, created_at)
                        VALUES (?, ?, ?, ?, ?, ?, NOW())')
             ->execute([$type, $action, $severity, throttleClientHash($config), $userId,
@@ -112,72 +133,87 @@ function securityLog(PDO $pdo, array $config, string $type, string $severity = '
  */
 function throttleCheck(PDO $pdo, array $config, string $action, string $subject): void
 {
-    throttleEnsureTables($pdo);
-    [, , $window, ] = THROTTLE_RULES[$action] ?? THROTTLE_DEFAULT;
-
-    // Stale rows are cleared here rather than by a cron: these endpoints are the only
-    // things that read the table, so they are the natural place to tidy it.
-    $pdo->prepare('DELETE FROM auth_attempts WHERE last_failure_at < DATE_SUB(NOW(), INTERVAL ? SECOND)
-                   AND (locked_until IS NULL OR locked_until < NOW())')->execute([$window]);
-
-    $client = throttleClientFingerprint();
-    $keys = [
-        throttleScopeKey($config, $action, 'subject', $subject . '|' . $client),
-        throttleScopeKey($config, $action, 'client', $client),
-    ];
-    $stmt = $pdo->prepare('SELECT locked_until FROM auth_attempts
-                            WHERE scope_key IN (?, ?) AND locked_until IS NOT NULL AND locked_until > NOW()
-                            ORDER BY locked_until DESC LIMIT 1');
-    $stmt->execute($keys);
-    if ($row = $stmt->fetch()) {
-        $seconds = max(1, strtotime((string)$row['locked_until']) - time());
-        $minutes = (int)ceil($seconds / 60);
-        securityLog($pdo, $config, 'rate_limit_blocked', 'warning', $action, 'Request refused while locked out');
-        header('Retry-After: ' . $seconds);
-        respond(429, [
-            'error' => "Too many attempts. Please try again in {$minutes} minute" . ($minutes === 1 ? '' : 's') . '.',
-            'reason' => 'rate_limited',
-        ]);
+    if (!throttleEnsureTables($pdo)) return;
+    try {
+        [, , $window, ] = THROTTLE_RULES[$action] ?? THROTTLE_DEFAULT;
+    
+        // Stale rows are cleared here rather than by a cron: these endpoints are the only
+        // things that read the table, so they are the natural place to tidy it.
+        $pdo->prepare('DELETE FROM auth_attempts WHERE last_failure_at < DATE_SUB(NOW(), INTERVAL ? SECOND)
+                       AND (locked_until IS NULL OR locked_until < NOW())')->execute([$window]);
+    
+        $client = throttleClientFingerprint();
+        $keys = [
+            throttleScopeKey($config, $action, 'subject', $subject . '|' . $client),
+            throttleScopeKey($config, $action, 'client', $client),
+        ];
+        $stmt = $pdo->prepare('SELECT locked_until FROM auth_attempts
+                                WHERE scope_key IN (?, ?) AND locked_until IS NOT NULL AND locked_until > NOW()
+                                ORDER BY locked_until DESC LIMIT 1');
+        $stmt->execute($keys);
+        if ($row = $stmt->fetch()) {
+            $seconds = max(1, strtotime((string)$row['locked_until']) - time());
+            $minutes = (int)ceil($seconds / 60);
+            securityLog($pdo, $config, 'rate_limit_blocked', 'warning', $action, 'Request refused while locked out');
+            header('Retry-After: ' . $seconds);
+            respond(429, [
+                'error' => "Too many attempts. Please try again in {$minutes} minute" . ($minutes === 1 ? '' : 's') . '.',
+                'reason' => 'rate_limited',
+            ]);
+        }
+    } catch (Throwable $e) {
+        // Bookkeeping must never be the reason a member cannot sign in.
+        error_log('throttleCheck failed: ' . $e->getMessage());
     }
 }
 
 function throttleFailure(PDO $pdo, array $config, string $action, string $subject): void
 {
-    throttleEnsureTables($pdo);
-    [$subjectLimit, $clientLimit, $window, $lock] = THROTTLE_RULES[$action] ?? THROTTLE_DEFAULT;
-    $client = throttleClientFingerprint();
-
-    foreach ([['subject', $subject . '|' . $client, $subjectLimit], ['client', $client, $clientLimit]] as [$scope, $value, $limit]) {
-        $key = throttleScopeKey($config, $action, $scope, $value);
-        $pdo->prepare(
-            'INSERT INTO auth_attempts (scope_key, action, failures, first_failure_at, last_failure_at)
-             VALUES (?, ?, 1, NOW(), NOW())
-             ON DUPLICATE KEY UPDATE
-               failures = IF(first_failure_at < DATE_SUB(NOW(), INTERVAL ? SECOND), 1, failures + 1),
-               first_failure_at = IF(first_failure_at < DATE_SUB(NOW(), INTERVAL ? SECOND), NOW(), first_failure_at),
-               last_failure_at = NOW()'
-        )->execute([$key, $action, $window, $window]);
-
-        $locked = $pdo->prepare('UPDATE auth_attempts SET locked_until = DATE_ADD(NOW(), INTERVAL ? SECOND)
-                                  WHERE scope_key = ? AND failures >= ? AND (locked_until IS NULL OR locked_until < NOW())');
-        $locked->execute([$lock, $key, $limit]);
-        if ($locked->rowCount() > 0) {
-            securityLog($pdo, $config, 'lockout', $scope === 'client' ? 'critical' : 'warning', $action,
-                $scope === 'client'
-                    ? 'Client locked out after repeated failures across multiple targets'
-                    : 'Target locked out after repeated failures');
+    if (!throttleEnsureTables($pdo)) return;
+    try {
+        [$subjectLimit, $clientLimit, $window, $lock] = THROTTLE_RULES[$action] ?? THROTTLE_DEFAULT;
+        $client = throttleClientFingerprint();
+    
+        foreach ([['subject', $subject . '|' . $client, $subjectLimit], ['client', $client, $clientLimit]] as [$scope, $value, $limit]) {
+            $key = throttleScopeKey($config, $action, $scope, $value);
+            $pdo->prepare(
+                'INSERT INTO auth_attempts (scope_key, action, failures, first_failure_at, last_failure_at)
+                 VALUES (?, ?, 1, NOW(), NOW())
+                 ON DUPLICATE KEY UPDATE
+                   failures = IF(first_failure_at < DATE_SUB(NOW(), INTERVAL ? SECOND), 1, failures + 1),
+                   first_failure_at = IF(first_failure_at < DATE_SUB(NOW(), INTERVAL ? SECOND), NOW(), first_failure_at),
+                   last_failure_at = NOW()'
+            )->execute([$key, $action, $window, $window]);
+    
+            $locked = $pdo->prepare('UPDATE auth_attempts SET locked_until = DATE_ADD(NOW(), INTERVAL ? SECOND)
+                                      WHERE scope_key = ? AND failures >= ? AND (locked_until IS NULL OR locked_until < NOW())');
+            $locked->execute([$lock, $key, $limit]);
+            if ($locked->rowCount() > 0) {
+                securityLog($pdo, $config, 'lockout', $scope === 'client' ? 'critical' : 'warning', $action,
+                    $scope === 'client'
+                        ? 'Client locked out after repeated failures across multiple targets'
+                        : 'Target locked out after repeated failures');
+            }
         }
+        securityLog($pdo, $config, 'failed_attempt', 'info', $action);
+    } catch (Throwable $e) {
+        // Bookkeeping must never be the reason a member cannot sign in.
+        error_log('throttleFailure failed: ' . $e->getMessage());
     }
-    securityLog($pdo, $config, 'failed_attempt', 'info', $action);
 }
 
 /** A success clears the subject counter. The client counter survives, so a spray is not
  *  reset by happening to guess one account correctly. */
 function throttleSuccess(PDO $pdo, array $config, string $action, string $subject): void
 {
-    throttleEnsureTables($pdo);
-    $pdo->prepare('DELETE FROM auth_attempts WHERE scope_key = ?')
-        ->execute([throttleScopeKey($config, $action, 'subject', $subject . '|' . throttleClientFingerprint())]);
+    if (!throttleEnsureTables($pdo)) return;
+    try {
+        $pdo->prepare('DELETE FROM auth_attempts WHERE scope_key = ?')
+            ->execute([throttleScopeKey($config, $action, 'subject', $subject . '|' . throttleClientFingerprint())]);
+    } catch (Throwable $e) {
+        // Bookkeeping must never be the reason a member cannot sign in.
+        error_log('throttleSuccess failed: ' . $e->getMessage());
+    }
 }
 
 /* Names kept from when this only guarded login, so the login route reads plainly. */

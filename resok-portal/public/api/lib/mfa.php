@@ -29,10 +29,28 @@ const MFA_WINDOW = 1;
 const MFA_CHALLENGE_SECONDS = 300;
 const MFA_RECOVERY_CODES = 8;
 
-function mfaEnsureColumns(PDO $pdo): void
+/**
+ * Adds the columns on first use, returning false if it cannot - adding them at request time
+ * needs ALTER privilege, which shared hosting often withholds. Callers treat false as "not
+ * available": no member can have enrolled without the columns, so nobody is let past a
+ * second factor they were relying on.
+ */
+function mfaEnsureColumns(PDO $pdo): bool
 {
-    static $done = false;
-    if ($done) return;
+    static $state = null;
+    if ($state !== null) return $state;
+    try {
+        mfaAddColumns($pdo);
+        $state = true;
+    } catch (Throwable $e) {
+        error_log('Two-factor unavailable - could not add its columns: ' . $e->getMessage());
+        $state = false;
+    }
+    return $state;
+}
+
+function mfaAddColumns(PDO $pdo): void
+{
     $columns = [];
     foreach ($pdo->query('SHOW COLUMNS FROM users')->fetchAll() as $column) {
         $columns[$column['Field']] = true;
@@ -46,7 +64,6 @@ function mfaEnsureColumns(PDO $pdo): void
     foreach ($required as $column => $sql) {
         if (empty($columns[$column])) $pdo->exec($sql);
     }
-    $done = true;
 }
 
 function mfaBase32Encode(string $bytes): string

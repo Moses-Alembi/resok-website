@@ -15,6 +15,7 @@ $config = require $configPath;
 
 require_once __DIR__ . '/lib/portal-mail.php';
 require_once __DIR__ . '/lib/mpesa.php';
+require_once __DIR__ . '/lib/auth-throttle.php';
 require_once __DIR__ . '/lib/blog.php';
 require_once __DIR__ . '/lib/social-ingest.php';
 
@@ -733,10 +734,16 @@ try {
             'SELECT u.id, u.email, u.password_hash, u.email_verified, u.role, mp.membership_status, mp.membership_id, mp.cpd_points
              FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.email = ? LIMIT 1'
         );
+        $loginEmail = (string)($data['email'] ?? '');
+        authThrottleCheck($pdo, $config, $loginEmail);
         $stmt->execute([$data['email'] ?? '']);
         $user = $stmt->fetch();
-        if (!$user || !password_verify($data['password'] ?? '', $user['password_hash'])) respond(401, ['error' => 'Invalid credentials']);
+        if (!$user || !password_verify($data['password'] ?? '', $user['password_hash'])) {
+            authThrottleFailure($pdo, $config, $loginEmail);
+            respond(401, ['error' => 'Invalid credentials']);
+        }
         if (!$user['email_verified']) respond(403, ['error' => 'Please verify your email before logging in']);
+        authThrottleSuccess($pdo, $config, $loginEmail);
         $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
         issueAuthCookie($loginToken);
         respond(200, [

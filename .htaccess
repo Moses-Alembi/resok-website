@@ -11,6 +11,11 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Left alone before anything else. .well-known carries security.txt (the disclosure
+  # contact) and the ACME challenges that renew the certificate - and ACME validates over
+  # plain HTTP, so forcing those to HTTPS is a quiet way to break renewal months later.
+  RewriteRule ^\.well-known/ - [L]
+
   # Force HTTPS. http://www.resok.org was serving the whole site in plaintext: the session
   # cookie is Secure so it is never sent, which alone makes the portal look broken, and the
   # login form would post credentials unencrypted. Both conditions are required - a host

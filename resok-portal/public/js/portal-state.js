@@ -289,6 +289,35 @@
     return api("/api/events");
   }
 
+  /* ---------------------------------------------------------------------------------
+   * Two-factor authentication. The password step and the code step are separate requests;
+   * the challenge returned by login proves the first passed and nothing more.
+   * --------------------------------------------------------------------------------- */
+  function mfaStatus() {
+    return api("/api/auth/mfa/status");
+  }
+
+  function mfaBeginSetup() {
+    return api("/api/auth/mfa/setup", { method: "POST" });
+  }
+
+  function mfaConfirmSetup(code) {
+    return api("/api/auth/mfa/enable", { method: "POST", body: JSON.stringify({ code }) });
+  }
+
+  function mfaDisable(password) {
+    return api("/api/auth/mfa/disable", { method: "POST", body: JSON.stringify({ password }) });
+  }
+
+  async function mfaVerifyLogin(challenge, code) {
+    const result = await api("/api/auth/mfa/verify", {
+      method: "POST",
+      body: JSON.stringify({ challenge, code })
+    });
+    login(result.user?.email || "", result.user);
+    return result;
+  }
+
   async function registerForEvent(eventId) {
     return api(`/api/events/${eventId}/register`, { method: "POST" });
   }
@@ -720,6 +749,11 @@
     cpdLedger,
     listEvents,
     registerForEvent,
+    mfaStatus,
+    mfaBeginSetup,
+    mfaConfirmSetup,
+    mfaDisable,
+    mfaVerifyLogin,
     requireAuthForProtectedPage,
     startIdleWatch,
     stopIdleWatch,

@@ -16,6 +16,7 @@ $config = require $configPath;
 require_once __DIR__ . '/lib/portal-mail.php';
 require_once __DIR__ . '/lib/mpesa.php';
 require_once __DIR__ . '/lib/throttle.php';
+require_once __DIR__ . '/lib/mfa.php';
 require_once __DIR__ . '/lib/security-assessment.php';
 require_once __DIR__ . '/lib/blog.php';
 require_once __DIR__ . '/lib/social-ingest.php';
@@ -757,6 +758,25 @@ try {
         }
         if (!$user['email_verified']) respond(403, ['error' => 'Please verify your email before logging in']);
         authThrottleSuccess($pdo, $config, $loginEmail);
+
+        // Second factor. The password is only the first step for anyone whose account can
+        // reach member data; the challenge token proves this step passed and nothing more.
+        mfaEnsureColumns($pdo);
+        if (!empty($user['mfa_enabled'])) {
+            securityLog($pdo, $config, 'mfa_challenge_issued', 'info', 'login', null, (int)$user['id']);
+            respond(200, [
+                'mfaRequired' => true,
+                'challenge' => mfaIssueChallenge($config, (int)$user['id']),
+                'message' => 'Enter the 6-digit code from your authenticator app.',
+            ]);
+        }
+        if (mfaRequiredForRole((string)$user['role'])) {
+            // Not a refusal: an admin who has not enrolled yet still gets in, but the portal
+            // is told to make them set it up. Locking them out of their own site would be a
+            // worse outcome than a short window where the control is pending.
+            securityLog($pdo, $config, 'mfa_missing_privileged_login', 'warning', 'login',
+                'Privileged account signed in without two-factor enabled', (int)$user['id']);
+        }
         $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
         issueAuthCookie($loginToken);
         respond(200, [
@@ -769,6 +789,118 @@ try {
                 'membershipId' => $user['membership_id'],
                 'cpdPoints' => (int)($user['cpd_points'] ?? 0)
             ]
+        ]);
+    }
+
+    // Second factor: exchange a challenge token plus a code for a session.
+    if ($route === 'auth/mfa/verify' && $method === 'POST') {
+        $data = input();
+        $userId = mfaVerifyChallenge($config, (string)($data['challenge'] ?? ''));
+        if (!$userId) respond(401, ['error' => 'That sign-in attempt expired. Please log in again.']);
+
+        // The code is guessable in six digits, so it is rate limited harder than a password.
+        throttleCheck($pdo, $config, 'login', 'mfa:' . $userId);
+        mfaEnsureColumns($pdo);
+        $stmt = $pdo->prepare('SELECT u.id, u.email, u.role, u.mfa_secret, u.mfa_recovery, mp.membership_status, mp.membership_id, mp.cpd_points
+                                 FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        if (!$user) respond(401, ['error' => 'That sign-in attempt is no longer valid.']);
+
+        $code = (string)($data['code'] ?? '');
+        $ok = mfaVerifyCode((string)$user['mfa_secret'], $code);
+        $usedRecovery = false;
+        if (!$ok && strlen(trim($code)) >= 8) {
+            $ok = mfaConsumeRecoveryCode($pdo, (int)$user['id'], (string)$user['mfa_recovery'], $code);
+            $usedRecovery = $ok;
+        }
+        if (!$ok) {
+            throttleFailure($pdo, $config, 'login', 'mfa:' . $userId);
+            securityLog($pdo, $config, 'mfa_failed', 'warning', 'login', null, (int)$user['id']);
+            respond(401, ['error' => 'That code was not correct.']);
+        }
+        throttleSuccess($pdo, $config, 'login', 'mfa:' . $userId);
+        securityLog($pdo, $config, $usedRecovery ? 'mfa_recovery_used' : 'mfa_success',
+            $usedRecovery ? 'warning' : 'info', 'login', null, (int)$user['id']);
+
+        $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
+        issueAuthCookie($loginToken);
+        respond(200, [
+            'token' => $loginToken,
+            'usedRecoveryCode' => $usedRecovery,
+            'user' => [
+                'id' => (int)$user['id'],
+                'email' => $user['email'],
+                'role' => $user['role'],
+                'membershipStatus' => $user['membership_status'],
+                'membershipId' => $user['membership_id'],
+                'cpdPoints' => (int)($user['cpd_points'] ?? 0)
+            ]
+        ]);
+    }
+
+    // Enrolment. The secret is generated but not activated until a code proves the app
+    // holds it - otherwise a mistyped setup locks the member out of their own account.
+    if ($route === 'auth/mfa/setup' && $method === 'POST') {
+        $user = auth($config);
+        mfaEnsureColumns($pdo);
+        $secret = mfaGenerateSecret();
+        $pdo->prepare('UPDATE users SET mfa_secret = ?, mfa_enabled = 0 WHERE id = ?')
+            ->execute([$secret, (int)$user['userId']]);
+        respond(200, [
+            'secret' => $secret,
+            'uri' => mfaProvisioningUri($secret, (string)$user['email']),
+        ]);
+    }
+
+    if ($route === 'auth/mfa/enable' && $method === 'POST') {
+        $user = auth($config);
+        mfaEnsureColumns($pdo);
+        $stmt = $pdo->prepare('SELECT mfa_secret FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([(int)$user['userId']]);
+        $row = $stmt->fetch();
+        if (!$row || empty($row['mfa_secret'])) respond(400, ['error' => 'Start the setup again.']);
+        if (!mfaVerifyCode((string)$row['mfa_secret'], (string)(input()['code'] ?? ''))) {
+            securityLog($pdo, $config, 'mfa_enrol_failed', 'info', 'mfa', null, (int)$user['userId']);
+            respond(400, ['error' => 'That code was not correct. Check your app and try again.']);
+        }
+        $recovery = mfaGenerateRecoveryCodes();
+        $pdo->prepare('UPDATE users SET mfa_enabled = 1, mfa_enrolled_at = NOW(), mfa_recovery = ? WHERE id = ?')
+            ->execute([$recovery['hashed'], (int)$user['userId']]);
+        securityLog($pdo, $config, 'mfa_enabled', 'info', 'mfa', null, (int)$user['userId']);
+        respond(200, ['enabled' => true, 'recoveryCodes' => $recovery['plain']]);
+    }
+
+    // Turning it off requires the password again: a hijacked session must not be able to
+    // quietly remove the control that would have stopped it.
+    if ($route === 'auth/mfa/disable' && $method === 'POST') {
+        $user = auth($config);
+        mfaEnsureColumns($pdo);
+        $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([(int)$user['userId']]);
+        $row = $stmt->fetch();
+        if (!$row || !password_verify((string)(input()['password'] ?? ''), (string)$row['password_hash'])) {
+            securityLog($pdo, $config, 'mfa_disable_refused', 'warning', 'mfa', 'Wrong password', (int)$user['userId']);
+            respond(401, ['error' => 'That password was not correct.']);
+        }
+        $pdo->prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, mfa_recovery = NULL WHERE id = ?')
+            ->execute([(int)$user['userId']]);
+        securityLog($pdo, $config, 'mfa_disabled', 'warning', 'mfa', null, (int)$user['userId']);
+        respond(200, ['enabled' => false]);
+    }
+
+    if ($route === 'auth/mfa/status' && $method === 'GET') {
+        $user = auth($config);
+        mfaEnsureColumns($pdo);
+        $stmt = $pdo->prepare('SELECT mfa_enabled, mfa_enrolled_at, mfa_recovery FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([(int)$user['userId']]);
+        $row = $stmt->fetch() ?: [];
+        $remaining = json_decode((string)($row['mfa_recovery'] ?? '[]'), true);
+        respond(200, [
+            'enabled' => (bool)(int)($row['mfa_enabled'] ?? 0),
+            'enrolledAt' => $row['mfa_enrolled_at'] ?? null,
+            'recoveryRemaining' => is_array($remaining) ? count($remaining) : 0,
+            'requiredForRole' => mfaRequiredForRole((string)($user['role'] ?? 'member')),
         ]);
     }
 

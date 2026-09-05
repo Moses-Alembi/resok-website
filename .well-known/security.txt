@@ -1,0 +1,15 @@
+# Vulnerability disclosure for resok.org
+#
+# Published in the format US federal agencies are required to use under CISA Binding
+# Operational Directive 20-01, so a researcher who finds a problem has an obvious,
+# unambiguous way to tell us instead of guessing at an inbox or going public.
+
+Contact: mailto:info@resok.org
+Expires: 2027-09-05T00:00:00.000Z
+Preferred-Languages: en, sw
+Canonical: https://www.resok.org/.well-known/security.txt
+Policy: https://www.resok.org/vulnerability-disclosure
+
+# We ask that you give us a reasonable opportunity to fix an issue before disclosing it,
+# and that you do not access, modify, or delete data belonging to our members while
+# testing. We will not pursue legal action against researchers who follow this.

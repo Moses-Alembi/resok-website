@@ -218,6 +218,26 @@
 
         <button id="loginBtn" class="login-btn" type="submit">Login</button>
       </form>
+
+      <!-- Second factor. Shown only when the server says the account has it enabled; the
+           challenge token it returns proves the password step already passed. -->
+      <form id="mfaForm" hidden>
+        <p style="margin:0 0 18px;font-size:.92rem;line-height:1.5;">
+          Enter the 6-digit code from your authenticator app. If you have lost your phone,
+          enter one of your recovery codes instead.
+        </p>
+        <div class="field">
+          <label class="sr-only" for="mfaCode">Authentication code</label>
+          <div class="input-wrap">
+            <input id="mfaCode" name="code" type="text" inputmode="numeric" autocomplete="one-time-code"
+                   placeholder="000000" required style="letter-spacing:.35em;font-size:1.15rem" />
+          </div>
+        </div>
+        <button id="mfaBtn" class="login-btn" type="submit">Verify</button>
+        <div class="forgot-row" style="margin-top:18px">
+          <a href="#" id="mfaCancel">Use a different account</a>
+        </div>
+      </form>
     </section>
   </main>
 
@@ -304,6 +324,16 @@
 
         if (!response.ok) throw new Error(data.error || "Invalid email or password.");
 
+        // A second factor stands between the password and the session.
+        if (data.mfaRequired) {
+          pendingChallenge = data.challenge;
+          form.hidden = true;
+          document.getElementById("mfaForm").hidden = false;
+          document.getElementById("mfaCode").focus();
+          showAlert(data.message || "Enter the code from your authenticator app.", "success");
+          return;
+        }
+
         window.ResokPortal.login(email, data.user, data.token);
         const isAdmin = data.user?.role === "admin";
         const next = safeNextPath();
@@ -323,6 +353,42 @@
         loginBtn.disabled = false;
         loginBtn.textContent = "Login";
       }
+    });
+
+    let pendingChallenge = "";
+
+    document.getElementById("mfaForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById("mfaBtn");
+      const code = document.getElementById("mfaCode").value.trim();
+      if (!code) { showAlert("Enter the code from your app."); return; }
+
+      btn.disabled = true;
+      btn.textContent = "Verifying...";
+      try {
+        const result = await window.ResokPortal.mfaVerifyLogin(pendingChallenge, code);
+        const isAdmin = result.user?.role === "admin";
+        const next = safeNextPath();
+        showAlert(result.usedRecoveryCode
+          ? "Signed in with a recovery code. That code is now used up."
+          : "Verified. Signing you in...", "success");
+        setTimeout(() => {
+          window.location.href = isAdmin ? "admin-review" : (next || "dashboard");
+        }, result.usedRecoveryCode ? 1600 : 650);
+      } catch (error) {
+        showAlert(error.message || "That code was not correct.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Verify";
+      }
+    });
+
+    document.getElementById("mfaCancel").addEventListener("click", (event) => {
+      event.preventDefault();
+      pendingChallenge = "";
+      document.getElementById("mfaForm").hidden = true;
+      form.hidden = false;
+      clearAlert();
     });
   </script>
 </body>

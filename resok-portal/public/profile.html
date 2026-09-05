@@ -72,9 +72,59 @@
           </div>
         </form>
       </section>
+
+      <!-- Two-factor authentication. Enrolment is only activated once a code proves the app
+           really holds the secret; otherwise a mistyped setup locks a member out. -->
+      <section class="panel" style="margin-top:20px">
+        <h2 style="font-size:18px;margin-bottom:6px">Two-Factor Authentication</h2>
+        <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
+          A code from your phone, in addition to your password. Without it, your password is
+          the only thing protecting your account.
+        </p>
+        <div id="mfaNotice" class="notice"></div>
+        <div id="mfaState" style="font-size:14px;margin-bottom:16px"></div>
+
+        <div id="mfaSetup" hidden>
+          <p style="font-size:14px;margin-bottom:10px">
+            Scan this in Google Authenticator, Microsoft Authenticator, or any TOTP app &mdash;
+            or type the key in by hand.
+          </p>
+          <div id="mfaQr" style="margin:14px 0"></div>
+          <p style="font-family:Consolas,monospace;font-size:15px;letter-spacing:.12em;background:#f3f4f7;
+                    padding:12px;border-radius:6px;word-break:break-all" id="mfaSecret"></p>
+          <div class="field" style="max-width:240px;margin-top:14px">
+            <label for="mfaSetupCode">Enter the 6-digit code</label>
+            <input id="mfaSetupCode" type="text" inputmode="numeric" placeholder="000000"
+                   style="letter-spacing:.3em" autocomplete="one-time-code" />
+          </div>
+          <button class="btn btn-primary" id="mfaConfirm" type="button" style="margin-top:12px">
+            <i class="fas fa-shield-halved"></i> Turn on
+          </button>
+        </div>
+
+        <div id="mfaCodes" hidden>
+          <p style="font-size:14px;font-weight:700;margin-bottom:8px">Save these recovery codes now.</p>
+          <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">
+            Each works once, and they are the only way back in if you lose your phone. They
+            cannot be shown again.
+          </p>
+          <pre id="mfaCodeList" style="background:#f3f4f7;padding:16px;border-radius:6px;font-size:14px;
+                                       line-height:1.9;letter-spacing:.06em"></pre>
+        </div>
+
+        <div class="actions" style="margin-top:14px">
+          <button class="btn btn-primary" id="mfaStart" type="button" hidden>
+            <i class="fas fa-shield-halved"></i> Set up two-factor
+          </button>
+          <button class="btn btn-secondary" id="mfaOff" type="button" hidden>
+            <i class="fas fa-shield-slash"></i> Turn off
+          </button>
+        </div>
+      </section>
     </main>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/cropper.js"></script>
   <script src="js/portal-state.js?v=20260905-card-photo"></script>
   <script>
@@ -151,6 +201,78 @@
       }
       renderProfile();
     });
+
+    /* ---------------- two-factor authentication ---------------- */
+    const mfa = (id) => document.getElementById(id);
+
+    function mfaNotice(message, type = "success") {
+      const box = mfa("mfaNotice");
+      box.textContent = message;
+      box.className = `notice ${type}`;
+    }
+
+    async function renderMfa() {
+      try {
+        const status = await window.ResokPortal.mfaStatus();
+        const state = mfa("mfaState");
+        state.textContent = status.enabled
+          ? `On since ${new Date(status.enrolledAt).toLocaleDateString("en-GB")} · ${status.recoveryRemaining} recovery code(s) left`
+          : (status.requiredForRole
+              ? "Off. Your account can reach member data, so this should be on."
+              : "Off. Your password is currently the only thing protecting your account.");
+        state.style.color = status.enabled ? "#0f7a38" : (status.requiredForRole ? "#b42318" : "#667085");
+        state.style.fontWeight = status.enabled ? "700" : "600";
+        mfa("mfaStart").hidden = status.enabled;
+        mfa("mfaOff").hidden = !status.enabled;
+      } catch (error) {
+        mfa("mfaState").textContent = "";
+      }
+    }
+
+    mfa("mfaStart").addEventListener("click", async () => {
+      try {
+        const setup = await window.ResokPortal.mfaBeginSetup();
+        mfa("mfaSecret").textContent = setup.secret.replace(/(.{4})/g, "$1 ").trim();
+        mfa("mfaQr").textContent = "";
+        // Rendered locally from the URI; the secret is never sent to a QR service.
+        if (window.QRCode) {
+          new window.QRCode(mfa("mfaQr"), { text: setup.uri, width: 168, height: 168 });
+        }
+        mfa("mfaSetup").hidden = false;
+        mfa("mfaStart").hidden = true;
+        mfaNotice("Scan the code, then enter the 6 digits your app shows.", "success");
+      } catch (error) {
+        mfaNotice(error.message || "Could not start setup.", "error");
+      }
+    });
+
+    mfa("mfaConfirm").addEventListener("click", async () => {
+      try {
+        const result = await window.ResokPortal.mfaConfirmSetup(mfa("mfaSetupCode").value.trim());
+        mfa("mfaSetup").hidden = true;
+        mfa("mfaCodeList").textContent = (result.recoveryCodes || []).join("\n");
+        mfa("mfaCodes").hidden = false;
+        mfaNotice("Two-factor authentication is on.", "success");
+        renderMfa();
+      } catch (error) {
+        mfaNotice(error.message || "That code was not correct.", "error");
+      }
+    });
+
+    mfa("mfaOff").addEventListener("click", async () => {
+      const password = window.prompt("Confirm your password to turn two-factor off:");
+      if (!password) return;
+      try {
+        await window.ResokPortal.mfaDisable(password);
+        mfa("mfaCodes").hidden = true;
+        mfaNotice("Two-factor authentication is off.", "error");
+        renderMfa();
+      } catch (error) {
+        mfaNotice(error.message || "Could not turn it off.", "error");
+      }
+    });
+
+    renderMfa();
   </script>
 </body>
 </html>

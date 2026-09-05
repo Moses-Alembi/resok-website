@@ -111,7 +111,16 @@ function blogSanitizeHtml(string $html): string
         '/\b(href|src)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/i',
         static function (array $m): string {
             $attr = strtolower($m[1]);
-            $url = $m[2] !== '' ? $m[2] : ($m[3] ?? '') !== '' ? $m[3] : ($m[4] ?? '');
+            // The three alternatives in the pattern are double-quoted, single-quoted and
+            // bare; exactly one of them holds the URL. Written as a loop rather than nested
+            // ternaries, which PHP 8 rejects outright unless parenthesised.
+            $url = '';
+            foreach ([2, 3, 4] as $group) {
+                if (isset($m[$group]) && $m[$group] !== '') {
+                    $url = $m[$group];
+                    break;
+                }
+            }
             // Decode entities and strip control characters before judging the scheme, so
             // the check sees what the browser will eventually see.
             $probe = html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');

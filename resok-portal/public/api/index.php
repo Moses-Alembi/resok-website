@@ -613,7 +613,24 @@ try {
     }
 
     if (preg_match('#^profile-images/([^/]+)$#', $route, $m) && $method === 'GET') {
+        // A member's photograph is personal data. This route previously served it to anyone
+        // who knew the filename, which is not access control - it is a URL that happens to
+        // be hard to guess, built around a predictable timestamp. A session is now required,
+        // and a member may only fetch their own; admins may fetch any, because the review
+        // queue has to display them.
+        $viewer = auth($config);
         $filename = basename(rawurldecode($m[1]));
+
+        $owner = $pdo->prepare('SELECT user_id FROM member_profiles WHERE profile_image = ? LIMIT 1');
+        $owner->execute([$filename]);
+        $ownerRow = $owner->fetch();
+        $isOwner = $ownerRow && (int)$ownerRow['user_id'] === (int)$viewer['userId'];
+        if (!$isOwner && ($viewer['role'] ?? '') !== 'admin') {
+            // Deliberately 404 rather than 403: a 403 confirms the file exists, which tells
+            // someone probing filenames that their guess was correct.
+            respond(404, ['error' => 'Profile photo not found']);
+        }
+
         $file = rtrim($config['upload_dir'], '/\\') . '/profile-images/' . $filename;
         if (!is_file($file)) respond(404, ['error' => 'Profile photo not found']);
 
@@ -1074,7 +1091,7 @@ try {
         $dir = rtrim($config['upload_dir'], '/\\') . '/profile-images';
         if (!is_dir($dir)) mkdir($dir, 0755, true);
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-        $filename = 'profileImage-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $filename = 'profileImage-' . bin2hex(random_bytes(16)) . '.' . $extension;
         if (!move_uploaded_file((string)$file['tmp_name'], $dir . '/' . $filename)) {
             respond(500, ['error' => 'Could not save profile photo']);
         }
@@ -1219,7 +1236,7 @@ try {
             respond(500, ['error' => 'The payment proof folder is not writable']);
         }
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-        $filename = 'proof-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $filename = 'proof-' . bin2hex(random_bytes(16)) . '.' . $extension;
         if (!move_uploaded_file((string)$file['tmp_name'], $dir . '/' . $filename)) {
             respond(500, ['error' => 'Could not save proof of payment']);
         }

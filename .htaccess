@@ -11,6 +11,15 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Force HTTPS. http://www.resok.org was serving the whole site in plaintext: the session
+  # cookie is Secure so it is never sent, which alone makes the portal look broken, and the
+  # login form would post credentials unencrypted. Both conditions are required - a host
+  # that terminates TLS at a proxy leaves %{HTTPS} off and signals the real scheme in
+  # X-Forwarded-Proto, and testing only the first would put such a host in a redirect loop.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^(.*)$ https://www.resok.org/$1 [R=301,L]
+
   # Canonical host - must stay first, before anything that gates on a session. The portal's
   # resok_token cookie is host-only (issueAuthCookie sets no domain attribute), so a session
   # started on www.resok.org is not sent to resok.org and vice versa: a member who logs in on
@@ -111,6 +120,7 @@ Options -Indexes
   Header set Permissions-Policy "geolocation=(), camera=(), microphone=()"
   # The portal carries a logged-in session, so it must not be loadable in someone else's
   # frame. X-Frame-Options for older browsers, frame-ancestors for current ones.
+  Header always set Strict-Transport-Security "max-age=15768000" env=HTTPS
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Content-Security-Policy "frame-ancestors 'self'"
 </IfModule>

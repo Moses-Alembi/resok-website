@@ -22,6 +22,10 @@ $debugValue = array_key_exists('debug', $config) ? $config['debug'] : getenv('RE
 $isDebug = filter_var($debugValue ?: false, FILTER_VALIDATE_BOOLEAN);
 
 function respond(int $status, array $payload): void {
+    // JSON only - never a document. This says so explicitly, so a browser coaxed into
+    // rendering a response cannot run anything from it.
+    header("Content-Security-Policy: default-src 'none'");
+    header('X-Content-Type-Options: nosniff');
     http_response_code($status);
     header('Cache-Control: no-store');
     echo json_encode($payload, JSON_UNESCAPED_SLASHES);

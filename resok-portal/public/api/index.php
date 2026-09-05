@@ -13,13 +13,66 @@ if (!file_exists($configPath)) {
 
 $config = require $configPath;
 
-require_once __DIR__ . '/lib/portal-mail.php';
-require_once __DIR__ . '/lib/mpesa.php';
-require_once __DIR__ . '/lib/throttle.php';
-require_once __DIR__ . '/lib/mfa.php';
-require_once __DIR__ . '/lib/security-assessment.php';
-require_once __DIR__ . '/lib/blog.php';
-require_once __DIR__ . '/lib/social-ingest.php';
+/**
+ * Modules are loaded defensively because this site is deployed by uploading files, and a
+ * partial upload is normal rather than exceptional. A bare require_once on a file that did
+ * not make it up is a fatal error before any handler runs, which takes the ENTIRE API down
+ * - every route, including ones that do not use the missing module - and returns an empty
+ * 500 that says nothing about why. That has happened; this makes it impossible.
+ *
+ * Anything missing is recorded instead. Routes that need it fail individually with a
+ * message naming the file, and everything else keeps working.
+ */
+$missingModules = [];
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest'] as $module) {
+    $modulePath = __DIR__ . '/lib/' . $module . '.php';
+    if (is_file($modulePath)) {
+        require_once $modulePath;
+    } else {
+        $missingModules[] = 'lib/' . $module . '.php';
+        error_log("API module not deployed: lib/{$module}.php");
+    }
+}
+
+/**
+ * Rate limiting degrades to the previous behaviour when its module is absent - no limiting,
+ * but authentication still works. A portal nobody can log into is a worse outcome than one
+ * missing a control it did not have last week, and the threat assessment reports the module
+ * as missing so it cannot pass unnoticed.
+ */
+if (!function_exists('throttleCheck')) {
+    function throttleCheck(PDO $pdo, array $config, string $action, string $subject): void {}
+    function throttleFailure(PDO $pdo, array $config, string $action, string $subject): void {}
+    function throttleSuccess(PDO $pdo, array $config, string $action, string $subject): void {}
+    function authThrottleCheck(PDO $pdo, array $config, string $email): void {}
+    function authThrottleFailure(PDO $pdo, array $config, string $email): void {}
+    function authThrottleSuccess(PDO $pdo, array $config, string $email): void {}
+    function securityLog(PDO $pdo, array $config, string $type, string $severity = 'info',
+                         ?string $action = null, ?string $detail = null, ?int $userId = null): void {}
+}
+
+/**
+ * Two-factor degrades differently, and deliberately so. Skipping the second factor because
+ * its file is missing would turn a deployment slip into an authentication bypass for
+ * exactly the accounts that enrolled to be safest. So these shims cover only the parts that
+ * are safe to skip; the login route refuses outright if an enrolled member arrives while
+ * the module is absent.
+ */
+if (!function_exists('mfaEnsureColumns')) {
+    function mfaEnsureColumns(PDO $pdo): void {}
+    function mfaRequiredForRole(string $role): bool { return false; }
+}
+
+/** Refuses a route whose module is absent, saying which file to upload. */
+function requireModule(string $function, string $file): void
+{
+    if (!function_exists($function)) {
+        respond(503, [
+            'error' => 'This feature is not available: a required file is missing on the server.',
+            'missing' => $file,
+        ]);
+    }
+}
 
 $debugValue = array_key_exists('debug', $config) ? $config['debug'] : getenv('RESOK_DEBUG');
 $isDebug = filter_var($debugValue ?: false, FILTER_VALIDATE_BOOLEAN);
@@ -467,14 +520,17 @@ try {
     // queries themselves only ever return published (or due-to-publish) articles.
     // ---------------------------------------------------------------------------------
     if ($route === 'blog/articles' && $method === 'GET') {
+        requireModule('blogListPublic', 'lib/blog.php');
         respond(200, blogListPublic($pdo, $_GET));
     }
 
     if ($route === 'blog/featured' && $method === 'GET') {
+        requireModule('blogFeatured', 'lib/blog.php');
         respond(200, blogFeatured($pdo) ?? []);
     }
 
     if ($route === 'blog/categories' && $method === 'GET') {
+        requireModule('blogCategories', 'lib/blog.php');
         respond(200, blogCategories($pdo));
     }
 
@@ -492,16 +548,19 @@ try {
     // adding a route here cannot accidentally skip the check.
     // ---------------------------------------------------------------------------------
     if ($route === 'blog/admin/articles' && $method === 'GET') {
+        requireModule('blogListAdmin', 'lib/blog.php');
         respond(200, blogListAdmin($pdo, auth($config), $_GET));
     }
 
     if ($route === 'blog/admin/articles' && $method === 'POST') {
+        requireModule('blogSaveArticle', 'lib/blog.php');
         respond(201, blogSaveArticle($pdo, auth($config), input()));
     }
 
     // Social ingestion queue. Fetching is deliberately separate from importing: the cron
     // fills the queue, an editor decides what becomes an article.
     if ($route === 'blog/admin/social' && $method === 'GET') {
+        requireModule('socialIngestAll', 'lib/social-ingest.php');
         $user = auth($config);
         blogRequireEdit($user);
         $status = $_GET['status'] ?? 'new';
@@ -526,6 +585,7 @@ try {
     }
 
     if ($route === 'blog/admin/social/refresh' && $method === 'POST') {
+        requireModule('socialIngestAll', 'lib/social-ingest.php');
         $user = auth($config);
         blogRequireEdit($user);
         respond(200, ['sources' => socialIngestAll($pdo)]);
@@ -565,6 +625,7 @@ try {
     // Threat assessment for the admin dashboard. Admin only - it names weaknesses, which is
     // precisely the list an attacker would want, so it is not exposed to other roles.
     if ($route === 'security/assessment' && $method === 'GET') {
+        requireModule('securityAssessment', 'lib/security-assessment.php');
         $user = auth($config);
         requireAdmin($user);
         respond(200, securityAssessment($pdo, $config));
@@ -762,7 +823,7 @@ try {
     if ($route === 'auth/login' && $method === 'POST') {
         $data = input();
         $stmt = $pdo->prepare(
-            'SELECT u.id, u.email, u.password_hash, u.email_verified, u.role, mp.membership_status, mp.membership_id, mp.cpd_points
+            'SELECT u.id, u.email, u.password_hash, u.email_verified, u.role, u.mfa_enabled, mp.membership_status, mp.membership_id, mp.cpd_points
              FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.email = ? LIMIT 1'
         );
         $loginEmail = (string)($data['email'] ?? '');
@@ -780,6 +841,9 @@ try {
         // reach member data; the challenge token proves this step passed and nothing more.
         mfaEnsureColumns($pdo);
         if (!empty($user['mfa_enabled'])) {
+            // Refuse rather than wave them through: this member enrolled precisely so that
+            // a password alone would not be enough.
+            requireModule('mfaIssueChallenge', 'lib/mfa.php');
             securityLog($pdo, $config, 'mfa_challenge_issued', 'info', 'login', null, (int)$user['id']);
             respond(200, [
                 'mfaRequired' => true,
@@ -811,6 +875,7 @@ try {
 
     // Second factor: exchange a challenge token plus a code for a session.
     if ($route === 'auth/mfa/verify' && $method === 'POST') {
+        requireModule('mfaVerifyChallenge', 'lib/mfa.php');
         $data = input();
         $userId = mfaVerifyChallenge($config, (string)($data['challenge'] ?? ''));
         if (!$userId) respond(401, ['error' => 'That sign-in attempt expired. Please log in again.']);
@@ -859,6 +924,7 @@ try {
     // Enrolment. The secret is generated but not activated until a code proves the app
     // holds it - otherwise a mistyped setup locks the member out of their own account.
     if ($route === 'auth/mfa/setup' && $method === 'POST') {
+        requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
         mfaEnsureColumns($pdo);
         $secret = mfaGenerateSecret();
@@ -871,6 +937,7 @@ try {
     }
 
     if ($route === 'auth/mfa/enable' && $method === 'POST') {
+        requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
         mfaEnsureColumns($pdo);
         $stmt = $pdo->prepare('SELECT mfa_secret FROM users WHERE id = ? LIMIT 1');
@@ -891,6 +958,7 @@ try {
     // Turning it off requires the password again: a hijacked session must not be able to
     // quietly remove the control that would have stopped it.
     if ($route === 'auth/mfa/disable' && $method === 'POST') {
+        requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
         mfaEnsureColumns($pdo);
         $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = ? LIMIT 1');
@@ -907,6 +975,7 @@ try {
     }
 
     if ($route === 'auth/mfa/status' && $method === 'GET') {
+        requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
         mfaEnsureColumns($pdo);
         $stmt = $pdo->prepare('SELECT mfa_enabled, mfa_enrolled_at, mfa_recovery FROM users WHERE id = ? LIMIT 1');

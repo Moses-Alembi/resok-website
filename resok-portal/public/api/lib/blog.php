@@ -47,6 +47,33 @@ function blogRequirePublish(array $user): void
     if (!blogCanPublish($user)) respond(403, ['error' => 'You do not have permission to publish.']);
 }
 
+/**
+ * Whether the blog tables exist yet. schema-blog.sql is imported by hand, so until someone
+ * does that every blog route would otherwise throw a raw SQL error and surface as a generic
+ * 500 - which says nothing about the one thing that would fix it.
+ */
+function blogTablesReady(PDO $pdo): bool
+{
+    static $ready = null;
+    if ($ready !== null) return $ready;
+    try {
+        $pdo->query('SELECT 1 FROM blog_articles LIMIT 1');
+        $ready = true;
+    } catch (Throwable $e) {
+        $ready = false;
+    }
+    return $ready;
+}
+
+function blogRequireTables(PDO $pdo): void
+{
+    if (blogTablesReady($pdo)) return;
+    respond(503, [
+        'error' => 'The blog is not set up on this server yet.',
+        'missing' => 'resok-portal/server/schema-blog.sql has not been imported into the database.',
+    ]);
+}
+
 /** URL-safe slug. Collisions get a numeric suffix rather than overwriting someone's article. */
 function blogSlugify(string $text): string
 {

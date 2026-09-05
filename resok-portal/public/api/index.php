@@ -58,6 +58,11 @@ if (!function_exists('throttleCheck')) {
  * are safe to skip; the login route refuses outright if an enrolled member arrives while
  * the module is absent.
  */
+if (!function_exists('blogRequireTables')) {
+    // Reached only if the guards above ever change order; the module check fires first.
+    function blogRequireTables(PDO $pdo): void {}
+}
+
 if (!function_exists('mfaEnsureColumns')) {
     function mfaEnsureColumns(PDO $pdo): bool { return false; }
     function mfaRequiredForRole(string $role): bool { return false; }
@@ -521,16 +526,19 @@ try {
     // ---------------------------------------------------------------------------------
     if ($route === 'blog/articles' && $method === 'GET') {
         requireModule('blogListPublic', 'lib/blog.php');
+        blogRequireTables($pdo);
         respond(200, blogListPublic($pdo, $_GET));
     }
 
     if ($route === 'blog/featured' && $method === 'GET') {
         requireModule('blogFeatured', 'lib/blog.php');
+        blogRequireTables($pdo);
         respond(200, blogFeatured($pdo) ?? []);
     }
 
     if ($route === 'blog/categories' && $method === 'GET') {
         requireModule('blogCategories', 'lib/blog.php');
+        blogRequireTables($pdo);
         respond(200, blogCategories($pdo));
     }
 
@@ -549,11 +557,13 @@ try {
     // ---------------------------------------------------------------------------------
     if ($route === 'blog/admin/articles' && $method === 'GET') {
         requireModule('blogListAdmin', 'lib/blog.php');
+        blogRequireTables($pdo);
         respond(200, blogListAdmin($pdo, auth($config), $_GET));
     }
 
     if ($route === 'blog/admin/articles' && $method === 'POST') {
         requireModule('blogSaveArticle', 'lib/blog.php');
+        blogRequireTables($pdo);
         respond(201, blogSaveArticle($pdo, auth($config), input()));
     }
 
@@ -561,6 +571,7 @@ try {
     // fills the queue, an editor decides what becomes an article.
     if ($route === 'blog/admin/social' && $method === 'GET') {
         requireModule('socialIngestAll', 'lib/social-ingest.php');
+        blogRequireTables($pdo);
         $user = auth($config);
         blogRequireEdit($user);
         $status = $_GET['status'] ?? 'new';
@@ -586,6 +597,7 @@ try {
 
     if ($route === 'blog/admin/social/refresh' && $method === 'POST') {
         requireModule('socialIngestAll', 'lib/social-ingest.php');
+        blogRequireTables($pdo);
         $user = auth($config);
         blogRequireEdit($user);
         respond(200, ['sources' => socialIngestAll($pdo)]);
@@ -823,7 +835,7 @@ try {
     if ($route === 'auth/login' && $method === 'POST') {
         $data = input();
         $stmt = $pdo->prepare(
-            'SELECT u.id, u.email, u.password_hash, u.email_verified, u.role, u.mfa_enabled, mp.membership_status, mp.membership_id, mp.cpd_points
+            'SELECT u.id, u.email, u.password_hash, u.email_verified, u.role, mp.membership_status, mp.membership_id, mp.cpd_points
              FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.email = ? LIMIT 1'
         );
         $loginEmail = (string)($data['email'] ?? '');
@@ -839,8 +851,21 @@ try {
 
         // Second factor. The password is only the first step for anyone whose account can
         // reach member data; the challenge token proves this step passed and nothing more.
-        mfaEnsureColumns($pdo);
-        if (!empty($user['mfa_enabled'])) {
+        //
+        // Read separately rather than joined into the query above. That query must work on a
+        // database where the mfa_ columns were never added - if it names a column that does
+        // not exist, the SELECT fails and nobody can log in at all, which is how this broke.
+        $mfaEnabled = false;
+        if (mfaEnsureColumns($pdo)) {
+            try {
+                $mfaStmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
+                $mfaStmt->execute([(int)$user['id']]);
+                $mfaEnabled = (bool)(int)($mfaStmt->fetch()['mfa_enabled'] ?? 0);
+            } catch (Throwable $e) {
+                error_log('Could not read two-factor state: ' . $e->getMessage());
+            }
+        }
+        if ($mfaEnabled) {
             // Refuse rather than wave them through: this member enrolled precisely so that
             // a password alone would not be enough.
             requireModule('mfaIssueChallenge', 'lib/mfa.php');

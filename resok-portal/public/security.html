@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Threat Assessment - ReSoK Members' Portal</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#253141;--muted:#667085;--bg:#f5f7fa;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);--radius:8px;
+      --pass:#0f7a38;--warn:#b54708;--fail:#b42318;--info:#175cd3}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text-dark)}
+    a{text-decoration:none;color:inherit}
+    [hidden]{display:none!important}
+    .topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line)}
+    .topbar-inner{max-width:1180px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+    .brand img{height:42px;display:block}
+    .back{color:var(--muted);font-size:14px;font-weight:600}
+    .wrap{max-width:1180px;margin:0 auto;padding:24px 20px;display:grid;gap:20px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
+    h1{font-size:24px;margin-bottom:6px}
+    .sub{color:var(--muted);font-size:14px;line-height:1.55}
+
+    .posture{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:18px;padding:18px;border-radius:var(--radius);border:1px solid var(--line)}
+    .posture.good{background:rgba(15,122,56,.07);border-color:rgba(15,122,56,.3)}
+    .posture.needs{background:rgba(181,71,8,.07);border-color:rgba(181,71,8,.3)}
+    .posture.risk{background:rgba(180,35,24,.07);border-color:rgba(180,35,24,.3)}
+    .posture .badge{font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.03em}
+    .posture.good .badge{color:var(--pass)}.posture.needs .badge{color:var(--warn)}.posture.risk .badge{color:var(--fail)}
+    .tally{display:flex;gap:16px;flex-wrap:wrap;margin-left:auto;font-size:13px;font-weight:700}
+    .tally span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+    .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+    .dot.pass{background:var(--pass)}.dot.warn{background:var(--warn)}.dot.fail{background:var(--fail)}.dot.info{background:var(--info)}
+
+    .checks{display:grid;gap:12px;margin-top:20px}
+    .check{display:grid;grid-template-columns:26px 1fr;gap:14px;padding:16px;border:1px solid var(--line);border-radius:var(--radius)}
+    .check i{font-size:17px;margin-top:2px}
+    .check.pass i{color:var(--pass)}.check.warn i{color:var(--warn)}.check.fail i{color:var(--fail)}.check.info i{color:var(--info)}
+    .check.fail{border-color:rgba(180,35,24,.35);background:rgba(180,35,24,.04)}
+    .check h3{font-size:15px;margin-bottom:4px}
+    .check p{color:var(--muted);font-size:13.5px;line-height:1.55}
+    .check .todo{margin-top:8px;font-size:13px;color:var(--text-dark);background:#f8fafc;border-left:3px solid var(--line);padding:8px 12px;border-radius:0 6px 6px 0}
+
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:18px}
+    .stat{border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+    .stat span{display:block;color:var(--muted);font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+    .stat strong{font-size:24px}
+    .stat.alert strong{color:var(--fail)}
+
+    table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13.5px}
+    th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--line)}
+    td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+    .sev{font-weight:800;font-size:11.5px;text-transform:uppercase}
+    .sev.info{color:var(--info)}.sev.warning{color:var(--warn)}.sev.critical{color:var(--fail)}
+    .empty{color:var(--muted);font-size:13.5px;padding:18px 0}
+    .btn{border:0;border-radius:6px;padding:11px 16px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;
+      background:var(--brand-primary);color:#fff;display:inline-flex;align-items:center;gap:8px}
+    .notice{margin-top:16px;padding:12px 14px;border-radius:6px;font-size:13.5px;background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}
+    @media(max-width:640px){.tally{margin-left:0}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="admin-review" class="brand"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <a href="admin-review" class="back"><i class="fas fa-arrow-left"></i> Back to admin</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <section class="panel">
+      <h1>Threat Assessment</h1>
+      <p class="sub">Live checks against the running site &mdash; the actual request, the actual configuration, the actual database. Nothing here is a stored answer.</p>
+      <div id="loadError" class="notice" hidden></div>
+      <div class="posture" id="posture" hidden>
+        <div>
+          <div class="badge" id="postureBadge"></div>
+          <div class="sub" id="postureNote"></div>
+        </div>
+        <div class="tally" id="tally"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="checksPanel" hidden>
+      <h2 style="font-size:18px">Checks</h2>
+      <div class="checks" id="checks"></div>
+    </section>
+
+    <section class="panel" id="activityPanel" hidden>
+      <h2 style="font-size:18px">Activity</h2>
+      <p class="sub">What has actually been attempted against the site, from the security log.</p>
+      <div class="stats" id="stats"></div>
+      <h3 style="font-size:15px;margin-top:24px">Recent events</h3>
+      <div id="eventsMount"></div>
+      <button class="btn" id="refresh" style="margin-top:18px"><i class="fas fa-rotate"></i> Refresh</button>
+    </section>
+  </div>
+
+  <script src="js/portal-state.js?v=20260905-card-photo"></script>
+  <script>
+    /**
+     * Renders the assessment the API produces. Every value is set with textContent - these
+     * strings describe weaknesses and include configuration detail, and none of it should
+     * ever be parsed as markup.
+     */
+    const ICONS = { pass: "fa-circle-check", warn: "fa-triangle-exclamation", fail: "fa-circle-xmark", info: "fa-circle-info" };
+    const el = (id) => document.getElementById(id);
+
+    function renderPosture(data) {
+      const map = { "good": "good", "needs attention": "needs", "at risk": "risk" };
+      const box = el("posture");
+      box.className = "posture " + (map[data.posture] || "needs");
+      el("postureBadge").textContent = data.posture;
+      el("postureNote").textContent = data.posture === "good"
+        ? "No failing or warning checks."
+        : "A single failing check caps this rating - passing others does not offset an open door.";
+      const tally = el("tally");
+      tally.textContent = "";
+      [["pass", "passing"], ["warn", "warnings"], ["fail", "failing"], ["info", "notes"]].forEach(([key, label]) => {
+        const n = data.counts[key] || 0;
+        if (!n) return;
+        const s = document.createElement("span");
+        const dot = document.createElement("i");
+        dot.className = "dot " + key;
+        s.append(dot, document.createTextNode(`${n} ${label}`));
+        tally.appendChild(s);
+      });
+      box.hidden = false;
+    }
+
+    function renderChecks(checks) {
+      const mount = el("checks");
+      mount.textContent = "";
+      const order = { fail: 0, warn: 1, info: 2, pass: 3 };
+      [...checks].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9)).forEach((c) => {
+        const row = document.createElement("div");
+        row.className = "check " + c.status;
+        const icon = document.createElement("i");
+        icon.className = "fas " + (ICONS[c.status] || ICONS.info);
+        const body = document.createElement("div");
+        const h3 = document.createElement("h3");
+        h3.textContent = c.title;
+        const p = document.createElement("p");
+        p.textContent = c.detail;
+        body.append(h3, p);
+        if (c.action) {
+          const todo = document.createElement("div");
+          todo.className = "todo";
+          todo.textContent = c.action;
+          body.appendChild(todo);
+        }
+        row.append(icon, body);
+        mount.appendChild(row);
+      });
+      el("checksPanel").hidden = false;
+    }
+
+    function renderActivity(activity) {
+      const stats = el("stats");
+      stats.textContent = "";
+      const total = (list) => (list || []).reduce((n, r) => n + r.count, 0);
+      const critical = (list) => (list || []).filter((r) => r.severity === "critical").reduce((n, r) => n + r.count, 0);
+
+      [
+        ["Events today", total(activity.day), false],
+        ["Events this week", total(activity.week), false],
+        ["Critical this week", critical(activity.week), critical(activity.week) > 0],
+        ["Active lockouts", activity.activeLockouts || 0, (activity.activeLockouts || 0) > 0],
+      ].forEach(([label, value, alert]) => {
+        const box = document.createElement("div");
+        box.className = "stat" + (alert ? " alert" : "");
+        const s = document.createElement("span");
+        s.textContent = label;
+        const strong = document.createElement("strong");
+        strong.textContent = Number(value).toLocaleString();
+        box.append(s, strong);
+        stats.appendChild(box);
+      });
+
+      const mount = el("eventsMount");
+      mount.textContent = "";
+      const events = activity.recent || [];
+      if (!events.length) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = activity.error || "Nothing logged yet. Events appear here as failed logins, lockouts and blocked requests occur.";
+        mount.appendChild(p);
+      } else {
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const hr = document.createElement("tr");
+        ["When", "Severity", "Event", "Action", "Detail"].forEach((h) => {
+          const th = document.createElement("th");
+          th.textContent = h;
+          hr.appendChild(th);
+        });
+        thead.appendChild(hr);
+        const tbody = document.createElement("tbody");
+        events.forEach((e) => {
+          const tr = document.createElement("tr");
+          const when = document.createElement("td");
+          when.textContent = e.at ? new Date(e.at.replace(" ", "T") + "Z").toLocaleString("en-GB") : "";
+          const sev = document.createElement("td");
+          const span = document.createElement("span");
+          span.className = "sev " + (e.severity || "info");
+          span.textContent = e.severity || "info";
+          sev.appendChild(span);
+          const type = document.createElement("td");
+          type.textContent = (e.type || "").replace(/_/g, " ");
+          const action = document.createElement("td");
+          action.textContent = e.action || "";
+          const detail = document.createElement("td");
+          detail.textContent = e.detail || "";
+          tr.append(when, sev, type, action, detail);
+          tbody.appendChild(tr);
+        });
+        table.append(thead, tbody);
+        mount.appendChild(table);
+      }
+      el("activityPanel").hidden = false;
+    }
+
+    async function load() {
+      try {
+        const data = await window.ResokPortal.api("/api/security/assessment");
+        el("loadError").hidden = true;
+        renderPosture(data);
+        renderChecks(data.checks || []);
+        renderActivity(data.activity || {});
+      } catch (error) {
+        el("loadError").textContent = error.message || "Could not load the assessment.";
+        el("loadError").hidden = false;
+      }
+    }
+
+    el("refresh").addEventListener("click", load);
+    document.addEventListener("DOMContentLoaded", load);
+    if (document.readyState !== "loading") load();
+  </script>
+</body>
+</html>

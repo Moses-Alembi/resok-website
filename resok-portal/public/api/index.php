@@ -15,7 +15,8 @@ $config = require $configPath;
 
 require_once __DIR__ . '/lib/portal-mail.php';
 require_once __DIR__ . '/lib/mpesa.php';
-require_once __DIR__ . '/lib/auth-throttle.php';
+require_once __DIR__ . '/lib/throttle.php';
+require_once __DIR__ . '/lib/security-assessment.php';
 require_once __DIR__ . '/lib/blog.php';
 require_once __DIR__ . '/lib/social-ingest.php';
 
@@ -560,6 +561,14 @@ try {
         }
     }
 
+    // Threat assessment for the admin dashboard. Admin only - it names weaknesses, which is
+    // precisely the list an attacker would want, so it is not exposed to other roles.
+    if ($route === 'security/assessment' && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        respond(200, securityAssessment($pdo, $config));
+    }
+
     if ($route === 'payment-instructions' && $method === 'GET') {
         // Methods shown to members as planned but not yet accepted. Announcing them is a
         // commitment, so keep this list to things actually being pursued - and move an entry
@@ -658,7 +667,11 @@ try {
 
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
         $stmt->execute([$data['email']]);
-        if ($stmt->fetch()) respond(400, ['error' => 'Email already registered']);
+        throttleCheck($pdo, $config, 'register', (string)($data['email'] ?? ''));
+        if ($stmt->fetch()) {
+            throttleFailure($pdo, $config, 'register', (string)($data['email'] ?? ''));
+            respond(400, ['error' => 'Email already registered']);
+        }
 
         $verified = empty($config['require_email_verification']) ? 1 : 0;
         $verificationToken = $verified ? null : bin2hex(random_bytes(32));
@@ -762,6 +775,11 @@ try {
     if ($route === 'auth/forgot-password' && $method === 'POST') {
         $data = input();
         if (empty($data['email'])) respond(400, ['error' => 'Email is required']);
+        // Every request here sends mail, so each one consumes budget whether or not the
+        // address exists - this endpoint is the classic way to mailbomb someone, and the
+        // reply is deliberately identical either way so it cannot be used to test emails.
+        throttleCheck($pdo, $config, 'password-reset', (string)$data['email']);
+        throttleFailure($pdo, $config, 'password-reset', (string)$data['email']);
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
         $stmt->execute([$data['email']]);
         $user = $stmt->fetch();
@@ -783,6 +801,7 @@ try {
                 error_log('Password reset token generated, but portal_base_url is not configured.');
             }
         }
+        securityLog($pdo, $config, 'password_reset_requested', 'info', 'password-reset');
         respond(200, ['message' => 'If the email exists, a reset link has been queued.']);
     }
 

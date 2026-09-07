@@ -194,14 +194,34 @@
     <div id="adminsList"></div>
 
     <div id="adminsPromote" hidden style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">
-      <h3 style="font-size:15px;margin-bottom:8px">Make someone an admin</h3>
+      <h3 style="font-size:15px;margin-bottom:8px">Add an administrator</h3>
       <p style="color:var(--muted);font-size:13.5px;line-height:1.55;margin-bottom:12px">
-        They must register in the portal first. Enter the email they signed up with.
+        Creates the account and issues a password. If they already have a member account,
+        use <strong>Make admin</strong> instead so their membership is kept.
       </p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <input id="promoteEmail" type="email" placeholder="their@email.address"
-               style="flex:1;min-width:240px;border:1px solid #d0d5dd;border-radius:6px;padding:11px;font-family:inherit;font-size:14px" />
-        <button class="btn btn-primary" id="promoteBtn" type="button"><i class="fas fa-user-shield"></i> Make admin</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:640px">
+        <input id="newAdminName" type="text" placeholder="Full name (optional)"
+               style="border:1px solid #d0d5dd;border-radius:6px;padding:11px;font-family:inherit;font-size:14px" />
+        <input id="newAdminEmail" type="email" placeholder="their@email.address"
+               style="border:1px solid #d0d5dd;border-radius:6px;padding:11px;font-family:inherit;font-size:14px" />
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-primary" id="createAdminBtn" type="button"><i class="fas fa-user-plus"></i> Create account</button>
+        <button class="btn btn-secondary" id="promoteBtn" type="button"><i class="fas fa-user-shield"></i> Make admin (existing member)</button>
+      </div>
+      <input id="promoteEmail" type="hidden" />
+
+      <!-- Shown once. The password is never stored in readable form and cannot be shown
+           again; if it is lost the account uses Forgot Password like any other. -->
+      <div id="newAdminResult" hidden style="margin-top:18px;padding:18px;border:1px solid #bbebc8;background:#eaf7ee;border-radius:8px">
+        <h4 style="font-size:14px;margin-bottom:8px">Account created &mdash; copy this now</h4>
+        <p style="font-size:13.5px;color:#166534;margin-bottom:12px" id="newAdminNote"></p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <code id="newAdminPassword" style="background:#fff;border:1px solid #bbebc8;border-radius:6px;padding:12px 16px;
+                font-size:16px;letter-spacing:.06em;font-family:Consolas,monospace"></code>
+          <button class="btn btn-secondary" id="copyPasswordBtn" type="button"><i class="fas fa-copy"></i> Copy</button>
+          <button class="btn btn-secondary" id="dismissPasswordBtn" type="button">Done</button>
+        </div>
       </div>
     </div>
   </section>
@@ -686,8 +706,53 @@
       }
     }
 
+    document.getElementById("createAdminBtn").addEventListener("click", async () => {
+      const email = document.getElementById("newAdminEmail").value.trim();
+      const name = document.getElementById("newAdminName").value.trim();
+      if (!email) { adminsNotice("Enter their email address.", "error"); return; }
+      const btn = document.getElementById("createAdminBtn");
+      btn.disabled = true;
+      try {
+        const created = await window.ResokPortal.api("/api/admins", {
+          method: "POST",
+          body: JSON.stringify({ email, name })
+        });
+        document.getElementById("newAdminPassword").textContent = created.password;
+        document.getElementById("newAdminNote").textContent =
+          `${created.email} can sign in now. ${created.notice}`;
+        document.getElementById("newAdminResult").hidden = false;
+        document.getElementById("newAdminEmail").value = "";
+        document.getElementById("newAdminName").value = "";
+        adminsNotice("Administrator account created.");
+        loadAdmins();
+      } catch (error) {
+        adminsNotice(error.message || "Could not create that account.", "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("copyPasswordBtn").addEventListener("click", async () => {
+      const text = document.getElementById("newAdminPassword").textContent;
+      const label = document.getElementById("copyPasswordBtn");
+      try {
+        await navigator.clipboard.writeText(text);
+        label.innerHTML = '<i class="fas fa-check"></i> Copied';
+      } catch {
+        label.textContent = "Select and copy";
+      }
+      setTimeout(() => { label.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+    });
+
+    document.getElementById("dismissPasswordBtn").addEventListener("click", () => {
+      // Cleared from the page as well as hidden, so it is not sitting in the DOM of a
+      // screen someone else may walk up to.
+      document.getElementById("newAdminPassword").textContent = "";
+      document.getElementById("newAdminResult").hidden = true;
+    });
+
     document.getElementById("promoteBtn").addEventListener("click", async () => {
-      const email = document.getElementById("promoteEmail").value.trim();
+      const email = document.getElementById("newAdminEmail").value.trim();
       if (!email) { adminsNotice("Enter the email they registered with.", "error"); return; }
       const userId = await findUserIdByEmail(email);
       if (!userId) {
@@ -695,7 +760,7 @@
         return;
       }
       await setRole(userId, "admin", email);
-      document.getElementById("promoteEmail").value = "";
+      document.getElementById("newAdminEmail").value = "";
     });
 
     (async () => {

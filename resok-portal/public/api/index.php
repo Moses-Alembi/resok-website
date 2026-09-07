@@ -684,6 +684,83 @@ try {
     // Find an account by email so it can be promoted. Super administrator only, and it
     // answers with an id or nothing - never with a list, so it cannot be walked to enumerate
     // who holds an account here.
+    // Create an administrator outright, rather than asking them to self-register first.
+    // Super administrator only, for the same reason promotion is: an admin who could mint
+    // admins could hand out their own level of access.
+    if ($route === 'admins' && $method === 'POST') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        $data = input();
+
+        $email = strtolower(trim((string)($data['email'] ?? '')));
+        $name = trim((string)($data['name'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) respond(400, ['error' => 'Enter a valid email address.']);
+
+        $stmt = $pdo->prepare('SELECT id, role FROM users WHERE LOWER(email) = ? LIMIT 1');
+        $stmt->execute([$email]);
+        if ($existing = $stmt->fetch()) {
+            respond(409, [
+                'error' => $existing['role'] === 'admin'
+                    ? 'That email is already an administrator.'
+                    : 'That email already has an account. Use "Make admin" instead of creating a new one.',
+            ]);
+        }
+
+        // Generated rather than chosen by the person creating it: an issued password picked
+        // by a colleague tends to be guessable and tends to get reused. Groups of four are
+        // for reading aloud or typing from a note, which is how this actually gets handed
+        // over. The alphabet omits O/0 and I/l, which is where transcription goes wrong.
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        $password = '';
+        for ($i = 0; $i < 16; $i++) {
+            if ($i > 0 && $i % 4 === 0) $password .= '-';
+            $password .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+        // Guarantee the mix the registration rule requires, so this password stays valid if
+        // it is ever put through that validator.
+        $password .= 'A' . 'a' . random_int(0, 9);
+
+        $pdo->prepare('INSERT INTO users (email, password_hash, email_verified, role) VALUES (?, ?, 1, "admin")')
+            ->execute([$email, password_hash($password, PASSWORD_DEFAULT)]);
+        $newId = (int)$pdo->lastInsertId();
+
+        // Verified on creation: a super administrator vouching for the address is a stronger
+        // signal than an emailed link, and an unverified admin could not log in at all.
+        logAdminAction($pdo, (int)$user['userId'], 'admin_created', null, 'user #' . $newId . ' (' . $email . ')');
+        securityLog($pdo, $config, 'admin_created', 'warning', 'admins', $email, (int)$user['userId']);
+
+        // Best effort, and never fatal: the password is handed over by the super admin, so
+        // this only tells the person an account exists and where to sign in.
+        try {
+            $portal = rtrim((string)($config['portal_base_url'] ?? ''), '/') ?: 'https://www.resok.org/resok-portal/public';
+            if (class_exists('SimpleMailer')) {
+                (new SimpleMailer($config))->send($email, 'Your ReSoK administrator account',
+                    "An administrator account has been created for you on the ReSoK members' portal.
+
+"
+                    . "Sign in at {$portal}/login
+
+"
+                    . "Your password will be given to you separately - it is deliberately not in this email. "
+                    . "Please change it after your first sign-in, and turn on two-factor authentication from "
+                    . "your profile page.
+
+Respiratory Society of Kenya");
+            }
+        } catch (Throwable $mailError) {
+            error_log('Admin welcome email failed: ' . $mailError->getMessage());
+        }
+
+        respond(201, [
+            'id' => $newId,
+            'email' => $email,
+            'name' => $name ?: null,
+            'role' => 'admin',
+            'password' => $password,
+            'notice' => 'This password is shown once. Give it to them directly, and ask them to change it and turn on two-factor.',
+        ]);
+    }
+
     if ($route === 'admins/lookup' && $method === 'GET') {
         $user = auth($config);
         requireSuperAdmin($user, $config);

@@ -37,7 +37,10 @@ return [
     // Super administrators, by email. These accounts can see the threat assessment and
     // promote or demote other admins. Leave empty and every admin keeps today's access,
     // which the assessment page reports as a warning until you set it.
-    'super_admins' => ['mosesalembiofficial@gmail.com'],
+    // Must match the email each super admin signs in with; compared case-insensitively,
+    // and more than one may be listed. Wrong or misspelled means that person silently
+    // loses super-admin access, so check it against the Administrators panel.
+    'super_admins' => ['super-admin@resok.org'],
     // Set this and pass ?key=... to cron/renewal-reminders.php if the host only offers URL-triggered cron.
     'cron_secret' => '',
     'portal_base_url' => 'https://www.resok.org/resok-portal/public',

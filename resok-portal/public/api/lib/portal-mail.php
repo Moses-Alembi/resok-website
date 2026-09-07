@@ -11,7 +11,40 @@ function portalMemberName(array $member): string
     return $name !== '' ? $name : 'ReSoK Member';
 }
 
+/**
+ * The society's own welcome letter, personalised.
+ *
+ * The letter is a designed document - letterhead, signature, the CEO's wording - not
+ * something to approximate in code. It is carried as a baseline JPEG of the artwork with the
+ * two placeholders already painted out, so the only thing done per member is drawing the
+ * date and their name onto it. The positions below were measured from the artwork itself.
+ *
+ * The template lives in private/, which Apache refuses to serve: it is a signed letterhead,
+ * and a blank one that anyone could download is a forgery kit.
+ *
+ * If the template is missing, this falls back to the plain generated letter rather than
+ * failing - an approved member should still receive something.
+ */
 function buildWelcomeLetterPdf(array $member): string
+{
+    $template = __DIR__ . '/../../../../private/welcome-letter-template.jpg';
+    $pdf = new SimplePdf(612, 792);   // US Letter, matching the artwork
+
+    if (is_file($template) && $pdf->image($template, 0, 0, 612, 792)) {
+        // Measured from the 1275x1650 render at 0.48 pt per pixel. Baselines sit just under
+        // the "Date:" and "Dear" labels already printed on the page.
+        $pdf->setTextColor(31, 31, 31);
+        $pdf->text(52, 166, date('j F Y'), 12);
+        $pdf->text(53, 188, portalMemberName($member), 12);
+        return $pdf->output();
+    }
+
+    error_log('Welcome letter template missing at ' . $template . ' - sending the plain letter instead.');
+    return buildPlainWelcomeLetterPdf($member);
+}
+
+/** The original generated letter, kept as the fallback when the artwork is unavailable. */
+function buildPlainWelcomeLetterPdf(array $member): string
 {
     $pdf = new SimplePdf(595, 842); // A4 portrait
     $pdf->setFillColor(0, 147, 46);

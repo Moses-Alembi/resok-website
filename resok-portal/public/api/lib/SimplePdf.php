@@ -16,6 +16,7 @@ class SimplePdf
     private array $fill = [0, 0, 0];
     private array $textColor = [0, 0, 0];
     private array $stroke = [0, 0, 0];
+    private array $images = [];
 
     public function __construct(float $width = 595, float $height = 842)
     {
@@ -103,19 +104,75 @@ class SimplePdf
         return $cursorY;
     }
 
+
+    /**
+     * Places a baseline JPEG. Only JPEG, and only baseline: the file is embedded verbatim
+     * with the DCTDecode filter, which is what lets a writer this small carry an image at
+     * all - it hands the compressed bytes straight to the PDF reader rather than needing an
+     * encoder here. A progressive JPEG will not render, so templates must be saved baseline.
+     */
+    public function image(string $path, float $x, float $y, float $w, float $h): bool
+    {
+        if (!is_file($path)) return false;
+        $data = file_get_contents($path);
+        if ($data === false || strncmp($data, "ÿØ", 2) !== 0) return false;
+
+        $size = @getimagesize($path);
+        if (!$size || ($size[2] ?? 0) !== IMAGETYPE_JPEG) return false;
+        // Greyscale and CMYK JPEGs need a different colour space; rejecting them is better
+        // than emitting a PDF that renders with inverted or missing colour.
+        $channels = (int)($size['channels'] ?? 3);
+        if ($channels !== 3) return false;
+
+        $name = 'Im' . (count($this->images) + 1);
+        $this->images[] = [
+            'name' => $name,
+            'data' => $data,
+            'width' => (int)$size[0],
+            'height' => (int)$size[1],
+        ];
+
+        // PDF places an image by scaling the unit square, so the matrix carries the size.
+        $py = $this->height - $y - $h;
+        $this->content .= sprintf("q
+%.2F 0 0 %.2F %.2F %.2F cm
+/%s Do
+Q
+", $w, $h, $x, $py, $name);
+        return true;
+    }
+
     public function output(): string
     {
+        // Objects 1-6 are fixed (catalog, pages, page, two fonts, content); any images
+        // follow from 7, and the page's /XObject dictionary points at them by name.
+        $imageObjectStart = 7;
+        $xobjects = '';
+        foreach ($this->images as $i => $image) {
+            $xobjects .= sprintf('/%s %d 0 R ', $image['name'], $imageObjectStart + $i);
+        }
+        $resources = '/Font << /F1 4 0 R /F2 5 0 R >>'
+            . ($xobjects !== '' ? ' /XObject << ' . trim($xobjects) . ' >>' : '');
+
         $objects = [];
         $objects[] = '<< /Type /Catalog /Pages 2 0 R >>';
         $objects[] = '<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
         $objects[] = sprintf(
-            '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2F %.2F] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
-            $this->width, $this->height
+            '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2F %.2F] /Resources << %s >> /Contents 6 0 R >>',
+            $this->width, $this->height, $resources
         );
         $objects[] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
         $objects[] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
         $stream = $this->content;
         $objects[] = '<< /Length ' . strlen($stream) . " >>\nstream\n" . $stream . 'endstream';
+
+        foreach ($this->images as $image) {
+            $objects[] = sprintf(
+                '<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB '
+                . '/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>',
+                $image['width'], $image['height'], strlen($image['data'])
+            ) . "\nstream\n" . $image['data'] . "\nendstream";
+        }
 
         $pdf = "%PDF-1.4\n";
         $offsets = [0];

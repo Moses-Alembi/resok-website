@@ -65,7 +65,10 @@
             idNumber: document.getElementById('idNumber').value,
             email: document.getElementById('email').value,
             mobile: document.getElementById('mobile').value,
-            password: document.getElementById('password').value
+            password: document.getElementById('password').value,
+            // Present only when the member arrived from an invitation link. The server
+            // marks that invitation used, so it cannot be claimed twice.
+            inviteToken: new URLSearchParams(window.location.search).get('invite') || undefined
           };
 
         try {
@@ -114,3 +117,39 @@
         document.getElementById('passwordMatchError').style.display = 'none';
       }
     });
+
+
+/**
+ * Invitation links (?invite=<token>). The address is filled in and locked because the whole
+ * point of the invitation is that it belongs to that member - letting it be edited here
+ * would produce an account the invitation was never for.
+ */
+(function () {
+  const token = new URLSearchParams(window.location.search).get('invite');
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return;
+
+  document.addEventListener('DOMContentLoaded', async function () {
+    const emailField = document.getElementById('email');
+    if (!emailField || !window.ResokPortal) return;
+    try {
+      const invite = await window.ResokPortal.api('/api/invites/claim/' + token);
+      emailField.value = invite.email;
+      emailField.readOnly = true;
+      emailField.style.background = '#f3f4f7';
+
+      const note = document.createElement('p');
+      note.textContent = 'Welcome back. Complete the form below to claim your ReSoK portal account.';
+      note.style.cssText = 'margin:0 0 18px;padding:12px 14px;border-radius:6px;background:#eaf7ee;' +
+                           'color:#166534;font-size:14px;border:1px solid #bbebc8';
+      const form = document.getElementById('registrationForm');
+      if (form) form.parentNode.insertBefore(note, form);
+    } catch (error) {
+      const note = document.createElement('p');
+      note.textContent = error.message || 'That invitation link is no longer valid. You can still register below.';
+      note.style.cssText = 'margin:0 0 18px;padding:12px 14px;border-radius:6px;background:#fff1f2;' +
+                           'color:#a10d23;font-size:14px;border:1px solid #fecdd3';
+      const form = document.getElementById('registrationForm');
+      if (form) form.parentNode.insertBefore(note, form);
+    }
+  });
+})();

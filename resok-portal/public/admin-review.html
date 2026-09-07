@@ -96,6 +96,39 @@
         </table>
       </div>
     </section>
+  <section class="panel" id="invitesPanel">
+    <h2 style="font-size:18px;margin-bottom:6px">Invite Members</h2>
+    <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
+      Sends each person a link to claim their own account. They set their own password and
+      fill in their own details, so the record is right from the start &mdash; no password
+      ever travels by email.
+    </p>
+    <div id="invitesNotice" class="notice"></div>
+
+    <label for="inviteEmails" style="display:block;font-weight:700;font-size:14px;margin-bottom:6px">
+      Email addresses
+    </label>
+    <textarea id="inviteEmails" rows="5" placeholder="one@example.org, two@example.org&#10;three@example.org"
+      style="width:100%;border:1px solid #d0d5dd;border-radius:6px;padding:12px;font-family:inherit;font-size:14px"></textarea>
+    <p style="color:var(--muted);font-size:12.5px;margin:6px 0 12px">
+      One per line, or separated by commas. Up to 200 at a time. Anyone who already has an
+      account is skipped and reported back.
+    </p>
+    <button class="btn btn-primary" id="sendInvitesBtn" type="button"><i class="fas fa-paper-plane"></i> Send invitations</button>
+
+    <div id="inviteResult" hidden style="margin-top:16px"></div>
+
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--line)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <h3 style="font-size:15px">Invitations sent</h3>
+        <button class="btn btn-secondary" id="refreshInvitesBtn" type="button" style="font-size:12px">
+          <i class="fas fa-rotate"></i> Refresh
+        </button>
+      </div>
+      <div id="invitesList" style="margin-top:12px"></div>
+    </div>
+  </section>
+
   <section class="panel" id="adminsPanel" hidden>
     <h2 style="font-size:18px;margin-bottom:6px">Administrators</h2>
     <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
@@ -613,6 +646,149 @@
         showNote(message || "Admin access required. Please log in as an admin.", "error");
       }
     });
+
+    /* ---------------- member invitations ---------------- */
+    function invitesNotice(message, type = "success") {
+      const box = document.getElementById("invitesNotice");
+      box.textContent = message;
+      box.className = `notice ${type}`;
+    }
+
+    const INVITE_LABELS = {
+      pending: ["Sent", "#175cd3"], claimed: ["Claimed", "#0f7a38"],
+      expired: ["Expired", "#667085"], revoked: ["Revoked", "#667085"],
+      failed: ["Send failed", "#b42318"], unsent: ["Not sent", "#b54708"]
+    };
+
+    function renderInvites(rows) {
+      const mount = document.getElementById("invitesList");
+      mount.textContent = "";
+      if (!rows.length) {
+        const p = document.createElement("p");
+        p.style.cssText = "color:var(--muted);font-size:13.5px";
+        p.textContent = "No invitations sent yet.";
+        mount.appendChild(p);
+        return;
+      }
+
+      const table = document.createElement("table");
+      table.style.cssText = "width:100%;border-collapse:collapse;font-size:13.5px";
+      const head = document.createElement("tr");
+      ["Email", "Status", "Sent", ""].forEach((h) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        th.style.cssText = "text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em";
+        head.appendChild(th);
+      });
+      table.appendChild(head);
+
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        const td = (text) => {
+          const cell = document.createElement("td");
+          cell.textContent = text;
+          cell.style.cssText = "padding:9px 8px;border-bottom:1px solid var(--line)";
+          return cell;
+        };
+        tr.appendChild(td(row.email));
+
+        const status = document.createElement("td");
+        status.style.cssText = "padding:9px 8px;border-bottom:1px solid var(--line)";
+        const [label, colour] = INVITE_LABELS[row.status] || [row.status, "#667085"];
+        const badge = document.createElement("span");
+        badge.textContent = label;
+        badge.style.cssText = `color:${colour};font-weight:800;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em`;
+        status.appendChild(badge);
+        if (row.error) {
+          const why = document.createElement("div");
+          why.textContent = row.error;
+          why.style.cssText = "color:var(--muted);font-size:12px;margin-top:3px";
+          status.appendChild(why);
+        }
+        tr.appendChild(status);
+        tr.appendChild(td(row.sentAt ? new Date(row.sentAt.replace(" ", "T") + "Z").toLocaleDateString("en-GB") : "-"));
+
+        const actions = document.createElement("td");
+        actions.style.cssText = "padding:9px 8px;border-bottom:1px solid var(--line);text-align:right";
+        if (row.status !== "claimed") {
+          const resend = document.createElement("button");
+          resend.className = "btn btn-secondary";
+          resend.style.fontSize = "12px";
+          resend.textContent = "Resend";
+          resend.addEventListener("click", () => inviteAction(row.id, "resend", row.email));
+          actions.appendChild(resend);
+        }
+        tr.appendChild(actions);
+        table.appendChild(tr);
+      });
+      mount.appendChild(table);
+    }
+
+    async function inviteAction(id, action, email) {
+      try {
+        await window.ResokPortal.api(`/api/invites/${id}/${action}`, { method: "POST" });
+        invitesNotice(action === "resend" ? `A new invitation was sent to ${email}.` : "Invitation revoked.");
+        loadInvites();
+      } catch (error) {
+        invitesNotice(error.message || "That did not work.", "error");
+      }
+    }
+
+    async function loadInvites() {
+      try {
+        renderInvites(await window.ResokPortal.api("/api/invites"));
+      } catch (error) {
+        document.getElementById("invitesList").textContent = "";
+        invitesNotice(error.message || "Could not load invitations.", "error");
+      }
+    }
+
+    document.getElementById("sendInvitesBtn").addEventListener("click", async () => {
+      const raw = document.getElementById("inviteEmails").value;
+      const emails = raw.split(/[\s,;]+/).map((e) => e.trim()).filter(Boolean);
+      if (!emails.length) { invitesNotice("Add at least one email address.", "error"); return; }
+
+      const btn = document.getElementById("sendInvitesBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+      try {
+        const result = await window.ResokPortal.api("/api/invites", {
+          method: "POST",
+          body: JSON.stringify({ invites: emails })
+        });
+        const box = document.getElementById("inviteResult");
+        box.textContent = "";
+        const summary = document.createElement("p");
+        summary.style.cssText = "font-size:14px;font-weight:700;margin-bottom:8px";
+        summary.textContent = `${result.sent.length} sent, ${result.failed.length} not sent.`;
+        box.appendChild(summary);
+
+        // Failures are listed individually - "12 failed" tells an administrator nothing they
+        // can act on, whereas the address and the reason does.
+        if (result.failed.length) {
+          const list = document.createElement("ul");
+          list.style.cssText = "margin:0 0 0 18px;color:var(--muted);font-size:13px;line-height:1.7";
+          result.failed.forEach((f) => {
+            const li = document.createElement("li");
+            li.textContent = `${f.email} - ${f.reason}`;
+            list.appendChild(li);
+          });
+          box.appendChild(list);
+        }
+        box.hidden = false;
+        if (result.sent.length) document.getElementById("inviteEmails").value = "";
+        invitesNotice(`${result.sent.length} invitation(s) sent.`, result.failed.length ? "error" : "success");
+        loadInvites();
+      } catch (error) {
+        invitesNotice(error.message || "Could not send invitations.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send invitations';
+      }
+    });
+
+    document.getElementById("refreshInvitesBtn").addEventListener("click", loadInvites);
+    loadInvites();
 
     /* ---------------- administrators ---------------- */
     let whoami = null;

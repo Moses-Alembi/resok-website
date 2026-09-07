@@ -24,7 +24,7 @@ $config = require $configPath;
  * message naming the file, and everything else keeps working.
  */
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -668,6 +668,80 @@ try {
     // precisely the list an attacker would want, so it is not exposed to other roles.
     // Who am I, and what may I see? The admin panel asks this to decide whether to show
     // the Threat Assessment link and the Administrators panel at all.
+    // Invitations. Any admin may invite members - that is membership work, not privilege
+    // granting - but the claim endpoint below is public, because the person using it does
+    // not have an account yet. That is the whole point of it.
+    if ($route === 'invites' && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('inviteList', 'lib/invites.php');
+        invitesRequire($pdo);
+        respond(200, inviteList($pdo));
+    }
+
+    if ($route === 'invites' && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('inviteCreate', 'lib/invites.php');
+        invitesRequire($pdo);
+
+        $data = input();
+        $entries = $data['invites'] ?? null;
+        if (!is_array($entries) || !$entries) respond(400, ['error' => 'Provide at least one email address.']);
+        if (count($entries) > 200) respond(400, ['error' => 'Send at most 200 invitations at a time.']);
+
+        $sent = [];
+        $failed = [];
+        foreach ($entries as $entry) {
+            $email = is_array($entry) ? (string)($entry['email'] ?? '') : (string)$entry;
+            $name = is_array($entry) ? (string)($entry['name'] ?? '') : '';
+            try {
+                $invite = inviteCreate($pdo, $config, $email, $name, (int)$user['userId']);
+                if (inviteSend($pdo, $config, $invite)) {
+                    $sent[] = $invite['email'];
+                } else {
+                    $failed[] = ['email' => $invite['email'], 'reason' => 'The email could not be sent.'];
+                }
+            } catch (Throwable $e) {
+                // One bad address must not stop the batch; it is reported back instead.
+                $failed[] = ['email' => trim($email), 'reason' => $e->getMessage()];
+            }
+        }
+        logAdminAction($pdo, (int)$user['userId'], 'invites_sent', null, count($sent) . ' sent, ' . count($failed) . ' failed');
+        respond(200, ['sent' => $sent, 'failed' => $failed]);
+    }
+
+    if (preg_match('#^invites/(\d+)/(resend|revoke)$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('inviteSend', 'lib/invites.php');
+        invitesRequire($pdo);
+
+        $stmt = $pdo->prepare('SELECT * FROM member_invites WHERE id = ? LIMIT 1');
+        $stmt->execute([(int)$m[1]]);
+        $invite = $stmt->fetch();
+        if (!$invite) respond(404, ['error' => 'Invitation not found.']);
+
+        if ($m[2] === 'revoke') {
+            $pdo->prepare('UPDATE member_invites SET revoked_at = NOW() WHERE id = ?')->execute([(int)$invite['id']]);
+            respond(200, ['message' => 'Invitation revoked.']);
+        }
+        // Resending issues a fresh token, so an old forwarded link stops working.
+        $refreshed = inviteCreate($pdo, $config, (string)$invite['email'], $invite['name'], (int)$user['userId']);
+        respond(200, ['sent' => inviteSend($pdo, $config, $refreshed)]);
+    }
+
+    // Public: the holder of a valid invitation has no account yet, so this cannot require
+    // one. It answers with the invited email and nothing else, and only for a token that is
+    // still claimable - so it reveals nothing about addresses that were never invited.
+    if (preg_match('#^invites/claim/([a-f0-9]{64})$#', $route, $m) && $method === 'GET') {
+        requireModule('inviteByToken', 'lib/invites.php');
+        if (!invitesEnsureTable($pdo)) respond(404, ['error' => 'That invitation link is not valid.']);
+        $invite = inviteByToken($pdo, $m[1]);
+        if (!$invite) respond(404, ['error' => 'That invitation link has expired or has already been used.']);
+        respond(200, ['email' => $invite['email'], 'name' => $invite['name']]);
+    }
+
     if ($route === 'admin/whoami' && $method === 'GET') {
         $user = auth($config);
         requireAdmin($user);
@@ -1004,6 +1078,14 @@ Respiratory Society of Kenya");
             } catch (Throwable $mailError) {
                 error_log('Verification email threw: ' . $mailError->getMessage());
             }
+        }
+
+        // An invited member who completed the form: mark their invitation used so it cannot
+        // be claimed twice and the admin list shows who has actually joined. Guarded and
+        // never fatal - the account exists at this point, and losing the bookkeeping must
+        // not undo a registration that succeeded.
+        if (!empty($data['inviteToken']) && function_exists('inviteMarkClaimed')) {
+            inviteMarkClaimed($pdo, (string)$data['inviteToken'], $userId);
         }
 
         $payload = ['message' => $verified ? 'Registration successful.' : 'Registration successful! Please check your email to verify your account before logging in.', 'userId' => $userId, 'requiresVerification' => !$verified];

@@ -1298,6 +1298,39 @@ Respiratory Society of Kenya");
         ]);
     }
 
+    // Resend a verification email. Without this, a member whose verification landed in spam
+    // is permanently stuck: they cannot sign in because they are unverified, and they cannot
+    // register again because the address is taken.
+    if ($route === 'auth/resend-verification' && $method === 'POST') {
+        $data = input();
+        $email = strtolower(trim((string)($data['email'] ?? '')));
+        if ($email === '') respond(400, ['error' => 'An email address is required.']);
+
+        // Costs an email every time, so it is throttled like the reset endpoint, and the
+        // reply is identical either way - this must not become a way to test which addresses
+        // are registered.
+        throttleCheck($pdo, $config, 'password-reset', $email);
+        throttleFailure($pdo, $config, 'password-reset', $email);
+
+        $stmt = $pdo->prepare('SELECT id, email_verified FROM users WHERE LOWER(email) = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+
+        if ($user && !(int)$user['email_verified']) {
+            // A fresh token each time, so an older link stops working.
+            $token = bin2hex(random_bytes(32));
+            $pdo->prepare('UPDATE users SET verification_token = ? WHERE id = ?')->execute([$token, (int)$user['id']]);
+            try {
+                if (function_exists('sendVerificationEmail')) sendVerificationEmail($config, $email, $token);
+            } catch (Throwable $e) {
+                error_log('Resend verification failed: ' . $e->getMessage());
+            }
+            securityLog($pdo, $config, 'verification_resent', 'info', 'register', null, (int)$user['id']);
+        }
+
+        respond(200, ['message' => 'If that address needs verifying, a new link is on its way.']);
+    }
+
     if ($route === 'auth/forgot-password' && $method === 'POST') {
         $data = input();
         if (empty($data['email'])) respond(400, ['error' => 'Email is required']);

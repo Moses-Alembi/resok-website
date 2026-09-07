@@ -293,6 +293,13 @@
    * Two-factor authentication. The password step and the code step are separate requests;
    * the challenge returned by login proves the first passed and nothing more.
    * --------------------------------------------------------------------------------- */
+  function resendVerification(email) {
+    return api("/api/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    });
+  }
+
   function mfaStatus() {
     return api("/api/auth/mfa/status");
   }
@@ -749,6 +756,7 @@
     cpdLedger,
     listEvents,
     registerForEvent,
+    resendVerification,
     mfaStatus,
     mfaBeginSetup,
     mfaConfirmSetup,

@@ -74,13 +74,20 @@
         try {
           if (window.ResokPortal) {
             const result = await window.ResokPortal.registerMember(payload);
-            const successMsg = document.getElementById('successMsg');
-            successMsg.textContent = result.message || 'Registration successful.';
-            successMsg.style.display = 'block';
-            window.scrollTo(0, 0);
-            setTimeout(() => {
-              window.location.href = result.token ? 'payment' : 'login';
-            }, 1200);
+
+            // A token means verification was not required and they are already signed in, so
+            // sending them straight to payment is right. Without one there is a step they
+            // must complete in their inbox - and the old code showed that for 1.2 seconds
+            // before redirecting to a login page they cannot yet use.
+            if (result.token) {
+              const successMsg = document.getElementById('successMsg');
+              successMsg.textContent = result.message || 'Registration successful. Taking you to payment...';
+              successMsg.style.display = 'block';
+              window.scrollTo(0, 0);
+              setTimeout(() => { window.location.href = 'payment'; }, 1500);
+              return;
+            }
+            showVerifyNotice(payload.email);
           } else {
             throw new Error('Registration service is not available.');
           }
@@ -153,3 +160,77 @@
     }
   });
 })();
+
+
+/**
+ * Replaces the form with a confirmation that stays on screen.
+ *
+ * The account exists at this point but cannot be used until the member clicks the link in
+ * their inbox, so this is the one moment where being explicit matters more than moving them
+ * along. It names the address the link went to - the commonest failure is a typo in the
+ * email field, and seeing it spelled out is what catches that - and offers a resend, because
+ * a verification lost to a spam folder otherwise leaves the account permanently unusable.
+ */
+function showVerifyNotice(email) {
+  const form = document.getElementById('registrationForm');
+  if (!form) return;
+  form.style.display = 'none';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'max-width:640px;margin:0 auto;padding:32px;border:1px solid #bbebc8;' +
+                        'background:#f7fdf9;border-radius:10px;text-align:center';
+
+  const icon = document.createElement('div');
+  icon.textContent = '\u2709';
+  icon.style.cssText = 'font-size:44px;line-height:1;margin-bottom:14px';
+
+  const heading = document.createElement('h2');
+  heading.textContent = 'Check your email';
+  heading.style.cssText = 'font-size:22px;margin:0 0 12px;color:#0f172a';
+
+  const body = document.createElement('p');
+  body.style.cssText = 'font-size:15px;line-height:1.65;color:#475467;margin:0 0 8px';
+  body.append(
+    document.createTextNode('We have sent a verification link to '),
+    Object.assign(document.createElement('strong'), { textContent: email }),
+    document.createTextNode('. Click it to activate your account, then sign in to complete your membership payment.')
+  );
+
+  const hint = document.createElement('p');
+  hint.textContent = 'It usually arrives within a minute. If it does not, check your spam or junk folder.';
+  hint.style.cssText = 'font-size:13.5px;color:#667085;margin:0 0 22px';
+
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:10px;justify-content:center;flex-wrap:wrap';
+
+  const login = document.createElement('a');
+  login.href = 'login';
+  login.textContent = 'Go to sign in';
+  login.style.cssText = 'background:#00932e;color:#fff;font-weight:700;padding:12px 20px;' +
+                        'border-radius:6px;text-decoration:none;font-size:14px';
+
+  const resend = document.createElement('button');
+  resend.type = 'button';
+  resend.textContent = 'Resend the email';
+  resend.style.cssText = 'background:#eef2f7;color:#344054;font-weight:700;padding:12px 20px;' +
+                         'border:0;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit';
+  resend.addEventListener('click', async function () {
+    resend.disabled = true;
+    resend.textContent = 'Sending...';
+    try {
+      await window.ResokPortal.resendVerification(email);
+      resend.textContent = 'Sent again';
+    } catch (error) {
+      resend.textContent = error.message || 'Could not resend';
+    }
+    setTimeout(function () {
+      resend.disabled = false;
+      resend.textContent = 'Resend the email';
+    }, 6000);
+  });
+
+  actions.append(login, resend);
+  panel.append(icon, heading, body, hint, actions);
+  form.parentNode.insertBefore(panel, form);
+  window.scrollTo(0, 0);
+}

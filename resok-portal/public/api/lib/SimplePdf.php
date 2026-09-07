@@ -118,7 +118,7 @@ class SimplePdf
         if ($data === false || strncmp($data, "ÿØ", 2) !== 0) return false;
 
         $size = @getimagesize($path);
-        if (!$size || ($size[2] ?? 0) !== IMAGETYPE_JPEG) return false;
+        if (!$size || $size[2] !== IMAGETYPE_JPEG) return false;
         // Greyscale and CMYK JPEGs need a different colour space; rejecting them is better
         // than emitting a PDF that renders with inverted or missing colour.
         $channels = (int)($size['channels'] ?? 3);

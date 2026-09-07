@@ -472,6 +472,7 @@
             events.forEach((event) => grid.appendChild(card(event)));
           }
           renderPast(data.past);
+          window.ResokAutoCollect([...(data.past || []), ...events]);
         })
         .catch(() => {
           // A marketing page must never show a stack trace or an endless shimmer. If the
@@ -715,6 +716,20 @@
         slug = eventSlug;
         title = eventTitle;
         askEmail();
+      };
+
+      /**
+       * events?collect=<slug> opens the dialog straight away, so the email announcing that
+       * tokens are ready can carry one link that does the right thing. The listing calls
+       * this once it has loaded, because the title comes from the event it just fetched.
+       */
+      window.ResokAutoCollect = (events) => {
+        const wanted = new URLSearchParams(window.location.search).get('collect');
+        if (!wanted) return;
+        const match = (events || []).find((e) => e.slug === wanted);
+        // Silent when the slug matches nothing - a stale or mistyped link should leave the
+        // page perfectly usable rather than opening an error box over it.
+        if (match) window.ResokCollectToken(match.slug, match.title);
       };
     })();
   </script>

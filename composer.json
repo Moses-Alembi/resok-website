@@ -1,0 +1,14 @@
+{
+    "name": "resok/portal",
+    "description": "ReSoK members' portal - development tooling only. Production runs on shared hosting with no composer; nothing here is required to deploy.",
+    "type": "project",
+    "require-dev": {
+        "phpstan/phpstan": "^2.0"
+    },
+    "scripts": {
+        "check": "bash tools/dev/check.sh --full"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

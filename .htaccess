@@ -21,6 +21,10 @@ DirectoryIndex index.html
   # login form would post credentials unencrypted. Both conditions are required - a host
   # that terminates TLS at a proxy leaves %{HTTPS} off and signals the real scheme in
   # X-Forwarded-Proto, and testing only the first would put such a host in a redirect loop.
+  # Local development is exempt. RESOK_LOCAL is set by the developer machine's
+  # Apache vhost and can only come from a server config - never from a request -
+  # so on the live server this condition is never true.
+  RewriteCond %{ENV:RESOK_LOCAL} !=1
   RewriteCond %{HTTPS} !=on
   RewriteCond %{HTTP:X-Forwarded-Proto} !=https
   RewriteRule ^(.*)$ https://www.resok.org/$1 [R=301,L]
@@ -32,6 +36,10 @@ DirectoryIndex index.html
   # emailed portal link - is silently signed out and bounced to login, which reads as the
   # gate breaking at random. www is canonical everywhere else (portal_base_url in the API
   # config, sitemap.xml, every <link rel="canonical">), so send the bare domain there.
+  # Local development is exempt. RESOK_LOCAL is set by the developer machine's
+  # Apache vhost and can only come from a server config - never from a request -
+  # so on the live server this condition is never true.
+  RewriteCond %{ENV:RESOK_LOCAL} !=1
   RewriteCond %{HTTP_HOST} ^resok\.org$ [NC]
   RewriteRule ^(.*)$ https://www.resok.org/$1 [R=301,L]
 

@@ -26,7 +26,7 @@ declare(strict_types=1);
  * rotated from the admin panel without a deploy.
  */
 
-function socialHttpGet(string $url, array $headers = [], int $timeout = 20): ?string
+function socialHttpGet(string $url, array $headers = [], int $timeout = 20): string
 {
     $ch = curl_init($url);
     curl_setopt_array($ch, [

@@ -1,0 +1,22 @@
+includes:
+    - phpstan-baseline.neon
+
+# Static analysis for the portal API.
+#
+# Tuned to what actually broke this project rather than to a purity score. Level 5 catches
+# the two classes that took the API down - a call to a function that does not exist
+# (adminLog, when the real one is logAdminAction) and a call with the wrong number of
+# arguments (the fallback shims, whose signatures were narrower than the real functions).
+#
+# Higher levels demand type annotations throughout, which would bury those signals in
+# thousands of "no return type specified" notices on a codebase that was not written for it.
+parameters:
+    level: 5
+    paths:
+        - resok-portal/public/api
+    excludePaths:
+        - resok-portal/public/api/config.local.php
+    # PDO fetch() returns mixed by design; the code checks before using, and insisting on
+    # narrower types here would mean annotating every database call for no real gain.
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false

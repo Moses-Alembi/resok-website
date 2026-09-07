@@ -112,6 +112,16 @@ function requireModule(string $function, string $file): void
 $debugValue = array_key_exists('debug', $config) ? $config['debug'] : getenv('RESOK_DEBUG');
 $isDebug = filter_var($debugValue ?: false, FILTER_VALIDATE_BOOLEAN);
 
+/**
+ * Sends a JSON response and stops. Nothing after a call to this runs.
+ *
+ * Documented as @return never so static analysis knows execution ends here. The native
+ * never type is deliberately not used: it needs PHP 8.1, and if the shared host is on 8.0
+ * it would be a parse error - taking down every route in the API, which is the exact
+ * failure this project has already had twice. A docblock costs nothing at runtime.
+ *
+ * @return never
+ */
 function respond(int $status, array $payload): void {
     // JSON only - never a document. This says so explicitly, so a browser coaxed into
     // rendering a response cannot run anything from it.
@@ -1295,7 +1305,7 @@ Respiratory Society of Kenya");
 
         // The code is guessable in six digits, so it is rate limited harder than a password.
         throttleCheck($pdo, $config, 'login', 'mfa:' . $userId);
-        mfaEnsureColumns($pdo);
+        if (!mfaEnsureColumns($pdo)) respond(503, ['error' => 'Two-factor authentication is unavailable on this server: its columns are missing and could not be created. Import resok-portal/server/schema-security.sql.']);
         $stmt = $pdo->prepare('SELECT u.id, u.email, u.role, u.mfa_secret, u.mfa_recovery, mp.membership_status, mp.membership_id, mp.cpd_points
                                  FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.id = ? LIMIT 1');
         $stmt->execute([$userId]);
@@ -1339,7 +1349,7 @@ Respiratory Society of Kenya");
     if ($route === 'auth/mfa/setup' && $method === 'POST') {
         requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
-        mfaEnsureColumns($pdo);
+        if (!mfaEnsureColumns($pdo)) respond(503, ['error' => 'Two-factor authentication is unavailable on this server: its columns are missing and could not be created. Import resok-portal/server/schema-security.sql.']);
         $secret = mfaGenerateSecret();
         $pdo->prepare('UPDATE users SET mfa_secret = ?, mfa_enabled = 0 WHERE id = ?')
             ->execute([cryptoEncrypt($config, $secret), (int)$user['userId']]);
@@ -1352,7 +1362,7 @@ Respiratory Society of Kenya");
     if ($route === 'auth/mfa/enable' && $method === 'POST') {
         requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
-        mfaEnsureColumns($pdo);
+        if (!mfaEnsureColumns($pdo)) respond(503, ['error' => 'Two-factor authentication is unavailable on this server: its columns are missing and could not be created. Import resok-portal/server/schema-security.sql.']);
         $stmt = $pdo->prepare('SELECT mfa_secret FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([(int)$user['userId']]);
         $row = $stmt->fetch();
@@ -1373,7 +1383,7 @@ Respiratory Society of Kenya");
     if ($route === 'auth/mfa/disable' && $method === 'POST') {
         requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
-        mfaEnsureColumns($pdo);
+        if (!mfaEnsureColumns($pdo)) respond(503, ['error' => 'Two-factor authentication is unavailable on this server: its columns are missing and could not be created. Import resok-portal/server/schema-security.sql.']);
         $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([(int)$user['userId']]);
         $row = $stmt->fetch();
@@ -1390,7 +1400,16 @@ Respiratory Society of Kenya");
     if ($route === 'auth/mfa/status' && $method === 'GET') {
         requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
-        mfaEnsureColumns($pdo);
+        // Reported as simply "off" when the columns are absent, rather than failing. This
+        // is what the security page calls on load; a page whose job is to report state
+        // should say "unavailable", not break.
+        if (!mfaEnsureColumns($pdo)) {
+            respond(200, [
+                'enabled' => false, 'enrolledAt' => null, 'recoveryRemaining' => 0,
+                'available' => false,
+                'requiredForRole' => mfaRequiredForRole((string)($user['role'] ?? 'member')),
+            ]);
+        }
         $stmt = $pdo->prepare('SELECT mfa_enabled, mfa_enrolled_at, mfa_recovery FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([(int)$user['userId']]);
         $row = $stmt->fetch() ?: [];

@@ -1,0 +1,38 @@
+# Accepted findings, so that anything NEW fails the check.
+#
+# All three come from patterns that are deliberate, and each is here because the fix would
+# be worse than the finding:
+#
+#   index.php botScreen / cryptoConfig
+#       Both have a fallback shim defined inside if (!function_exists(...)), so a half
+#       finished upload degrades instead of taking the API down. Static analysis sees two
+#       definitions and reasons about the shim, whose body really does return null and
+#       really has no effect. The live behaviour comes from lib/input-guard.php and
+#       lib/crypto.php, which are required first.
+#
+#   portal-mail.php method_exists($pdf, 'image')
+#       Always true against the current source, and that is the point - it guards against
+#       an OLD SimplePdf.php still sitting on the server after a partial upload. Removing
+#       it would turn that into a fatal instead of a fallback to the plain letter.
+#
+# Do not add to this file to silence a real problem. If the count grows, read the finding.
+
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to function cryptoConfig\(\) on a separate line has no effect\.$#'
+			identifier: function.resultUnused
+			count: 1
+			path: resok-portal/public/api/index.php
+
+		-
+			message: '#^Function botScreen\(\) never returns string so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: resok-portal/public/api/index.php
+
+		-
+			message: '#^Call to function method_exists\(\) with SimplePdf and ''image'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: resok-portal/public/api/lib/portal-mail.php

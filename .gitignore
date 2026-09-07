@@ -40,3 +40,9 @@ _batch_files.txt
 _git_code_only.ps1
 _push_compressed_images.ps1
 
+
+# Local developer tooling. PHPStan and friends are installed with composer on the dev
+# machine only - the shared host has no composer and never needs them.
+/vendor/
+/.phpunit.cache/
+composer.lock

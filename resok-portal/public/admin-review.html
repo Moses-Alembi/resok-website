@@ -26,7 +26,13 @@
   <nav class="topbar">
     <div class="topbar-inner">
       <a href="admin-review" class="brand"><img src="assets/img/logo.png" alt="ReSoK" /></a>
-      <div class="admin-chip"><div class="avatar">A</div><span class="admin-name">Admin</span></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <!-- The way into ICT operations. Placed here because this is where an administrator
+             already is; a new area nobody can find is a new area nobody uses. Hidden unless
+             the signed-in account actually has ICT access. -->
+        <a class="btn btn-secondary" href="ict" id="ictLink" hidden><i class="fas fa-server"></i> ICT</a>
+        <div class="admin-chip"><div class="avatar">A</div><span class="admin-name">Admin</span></div>
+      </div>
     </div>
   </nav>
 
@@ -1534,6 +1540,17 @@
         return message;
       });
     });
+
+
+    // Shown only to accounts that can actually use it, so the link never leads to a locked door.
+    (async () => {
+      try {
+        const ict = await window.ResokPortal.api("/api/ict/me");
+        if (ict && ict.hasAccess) document.getElementById("ictLink").hidden = false;
+      } catch (error) {
+        /* ICT module not deployed, or no access - the link simply stays hidden. */
+      }
+    })();
 
   </script>
 </body>

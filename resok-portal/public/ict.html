@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ICT Operations | ReSoK</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" href="assets/img/logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+  /* Deliberately the same tokens as admin-review.html, so this reads as part of the same
+     admin area rather than a second system bolted on beside it. */
+  :root{
+    --brand-primary:#00932e; --brand-secondary:#bc0b22;
+    --text-dark:#253141; --muted:#667085; --bg:#f5f7fa; --card:#fff; --line:#e5e7eb;
+    --shadow:0 2px 12px rgba(15,23,42,.07);
+    --ok:#12703a; --ok-bg:#e7f6ec;
+    --warn:#8a5a12; --warn-bg:#fdf2e6;
+    --crit:#a01427; --crit-bg:#fdeef0;
+    --info:#1c4f9c; --info-bg:#eef3fb;
+    --sidebar-w:236px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Poppins,'Segoe UI',sans-serif;background:var(--bg);color:var(--text-dark);line-height:1.55}
+
+  .topbar{background:var(--card);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;position:sticky;top:0;z-index:40}
+  .topbar-left{display:flex;align-items:center;gap:13px;min-width:0}
+  .topbar img{height:34px}
+  .topbar .where{font-weight:700;font-size:15px;white-space:nowrap}
+  .topbar .who{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar-right{display:flex;align-items:center;gap:9px}
+  .burger{display:none;background:none;border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer;font-size:15px;color:var(--text-dark)}
+
+  .shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;align-items:start;min-height:calc(100vh - 60px)}
+  .sidebar{background:var(--card);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto}
+  .side-group{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);padding:14px 12px 6px}
+  .side-link{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;font:inherit;font-size:13.5px;color:var(--text-dark);padding:9px 12px;border-radius:7px;cursor:pointer}
+  .side-link i{width:16px;text-align:center;color:var(--muted);font-size:13px}
+  .side-link:hover{background:var(--bg)}
+  .side-link.active{background:#eaf6ee;color:var(--brand-primary);font-weight:600}
+  .side-link.active i{color:var(--brand-primary)}
+  .side-link:focus-visible{outline:2px solid var(--brand-primary);outline-offset:-2px}
+  .side-link .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .side-soon{padding:9px 12px;font-size:12.5px;color:#98a2b3;display:flex;align-items:center;gap:11px;cursor:default}
+  .side-soon i{width:16px;text-align:center;font-size:12px}
+
+  main{padding:24px 26px 60px;min-width:0}
+  .view{display:none}
+  .view.active{display:block}
+  h1{font-size:21px;font-weight:700;margin-bottom:4px}
+  .lede{color:var(--muted);font-size:13.5px;margin-bottom:22px;max-width:70ch}
+  h2{font-size:16px;font-weight:700;margin-bottom:12px}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:20px 22px;margin-bottom:20px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:13px;margin-bottom:20px}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 17px;box-shadow:var(--shadow)}
+  .tile .n{font-size:26px;font-weight:800;line-height:1.1}
+  .tile .l{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .tile.is-crit{border-color:#f4c9cf;background:var(--crit-bg)} .tile.is-crit .n{color:var(--crit)}
+  .tile.is-warn{border-color:#f0dcb4;background:var(--warn-bg)} .tile.is-warn .n{color:var(--warn)}
+  .tile.is-ok .n{color:var(--ok)}
+
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:99px;white-space:nowrap}
+  .s-expired,.s-critical{background:var(--crit-bg);color:var(--crit)}
+  .s-warning{background:var(--warn-bg);color:var(--warn)}
+  .s-notice{background:var(--info-bg);color:var(--info)}
+  .s-ok{background:var(--ok-bg);color:var(--ok)}
+  .s-unknown,.s-cancelled{background:#f1f3f6;color:#5a6572}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding:0 14px 8px 0;white-space:nowrap}
+  td{border-bottom:1px solid var(--line);padding:11px 14px 11px 0;vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  .scroll{overflow-x:auto}
+
+  .btn{border:none;border-radius:7px;padding:9px 15px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .btn-primary{background:var(--brand-primary);color:#fff}
+  .btn-secondary{background:#eef1f5;color:var(--text-dark)}
+  .btn-ghost{background:none;border:1px solid var(--line);color:var(--text-dark)}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn:focus-visible{outline:2px solid var(--brand-primary);outline-offset:2px}
+
+  .lbl{display:block;font-weight:600;font-size:12.5px;margin:12px 0 5px}
+  .in{width:100%;border:1px solid #d0d5dd;border-radius:7px;padding:9px 11px;font:inherit;font-size:13.5px;background:#fff;color:var(--text-dark)}
+  .in:focus{outline:2px solid var(--brand-primary);outline-offset:-1px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+  .notice{display:none;border-radius:8px;padding:11px 14px;font-size:13px;margin-bottom:14px}
+  .notice.show{display:block}
+  .notice.success{background:var(--ok-bg);color:var(--ok)}
+  .notice.error{background:var(--crit-bg);color:var(--crit)}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13.5px}
+  .empty i{font-size:26px;color:#c6d0dc;display:block;margin-bottom:10px}
+  .timeline{display:grid;gap:0}
+  .tl{display:flex;gap:13px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .tl:last-child{border-bottom:none}
+  .tl .t{color:var(--muted);font-size:12px;min-width:112px;white-space:nowrap}
+  .muted{color:var(--muted);font-size:12.5px}
+
+  @media(max-width:900px){
+    .shell{grid-template-columns:1fr}
+    .sidebar{position:fixed;left:0;top:60px;bottom:0;width:var(--sidebar-w);transform:translateX(-100%);transition:transform .2s;z-index:30;height:auto}
+    .sidebar.open{transform:translateX(0)}
+    .burger{display:inline-flex}
+    .grid2,.grid3{grid-template-columns:1fr}
+    main{padding:20px 16px 60px}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-left">
+    <button class="burger" id="burger" type="button" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <a href="dashboard"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+    <div style="min-width:0">
+      <div class="where">ICT Operations</div>
+      <div class="who" id="whoami">&nbsp;</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a class="btn btn-ghost" href="admin-review"><i class="fas fa-users"></i> Members</a>
+    <a class="btn btn-secondary" href="dashboard"><i class="fas fa-arrow-left"></i> Back</a>
+  </div>
+</nav>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-group">Operations</div>
+    <button class="side-link active" data-view="overview" type="button"><i class="fas fa-gauge-high"></i> Overview</button>
+    <button class="side-link" data-view="infrastructure" data-cap="infrastructure.view" type="button">
+      <i class="fas fa-server"></i> Infrastructure <span class="dot" id="infraDot"></span>
+    </button>
+    <button class="side-link" data-view="activity" data-cap="reports.view" type="button"><i class="fas fa-list-timeline"></i> Activity</button>
+
+    <div class="side-group">Administration</div>
+    <button class="side-link" data-view="staff" data-super="1" type="button"><i class="fas fa-user-shield"></i> Staff &amp; access</button>
+
+    <div class="side-group">Later phases</div>
+    <div class="side-soon"><i class="fas fa-laptop"></i> Assets</div>
+    <div class="side-soon"><i class="fas fa-key"></i> Credentials</div>
+    <div class="side-soon"><i class="fas fa-life-ring"></i> Helpdesk</div>
+    <div class="side-soon"><i class="fas fa-list-check"></i> Tasks</div>
+  </aside>
+
+  <main>
+    <!-- ---------------- Overview ---------------- -->
+    <section class="view active" id="view-overview">
+      <h1>ICT Overview</h1>
+      <p class="lede">The state of the organisation's digital infrastructure, drawn live from the records below.</p>
+      <div id="overviewBody"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i>Loading&hellip;</div></div>
+    </section>
+
+    <!-- ---------------- Infrastructure ---------------- -->
+    <section class="view" id="view-infrastructure">
+      <h1>Digital infrastructure</h1>
+      <p class="lede">
+        Domain, hosting, SSL, backups and the code repository &mdash; one record each, with the
+        date it renews. A lapsed domain or certificate takes the whole website down, so these
+        dates are the point. Nothing secret belongs here: record the account name, never the
+        password.
+      </p>
+      <div id="infraNotice" class="notice"></div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <h2 style="margin:0">Records</h2>
+          <button class="btn btn-primary" id="infraNewBtn" type="button"><i class="fas fa-plus"></i> Add record</button>
+        </div>
+        <div class="scroll"><div id="infraList"></div></div>
+      </div>
+
+      <div class="panel" id="infraFormPanel" hidden>
+        <h2 id="infraFormTitle">Add a record</h2>
+        <form id="infraForm" autocomplete="off">
+          <input type="hidden" id="fId" />
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="fKind">Kind</label>
+              <select class="in" id="fKind">
+                <option value="domain">Domain</option>
+                <option value="hosting">Hosting</option>
+                <option value="ssl">SSL certificate</option>
+                <option value="backup">Backup</option>
+                <option value="repository">Code repository</option>
+                <option value="service">Other service</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="fName">Name</label>
+              <input class="in" id="fName" maxlength="160" placeholder="resok.org" required />
+            </div>
+            <div>
+              <label class="lbl" for="fProvider">Provider</label>
+              <input class="in" id="fProvider" maxlength="160" placeholder="Registrar, host or issuer" />
+            </div>
+          </div>
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="fAccount">Account reference</label>
+              <input class="in" id="fAccount" maxlength="160" placeholder="Username or customer number" />
+              <div class="muted" style="margin-top:4px">Never a password.</div>
+            </div>
+            <div>
+              <label class="lbl" for="fStarts">Starts / issued</label>
+              <input class="in" id="fStarts" type="date" />
+            </div>
+            <div>
+              <label class="lbl" for="fExpires">Renews / expires</label>
+              <input class="in" id="fExpires" type="date" />
+            </div>
+          </div>
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="fCost">Cost</label>
+              <input class="in" id="fCost" type="number" min="0" step="0.01" />
+            </div>
+            <div>
+              <label class="lbl" for="fCycle">Billing cycle</label>
+              <input class="in" id="fCycle" maxlength="30" placeholder="Annual" />
+            </div>
+            <div>
+              <label class="lbl" for="fStatus">Status</label>
+              <select class="in" id="fStatus">
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="expired">Expired</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid2">
+            <div>
+              <label class="lbl" for="fUrl">Control panel</label>
+              <input class="in" id="fUrl" maxlength="500" placeholder="https://..." />
+            </div>
+            <div>
+              <label class="lbl" for="fVerified">Last verified</label>
+              <input class="in" id="fVerified" type="date" />
+              <div class="muted" style="margin-top:4px">For backups: when a restore was last actually tested.</div>
+            </div>
+          </div>
+          <label class="lbl" for="fAuto" style="display:flex;align-items:center;gap:9px;margin-top:14px">
+            <input type="checkbox" id="fAuto" /> Auto-renew is switched on
+          </label>
+          <label class="lbl" for="fDetails">Details</label>
+          <textarea class="in" id="fDetails" rows="2" placeholder="Plan, nameservers, storage, frequency"></textarea>
+          <label class="lbl" for="fNotes">Notes</label>
+          <textarea class="in" id="fNotes" rows="2"></textarea>
+
+          <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" id="infraSaveBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+            <button class="btn btn-secondary" type="button" id="infraCancelBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ---------------- Activity ---------------- -->
+    <section class="view" id="view-activity">
+      <h1>ICT activity</h1>
+      <p class="lede">Every ICT change, most recent first. This log is written to and never edited.</p>
+      <div class="panel"><div id="activityList"></div></div>
+    </section>
+
+    <!-- ---------------- Staff & access ---------------- -->
+    <section class="view" id="view-staff">
+      <h1>Staff &amp; access</h1>
+      <p class="lede">
+        Who can do what in ICT. An ICT officer reaches only what is ticked here &mdash; never
+        member records, ID numbers, payments or approvals. Granting admin access is a separate
+        decision and lives on the Members page.
+      </p>
+      <div id="staffNotice" class="notice"></div>
+      <div class="panel"><div id="staffList"></div></div>
+    </section>
+  </main>
+</div>
+
+<script src="js/portal-state.js?v=20260905-card-photo"></script>
+<script>
+/**
+ * ICT Operations.
+ *
+ * A separate page from admin-review.html rather than more panels bolted onto it: that file is
+ * already 1,546 lines and five stacked panels with no navigation, and seventeen ICT modules
+ * would make it unusable and unmaintainable. Member administration stays exactly where it is.
+ *
+ * Views are switched in place rather than by loading pages, so the sidebar state and one
+ * capability fetch are shared across all of them.
+ *
+ * Everything from the server is written with textContent or created nodes, never innerHTML.
+ * These values are typed by staff and shown back to other staff; one pasted angle bracket
+ * should stay an angle bracket.
+ */
+(() => {
+  const api = (path, options) => window.ResokPortal.api(path, options);
+  const el = (id) => document.getElementById(id);
+  const make = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  };
+  const fmtDate = (value) => {
+    if (!value) return '—';
+    const d = new Date(String(value).replace(' ', 'T'));
+    return isNaN(d) ? String(value) : d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  const BAND_COLOUR = {
+    expired: '#a01427', critical: '#a01427', warning: '#8a5a12',
+    notice: '#1c4f9c', ok: '#12703a', unknown: '#98a2b3', cancelled: '#98a2b3'
+  };
+
+  let me = { capabilities: [], isSuperAdmin: false };
+  const can = (capability) => me.isSuperAdmin || me.capabilities.includes(capability);
+
+  /* ---------------- navigation ---------------- */
+  function show(view) {
+    document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
+    document.querySelectorAll('.side-link').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+    el('sidebar').classList.remove('open');
+    // The view is in the URL so a link can point straight at one, and a reload stays put.
+    if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
+    if (view === 'infrastructure') loadInfrastructure();
+    if (view === 'activity') loadActivity();
+    if (view === 'staff') loadStaff();
+    if (view === 'overview') loadOverview();
+  }
+  document.querySelectorAll('.side-link').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
+  el('burger').addEventListener('click', () => el('sidebar').classList.toggle('open'));
+
+  /* ---------------- overview ---------------- */
+  function tile(value, label, tone) {
+    const t = make('div', 'tile' + (tone ? ' is-' + tone : ''));
+    t.appendChild(make('div', 'n', String(value)));
+    t.appendChild(make('div', 'l', label));
+    return t;
+  }
+
+  async function loadOverview() {
+    const mount = el('overviewBody');
+    try {
+      const data = await api('/api/ict/overview');
+      mount.textContent = '';
+
+      if (data.infrastructure) {
+        const s = data.infrastructure;
+        const b = s.bands || {};
+        const tiles = make('div', 'tiles');
+        tiles.appendChild(tile(s.total, 'Records tracked'));
+        tiles.appendChild(tile(b.expired || 0, 'Expired', (b.expired || 0) > 0 ? 'crit' : 'ok'));
+        tiles.appendChild(tile((b.critical || 0) + (b.warning || 0), 'Renewing soon', ((b.critical || 0) + (b.warning || 0)) > 0 ? 'warn' : 'ok'));
+        tiles.appendChild(tile(b.unknown || 0, 'No date set', (b.unknown || 0) > 0 ? 'warn' : 'ok'));
+        mount.appendChild(tiles);
+
+        if ((s.attention || []).length) {
+          const panel = make('div', 'panel');
+          panel.appendChild(make('h2', null, 'Needs attention'));
+          s.attention.forEach((item) => {
+            const row = make('div', 'tl');
+            const pill = make('span', 'status s-' + item.band, item.kind);
+            row.appendChild(pill);
+            row.appendChild(make('span', null, item.name));
+            const when = make('span', null, item.label);
+            when.style.cssText = 'margin-left:auto;color:' + (BAND_COLOUR[item.band] || 'inherit') + ';font-weight:600';
+            row.appendChild(when);
+            panel.appendChild(row);
+          });
+          mount.appendChild(panel);
+        }
+      }
+
+      if (data.cpd) {
+        const panel = make('div', 'panel');
+        panel.appendChild(make('h2', null, 'CPD'));
+        panel.appendChild(make('p', 'muted', 'Read from the CPD system. Managed on the Members page, not here.'));
+        const tiles = make('div', 'tiles');
+        tiles.style.marginTop = '13px';
+        tiles.appendChild(tile(data.cpd.publishedEvents, 'Published events'));
+        tiles.appendChild(tile(data.cpd.upcomingEvents, 'Upcoming'));
+        tiles.appendChild(tile(data.cpd.tokensAwaiting, 'Tokens uncollected', data.cpd.tokensAwaiting > 0 ? 'warn' : 'ok'));
+        tiles.appendChild(tile(data.cpd.tokensCollected, 'Tokens collected', 'ok'));
+        panel.appendChild(tiles);
+        mount.appendChild(panel);
+      }
+
+      if (data.security) {
+        const panel = make('div', 'panel');
+        panel.appendChild(make('h2', null, 'Security'));
+        const tiles = make('div', 'tiles');
+        tiles.appendChild(tile(data.security.recentAlerts, 'Alerts, last 7 days', data.security.recentAlerts > 0 ? 'warn' : 'ok'));
+        tiles.appendChild(tile(data.security.lockedOutNow, 'Locked out now'));
+        panel.appendChild(tiles);
+        mount.appendChild(panel);
+      }
+
+      if (!mount.children.length) {
+        const empty = make('div', 'empty');
+        empty.appendChild(make('i', 'fas fa-lock'));
+        empty.appendChild(make('div', null, 'Nothing to show yet with your current permissions.'));
+        mount.appendChild(empty);
+      }
+    } catch (error) {
+      mount.textContent = '';
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'fas fa-triangle-exclamation'));
+      empty.appendChild(make('div', null, error.message || 'Could not load the overview.'));
+      mount.appendChild(empty);
+    }
+  }
+
+  /* ---------------- infrastructure ---------------- */
+  function infraNotice(message, kind) {
+    const box = el('infraNotice');
+    box.textContent = message || '';
+    box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+  }
+
+  const FIELDS = {
+    fKind: 'kind', fName: 'name', fProvider: 'provider', fAccount: 'accountRef',
+    fUrl: 'url', fStarts: 'startsOn', fExpires: 'expiresOn', fCost: 'cost',
+    fCycle: 'billingCycle', fStatus: 'status', fDetails: 'details', fNotes: 'notes',
+    fVerified: 'lastVerifiedOn'
+  };
+
+  function infraReset() {
+    el('infraForm').reset();
+    el('fId').value = '';
+    el('fAuto').checked = false;
+    el('infraFormTitle').textContent = 'Add a record';
+    el('infraFormPanel').hidden = true;
+  }
+
+  function infraEdit(item) {
+    Object.entries(FIELDS).forEach(([inputId, key]) => {
+      const value = item[key];
+      el(inputId).value = (value === null || value === undefined) ? '' : value;
+    });
+    el('fId').value = item.id;
+    el('fAuto').checked = !!item.autoRenew;
+    el('infraFormTitle').textContent = 'Edit: ' + item.name;
+    el('infraFormPanel').hidden = false;
+    el('infraFormPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderInfra(items) {
+    const mount = el('infraList');
+    mount.textContent = '';
+    if (!items.length) {
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'fas fa-server'));
+      empty.appendChild(make('div', null, 'Nothing recorded yet. Start with the domain — it is the one that takes the site down.'));
+      mount.appendChild(empty);
+      return;
+    }
+
+    const table = make('table');
+    const thead = make('thead');
+    const hr = make('tr');
+    ['Kind', 'Name', 'Provider', 'Renews', 'Status', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    thead.appendChild(hr);
+    table.appendChild(thead);
+
+    const tbody = make('tbody');
+    items.forEach((item) => {
+      const tr = make('tr');
+      tr.appendChild(make('td', null, item.kind));
+
+      const nameCell = make('td');
+      const name = make('div', null, item.name);
+      name.style.fontWeight = '600';
+      nameCell.appendChild(name);
+      if (item.accountRef) nameCell.appendChild(make('div', 'muted', item.accountRef));
+      tr.appendChild(nameCell);
+
+      tr.appendChild(make('td', null, item.provider || '—'));
+
+      const when = make('td');
+      when.appendChild(make('div', null, fmtDate(item.expiresOn)));
+      if (item.expiresOn && !item.autoRenew) {
+        const off = make('div', 'muted', 'auto-renew off');
+        off.style.color = 'var(--warn)';
+        when.appendChild(off);
+      }
+      tr.appendChild(when);
+
+      const state = make('td');
+      state.appendChild(make('span', 'status s-' + item.health.band, item.health.label));
+      tr.appendChild(state);
+
+      const actions = make('td');
+      if (can('infrastructure.manage')) {
+        const edit = make('button', 'btn btn-secondary', 'Edit');
+        edit.type = 'button';
+        edit.style.fontSize = '12px';
+        edit.addEventListener('click', () => infraEdit(item));
+        actions.appendChild(edit);
+      }
+      tr.appendChild(actions);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    mount.appendChild(table);
+  }
+
+  async function loadInfrastructure() {
+    try {
+      const data = await api('/api/ict/infrastructure');
+      renderInfra(data.items || []);
+      const dot = el('infraDot');
+      const overall = (data.summary || {}).overall || 'ok';
+      dot.style.background = ['expired', 'critical', 'warning'].includes(overall) ? BAND_COLOUR[overall] : 'transparent';
+    } catch (error) {
+      el('infraList').textContent = '';
+      el('infraList').appendChild(make('div', 'empty', error.message || 'Could not load infrastructure.'));
+    }
+  }
+
+  el('infraNewBtn').addEventListener('click', () => { infraReset(); el('infraFormPanel').hidden = false; });
+  el('infraCancelBtn').addEventListener('click', infraReset);
+
+  el('infraForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const id = el('fId').value;
+    const payload = { autoRenew: el('fAuto').checked };
+    Object.entries(FIELDS).forEach(([inputId, key]) => {
+      const raw = el(inputId).value.trim();
+      // Empty means "clear it" for the nullable columns; the server leaves the rest alone.
+      payload[key] = raw === '' ? null : raw;
+    });
+
+    const button = el('infraSaveBtn');
+    button.disabled = true;
+    try {
+      if (id) await api('/api/ict/infrastructure/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+      else await api('/api/ict/infrastructure', { method: 'POST', body: JSON.stringify(payload) });
+      infraNotice(id ? 'Record updated.' : 'Record added.', 'success');
+      infraReset();
+      await loadInfrastructure();
+    } catch (error) {
+      infraNotice(error.message || 'Could not save.', 'error');
+    }
+    button.disabled = false;
+  });
+
+  /* ---------------- activity ---------------- */
+  async function loadActivity() {
+    const mount = el('activityList');
+    try {
+      const data = await api('/api/ict/audit');
+      mount.textContent = '';
+      const entries = data.entries || [];
+      if (!entries.length) {
+        mount.appendChild(make('div', 'empty', 'Nothing logged yet.'));
+        return;
+      }
+      const list = make('div', 'timeline');
+      entries.forEach((entry) => {
+        const row = make('div', 'tl');
+        row.appendChild(make('span', 't', fmtDate(entry.at)));
+        const what = make('span');
+        what.appendChild(make('strong', null, entry.action.replace(/_/g, ' ')));
+        if (entry.summary) what.appendChild(document.createTextNode(' — ' + entry.summary));
+        row.appendChild(what);
+        if (entry.actor) {
+          const who = make('span', 'muted', entry.actor);
+          who.style.marginLeft = 'auto';
+          row.appendChild(who);
+        }
+        list.appendChild(row);
+      });
+      mount.appendChild(list);
+    } catch (error) {
+      mount.textContent = '';
+      mount.appendChild(make('div', 'empty', error.message || 'Could not load activity.'));
+    }
+  }
+
+  /* ---------------- staff & access ---------------- */
+  function staffNotice(message, kind) {
+    const box = el('staffNotice');
+    box.textContent = message || '';
+    box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+  }
+
+  async function loadStaff() {
+    const mount = el('staffList');
+    try {
+      const [staffData, capsData] = await Promise.all([
+        api('/api/ict/staff'),
+        api('/api/ict/capabilities')
+      ]);
+      const vocabulary = capsData.capabilities || {};
+      mount.textContent = '';
+
+      (staffData.staff || []).forEach((person) => {
+        const card = make('div');
+        card.style.cssText = 'padding:16px 0;border-bottom:1px solid var(--line)';
+
+        const head = make('div');
+        head.style.cssText = 'display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-bottom:10px';
+        const who = make('strong', null, person.name || person.email);
+        head.appendChild(who);
+        head.appendChild(make('span', 'muted', person.email));
+        head.appendChild(make('span', 'status s-' + (person.isSuperAdmin ? 'ok' : 'unknown'),
+          person.isSuperAdmin ? 'super admin' : person.role));
+        card.appendChild(head);
+
+        if (person.isSuperAdmin) {
+          card.appendChild(make('div', 'muted', 'Holds every ICT capability. Named in the server configuration.'));
+          mount.appendChild(card);
+          return;
+        }
+
+        const boxes = make('div');
+        boxes.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:6px';
+        Object.entries(vocabulary).forEach(([capability, label]) => {
+          const wrap = make('label');
+          wrap.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12.5px';
+          const box = document.createElement('input');
+          box.type = 'checkbox';
+          box.value = capability;
+          box.checked = person.capabilities.includes(capability);
+          wrap.appendChild(box);
+          wrap.appendChild(make('span', null, label));
+          boxes.appendChild(wrap);
+        });
+        card.appendChild(boxes);
+
+        const save = make('button', 'btn btn-primary', 'Save permissions');
+        save.type = 'button';
+        save.style.cssText = 'margin-top:11px;font-size:12.5px';
+        save.addEventListener('click', async () => {
+          save.disabled = true;
+          const wanted = Array.from(boxes.querySelectorAll('input:checked')).map((b) => b.value);
+          try {
+            await api('/api/ict/staff/' + person.id + '/capabilities', {
+              method: 'PUT', body: JSON.stringify({ capabilities: wanted })
+            });
+            staffNotice(person.email + ': ' + wanted.length + ' permission(s) saved.', 'success');
+          } catch (error) {
+            staffNotice(error.message || 'Could not save.', 'error');
+          }
+          save.disabled = false;
+        });
+        card.appendChild(save);
+        mount.appendChild(card);
+      });
+
+      if (!mount.children.length) {
+        mount.appendChild(make('div', 'empty', 'No ICT or admin accounts yet.'));
+      }
+    } catch (error) {
+      mount.textContent = '';
+      mount.appendChild(make('div', 'empty', error.message || 'Could not load staff.'));
+    }
+  }
+
+  /* ---------------- boot ---------------- */
+  (async () => {
+    try {
+      me = await api('/api/ict/me');
+    } catch (error) {
+      // Not signed in, or the session expired. api() already redirects on an idle timeout;
+      // anything else means this page is not for them.
+      document.querySelector('main').textContent = '';
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'fas fa-lock'));
+      empty.appendChild(make('div', null, 'Sign in with an account that has ICT access.'));
+      document.querySelector('main').appendChild(empty);
+      return;
+    }
+
+    el('whoami').textContent = me.isSuperAdmin ? 'Super administrator' : (me.role + ' · ' + me.capabilities.length + ' permission(s)');
+
+    if (!me.hasAccess) {
+      document.querySelector('.sidebar').hidden = true;
+      const main = document.querySelector('main');
+      main.textContent = '';
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'fas fa-lock'));
+      empty.appendChild(make('div', null, 'You do not have ICT permissions yet.'));
+      empty.appendChild(make('div', 'muted', 'A super administrator can grant them under Staff & access.'));
+      main.appendChild(empty);
+      return;
+    }
+
+    // A section nobody can use is never rendered, rather than rendered and then failing on
+    // click - which is how a permission system teaches people to distrust it.
+    document.querySelectorAll('.side-link').forEach((b) => {
+      if (b.dataset.super && !me.isSuperAdmin) b.hidden = true;
+      if (b.dataset.cap && !can(b.dataset.cap)) b.hidden = true;
+    });
+
+    const wanted = location.hash.slice(1);
+    const target = document.querySelector('.side-link[data-view="' + wanted + '"]:not([hidden])');
+    show(target ? wanted : 'overview');
+  })();
+})();
+</script>
+</body>
+</html>

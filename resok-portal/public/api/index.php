@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -85,6 +85,12 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('ictInfraSummary')) {
+    function ictInfraSummary(PDO $pdo): array {
+        return ['total' => 0, 'bands' => [], 'overall' => 'unknown', 'attention' => []];
+    }
 }
 
 if (!function_exists('ictCan')) {
@@ -1574,6 +1580,110 @@ Respiratory Society of Kenya");
      *
      * Returns upcoming by default; ?include=past adds the finished ones for an archive view.
      */
+    // ----- ICT: digital infrastructure -----------------------------------------------------
+
+    if ($route === 'ict/infrastructure' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictInfraAll', 'lib/ict-infrastructure.php');
+        ictRequire($pdo, $user, $config, 'infrastructure.view');
+        respond(200, [
+            'items'   => ictInfraAll($pdo),
+            'summary' => ictInfraSummary($pdo),
+        ]);
+    }
+
+    if ($route === 'ict/infrastructure' && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictInfraCreate', 'lib/ict-infrastructure.php');
+        ictRequire($pdo, $user, $config, 'infrastructure.manage');
+
+        [$item, $errors] = ictInfraCreate($pdo, input());
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        ictAudit($pdo, (int)$user['userId'], 'infrastructure_added', 'infrastructure', (string)$item['id'],
+                 $item['kind'] . ': ' . $item['name'], null, ['name' => $item['name'], 'expiresOn' => $item['expiresOn']]);
+        respond(201, ['item' => $item]);
+    }
+
+    if (preg_match('#^ict/infrastructure/(\d+)$#', $route, $m) && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireModule('ictInfraUpdate', 'lib/ict-infrastructure.php');
+        ictRequire($pdo, $user, $config, 'infrastructure.manage');
+
+        [$item, $errors, $before] = ictInfraUpdate($pdo, (int)$m[1], input());
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        // Only what actually changed goes into the log, so the entry answers "what did it say
+        // before" without storing a copy of the whole record on every edit.
+        [$was, $now] = ictDiff($before ?: [], $item);
+        ictAudit($pdo, (int)$user['userId'], 'infrastructure_updated', 'infrastructure', (string)$item['id'],
+                 $item['kind'] . ': ' . $item['name'], $was, $now);
+        respond(200, ['item' => $item]);
+    }
+
+    /**
+     * The ICT Overview.
+     *
+     * Assembled from whatever modules are actually deployed - each block is guarded, so this
+     * keeps working as later phases land rather than needing a rewrite each time. The CPD
+     * figures are read-only counts against the existing tables: no new storage, no duplicated
+     * logic, and removing this block tomorrow would leave CPD untouched.
+     */
+    if ($route === 'ict/overview' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictCan', 'lib/ict.php');
+        if (!ictHasAnyAccess($pdo, $user, $config)) {
+            respond(403, ['error' => 'You do not have access to the ICT area.']);
+        }
+
+        $overview = ['generatedAt' => date('c')];
+
+        if (ictCan($pdo, $user, $config, 'infrastructure.view') && function_exists('ictInfraSummary')) {
+            $overview['infrastructure'] = ictInfraSummary($pdo);
+        }
+
+        // Read-only CPD visibility. The existing system stays the source of truth.
+        if (ictCan($pdo, $user, $config, 'reports.view')) {
+            try {
+                $one = function (string $sql) use ($pdo): int {
+                    return (int)($pdo->query($sql)->fetch()['c'] ?? 0);
+                };
+                $overview['cpd'] = [
+                    'publishedEvents'  => $one("SELECT COUNT(*) c FROM cpd_events WHERE status = 'published'"),
+                    'upcomingEvents'   => $one("SELECT COUNT(*) c FROM cpd_events WHERE status = 'published' AND COALESCE(ends_at, starts_at) >= NOW()"),
+                    'tokensAwaiting'   => $one("SELECT COUNT(*) c FROM cpd_tokens WHERE status = 'assigned'"),
+                    'tokensCollected'  => $one("SELECT COUNT(*) c FROM cpd_tokens WHERE status = 'collected'"),
+                ];
+            } catch (Throwable $e) {
+                // CPD tables absent on this deployment. Not an ICT problem; the block is
+                // simply omitted rather than failing the whole overview.
+                $overview['cpd'] = null;
+            }
+        }
+
+        if (ictCan($pdo, $user, $config, 'security.view')) {
+            try {
+                $stmt = $pdo->query("SELECT COUNT(*) c FROM security_events
+                                     WHERE severity IN ('warning','critical') AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)");
+                $locked = $pdo->query("SELECT COUNT(*) c FROM auth_attempts WHERE locked_until > NOW()");
+                $overview['security'] = [
+                    'recentAlerts'    => (int)($stmt->fetch()['c'] ?? 0),
+                    'lockedOutNow'    => (int)($locked->fetch()['c'] ?? 0),
+                ];
+            } catch (Throwable $e) {
+                $overview['security'] = null;
+            }
+        }
+
+        if (ictCan($pdo, $user, $config, 'reports.view') && function_exists('ictAuditRecent')) {
+            $overview['activity'] = ictAuditRecent($pdo, 12);
+        }
+
+        respond(200, $overview);
+    }
+
     // ----- ICT: access and capabilities ---------------------------------------------------
 
     /**

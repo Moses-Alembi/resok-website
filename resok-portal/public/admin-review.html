@@ -567,8 +567,17 @@
         return;
       }
       try {
-        await window.ResokPortal.api(`/api/members/${selectedMember.id}/approve`, { method: "POST" });
-        showNote("Member approved and membership ID ensured.");
+        const approved = await window.ResokPortal.api(`/api/members/${selectedMember.id}/approve`, { method: "POST" });
+        // Approval and the welcome email are separate things that can disagree: the member
+        // is active either way, but if the email did not go out somebody has to know, or an
+        // approved member simply never receives their letter and card.
+        if (approved && approved.welcomeEmailSent === false) {
+          showNote("Member approved, but the welcome email did NOT send"
+            + (approved.welcomeEmailError ? ": " + approved.welcomeEmailError : "")
+            + ". Their letter and card have not been delivered.", "error");
+        } else {
+          showNote("Member approved. Welcome email sent with their letter and card.");
+        }
         await loadMembers();
       } catch (error) {
         showNote(error.message || "Could not approve member.", "error");

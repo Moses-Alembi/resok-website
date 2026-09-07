@@ -30,7 +30,11 @@ function buildWelcomeLetterPdf(array $member): string
     $template = __DIR__ . '/../../../../private/welcome-letter-template.jpg';
     $pdf = new SimplePdf(612, 792);   // US Letter, matching the artwork
 
-    if (is_file($template) && $pdf->image($template, 0, 0, 612, 792)) {
+    // method_exists guards against the half-deploy this file has already caused once: this
+    // function updated while SimplePdf.php did not, so calling image() was a fatal error -
+    // swallowed by the try/catch around the send, which meant approval succeeded and the
+    // member simply never received anything.
+    if (is_file($template) && method_exists($pdf, 'image') && $pdf->image($template, 0, 0, 612, 792)) {
         // Measured from the 1275x1650 render at 0.48 pt per pixel. Baselines sit just under
         // the "Date:" and "Dear" labels already printed on the page.
         $pdf->setTextColor(31, 31, 31);

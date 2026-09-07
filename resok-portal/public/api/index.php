@@ -525,8 +525,24 @@ function approveMemberById(PDO $pdo, array $config, int $memberId, ?int $adminUs
     $row = memberRowByProfileId($pdo, $memberId);
     $member = mapMember($row);
     logAdminAction($pdo, $adminUserId, 'approve', $memberId, null);
+    // The outcome is reported back rather than only logged. A silent failure here means an
+    // approved member never receives their letter and card, while the admin sees a success
+    // and has no reason to look - which is precisely how this went unnoticed.
+    $welcomeEmailSent = null;
+    $welcomeEmailError = null;
     if ($row && $member) {
-        try { sendWelcomePacketEmail($config, array_merge($member, ['email' => $row['email']])); } catch (Throwable $mailError) { error_log('Welcome email failed: ' . $mailError->getMessage()); }
+        try {
+            $welcomeEmailSent = (bool)sendWelcomePacketEmail($config, array_merge($member, ['email' => $row['email']]));
+            if (!$welcomeEmailSent) $welcomeEmailError = 'The mail server did not accept the message.';
+        } catch (Throwable $mailError) {
+            $welcomeEmailSent = false;
+            $welcomeEmailError = $mailError->getMessage();
+            error_log('Welcome email failed: ' . $mailError->getMessage());
+        }
+    }
+    if ($member) {
+        $member['welcomeEmailSent'] = $welcomeEmailSent;
+        $member['welcomeEmailError'] = $welcomeEmailError;
     }
     return $member ?? [];
 }

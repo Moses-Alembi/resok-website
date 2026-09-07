@@ -24,7 +24,7 @@ $config = require $configPath;
  * message naming the file, and everything else keeps working.
  */
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -71,6 +71,12 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('eventsUpcoming')) {
+    function eventsUpcoming(PDO $pdo, int $limit = 50): array { return []; }
+    function eventsPast(PDO $pdo, int $limit = 12): array { return []; }
+    function eventLegacyShape(array $public): array { return $public; }
 }
 
 if (!function_exists('blogRequireTables')) {
@@ -1499,6 +1505,53 @@ Respiratory Society of Kenya");
         }
     }
 
+    /**
+     * The public listing. No login - this is what the marketing site renders, and the whole
+     * point is that a doctor who is not yet a member can find a CME and come to it.
+     *
+     * Returns upcoming by default; ?include=past adds the finished ones for an archive view.
+     */
+    // ----- Event management (admin) -----------------------------------------------------
+
+    if ($route === 'admin/events' && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('eventsAll', 'lib/events.php');
+        respond(200, ['events' => eventsAll($pdo)]);
+    }
+
+    if ($route === 'admin/events' && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('eventCreate', 'lib/events.php');
+
+        [$event, $errors] = eventCreate($pdo, input(), (int)$user['userId']);
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        logAdminAction($pdo, (int)$user['userId'], 'event_created', null, $event['title']);
+        respond(201, ['event' => $event]);
+    }
+
+    if (preg_match('#^admin/events/(\d+)$#', $route, $m) && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('eventUpdate', 'lib/events.php');
+
+        [$event, $errors] = eventUpdate($pdo, (int)$m[1], input());
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        logAdminAction($pdo, (int)$user['userId'], 'event_updated', null, $event['title']);
+        respond(200, ['event' => $event]);
+    }
+
+    if ($route === 'events/public' && $method === 'GET') {
+        $payload = ['events' => eventsUpcoming($pdo)];
+        if (($_GET['include'] ?? '') === 'past') $payload['past'] = eventsPast($pdo);
+        respond(200, $payload);
+    }
+
     if ($route === 'events' && $method === 'GET') {
         $user = auth($config);
         ensureEventRegistrationsTable($pdo);
@@ -1509,7 +1562,12 @@ Respiratory Society of Kenya");
             $stmt->execute([(int)$member['id']]);
             $registeredIds = array_column($stmt->fetchAll(), 'event_id');
         }
-        respond(200, array_map(fn($event) => array_merge($event, ['registered' => in_array($event['id'], $registeredIds, true)]), eventCatalog()));
+        // Served from the database now. eventCatalog() remains as the fallback for a portal
+        // whose events table has not been created yet, so this page never comes up empty
+        // during the changeover.
+        $catalog = array_map('eventLegacyShape', eventsUpcoming($pdo));
+        if (!$catalog) $catalog = eventCatalog();
+        respond(200, array_map(fn($event) => array_merge($event, ['registered' => in_array($event['id'], $registeredIds, true)]), $catalog));
     }
 
     if (preg_match('#^events/([a-z0-9-]+)/register$#', $route, $m) && $method === 'POST') {

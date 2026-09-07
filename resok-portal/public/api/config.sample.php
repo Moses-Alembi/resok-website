@@ -34,6 +34,10 @@ return [
 
     'allow_approve_without_payment' => false,
     'setup_key' => '',
+    // 32+ random characters. Back it up somewhere you will still have in five years: lose
+    // it and every encrypted ID number becomes unreadable. Changing it has the same effect,
+    // so treat it as permanent once members have registered.
+    'data_encryption_key' => '',
     // Super administrators, by email. These accounts can see the threat assessment and
     // promote or demote other admins. Leave empty and every admin keeps today's access,
     // which the assessment page reports as a warning until you set it.

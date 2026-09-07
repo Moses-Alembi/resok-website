@@ -56,7 +56,9 @@ function mfaAddColumns(PDO $pdo): void
         $columns[$column['Field']] = true;
     }
     $required = [
-        'mfa_secret' => 'ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(64) NULL',
+        // 255 because the secret is stored encrypted: 32 base32 characters become ~87
+        // once AES-GCM and base64 are applied, and VARCHAR(64) would truncate it silently.
+        'mfa_secret' => 'ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(255) NULL',
         'mfa_enabled' => 'ALTER TABLE users ADD COLUMN mfa_enabled TINYINT(1) NOT NULL DEFAULT 0',
         'mfa_enrolled_at' => 'ALTER TABLE users ADD COLUMN mfa_enrolled_at DATETIME NULL',
         'mfa_recovery' => 'ALTER TABLE users ADD COLUMN mfa_recovery TEXT NULL',

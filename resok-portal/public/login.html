@@ -195,6 +195,14 @@
       <div id="loginAlert" class="alert" role="alert"></div>
 
       <form id="loginForm" novalidate>
+        <!-- Screening. Positioned off-screen rather than hidden: a person never fills this,
+             and a script that posts every field it finds does. The label stays so a screen
+             reader can explain what it is skipping. -->
+        <div style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+          <label for="lf-website">Leave this field empty</label>
+          <input id="lf-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
         <div class="field">
           <label class="sr-only" for="loginEmail">Username or Email</label>
           <div class="input-wrap">
@@ -312,7 +320,10 @@
         const response = await fetch("api/index.php?route=auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
+          // Screening fields. window.ResokPortal is loaded above; the fallback keeps login
+          // working if that script ever fails to load, since an empty honeypot passes.
+          body: JSON.stringify(Object.assign({ email, password },
+            window.ResokPortal ? window.ResokPortal.screeningFields(form) : {}))
         });
 
         let data = {};

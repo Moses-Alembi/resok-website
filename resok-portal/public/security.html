@@ -87,6 +87,13 @@
       <div class="checks" id="checks"></div>
     </section>
 
+    <section class="panel" id="migratePanel" hidden>
+      <h2 style="font-size:18px">Encrypt existing records</h2>
+      <p class="sub">Rows saved before the encryption key was set are still stored in readable form. This encrypts them in place. It is safe to run more than once, and safe to stop part way &mdash; anything already encrypted is skipped.</p>
+      <div id="migrateNotice" class="notice" hidden></div>
+      <button class="btn" id="migrate"><i class="fas fa-lock"></i> Encrypt existing records</button>
+    </section>
+
     <section class="panel" id="activityPanel" hidden>
       <h2 style="font-size:18px">Activity</h2>
       <p class="sub">What has actually been attempted against the site, from the security log.</p>
@@ -221,12 +228,41 @@
       el("activityPanel").hidden = false;
     }
 
+    /**
+     * Shown only when there is something to do: a key is configured and the encryption check
+     * is not already passing. Offering it otherwise invites someone to press a button that
+     * does nothing and wonder whether it worked.
+     */
+    function renderMigrate(checks) {
+      const check = checks.find((c) => c.id === "encryption");
+      el("migratePanel").hidden = !(check && check.status === "warn" && !/no data_encryption_key/i.test(check.detail));
+    }
+
+    el("migrate").addEventListener("click", async () => {
+      const button = el("migrate");
+      const notice = el("migrateNotice");
+      button.disabled = true;
+      button.textContent = "Encrypting...";
+      try {
+        const result = await window.ResokPortal.api("/api/security/encrypt-existing", { method: "POST" });
+        notice.textContent = `Encrypted ${result.idNumbers.encrypted} ID number(s) and ${result.mfaSecrets.encrypted} two-factor secret(s). ${result.message}`;
+        notice.hidden = false;
+        await load();
+      } catch (error) {
+        notice.textContent = error.message || "Could not encrypt the existing records.";
+        notice.hidden = false;
+      }
+      button.disabled = false;
+      button.innerHTML = '<i class="fas fa-lock"></i> Encrypt existing records';
+    });
+
     async function load() {
       try {
         const data = await window.ResokPortal.api("/api/security/assessment");
         el("loadError").hidden = true;
         renderPosture(data);
         renderChecks(data.checks || []);
+        renderMigrate(data.checks || []);
         renderActivity(data.activity || {});
       } catch (error) {
         el("loadError").textContent = error.message || "Could not load the assessment.";

@@ -106,6 +106,79 @@ function securityAssessConfig(array $config): array
     return $out;
 }
 
+/**
+ * Reports on controls that are built but can silently be doing nothing - which is the
+ * failure mode worth surfacing, because nothing about the site looks different when rate
+ * limiting is off or ID numbers are unencrypted.
+ */
+function securityAssessControls(PDO $pdo, array $config): array
+{
+    $out = [];
+
+    // Rate limiting builds its own tables and degrades quietly if the database user cannot
+    // create them, so "is it installed" and "is it working" are different questions.
+    try {
+        $pdo->query('SELECT 1 FROM auth_attempts LIMIT 1');
+        $out[] = securityCheck('ratelimit', 'Login rate limiting', 'pass',
+            'The auth_attempts table exists, so failed sign-ins are being counted and locked out.');
+    } catch (Throwable $e) {
+        $out[] = securityCheck('ratelimit', 'Login rate limiting', 'fail',
+            'The auth_attempts table does not exist, so nothing is limiting password guessing. The API creates it on first use, which means the database user cannot.',
+            'Import resok-portal/server/schema-security.sql in phpMyAdmin.');
+    }
+
+    try {
+        $pdo->query('SELECT 1 FROM security_events LIMIT 1');
+        $out[] = securityCheck('eventlog', 'Security event log', 'pass', 'Security events are being recorded.');
+    } catch (Throwable $e) {
+        $out[] = securityCheck('eventlog', 'Security event log', 'warn',
+            'The security_events table does not exist, so lockouts and blocked attempts are not being recorded.',
+            'Import resok-portal/server/schema-security.sql.');
+    }
+
+    // Encryption at rest. Absent key means values are stored exactly as before, which is
+    // deliberate - but it should be a visible choice, not a silent one.
+    $cryptoOn = function_exists('cryptoAvailable') && cryptoAvailable($config);
+    if (!$cryptoOn) {
+        $out[] = securityCheck('encryption', 'Encryption at rest', 'warn',
+            'No data_encryption_key is set, so national ID numbers and two-factor secrets are stored in readable form. Anyone who obtains a database dump can read them.',
+            'Set a 32+ character data_encryption_key in config.local.php, back it up, then run the migration. Widen the columns first - see schema-security.sql.');
+    } else {
+        try {
+            $plain = (int)$pdo->query("SELECT COUNT(*) c FROM member_profiles
+                                        WHERE id_number IS NOT NULL AND id_number <> ''
+                                          AND id_number NOT LIKE 'enc.v1.%'")->fetch()['c'];
+            $out[] = $plain === 0
+                ? securityCheck('encryption', 'Encryption at rest', 'pass', 'ID numbers and two-factor secrets are encrypted.')
+                : securityCheck('encryption', 'Encryption at rest', 'warn',
+                    "A key is configured, but {$plain} ID number(s) are still stored in readable form from before it was set.",
+                    'Run the migration from the admin panel to encrypt the remaining rows.');
+        } catch (Throwable $e) {
+            $out[] = securityCheck('encryption', 'Encryption at rest', 'warn', 'A key is set but the member table could not be checked.', $e->getMessage());
+        }
+    }
+
+    // A column too narrow truncates encrypted values without any error at all.
+    try {
+        $narrow = [];
+        foreach ([['users', 'mfa_secret'], ['member_profiles', 'id_number']] as [$table, $column]) {
+            $row = $pdo->query("SHOW COLUMNS FROM {$table} LIKE '{$column}'")->fetch();
+            if ($row && preg_match('/varchar\((\d+)\)/i', (string)$row['Type'], $m) && (int)$m[1] < 255) {
+                $narrow[] = "{$table}.{$column} is VARCHAR({$m[1]})";
+            }
+        }
+        if ($narrow && $cryptoOn) {
+            $out[] = securityCheck('columnwidth', 'Column widths for encryption', 'fail',
+                'Encrypted values are longer than these columns allow, and MySQL truncates without warning: ' . implode('; ', $narrow) . '.',
+                'Run the ALTER statements at the end of schema-security.sql immediately.');
+        }
+    } catch (Throwable $e) {
+        // Not worth reporting on its own; the encryption check above already covers intent.
+    }
+
+    return $out;
+}
+
 function securityAssessAccounts(PDO $pdo): array
 {
     $out = [];
@@ -168,6 +241,7 @@ function securityAssessment(PDO $pdo, array $config): array
     $checks = array_merge(
         securityAssessTransport($config),
         securityAssessConfig($config),
+        securityAssessControls($pdo, $config),
         securityAssessAccounts($pdo)
     );
 

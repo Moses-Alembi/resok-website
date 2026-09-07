@@ -48,6 +48,11 @@ return [
 
     'allow_approve_without_payment' => filter_var(config_value($local, 'allow_approve_without_payment', 'RESOK_ALLOW_APPROVE_WITHOUT_PAYMENT', false), FILTER_VALIDATE_BOOLEAN),
     'setup_key' => config_value($local, 'setup_key', 'RESOK_SETUP_KEY', ''),
+    // Encrypts ID numbers and two-factor secrets at rest. Deliberately NOT derived from
+    // jwt_secret: rotating the session key is routine, and would otherwise destroy this
+    // data permanently. Unset means nothing is encrypted - which is the safe default,
+    // because encrypting under a key nobody has backed up is worse than not encrypting.
+    'data_encryption_key' => config_value($local, 'data_encryption_key', 'RESOK_DATA_KEY', ''),
     // Emails of super administrators - the only accounts that may see the threat assessment
     // and change who is an admin. Stored here rather than in the database so it takes server
     // access to change, and so it needs no schema migration. Comma-separated in the env var.

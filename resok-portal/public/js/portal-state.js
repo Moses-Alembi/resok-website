@@ -217,10 +217,29 @@
     window.location.href = timedOut ? "login?timeout=1" : "login";
   }
 
+  const pageLoadedAt = Date.now();
+
+  /**
+   * The two fields the server screens on. Read at submit time, not page load, so a form left
+   * open in a tab reports the dwell it actually had.
+   *
+   * Deliberately forgiving: if the honeypot input is missing from a page the object simply
+   * carries an empty string, which passes. A screening signal that breaks a real member's
+   * registration because of a markup change would cost far more than the spam it stops.
+   */
+  function screeningFields(form) {
+    const scope = form || document;
+    const trap = scope.querySelector('input[name="website"]');
+    return {
+      website: trap ? trap.value : "",
+      formLoadedAt: pageLoadedAt
+    };
+  }
+
   async function registerMember(data) {
     const result = await api("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify(data)
+      body: JSON.stringify(Object.assign({}, data, screeningFields()))
     });
     if (result.token) login(data.email, result.user, result.token);
     return result;
@@ -739,6 +758,7 @@
 
   window.ResokPortal = {
     api,
+    screeningFields,
     apiUrl,
     getState,
     saveState,

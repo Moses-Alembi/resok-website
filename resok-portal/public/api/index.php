@@ -24,7 +24,7 @@ $config = require $configPath;
  * message naming the file, and everything else keeps working.
  */
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -58,6 +58,21 @@ if (!function_exists('throttleCheck')) {
  * are safe to skip; the login route refuses outright if an enrolled member arrives while
  * the module is absent.
  */
+if (!function_exists('botScreen')) {
+    function botScreen(array $data, int $minSeconds = 0): ?string { return null; }
+    function botScreenOrFakeSuccess(PDO $pdo, array $config, array $data, string $action, array $pretend, int $minSeconds = 0): void {}
+    function validateInput(array $data, array $rules): void {}
+}
+
+if (!function_exists('cryptoEncrypt')) {
+    function cryptoEncrypt(array $config, ?string $plain): ?string { return $plain; }
+    function cryptoDecrypt(array $config, ?string $stored): ?string { return $stored; }
+    function cryptoAvailable(array $config): bool { return false; }
+    // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
+    // without this a missing crypto.php would fatal on every member the admin panel lists.
+    function cryptoConfig(?array $set = null): array { return []; }
+}
+
 if (!function_exists('blogRequireTables')) {
     // Reached only if the guards above ever change order; the module check fires first.
     function blogRequireTables(PDO $pdo): void {}
@@ -67,6 +82,10 @@ if (!function_exists('mfaEnsureColumns')) {
     function mfaEnsureColumns(PDO $pdo): bool { return false; }
     function mfaRequiredForRole(string $role): bool { return false; }
 }
+
+// Give the crypto helpers the config once, so decryption works from anywhere. Always
+// defined by this point - the real one, or the shim above.
+cryptoConfig($config);
 
 /** Refuses a route whose module is absent, saying which file to upload. */
 function requireModule(string $function, string $file): void
@@ -296,7 +315,8 @@ function mapMember(?array $row): ?array {
         'payerType' => $row['payer_type'] ?? 'Individual',
         'category' => $row['category'],
         'idType' => $row['id_type'],
-        'idNumber' => $row['id_number'],
+        // Decrypts when encrypted, passes through when the row predates the key.
+        'idNumber' => cryptoDecrypt(cryptoConfig(), $row['id_number']),
         'mobile' => $row['mobile'],
         'profileImage' => $profileImage,
         'profileImageUrl' => !empty($profileImage) ? 'api/index.php?route=profile-images/' . rawurlencode(basename((string)$profileImage)) : null,
@@ -927,6 +947,32 @@ Respiratory Society of Kenya");
         respond(200, ['id' => $targetId, 'email' => $target['email'], 'role' => $role]);
     }
 
+    // Encrypts rows written before a key existed. Batched and idempotent, so it can be run
+    // repeatedly and interrupted without leaving the table half-converted in a way that
+    // needs untangling - rows already carrying the marker are skipped.
+    if ($route === 'security/encrypt-existing' && $method === 'POST') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        requireModule('cryptoMigrateColumn', 'lib/crypto.php');
+
+        if (!cryptoAvailable($config)) {
+            respond(400, ['error' => 'No data_encryption_key is configured, so there is nothing to encrypt to.']);
+        }
+        try {
+            $ids = cryptoMigrateColumn($pdo, $config, 'member_profiles', 'id', 'id_number');
+            $secrets = cryptoMigrateColumn($pdo, $config, 'users', 'id', 'mfa_secret');
+        } catch (Throwable $e) {
+            respond(500, ['error' => $e->getMessage()]);
+        }
+        securityLog($pdo, $config, 'encryption_migration', 'info', 'security',
+            $ids['encrypted'] . ' id numbers, ' . $secrets['encrypted'] . ' secrets', (int)$user['userId']);
+        respond(200, [
+            'idNumbers' => $ids,
+            'mfaSecrets' => $secrets,
+            'message' => 'Run again if either scanned count reached the batch limit of 500.',
+        ]);
+    }
+
     if ($route === 'security/assessment' && $method === 'GET') {
         requireModule('securityAssessment', 'lib/security-assessment.php');
         $user = auth($config);
@@ -1044,6 +1090,32 @@ Respiratory Society of Kenya");
         $data = input();
         requireFields($data, ['email', 'password', 'firstName', 'surname', 'mobile', 'country', 'county', 'division', 'profession', 'specialization', 'institution', 'physicalAddress', 'payerType', 'category', 'idNumber']);
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) respond(400, ['error' => 'Please enter a valid email address']);
+        // Answers as though it worked, so a script learns nothing about which signal caught
+        // it. A real member never reaches this: the honeypot is invisible and nobody
+        // completes fifteen fields in three seconds.
+        botScreenOrFakeSuccess($pdo, $config, $data, 'register', [
+            'message' => 'Registration successful! Please check your email to verify your account.',
+        ]);
+
+        // Fifteen fields were accepted and four were checked. These are not the security
+        // boundary - queries are bound and output escaped - but unbounded input is how a
+        // name column ends up holding a kilobyte of pasted text.
+        validateInput($data, [
+            'firstName'       => ['First name', 'name'],
+            'surname'         => ['Surname', 'name'],
+            'middleName'      => ['Middle name', 'name', false],
+            'title'           => ['Title', 'text', false, ['max' => 20]],
+            'mobile'          => ['Mobile number', 'phone'],
+            'country'         => ['Country', 'text', true, ['max' => 60]],
+            'county'          => ['County', 'text', true, ['max' => 60]],
+            'division'        => ['Division', 'text', true, ['max' => 80]],
+            'profession'      => ['Profession', 'text', true, ['max' => 100]],
+            'specialization'  => ['Specialization', 'text', true, ['max' => 120]],
+            'institution'     => ['Institution', 'text', true, ['max' => 160]],
+            'physicalAddress' => ['Physical address', 'address'],
+            'category'        => ['Membership category', 'text', true, ['max' => 80]],
+            'idNumber'        => ['ID number', 'id'],
+        ]);
         if (!preg_match('/^\+[1-9]\d{7,14}$/', $data['mobile'])) respond(400, ['error' => 'Please enter a valid mobile number with country code']);
         if (!preg_match('/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,64}$/', $data['password'])) respond(400, ['error' => 'Password must be 8-64 characters and include uppercase, lowercase, and a number']);
 
@@ -1081,7 +1153,7 @@ Respiratory Society of Kenya");
             $data['payerType'],
             $data['category'],
             $data['idType'] ?? 'ID',
-            $data['idNumber'],
+            cryptoEncrypt($config, (string)$data['idNumber']),
             $data['mobile']
         ]);
         $pdo->commit();
@@ -1138,6 +1210,12 @@ Respiratory Society of Kenya");
              FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.email = ? LIMIT 1'
         );
         $loginEmail = (string)($data['email'] ?? '');
+        // Screened before the password is even looked at, so an automated run costs nothing
+        // and reveals nothing. Answers with the same message a wrong password gets.
+        if (botScreen($data, 0) !== null) {   // honeypot only - see input-guard.php
+            securityLog($pdo, $config, 'bot_blocked', 'info', 'login', 'Login screened');
+            respond(401, ['error' => 'Invalid credentials']);
+        }
         authThrottleCheck($pdo, $config, $loginEmail);
         $stmt->execute([$data['email'] ?? '']);
         $user = $stmt->fetch();
@@ -1214,7 +1292,7 @@ Respiratory Society of Kenya");
         if (!$user) respond(401, ['error' => 'That sign-in attempt is no longer valid.']);
 
         $code = (string)($data['code'] ?? '');
-        $ok = mfaVerifyCode((string)$user['mfa_secret'], $code);
+        $ok = mfaVerifyCode((string)cryptoDecrypt($config, $user['mfa_secret']), $code);
         $usedRecovery = false;
         if (!$ok && strlen(trim($code)) >= 8) {
             $ok = mfaConsumeRecoveryCode($pdo, (int)$user['id'], (string)$user['mfa_recovery'], $code);
@@ -1253,7 +1331,7 @@ Respiratory Society of Kenya");
         mfaEnsureColumns($pdo);
         $secret = mfaGenerateSecret();
         $pdo->prepare('UPDATE users SET mfa_secret = ?, mfa_enabled = 0 WHERE id = ?')
-            ->execute([$secret, (int)$user['userId']]);
+            ->execute([cryptoEncrypt($config, $secret), (int)$user['userId']]);
         respond(200, [
             'secret' => $secret,
             'uri' => mfaProvisioningUri($secret, (string)$user['email']),
@@ -1268,7 +1346,7 @@ Respiratory Society of Kenya");
         $stmt->execute([(int)$user['userId']]);
         $row = $stmt->fetch();
         if (!$row || empty($row['mfa_secret'])) respond(400, ['error' => 'Start the setup again.']);
-        if (!mfaVerifyCode((string)$row['mfa_secret'], (string)(input()['code'] ?? ''))) {
+        if (!mfaVerifyCode((string)cryptoDecrypt($config, $row['mfa_secret']), (string)(input()['code'] ?? ''))) {
             securityLog($pdo, $config, 'mfa_enrol_failed', 'info', 'mfa', null, (int)$user['userId']);
             respond(400, ['error' => 'That code was not correct. Check your app and try again.']);
         }
@@ -1350,6 +1428,10 @@ Respiratory Society of Kenya");
     if ($route === 'auth/forgot-password' && $method === 'POST') {
         $data = input();
         if (empty($data['email'])) respond(400, ['error' => 'Email is required']);
+        botScreenOrFakeSuccess($pdo, $config, $data, 'password-reset', [
+            'message' => 'If the email exists, a reset link has been queued.',
+        ], 0);   // honeypot only - one field, often autofilled
+
         // Every request here sends mail, so each one consumes budget whether or not the
         // address exists - this endpoint is the classic way to mailbomb someone, and the
         // reply is deliberately identical either way so it cannot be used to test emails.
@@ -1403,7 +1485,11 @@ Respiratory Society of Kenya");
             foreach ($allowed as $key => $column) {
                 if (array_key_exists($key, $data)) {
                     $sets[] = "$column = ?";
-                    $values[] = $data[$key] ?: null;
+                    // The ID number is encrypted at rest, so an edit must be written
+                    // in the same form or the column would end up half plaintext.
+                    $values[] = $column === 'id_number'
+                        ? cryptoEncrypt($config, (string)($data[$key] ?: ''))
+                        : ($data[$key] ?: null);
                 }
             }
             if (!$sets) respond(400, ['error' => 'No profile fields provided']);

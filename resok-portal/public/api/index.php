@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -85,6 +85,20 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('ictCan')) {
+    function ictEnsureTables(PDO $pdo): bool { return false; }
+    function ictCan(PDO $pdo, array $user, array $config, string $capability): bool { return false; }
+    function ictHasAnyAccess(PDO $pdo, array $user, array $config): bool { return false; }
+    function ictCapabilitiesFor(PDO $pdo, int $userId): array { return []; }
+    function ictCapabilityList(): array { return []; }
+    function ictAudit(PDO $pdo, ?int $a, string $b, ?string $c = null, ?string $d = null,
+                      ?string $e = null, ?array $f = null, ?array $g = null): void {}
+    function ictAuditRecent(PDO $pdo, int $limit = 40): array { return []; }
+    function ictRequire(PDO $pdo, array $user, array $config, string $capability): void {
+        respond(503, ['error' => 'The ICT module is not deployed.', 'missing' => 'lib/ict.php']);
+    }
 }
 
 if (!function_exists('attendanceEnsureTables')) {
@@ -1560,6 +1574,174 @@ Respiratory Society of Kenya");
      *
      * Returns upcoming by default; ?include=past adds the finished ones for an archive view.
      */
+    // ----- ICT: access and capabilities ---------------------------------------------------
+
+    /**
+     * What the signed-in user may do. The ICT page calls this on load to decide which
+     * sections to show - so a section nobody can use is never rendered, rather than being
+     * rendered and then failing on click.
+     */
+    if ($route === 'ict/me' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictCapabilitiesFor', 'lib/ict.php');
+        respond(200, [
+            'role'         => $user['role'] ?? '',
+            'isSuperAdmin' => isSuperAdmin($user, $config),
+            'hasAccess'    => ictHasAnyAccess($pdo, $user, $config),
+            // A super admin holds everything implicitly, so the list is reported as complete
+            // rather than as whatever rows happen to exist for them.
+            'capabilities' => isSuperAdmin($user, $config)
+                ? array_keys(ictCapabilityList())
+                : ictCapabilitiesFor($pdo, (int)$user['userId']),
+        ]);
+    }
+
+    /** The vocabulary, so the granting screen is never out of step with the server. */
+    if ($route === 'ict/capabilities' && $method === 'GET') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        requireModule('ictCapabilityList', 'lib/ict.php');
+        respond(200, ['capabilities' => ictCapabilityList()]);
+    }
+
+    /** Everyone who holds any ICT capability, plus every admin and ICT account. */
+    if ($route === 'ict/staff' && $method === 'GET') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        requireModule('ictCapabilitiesFor', 'lib/ict.php');
+        if (!ictEnsureTables($pdo)) {
+            respond(503, ['error' => 'The ICT tables are not available. Import resok-portal/server/schema-ict.sql.']);
+        }
+
+        $rows = $pdo->query("SELECT u.id, u.email, u.role,
+                                    TRIM(CONCAT(COALESCE(mp.first_name,''), ' ', COALESCE(mp.surname,''))) AS name
+                               FROM users u
+                               LEFT JOIN member_profiles mp ON mp.user_id = u.id
+                              WHERE u.role IN ('admin','ict')
+                                 OR u.id IN (SELECT user_id FROM ict_capabilities)
+                              ORDER BY u.role, u.id")->fetchAll();
+
+        respond(200, ['staff' => array_map(fn($r) => [
+            'id'           => (int)$r['id'],
+            'email'        => $r['email'],
+            'name'         => trim((string)$r['name']) ?: null,
+            'role'         => $r['role'],
+            'isSuperAdmin' => isSuperAdmin(['role' => $r['role'], 'email' => $r['email']], $config),
+            'capabilities' => ictCapabilitiesFor($pdo, (int)$r['id']),
+        ], $rows)]);
+    }
+
+    /**
+     * Sets one person's ICT capabilities, as a complete list rather than one grant at a time.
+     * Sending the whole set makes the screen's state the intended state - there is no way to
+     * tick a box, miss a request, and be left with a permission nobody meant to give.
+     */
+    if (preg_match('#^ict/staff/(\d+)/capabilities$#', $route, $m) && $method === 'PUT') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        requireModule('ictCapabilityList', 'lib/ict.php');
+        if (!ictEnsureTables($pdo)) {
+            respond(503, ['error' => 'The ICT tables are not available. Import resok-portal/server/schema-ict.sql.']);
+        }
+
+        $targetId = (int)$m[1];
+        $target = $pdo->prepare('SELECT id, email, role FROM users WHERE id = ? LIMIT 1');
+        $target->execute([$targetId]);
+        $targetRow = $target->fetch();
+        if (!$targetRow) respond(404, ['error' => 'That account no longer exists.']);
+
+        $wanted = input()['capabilities'] ?? [];
+        if (!is_array($wanted)) respond(400, ['error' => 'Send capabilities as a list.']);
+
+        // Anything outside the vocabulary is refused rather than stored. A typo that is
+        // saved becomes a permission no check will ever match and nobody can find to revoke.
+        $known = array_keys(ictCapabilityList());
+        $unknown = array_values(array_diff($wanted, $known));
+        if ($unknown) {
+            respond(400, ['error' => 'Unknown capability: ' . implode(', ', array_slice($unknown, 0, 3))]);
+        }
+
+        $before = ictCapabilitiesFor($pdo, $targetId);
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM ict_capabilities WHERE user_id = ?')->execute([$targetId]);
+            if ($wanted) {
+                $insert = $pdo->prepare('INSERT INTO ict_capabilities (user_id, capability, granted_by) VALUES (?, ?, ?)');
+                foreach (array_unique($wanted) as $capability) {
+                    $insert->execute([$targetId, $capability, (int)$user['userId']]);
+                }
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            respond(500, ['error' => 'Nothing was changed: ' . $e->getMessage()]);
+        }
+
+        sort($before);
+        $after = array_values(array_unique($wanted));
+        sort($after);
+        ictAudit($pdo, (int)$user['userId'], 'capabilities_changed', 'user', (string)$targetId,
+                 $targetRow['email'] . ': ' . count($after) . ' capability(ies)',
+                 ['capabilities' => $before], ['capabilities' => $after]);
+        securityLog($pdo, $config, 'ict_capabilities_changed', 'warning', 'ict',
+                    $targetRow['email'], (int)$user['userId']);
+
+        respond(200, ['capabilities' => $after]);
+    }
+
+    /**
+     * Moves an account between member, admin and ict.
+     *
+     * Separate from the existing admin role route because that one only accepts member and
+     * admin, and widening it would let a super admin turn an ICT officer into an admin from
+     * a screen that does not say that is what it is doing.
+     */
+    if (preg_match('#^ict/staff/(\d+)/role$#', $route, $m) && $method === 'PUT') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        requireModule('ictCapabilityList', 'lib/ict.php');
+
+        $targetId = (int)$m[1];
+        $role = (string)(input()['role'] ?? '');
+        if (!in_array($role, ['member', 'ict'], true)) {
+            // Promotion to admin stays on the Administrators panel. Granting access to every
+            // member's ID number should happen on the screen that says so, not this one.
+            respond(400, ['error' => 'From here an account can be set to member or ict. Use the Administrators panel for admin access.']);
+        }
+        if ($targetId === (int)$user['userId']) {
+            respond(400, ['error' => 'You cannot change your own role.']);
+        }
+
+        $target = $pdo->prepare('SELECT id, email, role FROM users WHERE id = ? LIMIT 1');
+        $target->execute([$targetId]);
+        $targetRow = $target->fetch();
+        if (!$targetRow) respond(404, ['error' => 'That account no longer exists.']);
+
+        if ($targetRow['role'] === 'admin') {
+            respond(400, ['error' => 'That account is an administrator. Remove admin access first.']);
+        }
+        if (isSuperAdmin(['role' => $targetRow['role'], 'email' => $targetRow['email']], $config)) {
+            respond(400, ['error' => 'That account is named as a super administrator in the server configuration.']);
+        }
+
+        $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $targetId]);
+        ictAudit($pdo, (int)$user['userId'], 'role_changed', 'user', (string)$targetId,
+                 $targetRow['email'], ['role' => $targetRow['role']], ['role' => $role]);
+        securityLog($pdo, $config, 'ict_role_changed', 'warning', 'ict',
+                    $targetRow['email'] . ' -> ' . $role, (int)$user['userId']);
+
+        respond(200, ['role' => $role]);
+    }
+
+    /** The ICT activity timeline. */
+    if ($route === 'ict/audit' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictAuditRecent', 'lib/ict.php');
+        ictRequire($pdo, $user, $config, 'reports.view');
+        respond(200, ['entries' => ictAuditRecent($pdo, 60)]);
+    }
+
     // ----- CPD token collection (public) --------------------------------------------------
 
     /**

@@ -444,6 +444,16 @@
           rowEl.appendChild(el('span', 'd', `${start.getDate()} ${MONTHS[start.getMonth()]} ${start.getFullYear()}`));
           rowEl.appendChild(el('span', 't', event.title));
           rowEl.appendChild(el('span', 'ev-badge', event.type));
+
+          // Only where KMPDC actually approved points - there is nothing to collect otherwise.
+          if (event.points && event.approvalRef) {
+            const collect = el('button', 'btn btn-outline');
+            collect.type = 'button';
+            collect.style.fontSize = '13px';
+            collect.textContent = 'Collect CPD token';
+            collect.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title));
+            rowEl.appendChild(collect);
+          }
           list.appendChild(rowEl);
         });
         document.getElementById('pastEvents').hidden = false;
@@ -471,6 +481,241 @@
           grid.style.display = 'block';
           grid.appendChild(empty());
         });
+    })();
+  </script>
+
+    <style>
+    /* Token collection dialog */
+    .tk-backdrop{position:fixed;inset:0;background:rgba(6,17,25,.62);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9000}
+    .tk-modal{background:#fff;border-radius:16px;max-width:470px;width:100%;padding:30px;box-shadow:0 26px 70px rgba(6,17,25,.32);max-height:90vh;overflow-y:auto}
+    .tk-modal h3{font-family:var(--heading);font-size:1.28rem;font-weight:900;margin-bottom:6px;color:var(--ink)}
+    .tk-ev{color:var(--brand-primary);font-weight:800;font-size:.86rem;margin-bottom:16px}
+    .tk-modal p{color:var(--muted);font-size:.92rem;line-height:1.6;margin-bottom:16px}
+    .tk-in{width:100%;border:1px solid #d0d5dd;border-radius:9px;padding:13px 14px;font-family:inherit;font-size:1rem;margin-bottom:12px}
+    .tk-in:focus{outline:2px solid var(--brand-primary);outline-offset:-1px}
+    .tk-code{letter-spacing:.5em;text-align:center;font-size:1.5rem;font-weight:800;font-family:monospace}
+    .tk-note{border-radius:9px;padding:12px 14px;font-size:.87rem;line-height:1.55;margin-bottom:14px}
+    .tk-note.err{background:#fdeef0;color:#8f1220;border:1px solid #f6d3d8}
+    .tk-note.ok{background:#eef7f1;color:#15602f;border:1px solid #cfe8d8}
+    .tk-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .tk-token{background:#0a2e38;color:#fff;border-radius:12px;padding:22px;text-align:center;margin-bottom:16px;word-break:break-all}
+    .tk-token span{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#9be7b2;margin-bottom:9px;font-weight:800}
+    .tk-token b{font-size:1.42rem;font-family:monospace;font-weight:800;letter-spacing:.05em}
+    .tk-link{background:none;border:none;color:var(--brand-primary);font-weight:700;cursor:pointer;font-size:.87rem;text-decoration:underline;padding:0;font-family:inherit}
+    .tk-x{background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;line-height:1;padding:0}
+  </style>
+
+  <script>
+    /**
+     * Collecting a CPD token.
+     *
+     * Two steps, because an email address is not a secret. At a conference everybody's
+     * address is on the delegate list and the Zoom panel, so asking only for that would let
+     * anyone collect a colleague's token - and once it is redeemed on the KMPDC portal the
+     * real attendee cannot get it back. The emailed code restores the one guarantee the old
+     * practice of mailing tokens had: you have to be able to open the mailbox.
+     *
+     * Members never come through here. They are signed in already, so their tokens are in
+     * the portal dashboard.
+     */
+    (() => {
+      const API = 'resok-portal/public/api/index.php?route=';
+      let slug = null, title = '', email = '';
+
+      const make = (tag, cls, text) => {
+        const node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+      };
+
+      function close() {
+        const box = document.querySelector('.tk-backdrop');
+        if (box) box.remove();
+        document.body.style.overflow = '';
+      }
+
+      function shell(heading) {
+        close();
+        const backdrop = make('div', 'tk-backdrop');
+        const modal = make('div', 'tk-modal');
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+
+        const head = make('div');
+        head.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:12px';
+        head.appendChild(make('h3', null, heading));
+        const x = make('button', 'tk-x', '×');
+        x.type = 'button';
+        x.setAttribute('aria-label', 'Close');
+        x.addEventListener('click', close);
+        head.appendChild(x);
+        modal.appendChild(head);
+        modal.appendChild(make('div', 'tk-ev', title));
+
+        backdrop.appendChild(modal);
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+        document.body.appendChild(backdrop);
+        document.body.style.overflow = 'hidden';
+        return modal;
+      }
+
+      const note = (modal, message, kind) => {
+        const existing = modal.querySelector('.tk-note');
+        if (existing) existing.remove();
+        if (!message) return;
+        const n = make('div', `tk-note ${kind}`, message);
+        modal.insertBefore(n, modal.querySelector('.tk-ev').nextSibling);
+      };
+
+      /* ---- step one: the address ---- */
+      function askEmail() {
+        const modal = shell('Collect your CPD token');
+        modal.appendChild(make('p', null,
+          'Enter the email address you used to register for this event. We will send you a six-digit code.'));
+
+        const input = make('input', 'tk-in');
+        input.type = 'email';
+        input.placeholder = 'you@example.com';
+        input.autocomplete = 'email';
+        input.value = email;
+        modal.appendChild(input);
+
+        const actions = make('div', 'tk-actions');
+        const send = make('button', 'btn btn-primary');
+        send.type = 'button';
+        send.textContent = 'Send me a code';
+        actions.appendChild(send);
+        modal.appendChild(actions);
+
+        const hint = make('p', null, 'Already a ReSoK member? Your tokens are in your portal dashboard — no code needed.');
+        hint.style.cssText = 'font-size:.82rem;margin:16px 0 0';
+        modal.appendChild(hint);
+
+        const submit = async () => {
+          email = input.value.trim();
+          if (!email) { note(modal, 'Please enter your email address.', 'err'); return; }
+          send.disabled = true;
+          send.textContent = 'Sending...';
+          try {
+            const response = await fetch(`${API}${encodeURIComponent('events/' + slug + '/token/request')}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Could not send a code.');
+            askCode(data.message);
+          } catch (error) {
+            note(modal, error.message || 'Could not send a code.', 'err');
+            send.disabled = false;
+            send.textContent = 'Send me a code';
+          }
+        };
+        send.addEventListener('click', submit);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        input.focus();
+      }
+
+      /* ---- step two: the code ---- */
+      function askCode(message) {
+        const modal = shell('Enter your code');
+        note(modal, message, 'ok');
+        modal.appendChild(make('p', null, `Sent to ${email}. It expires in 15 minutes.`));
+
+        const input = make('input', 'tk-in tk-code');
+        input.type = 'text';
+        input.inputMode = 'numeric';
+        input.maxLength = 6;
+        input.placeholder = '000000';
+        input.autocomplete = 'one-time-code';
+        modal.appendChild(input);
+
+        const actions = make('div', 'tk-actions');
+        const go = make('button', 'btn btn-primary');
+        go.type = 'button';
+        go.textContent = 'Show my token';
+        actions.appendChild(go);
+        modal.appendChild(actions);
+
+        const again = make('button', 'tk-link', 'Use a different email address');
+        again.type = 'button';
+        again.style.marginTop = '14px';
+        again.addEventListener('click', askEmail);
+        modal.appendChild(again);
+
+        const submit = async () => {
+          const code = input.value.trim();
+          if (code.length < 4) { note(modal, 'Enter the six-digit code from your email.', 'err'); return; }
+          go.disabled = true;
+          go.textContent = 'Checking...';
+          try {
+            const response = await fetch(`${API}${encodeURIComponent('events/' + slug + '/token/collect')}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, code })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'That code is not right.');
+            showToken(data);
+          } catch (error) {
+            note(modal, error.message || 'That code is not right.', 'err');
+            go.disabled = false;
+            go.textContent = 'Show my token';
+            input.select();
+          }
+        };
+        go.addEventListener('click', submit);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        input.focus();
+      }
+
+      /* ---- the token ---- */
+      function showToken(data) {
+        const modal = shell('Your CPD token');
+        const box = make('div', 'tk-token');
+        box.appendChild(make('span', null, 'KMPDC token'));
+        box.appendChild(make('b', null, data.token));
+        modal.appendChild(box);
+
+        if (data.points) {
+          const line = data.approvalRef
+            ? `${data.points} CPD points — ${data.regulator} ${data.approvalRef}`
+            : `${data.points} CPD points`;
+          modal.appendChild(make('p', null, line));
+        }
+        modal.appendChild(make('p', null,
+          'Redeem this on the KMPDC portal to claim your points. Write it down before closing — you can come back and collect it again with a new code if you need to.'));
+
+        const actions = make('div', 'tk-actions');
+        const copy = make('button', 'btn btn-primary');
+        copy.type = 'button';
+        copy.textContent = 'Copy token';
+        copy.addEventListener('click', () => {
+          // Not available on an insecure origin or in older browsers, so the failure has to
+          // say something useful rather than nothing at all.
+          if (!navigator.clipboard) { copy.textContent = 'Select the code above to copy'; return; }
+          navigator.clipboard.writeText(data.token)
+            .then(() => { copy.textContent = 'Copied'; })
+            .catch(() => { copy.textContent = 'Select the code above to copy'; });
+        });
+        actions.appendChild(copy);
+        const done = make('button', 'btn btn-outline');
+        done.type = 'button';
+        done.textContent = 'Done';
+        done.addEventListener('click', close);
+        actions.appendChild(done);
+        modal.appendChild(actions);
+      }
+
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+      // Opened from the "Collect CPD token" button rendered on each past event.
+      window.ResokCollectToken = (eventSlug, eventTitle) => {
+        slug = eventSlug;
+        title = eventTitle;
+        askEmail();
+      };
     })();
   </script>
 

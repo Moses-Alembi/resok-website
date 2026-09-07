@@ -69,6 +69,15 @@
         <div id="cpdRows"></div>
       </section>
 
+      <section class="panel" id="tokensPanel" hidden>
+        <h2>My CPD Tokens</h2>
+        <p style="color:var(--muted);font-size:13.5px;line-height:1.55;margin:-4px 0 14px">
+          KMPDC tokens for events you attended. Redeem each one on the KMPDC portal to claim
+          your points. As a member you collect them here &mdash; no emailed code needed.
+        </p>
+        <div id="cpdTokens"></div>
+      </section>
+
       <section class="panel">
         <h2>Recent Payments</h2>
         <div id="paymentRows"></div>
@@ -168,6 +177,59 @@
       await render();
       await renderCpd();
     });
+
+    /**
+     * CPD tokens for this member.
+     *
+     * No code is asked for: they are signed in, which is stronger proof than an email
+     * round-trip. Fetching the list is itself the act of collection, so the server marks
+     * them collected and the office can tell who still has one waiting.
+     */
+    async function loadCpdTokens() {
+      try {
+        const data = await window.ResokPortal.api("/api/cpd/tokens");
+        const tokens = data.tokens || [];
+        if (!tokens.length) return;
+
+        const mount = document.getElementById("cpdTokens");
+        mount.textContent = "";
+        tokens.forEach((entry) => {
+          const row = document.createElement("div");
+          row.style.cssText = "display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);flex-wrap:wrap";
+
+          const left = document.createElement("div");
+          left.style.cssText = "flex:1;min-width:190px";
+          const title = document.createElement("div");
+          title.style.cssText = "font-weight:700;font-size:14px";
+          title.textContent = entry.event;
+          left.appendChild(title);
+          const sub = document.createElement("div");
+          sub.style.cssText = "font-size:12.5px;color:var(--muted);margin-top:2px";
+          sub.textContent = [
+            entry.date ? new Date(String(entry.date).replace(" ", "T")).toLocaleDateString("en-KE",
+              { day: "numeric", month: "short", year: "numeric" }) : "",
+            entry.points ? entry.points + " points" : "",
+            entry.approvalRef ? entry.regulator + " " + entry.approvalRef : ""
+          ].filter(Boolean).join("  ·  ");
+          left.appendChild(sub);
+          row.appendChild(left);
+
+          const code = document.createElement("code");
+          code.style.cssText = "background:#0a2e38;color:#fff;border-radius:7px;padding:9px 14px;font-size:14px;font-weight:700;letter-spacing:.04em;word-break:break-all";
+          // Null when the encryption key changed after the token was stored - saying so beats
+          // showing something that will be rejected at the KMPDC portal.
+          code.textContent = entry.token || "Contact the office";
+          row.appendChild(code);
+          mount.appendChild(row);
+        });
+        document.getElementById("tokensPanel").hidden = false;
+      } catch (error) {
+        // A dashboard that fails to load one panel should still show the rest.
+        console.warn("CPD tokens unavailable:", error.message);
+      }
+    }
+    loadCpdTokens();
+
   </script>
 </body>
 </html>

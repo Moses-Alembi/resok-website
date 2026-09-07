@@ -225,3 +225,35 @@ function sendRenewalReminderEmail(array $config, array $member, int $daysLeft): 
     $mailer = new SimpleMailer($config);
     return $mailer->send($email, "Your ReSoK membership renewal is due in {$daysLeft} day(s)", $text, [], $html);
 }
+
+/**
+ * The six-digit code that releases a CPD token.
+ *
+ * The token itself is deliberately not in this email. That is the whole point of the code:
+ * what travels by mail expires in fifteen minutes, so a message that is forwarded, left in a
+ * shared inbox, or read on a borrowed laptop is worth nothing afterwards. The token stays on
+ * the server until someone proves they can open this mailbox.
+ */
+function sendTokenAccessCodeEmail(array $config, string $email, string $name, string $eventTitle, string $code): bool
+{
+    $text = "Hello {$name},\n\n"
+          . "Your one-time code for collecting your CPD token for {$eventTitle} is:\n\n"
+          . "    {$code}\n\n"
+          . "Enter it on the event page to see your KMPDC token. The code expires in 15 minutes.\n\n"
+          . "If you did not ask for this, you can ignore this email - nobody can collect your token without it.";
+
+    $html = brandedEmailHtml(
+        'Your one-time code',
+        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Hello ' . htmlspecialchars($name, ENT_QUOTES) . ','
+        . '</p><p style="margin:0 0 18px;font-size:15px;line-height:1.65;">Here is your code for collecting your CPD token for <strong>'
+        . htmlspecialchars($eventTitle, ENT_QUOTES) . '</strong>:</p>'
+        . '<div style="margin:0 0 18px;padding:18px;background:#f5f9f6;border:1px dashed #cde5d5;border-radius:10px;text-align:center;">'
+        . '<span style="font-size:32px;font-weight:800;letter-spacing:10px;color:#0a2e38;font-family:monospace;">'
+        . htmlspecialchars($code, ENT_QUOTES) . '</span></div>'
+        . '<p style="margin:0 0 14px;font-size:14px;line-height:1.6;">Enter it on the event page to see your KMPDC token. It expires in 15 minutes.</p>'
+        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">If you did not ask for this, you can ignore this email &mdash; nobody can collect your token without this code.</p>'
+    );
+
+    $mailer = new SimpleMailer($config);
+    return $mailer->send($email, 'Your code for ' . $eventTitle, $text, [], $html);
+}

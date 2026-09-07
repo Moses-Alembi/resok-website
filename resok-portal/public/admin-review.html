@@ -19,7 +19,7 @@
     .ev-lbl{display:block;font-weight:700;font-size:13px;margin:12px 0 5px}
   .ev-in{width:100%;border:1px solid #d0d5dd;border-radius:6px;padding:10px 12px;font-family:inherit;font-size:14px;background:#fff}
   .ev-in:focus{outline:2px solid var(--brand-primary);outline-offset:-1px}
-  @media(max-width:720px){#eventsPanel [style*="grid-template-columns"]{grid-template-columns:1fr !important}}
+  @media(max-width:720px){#atCols{grid-template-columns:1fr !important}#eventsPanel [style*="grid-template-columns"]{grid-template-columns:1fr !important}}
 </style>
 </head>
 <body>
@@ -286,6 +286,74 @@
         </button>
       </div>
       <div id="eventsList" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="attendancePanel" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 style="font-size:18px;margin-bottom:4px">Attendance &amp; CPD tokens</h2>
+        <p style="color:var(--brand-primary);font-weight:700;font-size:14px" id="atEventName"></p>
+      </div>
+      <button class="btn btn-secondary" type="button" id="atCloseBtn" style="font-size:12px">Close</button>
+    </div>
+    <div id="atNotice" class="notice"></div>
+
+    <div id="atSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px;margin:16px 0 22px"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="atCols">
+      <div>
+        <h3 style="font-size:15px;margin-bottom:5px">1. Record who attended</h3>
+        <p style="color:var(--muted);font-size:12.5px;line-height:1.5;margin-bottom:10px">
+          Paste a Zoom participant export, a typed register, or a column from a spreadsheet.
+          Any line containing an email address is read; headers and summary rows are ignored.
+          Pasting twice is safe &mdash; people are matched on their email, never duplicated.
+        </p>
+        <textarea id="atList" rows="7" placeholder="Jane Mwangi, jane@hospital.co.ke, A12345, 84&#10;peter@clinic.org"
+          style="width:100%;border:1px solid #d0d5dd;border-radius:6px;padding:11px;font-family:monospace;font-size:12.5px"></textarea>
+        <div style="display:flex;gap:9px;margin:9px 0 11px;flex-wrap:wrap">
+          <select class="ev-in" id="atChannel" style="width:auto;flex:1;min-width:130px">
+            <option value="online">Online</option>
+            <option value="in_person">In person</option>
+            <option value="unknown">Not specified</option>
+          </select>
+          <select class="ev-in" id="atMethod" style="width:auto;flex:1;min-width:150px">
+            <option value="zoom_report">Zoom report</option>
+            <option value="register">Signed register</option>
+            <option value="venue_code">Venue code</option>
+            <option value="manual">Entered by hand</option>
+          </select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:11px">
+          <input type="checkbox" id="atMarkAttended" checked />
+          Mark these people as having attended
+        </label>
+        <button class="btn btn-primary" type="button" id="atRecordBtn"><i class="fas fa-user-check"></i> Record attendance</button>
+      </div>
+
+      <div>
+        <h3 style="font-size:15px;margin-bottom:5px">2. Load the KMPDC tokens</h3>
+        <p style="color:var(--muted);font-size:12.5px;line-height:1.5;margin-bottom:10px">
+          Paste the tokens generated on the KMPDC portal, one per line. They are encrypted
+          before storage. Loading the same batch twice adds nothing &mdash; duplicates are
+          dropped, so no two people can be handed the same token.
+        </p>
+        <textarea id="atTokens" rows="7" placeholder="One token per line"
+          style="width:100%;border:1px solid #d0d5dd;border-radius:6px;padding:11px;font-family:monospace;font-size:12.5px"></textarea>
+        <button class="btn btn-primary" type="button" id="atLoadTokensBtn" style="margin-top:11px"><i class="fas fa-key"></i> Load tokens</button>
+
+        <h3 style="font-size:15px;margin:22px 0 5px">3. Hand them out</h3>
+        <p style="color:var(--muted);font-size:12.5px;line-height:1.5;margin-bottom:10px">
+          Gives one token to each person marked as attended who does not already have one.
+          Nobody can collect a token until this is done.
+        </p>
+        <button class="btn btn-primary" type="button" id="atAssignBtn"><i class="fas fa-share-nodes"></i> Assign tokens</button>
+      </div>
+    </div>
+
+    <div style="margin-top:26px;padding-top:18px;border-top:1px solid var(--line)">
+      <h3 style="font-size:15px;margin-bottom:10px">Attendees</h3>
+      <div id="atList2"></div>
     </div>
   </section>
 
@@ -1226,6 +1294,14 @@
       editBtn.addEventListener('click', () => evFillForm(event));
       actions.appendChild(editBtn);
 
+      const attBtn = document.createElement('button');
+      attBtn.className = 'btn btn-secondary';
+      attBtn.style.fontSize = '12px';
+      attBtn.type = 'button';
+      attBtn.textContent = 'Attendance';
+      attBtn.addEventListener('click', () => atOpen(event));
+      actions.appendChild(attBtn);
+
       if (event.status === 'draft') {
         const pub = document.createElement('button');
         pub.className = 'btn btn-primary';
@@ -1270,6 +1346,194 @@
     });
     evEl('refreshEventsBtn').addEventListener('click', evLoad);
     evLoad();
+
+
+    /* ----- Attendance & CPD tokens ------------------------------------------------------
+     *
+     * The order on screen is the order the work actually happens in: record who was there,
+     * load the batch from KMPDC, then hand them out. Nothing can be collected before the
+     * third step, which is the point - a token released on registration rather than on
+     * attendance puts a false record on the council's system, not ours.
+     */
+    let atEventId = null;
+
+    function atNotice(message, kind) {
+      const box = document.getElementById('atNotice');
+      box.textContent = message || '';
+      box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+    }
+
+    const AT_TILES = [
+      ['attended', 'Attended'], ['tokens', 'Tokens loaded'], ['assigned', 'Assigned'],
+      ['collected', 'Collected'], ['waiting', 'Waiting'], ['missingKmpdc', 'No KMPDC no.']
+    ];
+
+    function atRenderSummary(summary) {
+      const mount = document.getElementById('atSummary');
+      mount.textContent = '';
+      AT_TILES.forEach(([key, label]) => {
+        const value = Number(summary[key] || 0);
+        const tile = document.createElement('div');
+        // The two that mean someone will not get their points are coloured; the rest are
+        // counts. A wall of uniform tiles hides the one number that needs acting on.
+        const alarm = (key === 'waiting' || key === 'missingKmpdc') && value > 0;
+        tile.style.cssText = `background:${alarm ? '#fdf2e6' : '#f7f9fb'};border:1px solid ${alarm ? '#f0dcb4' : 'var(--line)'};border-radius:9px;padding:11px 13px`;
+        const n = document.createElement('div');
+        n.style.cssText = `font-size:21px;font-weight:800;color:${alarm ? '#8a5a12' : 'var(--text-dark)'}`;
+        n.textContent = String(value);
+        tile.appendChild(n);
+        const l = document.createElement('div');
+        l.style.cssText = 'font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:2px';
+        l.textContent = label;
+        tile.appendChild(l);
+        mount.appendChild(tile);
+      });
+    }
+
+    function atRenderAttendees(attendees) {
+      const mount = document.getElementById('atList2');
+      mount.textContent = '';
+      if (!attendees.length) {
+        const none = document.createElement('p');
+        none.style.cssText = 'color:var(--muted);font-size:13.5px';
+        none.textContent = 'Nobody recorded yet. Paste an attendance list above.';
+        mount.appendChild(none);
+        return;
+      }
+      attendees.forEach((person) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap';
+
+        const left = document.createElement('div');
+        left.style.cssText = 'flex:1;min-width:190px';
+        const name = document.createElement('div');
+        name.style.cssText = 'font-weight:700;font-size:13.5px';
+        name.textContent = person.name + (person.isMember ? '' : '  (non-member)');
+        left.appendChild(name);
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size:12px;color:var(--muted);margin-top:1px';
+        sub.textContent = [
+          person.email,
+          person.kmpdcNumber || 'no KMPDC number',
+          person.minutes !== null ? person.minutes + ' min' : ''
+        ].filter(Boolean).join('  ·  ');
+        left.appendChild(sub);
+        row.appendChild(left);
+
+        const state = document.createElement('span');
+        const label = !person.attended ? 'not attended'
+          : (person.tokenStatus === 'collected' ? 'collected'
+          : (person.tokenStatus === 'assigned' ? 'token ready' : 'awaiting token'));
+        const colours = {
+          'collected': ['#e7f6ec', '#12703a'], 'token ready': ['#eef3fb', '#1c4f9c'],
+          'awaiting token': ['#fdf2e6', '#8a5a12'], 'not attended': ['#f1f3f6', '#5a6572']
+        };
+        const [bg, fg] = colours[label];
+        state.style.cssText = `background:${bg};color:${fg};border-radius:99px;padding:4px 11px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap`;
+        state.textContent = label;
+        row.appendChild(state);
+
+        // The override for a mistyped address. Someone registers as name@gmail.con, can
+        // never receive a code, and without this every typo becomes a phone call.
+        if (person.tokenStatus) {
+          const reveal = document.createElement('button');
+          reveal.className = 'btn btn-secondary';
+          reveal.style.fontSize = '12px';
+          reveal.type = 'button';
+          reveal.textContent = 'Reveal';
+          reveal.addEventListener('click', async () => {
+            reveal.disabled = true;
+            try {
+              const data = await window.ResokPortal.api(`/api/admin/attendees/${person.id}/token`);
+              const code = document.createElement('code');
+              code.style.cssText = 'background:#0a2e38;color:#fff;border-radius:6px;padding:6px 11px;font-size:13px;font-weight:700;word-break:break-all';
+              code.textContent = data.token;
+              reveal.replaceWith(code);
+            } catch (error) {
+              atNotice(error.message || 'Could not reveal that token.', 'error');
+              reveal.disabled = false;
+            }
+          });
+          row.appendChild(reveal);
+        }
+        mount.appendChild(row);
+      });
+    }
+
+    async function atLoad() {
+      if (!atEventId) return;
+      try {
+        const data = await window.ResokPortal.api(`/api/admin/events/${atEventId}/attendees`);
+        atRenderSummary(data.summary || {});
+        atRenderAttendees(data.attendees || []);
+      } catch (error) {
+        atNotice(error.message || 'Could not load attendance.', 'error');
+      }
+    }
+
+    function atOpen(event) {
+      atEventId = event.id;
+      document.getElementById('atEventName').textContent = event.title;
+      document.getElementById('attendancePanel').hidden = false;
+      atNotice('');
+      document.getElementById('attendancePanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      atLoad();
+    }
+
+    async function atPost(path, body, describe) {
+      try {
+        const data = await window.ResokPortal.api(path, { method: 'POST', body: JSON.stringify(body) });
+        atNotice(describe(data), 'success');
+        await atLoad();
+        return data;
+      } catch (error) {
+        atNotice(error.message || 'That did not work.', 'error');
+        return null;
+      }
+    }
+
+    document.getElementById('atCloseBtn').addEventListener('click', () => {
+      document.getElementById('attendancePanel').hidden = true;
+      atEventId = null;
+    });
+
+    document.getElementById('atRecordBtn').addEventListener('click', async () => {
+      const list = document.getElementById('atList').value.trim();
+      if (!list) { atNotice('Paste an attendance list first.', 'error'); return; }
+      const result = await atPost(`/api/admin/events/${atEventId}/attendees`, {
+        list,
+        channel: document.getElementById('atChannel').value,
+        method: document.getElementById('atMethod').value,
+        markAttended: document.getElementById('atMarkAttended').checked
+      }, (data) => {
+        const r = data.result;
+        return `${r.added} added, ${r.updated} updated, ${r.linked} matched to member accounts.`
+             + (data.skipped ? ` ${data.skipped} line(s) had no email address and were ignored.` : '');
+      });
+      if (result) document.getElementById('atList').value = '';
+    });
+
+    document.getElementById('atLoadTokensBtn').addEventListener('click', async () => {
+      const tokens = document.getElementById('atTokens').value.trim();
+      if (!tokens) { atNotice('Paste the tokens first.', 'error'); return; }
+      const result = await atPost(`/api/admin/events/${atEventId}/tokens`, { tokens }, (data) =>
+        `${data.result.added} token(s) loaded.`
+        + (data.result.duplicates ? ` ${data.result.duplicates} were already here and were skipped.` : ''));
+      if (result) document.getElementById('atTokens').value = '';
+    });
+
+    document.getElementById('atAssignBtn').addEventListener('click', () => {
+      atPost(`/api/admin/events/${atEventId}/tokens/assign`, {}, (data) => {
+        const r = data.result;
+        let message = `${r.assigned} token(s) assigned.`;
+        // The two things that mean somebody will not get their points, said plainly rather
+        // than left to be noticed in a tile.
+        if (r.waiting) message += ` ${r.waiting} attendee(s) still have none - load more tokens.`;
+        if (r.missingKmpdc) message += ` ${r.missingKmpdc} have no KMPDC number on file.`;
+        if (r.available) message += ` ${r.available} spare.`;
+        return message;
+      });
+    });
 
   </script>
 </body>

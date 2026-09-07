@@ -24,7 +24,7 @@ $config = require $configPath;
  * message naming the file, and everything else keeps working.
  */
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -71,6 +71,11 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('attendanceEnsureTables')) {
+    function attendanceEnsureTables(PDO $pdo): bool { return false; }
+    function tokensSummary(PDO $pdo, int $eventId): array { return []; }
 }
 
 if (!function_exists('eventsUpcoming')) {
@@ -1511,6 +1516,219 @@ Respiratory Society of Kenya");
      *
      * Returns upcoming by default; ?include=past adds the finished ones for an archive view.
      */
+    // ----- CPD token collection (public) --------------------------------------------------
+
+    /**
+     * Step one: send a six-digit code to the address attendance was recorded against.
+     *
+     * The reply is identical whether or not the address is on the list. Saying "you did not
+     * attend" would turn this into a way to work through a delegate list and learn who was
+     * there and who still has an uncollected token waiting - and the delegate list is exactly
+     * what somebody misusing this would already have.
+     */
+    if (preg_match('#^events/([a-z0-9-]+)/token/request$#', $route, $m) && $method === 'POST') {
+        requireModule('attendeeFor', 'lib/attendance.php');
+        $data = input();
+        $email = strtolower(trim((string)($data['email'] ?? '')));
+
+        // Two counters: this address, and this browser. The second is what stops one client
+        // walking a list of addresses.
+        throttleCheck($pdo, $config, 'token-request', $email);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            respond(400, ['error' => 'Please enter the email address you registered with.']);
+        }
+        $event = eventFind($pdo, $m[1]);
+        if (!$event) respond(404, ['error' => 'That event could not be found.']);
+
+        $sameEither = ['message' => 'If that address attended this event, a six-digit code is on its way. It expires in 15 minutes.'];
+
+        $attendee = attendeeFor($pdo, (int)$event['id'], $email);
+        if (!$attendee || !(int)$attendee['attended']) {
+            throttleFailure($pdo, $config, 'token-request', $email);
+            respond(200, $sameEither);
+        }
+
+        // No token assigned yet - the admin has not loaded the batch, or it ran short. Still
+        // answered the same way; the office follows up rather than the page explaining.
+        $hasToken = $pdo->prepare('SELECT id FROM cpd_tokens WHERE attendee_id = ? LIMIT 1');
+        $hasToken->execute([(int)$attendee['id']]);
+        if (!$hasToken->fetch()) {
+            error_log('Token requested by attendee ' . $attendee['id'] . ' but none is assigned.');
+            respond(200, $sameEither);
+        }
+
+        $code = tokenCodeIssue($pdo, (int)$attendee['id']);
+        if (function_exists('sendTokenAccessCodeEmail')) {
+            sendTokenAccessCodeEmail($config, $email, (string)$attendee['full_name'], (string)$event['title'], $code);
+        }
+        throttleSuccess($pdo, $config, 'token-request', $email);
+        securityLog($pdo, $config, 'token_code_sent', 'info', 'token-request', 'Event ' . $event['slug']);
+        respond(200, $sameEither);
+    }
+
+    /** Step two: check the code, then release the token. */
+    if (preg_match('#^events/([a-z0-9-]+)/token/collect$#', $route, $m) && $method === 'POST') {
+        requireModule('tokenCodeVerify', 'lib/attendance.php');
+        $data = input();
+        $email = strtolower(trim((string)($data['email'] ?? '')));
+        $code = trim((string)($data['code'] ?? ''));
+
+        throttleCheck($pdo, $config, 'token-collect', $email);
+
+        $event = eventFind($pdo, $m[1]);
+        if (!$event) respond(404, ['error' => 'That event could not be found.']);
+
+        $attendee = $email !== '' ? attendeeFor($pdo, (int)$event['id'], $email) : null;
+        if (!$attendee) {
+            // The address had to be right to receive a code at all, so this is a wrong
+            // address rather than a wrong code - reported the same way either way.
+            throttleFailure($pdo, $config, 'token-collect', $email);
+            respond(400, ['error' => 'That code is not right.']);
+        }
+
+        $check = tokenCodeVerify($pdo, (int)$attendee['id'], $code);
+        if (!$check['ok']) {
+            throttleFailure($pdo, $config, 'token-collect', $email);
+            securityLog($pdo, $config, 'token_code_failed', 'info', 'token-collect', 'Event ' . $event['slug']);
+            respond(400, ['error' => $check['error']]);
+        }
+
+        $released = tokenRelease($pdo, $config, (int)$attendee['id']);
+        if (!$released) {
+            respond(409, ['error' => 'Your attendance is recorded, but no token is available yet. Please contact the ReSoK office.']);
+        }
+        throttleSuccess($pdo, $config, 'token-collect', $email);
+        securityLog($pdo, $config, 'token_collected', 'info', 'token-collect', 'Event ' . $event['slug']);
+
+        respond(200, [
+            'token'  => $released['token'],
+            'name'   => $attendee['full_name'],
+            'event'  => $event['title'],
+            'points' => $event['approved_points'] === null ? null : (float)$event['approved_points'],
+            'approvalRef' => $event['approval_ref'],
+            'regulator'   => $event['regulator'],
+        ]);
+    }
+
+    // ----- CPD tokens (member) ------------------------------------------------------------
+
+    /**
+     * A signed-in member's tokens. No code: being signed in is a stronger proof than an
+     * email round-trip, so asking for one as well would be theatre.
+     */
+    if ($route === 'cpd/tokens' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('tokensForMember', 'lib/attendance.php');
+        $member = memberRow($pdo, (int)$user['userId']);
+        if (!$member) respond(200, ['tokens' => []]);
+
+        $tokens = tokensForMember($pdo, $config, (int)$member['id']);
+        // Seeing it in the dashboard is the collection, so it is recorded as such - otherwise
+        // the admin reconciliation could never tell a collected member token from a waiting one.
+        $pdo->prepare("UPDATE cpd_tokens t
+                       JOIN event_attendees a ON a.id = t.attendee_id
+                       SET t.status = 'collected', t.collected_at = NOW()
+                       WHERE a.member_profile_id = ? AND t.status = 'assigned'")
+            ->execute([(int)$member['id']]);
+        respond(200, ['tokens' => $tokens]);
+    }
+
+    // ----- Attendance and tokens (admin) --------------------------------------------------
+
+    if (preg_match('#^admin/events/(\d+)/attendees$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('attendanceList', 'lib/attendance.php');
+        respond(200, [
+            'attendees' => attendanceList($pdo, (int)$m[1]),
+            'summary'   => tokensSummary($pdo, (int)$m[1]),
+        ]);
+    }
+
+    /** Paste a register, a Zoom participant export, or a typed list. */
+    if (preg_match('#^admin/events/(\d+)/attendees$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('attendanceParseList', 'lib/attendance.php');
+        if (!attendanceEnsureTables($pdo)) {
+            respond(503, ['error' => 'The attendance tables are not available. Import schema-tokens.sql.']);
+        }
+
+        $data = input();
+        $parsed = attendanceParseList((string)($data['list'] ?? ''));
+        if (!$parsed['rows']) {
+            respond(400, ['error' => 'No email addresses were found in that list.']);
+        }
+        $channel = in_array($data['channel'] ?? '', ['in_person', 'online', 'unknown'], true) ? $data['channel'] : 'unknown';
+        $method_ = in_array($data['method'] ?? '', ['register', 'zoom_report', 'venue_code', 'manual'], true) ? $data['method'] : 'manual';
+
+        $result = attendanceRecord($pdo, (int)$m[1], $parsed['rows'], $channel, $method_,
+                                   (int)$user['userId'], !empty($data['markAttended']));
+        logAdminAction($pdo, (int)$user['userId'], 'attendance_recorded', null,
+                       $result['added'] . ' added, ' . $result['updated'] . ' updated');
+        respond(200, [
+            'result'  => $result,
+            'skipped' => count($parsed['skipped']),
+            'summary' => tokensSummary($pdo, (int)$m[1]),
+        ]);
+    }
+
+    /** Load the batch of tokens generated on the KMPDC portal. */
+    if (preg_match('#^admin/events/(\d+)/tokens$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('tokensLoad', 'lib/attendance.php');
+        if (!attendanceEnsureTables($pdo)) {
+            respond(503, ['error' => 'The attendance tables are not available. Import schema-tokens.sql.']);
+        }
+        if (!cryptoAvailable($config)) {
+            // Refused rather than stored in the clear. A table of readable CPD tokens is
+            // worth stealing, and this is the one moment where saying no still costs nothing.
+            respond(400, ['error' => 'Set a data_encryption_key before loading tokens, so they are not stored in readable form.']);
+        }
+
+        $data = input();
+        $result = tokensLoad($pdo, $config, (int)$m[1], (string)($data['tokens'] ?? ''));
+        logAdminAction($pdo, (int)$user['userId'], 'tokens_loaded', null, $result['added'] . ' tokens');
+        respond(200, ['result' => $result, 'summary' => tokensSummary($pdo, (int)$m[1])]);
+    }
+
+    /** Hand one token to each attendee marked present who does not have one. */
+    if (preg_match('#^admin/events/(\d+)/tokens/assign$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('tokensAssign', 'lib/attendance.php');
+        try {
+            $result = tokensAssign($pdo, (int)$m[1]);
+        } catch (Throwable $e) {
+            respond(500, ['error' => 'Assignment failed and nothing was changed: ' . $e->getMessage()]);
+        }
+        logAdminAction($pdo, (int)$user['userId'], 'tokens_assigned', null, $result['assigned'] . ' assigned');
+        respond(200, ['result' => $result, 'summary' => tokensSummary($pdo, (int)$m[1])]);
+    }
+
+    /**
+     * The override for a mistyped address.
+     *
+     * Someone will register as name@gmail.con and then be unable to collect anything. Without
+     * this every typo becomes a phone call. Logged against the admin who did it, because a
+     * route that reveals a token on request is exactly the one worth being able to audit.
+     */
+    if (preg_match('#^admin/attendees/(\d+)/token$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('tokenRelease', 'lib/attendance.php');
+
+        $released = tokenRelease($pdo, $config, (int)$m[1]);
+        if (!$released) respond(404, ['error' => 'No token is assigned to that attendee.']);
+
+        logAdminAction($pdo, (int)$user['userId'], 'token_revealed', null, 'Attendee ' . $m[1]);
+        securityLog($pdo, $config, 'token_revealed_by_admin', 'warning', 'admin',
+                    'Attendee ' . $m[1], (int)$user['userId']);
+        respond(200, ['token' => $released['token']]);
+    }
+
     // ----- Event management (admin) -----------------------------------------------------
 
     if ($route === 'admin/events' && $method === 'GET') {

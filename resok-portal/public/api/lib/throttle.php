@@ -33,6 +33,12 @@ const THROTTLE_RULES = [
     'password-reset' => [5,  15, 3600, 1800],
     'payment'        => [10, 30, 3600, 900],
     'upload'         => [20, 60, 3600, 900],
+    // Token collection. The client limit is the one that matters: a delegate list is public
+    // enough that the attack is one browser working through many addresses, not many
+    // attempts at one. Generous per address, because a real attendee whose code expires
+    // while they hunt for the email will legitimately ask for two or three.
+    'token-request'  => [6,  20, 3600, 900],
+    'token-collect'  => [8,  30, 3600, 900],
 ];
 const THROTTLE_DEFAULT = [15, 40, 900, 900];
 

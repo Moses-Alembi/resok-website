@@ -23,6 +23,20 @@ $config = require $configPath;
  * Anything missing is recorded instead. Routes that need it fail individually with a
  * message naming the file, and everything else keeps working.
  */
+/**
+ * One timezone for everything.
+ *
+ * PHP and MySQL each default to whatever the host decided, and they disagreed by an hour on
+ * both the live server and this laptop. Anything written by one and compared by the other -
+ * a lockout expiry, an event's start time deciding whether it is upcoming or past - was
+ * wrong by that hour.
+ *
+ * Set here rather than in php.ini because php.ini is not reliably editable on shared
+ * hosting. Nairobi because that is where the society and its events are: a date an admin
+ * types should mean what it says.
+ */
+date_default_timezone_set('Africa/Nairobi');
+
 $missingModules = [];
 foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
@@ -179,6 +193,17 @@ function db(array $config): PDO {
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
     ]);
+
+    // Pins this connection to the same offset PHP is using, so NOW() and PHP's date() agree.
+    // A fixed offset rather than 'Africa/Nairobi', because the named-timezone tables are
+    // often not loaded on shared MySQL and setting an unknown name is an error. Kenya has
+    // never observed daylight saving, so +03:00 is correct year round.
+    try {
+        $pdo->exec("SET time_zone = '+03:00'");
+    } catch (Throwable $e) {
+        // Not fatal. Worth knowing about, but not worth refusing to serve the site over.
+        error_log('Could not set the database session timezone: ' . $e->getMessage());
+    }
     return $pdo;
 }
 

@@ -10,6 +10,14 @@ function config_value(array $local, string $key, ?string $env = null, $default =
     return $value === false ? $default : $value;
 }
 
+/** A list setting: an array in config.local.php, or a comma-separated environment variable. */
+function config_list(array $local, string $key, string $env): array
+{
+    $value = config_value($local, $key, $env, []);
+    if (!is_array($value)) $value = explode(',', (string)$value);
+    return array_values(array_filter(array_map('trim', $value)));
+}
+
 return [
     'db_host' => config_value($local, 'db_host', 'RESOK_DB_HOST', 'localhost'),
     'db_port' => (int)config_value($local, 'db_port', 'RESOK_DB_PORT', 3306),
@@ -40,6 +48,10 @@ return [
 
     'allow_approve_without_payment' => filter_var(config_value($local, 'allow_approve_without_payment', 'RESOK_ALLOW_APPROVE_WITHOUT_PAYMENT', false), FILTER_VALIDATE_BOOLEAN),
     'setup_key' => config_value($local, 'setup_key', 'RESOK_SETUP_KEY', ''),
+    // Emails of super administrators - the only accounts that may see the threat assessment
+    // and change who is an admin. Stored here rather than in the database so it takes server
+    // access to change, and so it needs no schema migration. Comma-separated in the env var.
+    'super_admins' => config_list($local, 'super_admins', 'RESOK_SUPER_ADMINS'),
     'cron_secret' => config_value($local, 'cron_secret', 'RESOK_CRON_SECRET', ''),
     'portal_base_url' => rtrim((string)config_value($local, 'portal_base_url', 'RESOK_PORTAL_BASE_URL', ''), '/'),
     'mail_from' => config_value($local, 'mail_from', 'RESOK_MAIL_FROM', ''),

@@ -33,7 +33,7 @@
         <p>View all registered members, payment status, membership numbers, and payment proof records.</p>
       </div>
       <div>
-        <a class="btn btn-secondary" href="security" id="securityLink"><i class="fas fa-shield-halved"></i> Threat Assessment</a>
+        <a class="btn btn-secondary" href="security" id="securityLink" hidden><i class="fas fa-shield-halved"></i> Threat Assessment</a>
         <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-rotate"></i> Refresh</button>
         <button class="btn btn-danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
       </div>
@@ -183,6 +183,28 @@
       </div>
     </div>
   </footer>
+
+  <section class="panel" id="adminsPanel" hidden style="margin:0 auto 24px;max-width:1280px;width:calc(100% - 40px)">
+    <h2 style="font-size:18px;margin-bottom:6px">Administrators</h2>
+    <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
+      Accounts with admin access. A super administrator is named in the server configuration
+      and is the only one who can see the Threat Assessment or change these roles.
+    </p>
+    <div id="adminsNotice" class="notice"></div>
+    <div id="adminsList"></div>
+
+    <div id="adminsPromote" hidden style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">
+      <h3 style="font-size:15px;margin-bottom:8px">Make someone an admin</h3>
+      <p style="color:var(--muted);font-size:13.5px;line-height:1.55;margin-bottom:12px">
+        They must register in the portal first. Enter the email they signed up with.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <input id="promoteEmail" type="email" placeholder="their@email.address"
+               style="flex:1;min-width:240px;border:1px solid #d0d5dd;border-radius:6px;padding:11px;font-family:inherit;font-size:14px" />
+        <button class="btn btn-primary" id="promoteBtn" type="button"><i class="fas fa-user-shield"></i> Make admin</button>
+      </div>
+    </div>
+  </section>
 
   <script src="js/portal-state.js?v=20260905-card-photo"></script>
   <script>
@@ -571,6 +593,126 @@
         showNote(message || "Admin access required. Please log in as an admin.", "error");
       }
     });
+
+    /* ---------------- administrators ---------------- */
+    let whoami = null;
+
+    function adminsNotice(message, type = "success") {
+      const box = document.getElementById("adminsNotice");
+      box.textContent = message;
+      box.className = `notice ${type}`;
+    }
+
+    async function findUserIdByEmail(email) {
+      // Asks the server rather than searching the member list: someone who registered but
+      // never completed a profile has no member row, and would be invisible here.
+      const found = await window.ResokPortal.api(`/api/admins/lookup?email=${encodeURIComponent(email)}`);
+      return found?.id || null;
+    }
+
+    function renderAdmins(rows) {
+      const mount = document.getElementById("adminsList");
+      mount.textContent = "";
+      const table = document.createElement("table");
+      table.style.width = "100%";
+      table.style.borderCollapse = "collapse";
+      table.style.fontSize = "14px";
+
+      const head = document.createElement("tr");
+      ["Name", "Email", "Level", ""].forEach((h) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        th.style.cssText = "text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em";
+        head.appendChild(th);
+      });
+      table.appendChild(head);
+
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        const cell = (text) => {
+          const td = document.createElement("td");
+          td.textContent = text;
+          td.style.cssText = "padding:10px 8px;border-bottom:1px solid var(--line)";
+          return td;
+        };
+        tr.append(cell(row.name || "-"), cell(row.email));
+
+        const level = document.createElement("td");
+        level.style.cssText = "padding:10px 8px;border-bottom:1px solid var(--line)";
+        const badge = document.createElement("span");
+        badge.textContent = row.isSuperAdmin ? "Super admin" : "Admin";
+        badge.style.cssText = row.isSuperAdmin
+          ? "background:rgba(0,147,46,.1);color:#0f7a38;font-weight:800;font-size:11.5px;padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em"
+          : "background:#eef2f7;color:#475467;font-weight:800;font-size:11.5px;padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em";
+        level.appendChild(badge);
+        tr.appendChild(level);
+
+        const action = document.createElement("td");
+        action.style.cssText = "padding:10px 8px;border-bottom:1px solid var(--line);text-align:right";
+        if (whoami?.isSuperAdmin && !row.isSuperAdmin) {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-danger";
+          btn.style.fontSize = "12px";
+          btn.textContent = "Remove admin";
+          btn.addEventListener("click", () => setRole(row.id, "member", row.email));
+          action.appendChild(btn);
+        }
+        tr.appendChild(action);
+        table.appendChild(tr);
+      });
+      mount.appendChild(table);
+    }
+
+    async function setRole(userId, role, email) {
+      if (role === "member" && !window.confirm(`Remove admin access from ${email}?`)) return;
+      try {
+        await window.ResokPortal.api(`/api/admins/${userId}/role`, {
+          method: "POST",
+          body: JSON.stringify({ role })
+        });
+        adminsNotice(role === "admin" ? `${email} is now an admin.` : `${email} is no longer an admin.`);
+        loadAdmins();
+      } catch (error) {
+        adminsNotice(error.message || "Could not change that role.", "error");
+      }
+    }
+
+    async function loadAdmins() {
+      try {
+        const rows = await window.ResokPortal.api("/api/admins");
+        renderAdmins(rows);
+      } catch (error) {
+        adminsNotice(error.message || "Could not load administrators.", "error");
+      }
+    }
+
+    document.getElementById("promoteBtn").addEventListener("click", async () => {
+      const email = document.getElementById("promoteEmail").value.trim();
+      if (!email) { adminsNotice("Enter the email they registered with.", "error"); return; }
+      const userId = await findUserIdByEmail(email);
+      if (!userId) {
+        adminsNotice("No member with that email. They need to register in the portal first.", "error");
+        return;
+      }
+      await setRole(userId, "admin", email);
+      document.getElementById("promoteEmail").value = "";
+    });
+
+    (async () => {
+      try {
+        whoami = await window.ResokPortal.api("/api/admin/whoami");
+        document.getElementById("securityLink").hidden = !whoami.isSuperAdmin;
+        document.getElementById("adminsPanel").hidden = false;
+        document.getElementById("adminsPromote").hidden = !whoami.isSuperAdmin;
+        if (whoami.isSuperAdmin && !whoami.superAdminsConfigured) {
+          adminsNotice("No super administrator is configured, so every admin currently has full access. Set super_admins in config.local.php.", "error");
+        }
+        loadAdmins();
+      } catch (error) {
+        // An older API without these routes: leave the panel hidden rather than showing an
+        // error for a feature this server does not have yet.
+      }
+    })();
   </script>
 </body>
 </html>

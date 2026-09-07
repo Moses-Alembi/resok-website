@@ -34,6 +34,10 @@ return [
 
     'allow_approve_without_payment' => false,
     'setup_key' => '',
+    // Super administrators, by email. These accounts can see the threat assessment and
+    // promote or demote other admins. Leave empty and every admin keeps today's access,
+    // which the assessment page reports as a warning until you set it.
+    'super_admins' => ['mosesalembiofficial@gmail.com'],
     // Set this and pass ?key=... to cron/renewal-reminders.php if the host only offers URL-triggered cron.
     'cron_secret' => '',
     'portal_base_url' => 'https://www.resok.org/resok-portal/public',

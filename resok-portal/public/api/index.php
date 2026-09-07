@@ -312,6 +312,36 @@ function requireAdmin(array $user): void {
     if (($user['role'] ?? '') !== 'admin') respond(403, ['error' => 'Admin access required']);
 }
 
+/**
+ * A super administrator is named by email in config, not by a database column.
+ *
+ * That is deliberate on two counts. It needs no ALTER TABLE, which this host may not permit
+ * and which has already broken login once. And it means the highest privilege on the site
+ * can only be granted by someone with server access - not by anyone who reaches the admin
+ * panel, which is precisely the account an attacker would be sitting in.
+ *
+ * With no list configured, every admin keeps exactly the access they have today. Silently
+ * locking the only admin out of a page they rely on would be a worse failure than the one
+ * this prevents, so the threat assessment reports the unset list as a warning instead.
+ */
+function isSuperAdmin(array $user, array $config): bool {
+    if (($user['role'] ?? '') !== 'admin') return false;
+    $list = $config['super_admins'] ?? [];
+    if (!$list) return true;
+    $email = strtolower(trim((string)($user['email'] ?? '')));
+    foreach ($list as $candidate) {
+        if ($email !== '' && $email === strtolower(trim((string)$candidate))) return true;
+    }
+    return false;
+}
+
+function requireSuperAdmin(array $user, array $config): void {
+    requireAdmin($user);
+    if (!isSuperAdmin($user, $config)) {
+        respond(403, ['error' => 'This area is restricted to super administrators.']);
+    }
+}
+
 function requireFields(array $data, array $fields): void {
     foreach ($fields as $field) {
         if (!isset($data[$field]) || trim((string)$data[$field]) === '') {
@@ -636,6 +666,100 @@ try {
 
     // Threat assessment for the admin dashboard. Admin only - it names weaknesses, which is
     // precisely the list an attacker would want, so it is not exposed to other roles.
+    // Who am I, and what may I see? The admin panel asks this to decide whether to show
+    // the Threat Assessment link and the Administrators panel at all.
+    if ($route === 'admin/whoami' && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        respond(200, [
+            'email' => $user['email'] ?? '',
+            'role' => $user['role'] ?? '',
+            'isSuperAdmin' => isSuperAdmin($user, $config),
+            'superAdminsConfigured' => !empty($config['super_admins']),
+        ]);
+    }
+
+    // Administrator management. Listing is open to any admin - knowing who else holds the
+    // keys is not a secret from the people who hold them - but changing a role is not.
+    // Find an account by email so it can be promoted. Super administrator only, and it
+    // answers with an id or nothing - never with a list, so it cannot be walked to enumerate
+    // who holds an account here.
+    if ($route === 'admins/lookup' && $method === 'GET') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        $email = strtolower(trim((string)($_GET['email'] ?? '')));
+        if ($email === '') respond(400, ['error' => 'An email is required.']);
+        $stmt = $pdo->prepare("SELECT u.id, u.email, u.role,
+                                      TRIM(CONCAT(COALESCE(mp.first_name,''), ' ', COALESCE(mp.surname,''))) AS name
+                                 FROM users u
+                                 LEFT JOIN member_profiles mp ON mp.user_id = u.id
+                                WHERE LOWER(u.email) = ? LIMIT 1");
+        $stmt->execute([$email]);
+        $row = $stmt->fetch();
+        if (!$row) respond(404, ['error' => 'No account is registered with that email.']);
+        respond(200, [
+            'id' => (int)$row['id'],
+            'email' => $row['email'],
+            'name' => trim((string)$row['name']) ?: null,
+            'role' => $row['role'],
+        ]);
+    }
+
+    if ($route === 'admins' && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        $rows = $pdo->query("SELECT u.id, u.email, u.role, u.created_at,
+                                    TRIM(CONCAT(COALESCE(mp.first_name,''), ' ', COALESCE(mp.surname,''))) AS name
+                               FROM users u
+                               LEFT JOIN member_profiles mp ON mp.user_id = u.id
+                              WHERE u.role = 'admin' ORDER BY u.id")->fetchAll();
+        respond(200, array_map(fn($r) => [
+            'id' => (int)$r['id'],
+            'email' => $r['email'],
+            'name' => trim((string)$r['name']) ?: null,
+            'role' => $r['role'],
+            'isSuperAdmin' => isSuperAdmin(['role' => $r['role'], 'email' => $r['email']], $config),
+            'createdAt' => $r['created_at'],
+        ], $rows));
+    }
+
+    // Promote a member to admin, or demote one back. Super administrator only: an admin who
+    // could appoint other admins could hand out their own level of access, which makes the
+    // distinction this route exists to enforce meaningless.
+    if (preg_match('#^admins/(\d+)/role$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+
+        $targetId = (int)$m[1];
+        $role = (string)(input()['role'] ?? '');
+        if (!in_array($role, ['member', 'admin'], true)) {
+            respond(400, ['error' => 'Role must be member or admin.']);
+        }
+        if ($targetId === (int)$user['userId']) {
+            // Without this a super admin could demote themselves and leave the site with no
+            // one able to promote anybody back.
+            respond(400, ['error' => 'You cannot change your own role.']);
+        }
+
+        $stmt = $pdo->prepare('SELECT id, email, role FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$targetId]);
+        $target = $stmt->fetch();
+        if (!$target) respond(404, ['error' => 'That account does not exist.']);
+
+        if ($role === 'member' && isSuperAdmin(['role' => $target['role'], 'email' => $target['email']], $config)) {
+            respond(400, ['error' => 'That account is named as a super administrator in the server configuration. Remove it there first.']);
+        }
+
+        $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $targetId]);
+        // Target is null: that column holds a member_profile id, and this acts on a user
+        // account, which is a different key entirely. The detail carries who was changed.
+        logAdminAction($pdo, (int)$user['userId'], 'role_change', null,
+            'user #' . $targetId . ' (' . $target['email'] . ') set to ' . $role);
+        securityLog($pdo, $config, 'admin_role_changed', 'warning', 'admins',
+            $target['email'] . ' set to ' . $role, (int)$user['userId']);
+        respond(200, ['id' => $targetId, 'email' => $target['email'], 'role' => $role]);
+    }
+
     if ($route === 'security/assessment' && $method === 'GET') {
         requireModule('securityAssessment', 'lib/security-assessment.php');
         $user = auth($config);

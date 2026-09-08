@@ -51,7 +51,7 @@ DirectoryIndex index.html
   # config, never from a request, so on the live server this condition is never true and the
   # placeholder behaves exactly as it does now.
   RewriteCond %{ENV:RESOK_LOCAL} !=1
-  RewriteRule ^(conferences|workshops-and-training|sponsors|blog|post|knowledge|guidelines|patient-resources)(\.html)?/?$ /coming-soon.html [R=302,L]
+  RewriteRule ^(conferences|projects|workshops-and-training|sponsors|blog|post|knowledge|guidelines|patient-resources)(\.html)?/?$ /coming-soon.html [R=302,L]
 
   # Members-only pages. Each one moved to private/<name>.html (blocked by private/.htaccess)
   # and is emitted only by its <name>.php wrapper, which verifies the portal's resok_token

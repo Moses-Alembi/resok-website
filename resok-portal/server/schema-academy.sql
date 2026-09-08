@@ -131,7 +131,12 @@ CREATE TABLE IF NOT EXISTS academy_lesson_progress (
   UNIQUE KEY academy_progress_unique (enrolment_id, lesson_id),
   KEY academy_progress_lesson (lesson_id),
   CONSTRAINT academy_progress_enrolment_fk FOREIGN KEY (enrolment_id)
-    REFERENCES academy_enrolments(id) ON DELETE CASCADE
+    REFERENCES academy_enrolments(id) ON DELETE CASCADE,
+  -- A deleted lesson must take its progress rows with it. Without this the rows survive,
+  -- and progress - which counts completed rows against the lessons that still exist - reads
+  -- a learner who had finished the deleted lesson as having finished the whole course.
+  CONSTRAINT academy_progress_lesson_fk FOREIGN KEY (lesson_id)
+    REFERENCES academy_lessons(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------------------

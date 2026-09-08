@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -389,6 +389,45 @@ function auth(array $config): array {
         unset($refreshed['exp'], $refreshed['seen']);
         issueAuthCookie(token($refreshed, $config['jwt_secret'], (int)$payload['exp']));
     }
+
+    return $payload;
+}
+
+/**
+ * Who is signed in, or null - for pages that are public but read differently when they know
+ * you.
+ *
+ * Deliberately not auth() with a flag. auth() answers "prove you may be here" and ends the
+ * request when the answer is no; this one answers "is anyone there", where every no - absent,
+ * malformed, expired, idle - is the same ordinary answer. A stale cookie must not take down
+ * a page that never needed a session in the first place, which is exactly what reusing
+ * auth() here would do: the public course page would start returning 401 to a visitor whose
+ * only mistake was having signed in last week.
+ *
+ * It never refreshes the cookie. Sliding the idle window on an anonymous page view would let
+ * a background poll keep a session alive forever without anybody using the portal.
+ */
+function authOptional(array $config): ?array {
+    $token = $_COOKIE['resok_token'] ?? '';
+    if (!$token) {
+        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (!$header && function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            $header = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        }
+        if (!preg_match('/^Bearer\s+(.+)$/', $header, $m)) return null;
+        $token = $m[1];
+    }
+    [$body, $sig] = array_pad(explode('.', $token, 2), 2, '');
+    if (!$body || !$sig) return null;
+    $expected = b64url(hash_hmac('sha256', $body, $config['jwt_secret'], true));
+    if (!hash_equals($expected, $sig)) return null;
+
+    $payload = json_decode(base64_decode(strtr($body, '-_', '+/')), true);
+    if (!is_array($payload) || (($payload['exp'] ?? 0) < time())) return null;
+
+    $seen = (int)($payload['seen'] ?? 0);
+    if ($seen > 0 && (time() - $seen) > RESOK_SESSION_IDLE_TIMEOUT) return null;
 
     return $payload;
 }
@@ -1944,6 +1983,193 @@ Respiratory Society of Kenya");
         requireModule('ictCredentialAccessLog', 'lib/ict-credentials.php');
         ictRequire($pdo, $user, $config, 'credentials.manage');
         respond(200, ['entries' => ictCredentialAccessLog($pdo, null, 60)]);
+    }
+
+    // ----- ReSoK Virtual Academy: catalogue ------------------------------------------------
+
+    /**
+     * The public catalogue. No auth() call on purpose: a course platform you cannot look at
+     * before signing up is a brochure, and the whole point of the Alison model is that
+     * browsing is free and only progress needs an account.
+     */
+    if ($route === 'academy/courses' && $method === 'GET') {
+        requireModule('academyCourseList', 'lib/academy.php');
+        respond(200, [
+            'courses'    => academyCourseList($pdo, [
+                'q'        => (string)($_GET['q'] ?? ''),
+                'category' => (string)($_GET['category'] ?? ''),
+                'level'    => (string)($_GET['level'] ?? ''),
+            ]),
+            'categories' => academyCategories($pdo),
+            'levels'     => ACADEMY_LEVELS,
+        ]);
+    }
+
+    /**
+     * One course, by slug or id, with its contents page.
+     *
+     * Lesson bodies are not included - academyOutline returns titles and durations only, so
+     * this is safe to serve to anyone. The material itself is what enrolment buys.
+     */
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)$#', $route, $m) && $method === 'GET') {
+        requireModule('academyCourseFind', 'lib/academy.php');
+        $course = academyCourseFind($pdo, $m[1]);
+        if (!$course) respond(404, ['error' => 'No published course at that address.']);
+
+        // A signed-in visitor is told whether they are already enrolled, so the page can say
+        // "continue" rather than offering to enrol them a second time.
+        $enrolment = null;
+        $viewer = authOptional($config);
+        if ($viewer) $enrolment = academyEnrolment($pdo, (int)$viewer['userId'], (int)$course['id']);
+        respond(200, ['course' => $course, 'enrolment' => $enrolment]);
+    }
+
+    // ----- ReSoK Virtual Academy: learning ------------------------------------------------
+
+    if ($route === 'academy/my-courses' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyMyCourses', 'lib/academy.php');
+        respond(200, ['courses' => academyMyCourses($pdo, (int)$user['userId'])]);
+    }
+
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)/enrol$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyEnrol', 'lib/academy.php');
+
+        // Membership is read here rather than trusted from the token: a members-only course
+        // has to check the status as it is now, not as it was when the session started.
+        $stmt = $pdo->prepare('SELECT membership_status FROM member_profiles WHERE user_id = ? LIMIT 1');
+        $stmt->execute([(int)$user['userId']]);
+        $status = $stmt->fetch()['membership_status'] ?? null;
+
+        [$enrolment, $error] = academyEnrol($pdo, (int)$user['userId'], $m[1],
+                                            $status === null ? null : (string)$status);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['enrolment' => $enrolment]);
+    }
+
+    /** A lesson with its material. Refuses anyone who is not enrolled. */
+    if (preg_match('#^academy/lessons/(\d+)$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyLesson', 'lib/academy.php');
+        [$lesson, $error] = academyLesson($pdo, (int)$user['userId'], (int)$m[1]);
+        if ($error) respond(403, ['error' => $error]);
+        respond(200, ['lesson' => $lesson]);
+    }
+
+    if (preg_match('#^academy/lessons/(\d+)/progress$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyRecordProgress', 'lib/academy.php');
+        [$enrolment, $error] = academyRecordProgress($pdo, (int)$user['userId'], (int)$m[1], input());
+        if ($error) respond(403, ['error' => $error]);
+        respond(200, ['enrolment' => $enrolment]);
+    }
+
+    // ----- ReSoK Virtual Academy: authoring ------------------------------------------------
+
+    if ($route === 'academy/admin/courses' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyCourseList', 'lib/academy.php');
+        academyRequireEdit($user);
+        respond(200, [
+            'courses' => academyCourseList($pdo, ['status' => (string)($_GET['status'] ?? ''),
+                                                  'q' => (string)($_GET['q'] ?? '')], true),
+            'summary' => academySummary($pdo),
+            'canPublish' => academyCanPublish($user),
+        ]);
+    }
+
+    if ($route === 'academy/admin/courses' && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyCourseCreate', 'lib/academy.php');
+        academyRequireEdit($user);
+        [$course, $errors] = academyCourseCreate($pdo, input(), (int)$user['userId']);
+        if ($errors) respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.',
+                                   'fields' => $errors]);
+        logAdminAction($pdo, (int)$user['userId'], 'academy_course_created', null,
+                       'Course: ' . $course['title']);
+        respond(201, ['course' => $course]);
+    }
+
+    /** One course including drafts - what the builder opens. */
+    if (preg_match('#^academy/admin/courses/(\d+)$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyCourseFind', 'lib/academy.php');
+        academyRequireEdit($user);
+        $course = academyCourseFind($pdo, $m[1], true);
+        if (!$course) respond(404, ['error' => 'No course with that id.']);
+        respond(200, ['course' => $course]);
+    }
+
+    if (preg_match('#^academy/admin/courses/(\d+)$#', $route, $m)
+        && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireModule('academyCourseUpdate', 'lib/academy.php');
+        academyRequireEdit($user);
+        [$course, $errors] = academyCourseUpdate($pdo, (int)$m[1], input());
+        if ($errors) respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.',
+                                   'fields' => $errors]);
+        respond(200, ['course' => $course]);
+    }
+
+    /**
+     * Publishing is a separate right from authoring, the same way it is for articles: an
+     * author can build a course but not put it in front of the public.
+     */
+    if (preg_match('#^academy/admin/courses/(\d+)/status$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyCoursePublish', 'lib/academy.php');
+        academyRequireEdit($user);
+        if (!academyCanPublish($user)) {
+            respond(403, ['error' => 'You can build courses, but publishing them is an editor\'s decision.']);
+        }
+        [$course, $error] = academyCoursePublish($pdo, (int)$m[1], (string)(input()['status'] ?? ''));
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'academy_course_' . $course['status'], null,
+                       'Course: ' . $course['title']);
+        respond(200, ['course' => $course]);
+    }
+
+    if (preg_match('#^academy/admin/courses/(\d+)/modules$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyModuleSave', 'lib/academy.php');
+        academyRequireEdit($user);
+        $data = input();
+        [$outline, $error] = academyModuleSave($pdo, (int)$m[1], $data,
+                                               isset($data['id']) ? (int)$data['id'] : null);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['modules' => $outline]);
+    }
+
+    if (preg_match('#^academy/admin/modules/(\d+)/lessons$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyLessonSave', 'lib/academy.php');
+        academyRequireEdit($user);
+        $data = input();
+        [$outline, $error] = academyLessonSave($pdo, (int)$m[1], $data,
+                                               isset($data['id']) ? (int)$data['id'] : null);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['modules' => $outline]);
+    }
+
+    if (preg_match('#^academy/admin/(module|lesson)/(\d+)$#', $route, $m) && $method === 'DELETE') {
+        $user = auth($config);
+        requireModule('academyDelete', 'lib/academy.php');
+        academyRequireEdit($user);
+        [$outline, $error] = academyDelete($pdo, $m[1], (int)$m[2]);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['modules' => $outline]);
+    }
+
+    if (preg_match('#^academy/admin/(module|lesson)/reorder$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyReorder', 'lib/academy.php');
+        academyRequireEdit($user);
+        $data = input();
+        [$outline, $error] = academyReorder($pdo, $m[1], (int)($data['parentId'] ?? 0),
+                                            is_array($data['order'] ?? null) ? $data['order'] : []);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['modules' => $outline]);
     }
 
     // ----- ICT: assets --------------------------------------------------------------------

@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -85,6 +85,13 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('ictTicketsSummary')) {
+    function ictTicketsSummary(PDO $pdo): array {
+        return ['open' => 0, 'unassigned' => 0, 'overdue' => 0, 'resolvedThisMonth' => 0,
+                'medianResponseHours' => null, 'medianResolutionHours' => null];
+    }
 }
 
 if (!function_exists('ictLicensesSummary')) {
@@ -1645,6 +1652,130 @@ Respiratory Society of Kenya");
             'failed'    => count($failed),
             'migrations'=> migrateStatus($pdo),
         ]);
+    }
+
+    // ----- ICT: helpdesk ---------------------------------------------------------------------
+
+    /**
+     * Raising a ticket needs no ICT permission at all - anyone signed in can report a
+     * problem. That is the whole point: a helpdesk harder to use than a WhatsApp message
+     * gets a WhatsApp message instead, and then shows an empty queue while the real requests
+     * arrive somewhere nobody can measure.
+     */
+    if ($route === 'ict/tickets' && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictTicketCreate', 'lib/ict-tickets.php');
+
+        // Rate limited on the same machinery as everything else, so a script cannot flood
+        // the queue - but generously, because a bad morning genuinely produces three tickets.
+        throttleCheck($pdo, $config, 'ticket', (string)($user['email'] ?? ''));
+
+        [$ticket, $errors] = ictTicketCreate($pdo, input(), $user);
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? reset($errors), 'fields' => $errors]);
+        }
+        throttleSuccess($pdo, $config, 'ticket', (string)($user['email'] ?? ''));
+        ictAudit($pdo, (int)$user['userId'], 'ticket_raised', 'ticket', (string)$ticket['id'],
+                 $ticket['reference'] . ': ' . $ticket['subject']);
+        respond(201, ['ticket' => $ticket]);
+    }
+
+    /** Who a ticket can be assigned to. Declared before the numeric route below, because
+     *  "assignees" would otherwise be read as a ticket id. */
+    if ($route === 'ict/tickets/assignees' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictTicketsList', 'lib/ict-tickets.php');
+        ictRequire($pdo, $user, $config, 'tickets.manage');
+
+        $rows = $pdo->query("SELECT u.id, u.email FROM users u
+                              WHERE u.role IN ('ict','admin')
+                                 OR u.id IN (SELECT user_id FROM ict_capabilities
+                                              WHERE capability = 'tickets.manage')
+                              ORDER BY u.email")->fetchAll();
+        respond(200, ['assignees' => array_map(fn($r) => [
+            'id' => (int)$r['id'], 'email' => $r['email'],
+        ], $rows)]);
+    }
+
+    /**
+     * The queue for ICT staff, or your own tickets if you are not one. Both are the same
+     * route deliberately - a member should not have to know a different address to see what
+     * they reported.
+     */
+    if ($route === 'ict/tickets' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictTicketsList', 'lib/ict-tickets.php');
+
+        $isStaff = ictCan($pdo, $user, $config, 'tickets.view');
+        $filters = [
+            'status' => (string)($_GET['status'] ?? ''),
+            'search' => trim((string)($_GET['search'] ?? '')),
+        ];
+        if (!$isStaff) {
+            $filters['requester'] = (int)$user['userId'];
+        } elseif (!empty($_GET['mine'])) {
+            $filters['assignee'] = (int)$user['userId'];
+        }
+
+        respond(200, [
+            'tickets'    => ictTicketsList($pdo, $filters),
+            'summary'    => $isStaff ? ictTicketsSummary($pdo) : null,
+            'isStaff'    => $isStaff,
+            'categories' => ICT_TICKET_CATEGORIES,
+            'priorities' => ICT_TICKET_PRIORITIES,
+            'statuses'   => ICT_TICKET_STATUSES,
+        ]);
+    }
+
+    if (preg_match('#^ict/tickets/(\d+)$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictTicketFind', 'lib/ict-tickets.php');
+
+        $isStaff = ictCan($pdo, $user, $config, 'tickets.view');
+        $ticket = ictTicketFind($pdo, (int)$m[1], $isStaff);
+        if (!$ticket) respond(404, ['error' => 'No such ticket.']);
+
+        // Someone who is neither staff nor the person who raised it has no business reading
+        // it - a ticket can describe an account problem or a security incident.
+        if (!$isStaff && $ticket['requesterEmail'] !== null
+            && strcasecmp($ticket['requesterEmail'], (string)$user['email']) !== 0) {
+            respond(403, ['error' => 'That ticket is not yours.']);
+        }
+        respond(200, ['ticket' => $ticket, 'isStaff' => $isStaff]);
+    }
+
+    /**
+     * Working a ticket. Staff may change anything; the requester may only add a comment,
+     * because chasing your own ticket is legitimate and raising its priority is not.
+     */
+    if (preg_match('#^ict/tickets/(\d+)$#', $route, $m) && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireModule('ictTicketUpdate', 'lib/ict-tickets.php');
+
+        $existing = ictTicketFind($pdo, (int)$m[1]);
+        if (!$existing) respond(404, ['error' => 'No such ticket.']);
+
+        $data = input();
+        if (!ictCan($pdo, $user, $config, 'tickets.manage')) {
+            $isOwner = $existing['requesterEmail'] !== null
+                && strcasecmp($existing['requesterEmail'], (string)$user['email']) === 0;
+            if (!$isOwner) {
+                respond(403, ['error' => 'You do not have the ICT permission needed for this.',
+                              'capability' => 'tickets.manage']);
+            }
+            // Everything except a comment is dropped rather than refused, so adding a note
+            // still works and nothing silently takes effect that should not.
+            $data = ['comment' => (string)($data['comment'] ?? '')];
+            if (trim($data['comment']) === '') {
+                respond(400, ['error' => 'Add a comment to update your ticket.']);
+            }
+        }
+
+        [$ticket, $error] = ictTicketUpdate($pdo, (int)$m[1], $data, $user);
+        if ($error) respond(400, ['error' => $error]);
+        ictAudit($pdo, (int)$user['userId'], 'ticket_updated', 'ticket', (string)$ticket['id'],
+                 $ticket['reference'] . ': ' . $ticket['status']);
+        respond(200, ['ticket' => $ticket]);
     }
 
     // ----- ICT: software and licences --------------------------------------------------------

@@ -39,6 +39,9 @@ const THROTTLE_RULES = [
     // while they hunt for the email will legitimately ask for two or three.
     'token-request'  => [6,  20, 3600, 900],
     'token-collect'  => [8,  30, 3600, 900],
+    // Generous: a bad morning genuinely produces three tickets, and a helpdesk that refuses
+    // the third is a helpdesk people stop using.
+    'ticket'         => [20, 60, 3600, 900],
 ];
 const THROTTLE_DEFAULT = [15, 40, 900, 900];
 

@@ -82,6 +82,11 @@ PY
     fi
 
     echo
+    echo "Portal API surface"
+    echo "------------------------------------------------------------"
+    python tools/dev/check_portal_api.py || fail=$((fail + 1))
+
+    echo
     echo "PHPStan"
     echo "------------------------------------------------------------"
     # Invoked through the PHP binary found above rather than vendor/bin/phpstan, whose

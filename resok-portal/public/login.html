@@ -249,7 +249,7 @@
     </section>
   </main>
 
-  <script src="js/portal-state.js?v=20260905-card-photo"></script>
+  <script src="js/portal-state.js?v=20260908-screening"></script>
   <script>
     const form = document.getElementById("loginForm");
     const emailInput = document.getElementById("loginEmail");
@@ -322,8 +322,14 @@
           headers: { "Content-Type": "application/json" },
           // Screening fields. window.ResokPortal is loaded above; the fallback keeps login
           // working if that script ever fails to load, since an empty honeypot passes.
+          // Tests for the FUNCTION, not just the object. A cached or partly-uploaded
+          // portal-state.js still defines window.ResokPortal, so checking the object alone
+          // let an old copy through and login died on a missing method. Screening is a
+          // nice-to-have; signing in is not, so this degrades rather than throws.
           body: JSON.stringify(Object.assign({ email, password },
-            window.ResokPortal ? window.ResokPortal.screeningFields(form) : {}))
+            typeof window.ResokPortal?.screeningFields === "function"
+              ? window.ResokPortal.screeningFields(form)
+              : {}))
         });
 
         let data = {};

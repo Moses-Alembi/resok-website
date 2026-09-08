@@ -296,6 +296,25 @@ function token(array $payload, string $secret, ?int $expiresAt = null): string {
     return $body . '.' . $sig;
 }
 
+/**
+ * Whether this request arrived over a secure connection.
+ *
+ * Checks X-Forwarded-Proto as well as HTTPS, because TLS is terminated at the host's proxy
+ * and Apache frequently never sees HTTPS=on - the force-HTTPS rule in .htaccess and the HSTS
+ * header both had to learn the same thing.
+ *
+ * Only a plain-HTTP request on localhost returns false, and that is the one case where a
+ * Secure cookie is worse than useless: the browser will not store it, so the session is lost
+ * the moment the page makes its first API call.
+ */
+function requestIsSecure(): bool
+{
+    if (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') return true;
+    if (strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') return true;
+    if ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443) return true;
+    return false;
+}
+
 // httpOnly cookie is the primary session for browser clients (see issueAuthCookie());
 // the Authorization header stays supported as a fallback for any non-browser API caller.
 // SameSite=Lax + HttpOnly + Secure is treated as sufficient CSRF protection here — every
@@ -308,7 +327,7 @@ function issueAuthCookie(string $token): void {
     setcookie('resok_token', $token, [
         'expires' => time() + RESOK_SESSION_IDLE_TIMEOUT,
         'path' => '/',
-        'secure' => true,
+        'secure' => requestIsSecure(),
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
@@ -318,7 +337,7 @@ function clearAuthCookie(): void {
     setcookie('resok_token', '', [
         'expires' => time() - 3600,
         'path' => '/',
-        'secure' => true,
+        'secure' => requestIsSecure(),
         'httponly' => true,
         'samesite' => 'Lax'
     ]);

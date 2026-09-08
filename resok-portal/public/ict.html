@@ -134,6 +134,9 @@
   <aside class="sidebar" id="sidebar">
     <div class="side-group">Operations</div>
     <button class="side-link active" data-view="overview" type="button"><i class="fas fa-gauge-high"></i> Overview</button>
+    <button class="side-link" data-view="assets" data-cap="assets.view" type="button">
+      <i class="fas fa-laptop"></i> Assets
+    </button>
     <button class="side-link" data-view="infrastructure" data-cap="infrastructure.view" type="button">
       <i class="fas fa-server"></i> Infrastructure <span class="dot" id="infraDot"></span>
     </button>
@@ -143,7 +146,6 @@
     <button class="side-link" data-view="staff" data-super="1" type="button"><i class="fas fa-user-shield"></i> Staff &amp; access</button>
 
     <div class="side-group">Later phases</div>
-    <div class="side-soon"><i class="fas fa-laptop"></i> Assets</div>
     <div class="side-soon"><i class="fas fa-key"></i> Credentials</div>
     <div class="side-soon"><i class="fas fa-life-ring"></i> Helpdesk</div>
     <div class="side-soon"><i class="fas fa-list-check"></i> Tasks</div>
@@ -155,6 +157,142 @@
       <h1>ICT Overview</h1>
       <p class="lede">The state of the organisation's digital infrastructure, drawn live from the records below.</p>
       <div id="overviewBody"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i>Loading&hellip;</div></div>
+    </section>
+
+    <!-- ---------------- Assets ---------------- -->
+    <section class="view" id="view-assets">
+      <h1>Assets</h1>
+      <p class="lede">
+        Every piece of ICT equipment, who is holding it, and what has been done to it.
+        Assignment is kept as history, so a returned laptop still shows who had it and what
+        condition it came back in.
+      </p>
+      <div id="assetNotice" class="notice"></div>
+
+      <div class="tiles" id="assetTiles"></div>
+
+      <div class="panel">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <input class="in" id="assetSearch" style="flex:1;min-width:190px"
+                 placeholder="Tag, serial, model or holder" autocomplete="off" />
+          <select class="in" id="assetStatusFilter" style="width:auto;min-width:130px">
+            <option value="">Any status</option>
+            <option value="available">Available</option>
+            <option value="assigned">Assigned</option>
+            <option value="maintenance">Under maintenance</option>
+            <option value="damaged">Damaged</option>
+            <option value="lost">Lost</option>
+            <option value="retired">Retired</option>
+            <option value="disposed">Disposed</option>
+          </select>
+          <select class="in" id="assetCategoryFilter" style="width:auto;min-width:130px">
+            <option value="">Any category</option>
+          </select>
+          <button class="btn btn-primary" id="assetNewBtn" type="button"><i class="fas fa-plus"></i> Add asset</button>
+        </div>
+        <div class="scroll"><div id="assetList"></div></div>
+      </div>
+
+      <!-- Add / edit -->
+      <div class="panel" id="assetFormPanel" hidden>
+        <h2 id="assetFormTitle">Add an asset</h2>
+        <form id="assetForm" autocomplete="off">
+          <input type="hidden" id="aId" />
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="aCategory">Category</label>
+              <select class="in" id="aCategory"></select>
+            </div>
+            <div>
+              <label class="lbl" for="aName">Name</label>
+              <input class="in" id="aName" maxlength="160" placeholder="Dell Latitude 5420" required />
+            </div>
+            <div>
+              <label class="lbl" for="aTag">Asset tag</label>
+              <input class="in" id="aTag" maxlength="40" placeholder="Issued automatically" />
+              <div class="muted" style="margin-top:4px">Leave blank to issue the next one.</div>
+            </div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="aManufacturer">Manufacturer</label><input class="in" id="aManufacturer" maxlength="120" /></div>
+            <div><label class="lbl" for="aModel">Model</label><input class="in" id="aModel" maxlength="120" /></div>
+            <div><label class="lbl" for="aSerial">Serial number</label><input class="in" id="aSerial" maxlength="120" /></div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="aPurchaseDate">Purchased</label><input class="in" id="aPurchaseDate" type="date" /></div>
+            <div><label class="lbl" for="aCost">Cost (KES)</label><input class="in" id="aCost" type="number" min="0" step="0.01" /></div>
+            <div><label class="lbl" for="aWarranty">Warranty expires</label><input class="in" id="aWarranty" type="date" /></div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="aSupplier">Supplier</label><input class="in" id="aSupplier" maxlength="160" /></div>
+            <div>
+              <label class="lbl" for="aCondition">Condition</label>
+              <select class="in" id="aCondition">
+                <option value="new">New</option><option value="good" selected>Good</option>
+                <option value="fair">Fair</option><option value="poor">Poor</option>
+                <option value="damaged">Damaged</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="aStatus">Status</label>
+              <select class="in" id="aStatus">
+                <option value="available">Available</option><option value="assigned">Assigned</option>
+                <option value="maintenance">Under maintenance</option><option value="damaged">Damaged</option>
+                <option value="lost">Lost</option><option value="retired">Retired</option>
+                <option value="disposed">Disposed</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid2">
+            <div><label class="lbl" for="aLocation">Location</label><input class="in" id="aLocation" maxlength="160" /></div>
+            <div><label class="lbl" for="aDepartment">Department</label><input class="in" id="aDepartment" maxlength="120" /></div>
+          </div>
+          <label class="lbl" for="aSpecs">Specifications</label>
+          <textarea class="in" id="aSpecs" rows="2"></textarea>
+          <label class="lbl" for="aNotes">Notes</label>
+          <textarea class="in" id="aNotes" rows="2"></textarea>
+          <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" id="assetSaveBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+            <button class="btn btn-secondary" type="button" id="assetCancelBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Detail -->
+      <div class="panel" id="assetDetailPanel" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div>
+            <h2 id="adTitle" style="margin-bottom:2px"></h2>
+            <p class="muted" id="adTag"></p>
+          </div>
+          <button class="btn btn-secondary" id="adCloseBtn" type="button" style="font-size:12px">Close</button>
+        </div>
+        <div id="adNotice" class="notice" style="margin-top:12px"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 190px;gap:22px;margin-top:16px" id="adTop">
+          <div id="adFacts"></div>
+          <div style="text-align:center">
+            <!-- The QR encodes the tag only, never a URL. A code that resolves to a public
+                 page would turn a sticker on a laptop into a way to read the inventory. -->
+            <div id="adQr" style="display:inline-block;background:#fff;padding:10px;border:1px solid var(--line);border-radius:8px"></div>
+            <div class="muted" style="margin-top:6px" id="adQrTag"></div>
+            <button class="btn btn-secondary" id="adPrintBtn" type="button" style="margin-top:8px;font-size:12px">
+              <i class="fas fa-print"></i> Print label
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:9px;margin-top:18px;flex-wrap:wrap" id="adActions"></div>
+
+        <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line)">
+          <h3 style="font-size:15px;margin-bottom:10px">Assignment history</h3>
+          <div id="adAssignments"></div>
+        </div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line)">
+          <h3 style="font-size:15px;margin-bottom:10px">Maintenance history</h3>
+          <div id="adMaintenance"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ---------------- Infrastructure ---------------- -->
@@ -283,6 +421,7 @@
   </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="js/portal-state.js?v=20260908-screening"></script>
 <script>
 /**
@@ -328,6 +467,7 @@
     el('sidebar').classList.remove('open');
     // The view is in the URL so a link can point straight at one, and a reload stays put.
     if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
+    if (view === 'assets') loadAssets();
     if (view === 'infrastructure') loadInfrastructure();
     if (view === 'activity') loadActivity();
     if (view === 'staff') loadStaff();
@@ -415,6 +555,481 @@
       mount.appendChild(empty);
     }
   }
+
+
+  /* ---------------- assets ---------------- */
+  let assetCategories = {};
+  let currentAsset = null;
+
+  const ASSET_STATUS_TONE = {
+    available: 's-ok', assigned: 's-notice', maintenance: 's-warning',
+    damaged: 's-critical', lost: 's-critical', retired: 's-unknown', disposed: 's-unknown'
+  };
+  const CONDITIONS = ['new', 'good', 'fair', 'poor', 'damaged'];
+
+  function assetNotice(message, kind) {
+    const box = el('assetNotice');
+    box.textContent = message || '';
+    box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+  }
+  function adNotice(message, kind) {
+    const box = el('adNotice');
+    box.textContent = message || '';
+    box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+  }
+  const money = (n, c) => (n === null || n === undefined) ? '—' : (c || 'KES') + ' ' + Number(n).toLocaleString();
+
+  const ASSET_FIELDS = {
+    aCategory: 'category', aName: 'name', aManufacturer: 'manufacturer', aModel: 'model',
+    aSerial: 'serialNumber', aPurchaseDate: 'purchaseDate', aCost: 'purchaseCost',
+    aWarranty: 'warrantyExpiresOn', aSupplier: 'supplier', aCondition: 'condition',
+    aStatus: 'status', aLocation: 'location', aDepartment: 'department',
+    aSpecs: 'specifications', aNotes: 'notes'
+  };
+
+  function assetResetForm() {
+    el('assetForm').reset();
+    el('aId').value = '';
+    el('assetFormTitle').textContent = 'Add an asset';
+    el('assetFormPanel').hidden = true;
+  }
+
+  function assetEdit(asset) {
+    Object.entries(ASSET_FIELDS).forEach(([id, key]) => {
+      const v = asset[key];
+      el(id).value = (v === null || v === undefined) ? '' : v;
+    });
+    el('aId').value = asset.id;
+    el('aTag').value = asset.assetTag;
+    el('assetFormTitle').textContent = 'Edit ' + asset.assetTag;
+    el('assetFormPanel').hidden = false;
+    el('assetFormPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderAssetTiles(s) {
+    const mount = el('assetTiles');
+    mount.textContent = '';
+    const by = s.byStatus || {};
+    mount.appendChild(tile(s.total || 0, 'Assets'));
+    mount.appendChild(tile(by.available || 0, 'Available', 'ok'));
+    mount.appendChild(tile(by.assigned || 0, 'Assigned'));
+    mount.appendChild(tile((by.maintenance || 0) + (by.damaged || 0), 'Needs attention',
+      ((by.maintenance || 0) + (by.damaged || 0)) > 0 ? 'warn' : 'ok'));
+    mount.appendChild(tile(s.warrantyExpiring || 0, 'Warranty ending', (s.warrantyExpiring || 0) > 0 ? 'warn' : 'ok'));
+    const value = make('div', 'tile');
+    value.appendChild(make('div', 'n', 'KES ' + Math.round(s.value || 0).toLocaleString()));
+    value.appendChild(make('div', 'l', 'Purchase value'));
+    mount.appendChild(value);
+  }
+
+  function renderAssets(assets) {
+    const mount = el('assetList');
+    mount.textContent = '';
+    if (!assets.length) {
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'fas fa-laptop'));
+      empty.appendChild(make('div', null, 'No assets match. Add one, or clear the filters.'));
+      mount.appendChild(empty);
+      return;
+    }
+    const table = make('table');
+    const head = make('thead'); const hr = make('tr');
+    ['Tag', 'Asset', 'Status', 'Held by', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    head.appendChild(hr); table.appendChild(head);
+
+    const body = make('tbody');
+    assets.forEach((a) => {
+      const tr = make('tr');
+      const tag = make('td');
+      const code = make('code', null, a.assetTag);
+      code.style.cssText = 'font-size:12.5px;background:var(--bg);padding:3px 7px;border-radius:5px';
+      tag.appendChild(code);
+      tr.appendChild(tag);
+
+      const name = make('td');
+      const t = make('div', null, a.name); t.style.fontWeight = '600';
+      name.appendChild(t);
+      const sub = [a.manufacturer, a.model, a.category].filter(Boolean).join(' · ');
+      if (sub) name.appendChild(make('div', 'muted', sub));
+      tr.appendChild(name);
+
+      const st = make('td');
+      st.appendChild(make('span', 'status ' + (ASSET_STATUS_TONE[a.status] || 's-unknown'), a.status));
+      if (a.warranty && ['expired', 'critical', 'warning'].includes(a.warranty.band)) {
+        const w = make('div', 'muted', 'warranty ' + a.warranty.label.toLowerCase());
+        w.style.marginTop = '4px';
+        st.appendChild(w);
+      }
+      tr.appendChild(st);
+
+      const holder = make('td');
+      if (a.holder) {
+        holder.appendChild(make('div', null, a.holder.name));
+        if (a.holder.department) holder.appendChild(make('div', 'muted', a.holder.department));
+      } else {
+        holder.appendChild(make('span', 'muted', '—'));
+      }
+      tr.appendChild(holder);
+
+      const act = make('td');
+      const view = make('button', 'btn btn-secondary', 'Open');
+      view.type = 'button'; view.style.fontSize = '12px';
+      view.addEventListener('click', () => openAsset(a.id));
+      act.appendChild(view);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    mount.appendChild(table);
+  }
+
+  async function loadAssets() {
+    const params = new URLSearchParams();
+    const search = el('assetSearch').value.trim();
+    if (search) params.set('search', search);
+    if (el('assetStatusFilter').value) params.set('status', el('assetStatusFilter').value);
+    if (el('assetCategoryFilter').value) params.set('category', el('assetCategoryFilter').value);
+    const query = params.toString();
+
+    try {
+      const data = await api('/api/ict/assets' + (query ? '&' + query : ''));
+      assetCategories = data.categories || {};
+      if (!el('aCategory').options.length) {
+        Object.keys(assetCategories).forEach((c) => {
+          [el('aCategory'), el('assetCategoryFilter')].forEach((sel) => {
+            const o = document.createElement('option');
+            o.value = c; o.textContent = c.replace(/_/g, ' ');
+            sel.appendChild(o.cloneNode(true));
+          });
+        });
+      }
+      renderAssetTiles(data.summary || {});
+      renderAssets(data.assets || []);
+    } catch (error) {
+      el('assetList').textContent = '';
+      el('assetList').appendChild(make('div', 'empty', error.message || 'Could not load assets.'));
+    }
+  }
+
+  /* ---------------- detail ---------------- */
+  function fact(label, value) {
+    const row = make('div');
+    row.style.cssText = 'display:flex;gap:10px;padding:6px 0;font-size:13.5px;border-bottom:1px solid var(--line)';
+    const l = make('span', 'muted', label);
+    l.style.cssText = 'min-width:132px;flex:0 0 auto';
+    row.appendChild(l);
+    row.appendChild(make('span', null, value === null || value === undefined || value === '' ? '—' : String(value)));
+    return row;
+  }
+
+  function renderAssetDetail(a) {
+    currentAsset = a;
+    el('adTitle').textContent = a.name;
+    el('adTag').textContent = a.assetTag + '  ·  ' + a.category.replace(/_/g, ' ');
+    adNotice('');
+
+    const facts = el('adFacts');
+    facts.textContent = '';
+    facts.appendChild(fact('Status', a.status));
+    facts.appendChild(fact('Condition', a.condition));
+    facts.appendChild(fact('Manufacturer', [a.manufacturer, a.model].filter(Boolean).join(' ')));
+    facts.appendChild(fact('Serial', a.serialNumber));
+    facts.appendChild(fact('Purchased', a.purchaseDate ? fmtDate(a.purchaseDate) : null));
+    facts.appendChild(fact('Cost', a.purchaseCost === null ? null : money(a.purchaseCost, a.currency)));
+    facts.appendChild(fact('Supplier', a.supplier));
+    facts.appendChild(fact('Warranty', a.warrantyExpiresOn ? fmtDate(a.warrantyExpiresOn) + (a.warranty ? '  (' + a.warranty.label + ')' : '') : null));
+    facts.appendChild(fact('Location', [a.location, a.department].filter(Boolean).join(' · ')));
+    facts.appendChild(fact('Held by', a.holder ? a.holder.name + (a.holder.department ? ' · ' + a.holder.department : '') : 'Nobody'));
+    if (a.specifications) facts.appendChild(fact('Specification', a.specifications));
+    if (a.notes) facts.appendChild(fact('Notes', a.notes));
+
+    // The QR carries the tag alone. Scanning opens the portal, which then asks who you are.
+    const qr = el('adQr');
+    qr.textContent = '';
+    el('adQrTag').textContent = a.assetTag;
+    if (window.QRCode) {
+      new window.QRCode(qr, { text: a.assetTag, width: 150, height: 150, correctLevel: window.QRCode.CorrectLevel.M });
+    } else {
+      qr.appendChild(make('div', 'muted', 'QR library unavailable'));
+    }
+
+    const actions = el('adActions');
+    actions.textContent = '';
+    const button = (label, icon, cls, fn) => {
+      const b = make('button', 'btn ' + cls);
+      b.type = 'button';
+      const i = make('i', 'fas ' + icon); i.setAttribute('aria-hidden', 'true');
+      b.appendChild(i); b.appendChild(make('span', null, ' ' + label));
+      b.addEventListener('click', fn);
+      actions.appendChild(b);
+      return b;
+    };
+    if (can('assets.manage')) button('Edit', 'fa-pen', 'btn-secondary', () => assetEdit(a));
+    if (can('assets.assign')) {
+      if (a.holder) button('Record return', 'fa-rotate-left', 'btn-primary', () => showReturnForm(a));
+      else if (!['retired', 'disposed', 'lost'].includes(a.status)) {
+        button('Assign', 'fa-user-check', 'btn-primary', () => showAssignForm(a));
+      }
+    }
+    if (can('maintenance.manage')) button('Record maintenance', 'fa-screwdriver-wrench', 'btn-secondary', () => showMaintenanceForm(a));
+
+    renderHistory(a);
+    el('assetDetailPanel').hidden = false;
+    el('assetDetailPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderHistory(a) {
+    const am = el('adAssignments');
+    am.textContent = '';
+    if (!a.assignments.length) am.appendChild(make('p', 'muted', 'Never assigned.'));
+    a.assignments.forEach((h) => {
+      const row = make('div');
+      row.style.cssText = 'padding:9px 0;border-bottom:1px solid var(--line);font-size:13px';
+      const line = make('div');
+      const who = make('strong', null, h.name);
+      line.appendChild(who);
+      line.appendChild(document.createTextNode(
+        '  ' + fmtDate(h.assignedAt) + (h.returnedAt ? '  →  ' + fmtDate(h.returnedAt) : '  →  still out')));
+      row.appendChild(line);
+      const meta = [h.department, 'out: ' + h.conditionOut, h.conditionIn ? 'back: ' + h.conditionIn : null]
+        .filter(Boolean).join('  ·  ');
+      row.appendChild(make('div', 'muted', meta));
+      if (h.notes) row.appendChild(make('div', 'muted', h.notes));
+      if (h.returnNotes) row.appendChild(make('div', 'muted', 'On return: ' + h.returnNotes));
+      am.appendChild(row);
+    });
+
+    const mm = el('adMaintenance');
+    mm.textContent = '';
+    if (!a.maintenance.length) mm.appendChild(make('p', 'muted', 'No maintenance recorded.'));
+    a.maintenance.forEach((m) => {
+      const row = make('div');
+      row.style.cssText = 'padding:9px 0;border-bottom:1px solid var(--line);font-size:13px';
+      const head = make('div');
+      head.appendChild(make('strong', null, m.kind));
+      head.appendChild(document.createTextNode('  ' + fmtDate(m.performedOn) + '  ·  ' + m.result.replace(/_/g, ' ')));
+      row.appendChild(head);
+      if (m.problem) row.appendChild(make('div', null, m.problem));
+      const meta = [m.workDone, m.technician, m.vendor, m.cost !== null ? money(m.cost, m.currency) : null,
+                    m.nextDueOn ? 'next due ' + fmtDate(m.nextDueOn) : null].filter(Boolean).join('  ·  ');
+      if (meta) row.appendChild(make('div', 'muted', meta));
+      mm.appendChild(row);
+    });
+  }
+
+  async function openAsset(id) {
+    try {
+      const data = await api('/api/ict/assets/' + id);
+      renderAssetDetail(data.asset);
+    } catch (error) {
+      assetNotice(error.message || 'Could not open that asset.', 'error');
+    }
+  }
+
+  /* ---------------- inline action forms ---------------- */
+  function actionForm(title, fields, submitLabel, onSubmit) {
+    const wrap = el('adActions');
+    let form = document.getElementById('adActionForm');
+    if (form) form.remove();
+    form = make('form');
+    form.id = 'adActionForm';
+    form.style.cssText = 'width:100%;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)';
+    form.appendChild(make('h3', null, title));
+    form.querySelector('h3').style.cssText = 'font-size:15px;margin-bottom:8px';
+
+    const grid = make('div', 'grid3');
+    fields.forEach((f) => {
+      const cell = make('div');
+      cell.appendChild(make('label', 'lbl', f.label));
+      let input;
+      if (f.options) {
+        input = document.createElement('select');
+        f.options.forEach((o) => {
+          const opt = document.createElement('option');
+          opt.value = o; opt.textContent = o;
+          if (o === f.value) opt.selected = true;
+          input.appendChild(opt);
+        });
+      } else {
+        input = document.createElement('input');
+        input.type = f.type || 'text';
+        if (f.value) input.value = f.value;
+        if (f.placeholder) input.placeholder = f.placeholder;
+      }
+      input.className = 'in';
+      input.id = f.id;
+      cell.appendChild(input);
+      grid.appendChild(cell);
+    });
+    form.appendChild(grid);
+
+    const notes = document.createElement('textarea');
+    notes.className = 'in'; notes.id = 'afNotes'; notes.rows = 2;
+    notes.placeholder = 'Notes';
+    notes.style.marginTop = '12px';
+    form.appendChild(notes);
+
+    const row = make('div');
+    row.style.cssText = 'display:flex;gap:9px;margin-top:12px';
+    const go = make('button', 'btn btn-primary', submitLabel);
+    go.type = 'submit';
+    const cancel = make('button', 'btn btn-secondary', 'Cancel');
+    cancel.type = 'button';
+    cancel.addEventListener('click', () => form.remove());
+    row.appendChild(go); row.appendChild(cancel);
+    form.appendChild(row);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      go.disabled = true;
+      await onSubmit();
+      go.disabled = false;
+    });
+    wrap.appendChild(form);
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function showAssignForm(a) {
+    actionForm('Assign ' + a.assetTag, [
+      { id: 'afName', label: 'Received by', placeholder: 'Full name' },
+      { id: 'afEmail', label: 'Email', type: 'email', placeholder: 'Optional' },
+      { id: 'afDept', label: 'Department' },
+      { id: 'afCondition', label: 'Condition when issued', options: CONDITIONS, value: a.condition }
+    ], 'Assign', async () => {
+      try {
+        const data = await api('/api/ict/assets/' + a.id + '/assign', {
+          method: 'POST',
+          body: JSON.stringify({
+            holderName: el('afName').value.trim(),
+            holderEmail: el('afEmail').value.trim(),
+            department: el('afDept').value.trim(),
+            conditionOut: el('afCondition').value,
+            notes: el('afNotes').value.trim()
+          })
+        });
+        renderAssetDetail(data.asset);
+        adNotice('Assigned to ' + data.asset.holder.name + '.', 'success');
+        loadAssets();
+      } catch (error) {
+        adNotice(error.message || 'Could not assign.', 'error');
+      }
+    });
+  }
+
+  function showReturnForm(a) {
+    actionForm('Return ' + a.assetTag + ' from ' + a.holder.name, [
+      { id: 'afCondition', label: 'Condition on return', options: CONDITIONS, value: a.condition }
+    ], 'Record return', async () => {
+      try {
+        const data = await api('/api/ict/assets/' + a.id + '/return', {
+          method: 'POST',
+          body: JSON.stringify({ conditionIn: el('afCondition').value, notes: el('afNotes').value.trim() })
+        });
+        renderAssetDetail(data.asset);
+        adNotice(data.asset.status === 'maintenance'
+          ? 'Returned. Sent to maintenance rather than back on the shelf, because of its condition.'
+          : 'Returned and available again.', 'success');
+        loadAssets();
+      } catch (error) {
+        adNotice(error.message || 'Could not record the return.', 'error');
+      }
+    });
+  }
+
+  function showMaintenanceForm(a) {
+    const today = new Date().toISOString().slice(0, 10);
+    actionForm('Record maintenance on ' + a.assetTag, [
+      { id: 'afDate', label: 'Date', type: 'date', value: today },
+      { id: 'afKind', label: 'Type', options: ['preventive', 'repair', 'upgrade', 'inspection', 'decommission'], value: 'repair' },
+      { id: 'afResult', label: 'Result', options: ['resolved', 'unresolved', 'replaced', 'written_off'], value: 'resolved' },
+      { id: 'afProblem', label: 'Problem reported' },
+      { id: 'afWork', label: 'Work done' },
+      { id: 'afTech', label: 'Technician or vendor' },
+      { id: 'afCost', label: 'Cost (KES)', type: 'number' },
+      { id: 'afNext', label: 'Next due', type: 'date' }
+    ], 'Record', async () => {
+      try {
+        const data = await api('/api/ict/assets/' + a.id + '/maintenance', {
+          method: 'POST',
+          body: JSON.stringify({
+            performedOn: el('afDate').value, kind: el('afKind').value, result: el('afResult').value,
+            problem: el('afProblem').value.trim(), workDone: el('afWork').value.trim(),
+            technician: el('afTech').value.trim(), cost: el('afCost').value,
+            nextDueOn: el('afNext').value, notes: el('afNotes').value.trim()
+          })
+        });
+        renderAssetDetail(data.asset);
+        adNotice('Maintenance recorded.', 'success');
+        loadAssets();
+      } catch (error) {
+        adNotice(error.message || 'Could not record maintenance.', 'error');
+      }
+    });
+  }
+
+  /* ---------------- label printing ---------------- */
+  el('adPrintBtn').addEventListener('click', () => {
+    if (!currentAsset) return;
+    const img = el('adQr').querySelector('img, canvas');
+    if (!img) { adNotice('The QR code is not ready yet.', 'error'); return; }
+    const src = img.tagName === 'IMG' ? img.src : img.toDataURL();
+
+    // A print window rather than printing the page: an asset label is a sticker, and the
+    // rest of the screen is not part of it.
+    const w = window.open('', '_blank', 'width=420,height=520');
+    if (!w) { adNotice('Allow pop-ups to print the label.', 'error'); return; }
+    const doc = w.document;
+    doc.title = currentAsset.assetTag;
+    const style = doc.createElement('style');
+    style.textContent = 'body{font-family:Poppins,Arial,sans-serif;text-align:center;padding:24px;margin:0}'
+      + 'img{width:190px;height:190px}h1{font-size:17px;margin:12px 0 2px;letter-spacing:.04em}'
+      + 'p{margin:0;color:#555;font-size:13px}@media print{@page{margin:8mm}}';
+    doc.head.appendChild(style);
+    const image = doc.createElement('img'); image.src = src; doc.body.appendChild(image);
+    const tag = doc.createElement('h1'); tag.textContent = currentAsset.assetTag; doc.body.appendChild(tag);
+    const name = doc.createElement('p'); name.textContent = currentAsset.name; doc.body.appendChild(name);
+    const org = doc.createElement('p'); org.textContent = 'Respiratory Society of Kenya'; doc.body.appendChild(org);
+    w.setTimeout(() => w.print(), 250);
+  });
+
+  el('adCloseBtn').addEventListener('click', () => { el('assetDetailPanel').hidden = true; currentAsset = null; });
+  el('assetNewBtn').addEventListener('click', () => { assetResetForm(); el('assetFormPanel').hidden = false; });
+  el('assetCancelBtn').addEventListener('click', assetResetForm);
+
+  el('assetForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const id = el('aId').value;
+    const payload = {};
+    Object.entries(ASSET_FIELDS).forEach(([inputId, key]) => {
+      const raw = el(inputId).value.trim();
+      payload[key] = raw === '' ? null : raw;
+    });
+    if (!id && el('aTag').value.trim()) payload.assetTag = el('aTag').value.trim();
+
+    const button = el('assetSaveBtn');
+    button.disabled = true;
+    try {
+      const data = id
+        ? await api('/api/ict/assets/' + id, { method: 'PATCH', body: JSON.stringify(payload) })
+        : await api('/api/ict/assets', { method: 'POST', body: JSON.stringify(payload) });
+      assetNotice(id ? 'Asset updated.' : 'Added as ' + data.asset.assetTag + '.', 'success');
+      assetResetForm();
+      await loadAssets();
+      if (id) renderAssetDetail(data.asset);
+    } catch (error) {
+      assetNotice(error.message || 'Could not save.', 'error');
+    }
+    button.disabled = false;
+  });
+
+  // Debounced so typing a serial number does not fire a request per keystroke.
+  let assetSearchTimer = null;
+  el('assetSearch').addEventListener('input', () => {
+    clearTimeout(assetSearchTimer);
+    assetSearchTimer = setTimeout(loadAssets, 300);
+  });
+  el('assetStatusFilter').addEventListener('change', loadAssets);
+  el('assetCategoryFilter').addEventListener('change', loadAssets);
 
   /* ---------------- infrastructure ---------------- */
   function infraNotice(message, kind) {

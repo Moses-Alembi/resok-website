@@ -94,6 +94,32 @@
       <button class="btn" id="migrate"><i class="fas fa-lock"></i> Encrypt existing records</button>
     </section>
 
+    <section class="panel" id="schemaPanel" hidden>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div>
+          <h2 style="font-size:18px">Database schema</h2>
+          <p class="sub" style="margin:4px 0 0">
+            Which schema files have been applied to this database. Applying them here replaces
+            importing each one by hand in phpMyAdmin &mdash; the step most likely to be skipped,
+            and the one whose absence nothing on the site announces.
+          </p>
+        </div>
+        <button class="btn btn-secondary" id="refreshSchemaBtn" type="button" style="font-size:12px">
+          <i class="fas fa-rotate"></i> Refresh
+        </button>
+      </div>
+      <div id="schemaNotice" class="notice" style="margin-top:14px"></div>
+      <div id="schemaList" style="margin-top:8px"></div>
+      <button class="btn btn-primary" id="applyAllBtn" type="button" style="margin-top:16px">
+        <i class="fas fa-database"></i> Apply pending files
+      </button>
+      <p class="sub" style="margin-top:10px;font-size:12.5px">
+        Safe to run more than once &mdash; changes already in place are skipped, not repeated.
+        Sample-data files are listed but never included in &ldquo;apply pending&rdquo;, since
+        re-running one can overwrite records edited by hand.
+      </p>
+    </section>
+
     <section class="panel" id="activityPanel" hidden>
       <h2 style="font-size:18px">Activity</h2>
       <p class="sub">What has actually been attempted against the site, from the security log.</p>
@@ -273,6 +299,118 @@
     el("refresh").addEventListener("click", load);
     document.addEventListener("DOMContentLoaded", load);
     if (document.readyState !== "loading") load();
+
+    /* ----- Database schema ---------------------------------------------------------------
+     *
+     * Applying schema files by hand in phpMyAdmin was the step most likely to be skipped,
+     * and skipping it did not announce itself: each module quietly creates its own tables at
+     * runtime if the database user holds CREATE, and quietly does without if it does not.
+     * This shows what has actually been applied.
+     */
+    const SCHEMA_STATE = {
+      applied: ['#e7f6ec', '#12703a', 'applied'],
+      pending: ['#fdf2e6', '#8a5a12', 'not applied'],
+      changed: ['#eef3fb', '#1c4f9c', 'file changed']
+    };
+
+    function schemaNotice(message, kind) {
+      const box = el('schemaNotice');
+      box.textContent = message || '';
+      box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+    }
+
+    function renderSchema(migrations) {
+      const mount = el('schemaList');
+      mount.textContent = '';
+      let pending = 0;
+
+      migrations.forEach((m) => {
+        if (m.status !== 'applied' && !m.isSeed) pending++;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap';
+
+        const name = document.createElement('div');
+        name.style.cssText = 'flex:1;min-width:210px;font-family:ui-monospace,Menlo,monospace;font-size:13px';
+        name.textContent = m.file;
+        if (m.isSeed) {
+          const tag = document.createElement('span');
+          tag.style.cssText = 'margin-left:8px;font-family:inherit;font-size:11px;color:var(--muted)';
+          tag.textContent = '(sample data)';
+          name.appendChild(tag);
+        }
+        row.appendChild(name);
+
+        const count = document.createElement('span');
+        count.style.cssText = 'font-size:12px;color:var(--muted);white-space:nowrap';
+        count.textContent = m.statements + ' statement' + (m.statements === 1 ? '' : 's');
+        row.appendChild(count);
+
+        const [bg, fg, label] = SCHEMA_STATE[m.status] || SCHEMA_STATE.pending;
+        const pill = document.createElement('span');
+        pill.style.cssText = `background:${bg};color:${fg};border-radius:99px;padding:4px 11px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap`;
+        pill.textContent = label;
+        row.appendChild(pill);
+
+        const run = document.createElement('button');
+        run.className = 'btn btn-secondary';
+        run.style.fontSize = '12px';
+        run.type = 'button';
+        run.textContent = m.status === 'applied' ? 'Re-run' : 'Apply';
+        run.addEventListener('click', () => applySchema(m.file, run));
+        row.appendChild(run);
+
+        mount.appendChild(row);
+      });
+
+      const button = el('applyAllBtn');
+      button.disabled = pending === 0;
+      button.textContent = pending === 0
+        ? 'Everything is applied'
+        : `Apply ${pending} pending file${pending === 1 ? '' : 's'}`;
+    }
+
+    async function applySchema(file, button) {
+      if (button) button.disabled = true;
+      schemaNotice('');
+      try {
+        const data = await window.ResokPortal.api('/api/admin/migrations', {
+          method: 'POST',
+          body: JSON.stringify(file ? { file } : {})
+        });
+        const ran = data.results.reduce((n, r) => n + r.run, 0);
+        const skipped = data.results.reduce((n, r) => n + r.skipped, 0);
+        const problems = data.results.filter((r) => r.errors.length);
+
+        if (problems.length) {
+          // Named individually. "Something went wrong" on a schema change is useless - the
+          // whole point is knowing which statement did not land.
+          schemaNotice(problems.map((p) => p.file + ': ' + p.errors[0]).join(' | '), 'error');
+        } else {
+          schemaNotice(
+            `${data.applied} file(s) applied. ${ran} statement(s) run, ${skipped} already in place.`,
+            'success');
+        }
+        renderSchema(data.migrations || []);
+      } catch (error) {
+        schemaNotice(error.message || 'Could not apply the schema.', 'error');
+      }
+      if (button) button.disabled = false;
+    }
+
+    async function loadSchema() {
+      try {
+        const data = await window.ResokPortal.api('/api/admin/migrations');
+        renderSchema(data.migrations || []);
+        el('schemaPanel').hidden = false;
+      } catch (error) {
+        // Not a super admin, or the module is not deployed. The panel simply stays hidden.
+      }
+    }
+
+    el('applyAllBtn').addEventListener('click', () => applySchema(null, el('applyAllBtn')));
+    el('refreshSchemaBtn').addEventListener('click', loadSchema);
+    loadSchema();
+
   </script>
 </body>
 </html>

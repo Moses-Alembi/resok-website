@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -1580,6 +1580,52 @@ Respiratory Society of Kenya");
      *
      * Returns upcoming by default; ?include=past adds the finished ones for an archive view.
      */
+    // ----- Database schema ----------------------------------------------------------------
+
+    /**
+     * What has been applied and what has not. Super administrator only: this reveals the
+     * shape of the database, and it is the screen that can change it.
+     */
+    if ($route === 'admin/migrations' && $method === 'GET') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        requireModule('migrateStatus', 'lib/migrate.php');
+        respond(200, ['migrations' => migrateStatus($pdo)]);
+    }
+
+    /**
+     * Applies one file by name, or every pending schema file when none is named.
+     *
+     * The filename is checked against the directory listing rather than trusted, so this
+     * cannot be pointed at anything that is not already one of these files. Nothing about
+     * the SQL itself comes from the request.
+     */
+    if ($route === 'admin/migrations' && $method === 'POST') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+        requireModule('migrateApply', 'lib/migrate.php');
+
+        $file = trim((string)(input()['file'] ?? ''));
+        $results = $file !== ''
+            ? [migrateApply($pdo, $file, (int)$user['userId'])]
+            : migrateApplyPending($pdo, (int)$user['userId']);
+
+        $failed = array_values(array_filter($results, fn($r) => $r['errors'] !== []));
+        $applied = count($results) - count($failed);
+
+        logAdminAction($pdo, (int)$user['userId'], 'schema_applied', null,
+                       $applied . ' file(s), ' . count($failed) . ' with errors');
+        securityLog($pdo, $config, 'schema_applied', 'warning', 'admin',
+                    $applied . ' file(s)', (int)$user['userId']);
+
+        respond($failed ? 207 : 200, [
+            'results'   => $results,
+            'applied'   => $applied,
+            'failed'    => count($failed),
+            'migrations'=> migrateStatus($pdo),
+        ]);
+    }
+
     // ----- ICT: digital infrastructure -----------------------------------------------------
 
     if ($route === 'ict/infrastructure' && $method === 'GET') {

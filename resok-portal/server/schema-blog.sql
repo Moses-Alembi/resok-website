@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS blog_daily_stats (
   article_id INT UNSIGNED NOT NULL,
   dimension ENUM('total','country','source','device','campaign') NOT NULL DEFAULT 'total',
   dimension_value VARCHAR(160) NOT NULL DEFAULT '',
-  reads INT UNSIGNED NOT NULL DEFAULT 0,
+  `reads` INT UNSIGNED NOT NULL DEFAULT 0,   -- backticked: READS is reserved in MySQL/MariaDB
   unique_readers INT UNSIGNED NOT NULL DEFAULT 0,
   returning_readers INT UNSIGNED NOT NULL DEFAULT 0,
   completions INT UNSIGNED NOT NULL DEFAULT 0,

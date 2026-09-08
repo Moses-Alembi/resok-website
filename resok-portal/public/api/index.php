@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -85,6 +85,13 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('ictLicensesSummary')) {
+    function ictLicensesSummary(PDO $pdo): array {
+        return ['total' => 0, 'expiringSoon' => 0, 'expired' => 0,
+                'annualCost' => 0.0, 'seatsIdle' => 0, 'overAllocated' => 0];
+    }
 }
 
 if (!function_exists('ictCredentialsSummary')) {
@@ -1638,6 +1645,82 @@ Respiratory Society of Kenya");
             'failed'    => count($failed),
             'migrations'=> migrateStatus($pdo),
         ]);
+    }
+
+    // ----- ICT: software and licences --------------------------------------------------------
+
+    if ($route === 'ict/licenses' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictLicensesList', 'lib/ict-licenses.php');
+        ictRequire($pdo, $user, $config, 'licenses.view');
+        respond(200, [
+            'licenses' => ictLicensesList($pdo),
+            'summary'  => ictLicensesSummary($pdo),
+            'kinds'    => ICT_LICENSE_KINDS,
+        ]);
+    }
+
+    if ($route === 'ict/licenses' && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictLicenseCreate', 'lib/ict-licenses.php');
+        ictRequire($pdo, $user, $config, 'licenses.manage');
+
+        [$licence, $errors] = ictLicenseCreate($pdo, input(), (int)$user['userId']);
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        ictAudit($pdo, (int)$user['userId'], 'license_added', 'license', (string)$licence['id'],
+                 $licence['name'], null, ['name' => $licence['name'], 'seats' => $licence['seatsTotal']]);
+        respond(201, ['license' => $licence]);
+    }
+
+    if (preg_match('#^ict/licenses/(\d+)$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictLicenseFind', 'lib/ict-licenses.php');
+        ictRequire($pdo, $user, $config, 'licenses.view');
+        $licence = ictLicenseFind($pdo, (int)$m[1]);
+        if (!$licence) respond(404, ['error' => 'No such licence.']);
+        respond(200, ['license' => $licence]);
+    }
+
+    if (preg_match('#^ict/licenses/(\d+)$#', $route, $m) && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireModule('ictLicenseUpdate', 'lib/ict-licenses.php');
+        ictRequire($pdo, $user, $config, 'licenses.manage');
+
+        [$licence, $errors, $before] = ictLicenseUpdate($pdo, (int)$m[1], input());
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        [$was, $now] = ictDiff($before ?: [], $licence);
+        $flat = fn(array $a) => array_filter($a, fn($v) => !is_array($v));
+        ictAudit($pdo, (int)$user['userId'], 'license_updated', 'license', (string)$licence['id'],
+                 $licence['name'], $flat($was), $flat($now));
+        respond(200, ['license' => $licence]);
+    }
+
+    if (preg_match('#^ict/licenses/(\d+)/seats$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictLicenseAssignSeat', 'lib/ict-licenses.php');
+        ictRequire($pdo, $user, $config, 'licenses.manage');
+
+        [$licence, $error] = ictLicenseAssignSeat($pdo, (int)$m[1], input(), (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        ictAudit($pdo, (int)$user['userId'], 'license_seat_assigned', 'license', (string)$licence['id'],
+                 $licence['name'] . ': ' . $licence['seatsUsed'] . ' of ' . ($licence['seatsTotal'] ?: 'unlimited'));
+        respond(200, ['license' => $licence]);
+    }
+
+    if (preg_match('#^ict/licenses/seats/(\d+)$#', $route, $m) && $method === 'DELETE') {
+        $user = auth($config);
+        requireModule('ictLicenseReleaseSeat', 'lib/ict-licenses.php');
+        ictRequire($pdo, $user, $config, 'licenses.manage');
+
+        [$licence, $error] = ictLicenseReleaseSeat($pdo, (int)$m[1], (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        ictAudit($pdo, (int)$user['userId'], 'license_seat_released', 'license', (string)$licence['id'],
+                 $licence['name'] . ': ' . $licence['seatsUsed'] . ' now in use');
+        respond(200, ['license' => $licence]);
     }
 
     // ----- ICT: credential register ---------------------------------------------------------

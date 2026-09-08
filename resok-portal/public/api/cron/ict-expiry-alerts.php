@@ -2,9 +2,9 @@
 declare(strict_types=1);
 
 /**
- * Warns about infrastructure that is about to expire.
+ * Warns about anything that is about to expire: domains, hosting, SSL, and software licences.
  *
- * This is the point of the infrastructure module. A domain or SSL certificate that lapses
+ * This is the point of those modules. A domain or SSL certificate that lapses
  * takes the entire website down, and the only thing standing between the organisation and
  * that is somebody remembering a date written in a notebook.
  *
@@ -23,7 +23,7 @@ declare(strict_types=1);
 $isCli = PHP_SAPI === 'cli';
 $config = require __DIR__ . '/../config.php';
 
-foreach (['portal-mail', 'ict', 'ict-infrastructure', 'throttle'] as $module) {
+foreach (['portal-mail', 'ict', 'ict-infrastructure', 'ict-licenses', 'throttle'] as $module) {
     $path = __DIR__ . '/../lib/' . $module . '.php';
     if (is_file($path)) require_once $path;
 }
@@ -58,7 +58,25 @@ try {
 }
 date_default_timezone_set('Africa/Nairobi');
 
-$due = ictInfraDueForAlert($pdo);
+/**
+ * Both kinds of renewal in one list.
+ *
+ * A licence lapsing is the same shape of problem as a domain lapsing - something stops
+ * working on a date somebody was supposed to remember - so it gets the same banding, the
+ * same de-duplication and the same mail rather than a parallel system.
+ */
+$due = [];
+foreach (ictInfraDueForAlert($pdo) as $entry) {
+    $entry['what'] = 'infrastructure';
+    $due[] = $entry;
+}
+if (function_exists('ictLicensesDueForAlert')) {
+    foreach (ictLicensesDueForAlert($pdo) as $entry) {
+        $entry['what'] = 'license';
+        $due[] = $entry;
+    }
+}
+
 if (!$due) {
     echo "Nothing to report.\n";
     exit(0);
@@ -97,7 +115,9 @@ foreach ($due as $entry) {
     }
 
     $urgency = $health['band'] === 'expired' ? 'HAS EXPIRED' : 'expires soon';
-    $kind = ucfirst((string)$row['kind']);
+    $kind = $entry['what'] === 'license'
+        ? 'Software licence'
+        : ucfirst((string)$row['kind']);
     $subject = $health['band'] === 'expired'
         ? "EXPIRED: {$row['name']}"
         : "{$kind} renewal due: {$row['name']} ({$health['days']} days)";
@@ -107,11 +127,12 @@ foreach ($due as $entry) {
         $health['label'] . '.',
         '',
         'Renewal date : ' . $row['expires_on'],
-        'Provider     : ' . ($row['provider'] ?: 'not recorded'),
-        'Account      : ' . ($row['account_ref'] ?: 'not recorded'),
+        'Provider     : ' . ($row['provider'] ?? $row['vendor'] ?? 'not recorded'),
+        'Account      : ' . ($row['account_ref'] ?? $row['account_identifier'] ?? 'not recorded'),
         'Auto-renew   : ' . (((int)$row['auto_renew']) === 1 ? 'yes' : 'NO'),
     ];
-    if (!empty($row['url'])) $lines[] = 'Control panel: ' . $row['url'];
+    $console = $row['url'] ?? $row['console_url'] ?? '';
+    if ($console !== '') $lines[] = 'Control panel: ' . $console;
     $lines[] = '';
     $lines[] = ((int)$row['auto_renew']) === 1
         ? 'Auto-renew is on, so this should renew itself. Worth confirming the card on file is still valid.'
@@ -125,9 +146,9 @@ foreach ($due as $entry) {
           . '<tr><td style="padding-right:16px;color:#667085;">Renewal date</td><td><strong>'
           . htmlspecialchars((string)$row['expires_on'], ENT_QUOTES) . '</strong></td></tr>'
           . '<tr><td style="padding-right:16px;color:#667085;">Provider</td><td>'
-          . htmlspecialchars((string)($row['provider'] ?: 'not recorded'), ENT_QUOTES) . '</td></tr>'
+          . htmlspecialchars((string)($row['provider'] ?? $row['vendor'] ?? 'not recorded'), ENT_QUOTES) . '</td></tr>'
           . '<tr><td style="padding-right:16px;color:#667085;">Account</td><td>'
-          . htmlspecialchars((string)($row['account_ref'] ?: 'not recorded'), ENT_QUOTES) . '</td></tr>'
+          . htmlspecialchars((string)($row['account_ref'] ?? $row['account_identifier'] ?? 'not recorded'), ENT_QUOTES) . '</td></tr>'
           . '<tr><td style="padding-right:16px;color:#667085;">Auto-renew</td><td>'
           . (((int)$row['auto_renew']) === 1 ? 'Yes' : '<strong style="color:#bc0b22;">No</strong>') . '</td></tr>'
           . '</table>'
@@ -154,9 +175,10 @@ foreach ($due as $entry) {
     if ($ok) {
         // Recorded only on success, so a mail server outage means the warning is retried
         // tomorrow rather than silently marked as delivered and never sent again.
-        ictInfraMarkAlerted($pdo, (int)$row['id'], $health['band']);
+        if ($entry['what'] === 'license') ictLicenseMarkAlerted($pdo, (int)$row['id'], $health['band']);
+        else ictInfraMarkAlerted($pdo, (int)$row['id'], $health['band']);
         if (function_exists('ictAudit')) {
-            ictAudit($pdo, null, 'expiry_alert_sent', 'infrastructure', (string)$row['id'],
+            ictAudit($pdo, null, 'expiry_alert_sent', $entry['what'], (string)$row['id'],
                      $row['name'] . ': ' . $health['label']);
         }
         echo "Alerted: {$row['name']} ({$health['band']}, {$health['days']} days)\n";

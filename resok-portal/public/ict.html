@@ -140,6 +140,9 @@
     <button class="side-link" data-view="infrastructure" data-cap="infrastructure.view" type="button">
       <i class="fas fa-server"></i> Infrastructure <span class="dot" id="infraDot"></span>
     </button>
+    <button class="side-link" data-view="licenses" data-cap="licenses.view" type="button">
+      <i class="fas fa-box-open"></i> Software &amp; licences
+    </button>
     <button class="side-link" data-view="credentials" data-cap="credentials.view" type="button">
       <i class="fas fa-key"></i> Credentials
     </button>
@@ -402,6 +405,100 @@
       </div>
     </section>
 
+    <!-- ---------------- Licences ---------------- -->
+    <section class="view" id="view-licenses">
+      <h1>Software &amp; licences</h1>
+      <p class="lede">
+        What the organisation pays for, when it renews, and who is actually using it. Seats
+        are counted from who holds one, so &ldquo;we pay for ten and use four&rdquo; is a
+        number rather than a suspicion. Licence keys are not stored here &mdash; they live in
+        the password manager, like every other secret.
+      </p>
+      <div id="licNotice" class="notice"></div>
+      <div class="tiles" id="licTiles"></div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <h2 style="margin:0">Licences</h2>
+          <button class="btn btn-primary" id="licNewBtn" type="button"><i class="fas fa-plus"></i> Add licence</button>
+        </div>
+        <div class="scroll"><div id="licList"></div></div>
+      </div>
+
+      <div class="panel" id="licFormPanel" hidden>
+        <h2 id="licFormTitle">Add a licence</h2>
+        <form id="licForm" autocomplete="off">
+          <input type="hidden" id="lId" />
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="lName">Software</label>
+              <input class="in" id="lName" maxlength="160" placeholder="Microsoft 365 Business" required />
+            </div>
+            <div><label class="lbl" for="lVendor">Vendor</label><input class="in" id="lVendor" maxlength="160" /></div>
+            <div>
+              <label class="lbl" for="lKind">Licence type</label>
+              <select class="in" id="lKind"></select>
+            </div>
+          </div>
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="lSeats">Seats</label>
+              <input class="in" id="lSeats" type="number" min="0" value="0" />
+              <div class="muted" style="margin-top:4px">0 for unlimited or not seat-based.</div>
+            </div>
+            <div><label class="lbl" for="lCategory">Category</label><input class="in" id="lCategory" maxlength="80" placeholder="Productivity, security" /></div>
+            <div>
+              <label class="lbl" for="lStatus">Status</label>
+              <select class="in" id="lStatus">
+                <option value="active">Active</option><option value="expired">Expired</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="lPurchased">Purchased</label><input class="in" id="lPurchased" type="date" /></div>
+            <div><label class="lbl" for="lExpires">Renews / expires</label><input class="in" id="lExpires" type="date" /></div>
+            <div><label class="lbl" for="lCost">Cost (KES)</label><input class="in" id="lCost" type="number" min="0" step="0.01" /></div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="lCycle">Billing cycle</label><input class="in" id="lCycle" maxlength="30" placeholder="Annual" /></div>
+            <div><label class="lbl" for="lAccountId">Account</label><input class="in" id="lAccountId" maxlength="190" placeholder="Username, never the key" /></div>
+            <div><label class="lbl" for="lOwner">Owner</label><input class="in" id="lOwner" maxlength="160" /></div>
+          </div>
+          <div class="grid2">
+            <div><label class="lbl" for="lConsoleUrl">Admin console</label><input class="in" id="lConsoleUrl" maxlength="500" placeholder="https://..." /></div>
+            <div><label class="lbl" for="lVaultUrl">Where the key is kept</label><input class="in" id="lVaultUrl" maxlength="500" placeholder="https://vault..." /></div>
+          </div>
+          <label class="lbl" for="lAutoRenew" style="display:flex;align-items:center;gap:9px;margin-top:14px">
+            <input type="checkbox" id="lAutoRenew" /> Auto-renew is switched on
+          </label>
+          <label class="lbl" for="lNotes">Notes</label>
+          <textarea class="in" id="lNotes" rows="2"></textarea>
+          <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" id="licSaveBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+            <button class="btn btn-secondary" type="button" id="licCancelBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel" id="licDetailPanel" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div>
+            <h2 id="ldTitle" style="margin-bottom:2px"></h2>
+            <p class="muted" id="ldSub"></p>
+          </div>
+          <button class="btn btn-secondary" id="ldCloseBtn" type="button" style="font-size:12px">Close</button>
+        </div>
+        <div id="ldNotice" class="notice" style="margin-top:12px"></div>
+        <div id="ldFacts" style="margin-top:14px"></div>
+        <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap" id="ldActions"></div>
+        <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line)">
+          <h3 style="font-size:15px;margin-bottom:10px">Seats</h3>
+          <div id="ldSeats"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ---------------- Credentials ---------------- -->
     <section class="view" id="view-credentials">
       <h1>Credential register</h1>
@@ -592,6 +689,7 @@
     if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
     if (view === 'assets') loadAssets();
     if (view === 'infrastructure') loadInfrastructure();
+    if (view === 'licenses') loadLicenses();
     if (view === 'credentials') loadCredentials();
     if (view === 'activity') loadActivity();
     if (view === 'staff') loadStaff();
@@ -1289,6 +1387,329 @@
     button.disabled = false;
   });
 
+
+
+  /* ---------------- licences ---------------- */
+  let currentLicense = null;
+
+  const LIC_FIELDS = {
+    lName: 'name', lVendor: 'vendor', lKind: 'kind', lCategory: 'category',
+    lSeats: 'seatsTotal', lPurchased: 'purchasedOn', lExpires: 'expiresOn',
+    lCost: 'cost', lCycle: 'billingCycle', lAccountId: 'accountId', lOwner: 'ownerName',
+    lConsoleUrl: 'consoleUrl', lVaultUrl: 'vaultUrl', lStatus: 'status', lNotes: 'notes'
+  };
+
+  function licNotice(m, k) {
+    const b = el('licNotice');
+    b.textContent = m || '';
+    b.className = 'notice' + (m ? ' show ' + (k || 'success') : '');
+  }
+  function ldNotice(m, k) {
+    const b = el('ldNotice');
+    b.textContent = m || '';
+    b.className = 'notice' + (m ? ' show ' + (k || 'success') : '');
+  }
+
+  function licReset() {
+    el('licForm').reset();
+    el('lId').value = '';
+    el('lSeats').value = '0';
+    el('lAutoRenew').checked = false;
+    el('licFormTitle').textContent = 'Add a licence';
+    el('licFormPanel').hidden = true;
+  }
+
+  function licEdit(l) {
+    Object.entries(LIC_FIELDS).forEach(([id, key]) => {
+      const v = l[key];
+      el(id).value = (v === null || v === undefined) ? '' : v;
+    });
+    el('lId').value = l.id;
+    el('lAutoRenew').checked = !!l.autoRenew;
+    el('licFormTitle').textContent = 'Edit ' + l.name;
+    el('licFormPanel').hidden = false;
+    el('licFormPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderLicTiles(s) {
+    const mount = el('licTiles');
+    mount.textContent = '';
+    mount.appendChild(tile(s.total || 0, 'Licences'));
+    mount.appendChild(tile(s.expired || 0, 'Expired', (s.expired || 0) > 0 ? 'crit' : 'ok'));
+    mount.appendChild(tile(s.expiringSoon || 0, 'Renewing soon', (s.expiringSoon || 0) > 0 ? 'warn' : 'ok'));
+    // Seats paid for and unused - the one figure here that turns straight into money.
+    mount.appendChild(tile(s.seatsIdle || 0, 'Seats unused', (s.seatsIdle || 0) > 0 ? 'warn' : 'ok'));
+    mount.appendChild(tile(s.overAllocated || 0, 'Over-allocated', (s.overAllocated || 0) > 0 ? 'crit' : 'ok'));
+    const cost = make('div', 'tile');
+    cost.appendChild(make('div', 'n', 'KES ' + Math.round(s.annualCost || 0).toLocaleString()));
+    cost.appendChild(make('div', 'l', 'Yearly spend'));
+    mount.appendChild(cost);
+  }
+
+  function renderLicenses(list) {
+    const mount = el('licList');
+    mount.textContent = '';
+    if (!list.length) {
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'fas fa-box-open'));
+      empty.appendChild(make('div', null, 'Nothing recorded yet. Start with whatever renews soonest.'));
+      mount.appendChild(empty);
+      return;
+    }
+    const table = make('table');
+    const head = make('thead'); const hr = make('tr');
+    ['Software', 'Seats', 'Renews', 'Cost', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    head.appendChild(hr); table.appendChild(head);
+
+    const body = make('tbody');
+    list.forEach((l) => {
+      const tr = make('tr');
+      if (l.status !== 'active') tr.style.opacity = '.55';
+
+      const name = make('td');
+      const n = make('div', null, l.name); n.style.fontWeight = '600';
+      name.appendChild(n);
+      const sub = [l.vendor, l.kind.replace(/_/g, ' '), l.category].filter(Boolean).join('  ·  ');
+      if (sub) name.appendChild(make('div', 'muted', sub));
+      tr.appendChild(name);
+
+      const seats = make('td');
+      if (l.seatsTotal > 0) {
+        const s = make('div', null, l.seatsUsed + ' of ' + l.seatsTotal);
+        if (l.seatsOver) { s.style.color = BAND_COLOUR.expired; s.style.fontWeight = '600'; }
+        seats.appendChild(s);
+        if (l.seatsFree > 0) seats.appendChild(make('div', 'muted', l.seatsFree + ' unused'));
+      } else {
+        seats.appendChild(make('div', null, l.seatsUsed ? String(l.seatsUsed) : '—'));
+        seats.appendChild(make('div', 'muted', 'unlimited'));
+      }
+      tr.appendChild(seats);
+
+      const when = make('td');
+      when.appendChild(make('div', null, l.expiresOn ? fmtDate(l.expiresOn) : '—'));
+      if (l.health) {
+        const h = make('div', 'muted', l.health.label);
+        if (['expired', 'critical', 'warning'].includes(l.health.band)) {
+          h.style.color = BAND_COLOUR[l.health.band];
+          h.style.fontWeight = '600';
+        }
+        when.appendChild(h);
+      }
+      if (l.expiresOn && !l.autoRenew) {
+        const off = make('div', 'muted', 'auto-renew off');
+        off.style.color = 'var(--warn)';
+        when.appendChild(off);
+      }
+      tr.appendChild(when);
+
+      const cost = make('td');
+      cost.appendChild(make('div', null, l.cost === null ? '—' : (l.currency || 'KES') + ' ' + Number(l.cost).toLocaleString()));
+      if (l.billingCycle) cost.appendChild(make('div', 'muted', l.billingCycle));
+      tr.appendChild(cost);
+
+      const act = make('td');
+      const open = make('button', 'btn btn-secondary', 'Open');
+      open.type = 'button'; open.style.fontSize = '12px';
+      open.addEventListener('click', () => openLicense(l.id));
+      act.appendChild(open);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    mount.appendChild(table);
+  }
+
+  async function loadLicenses() {
+    try {
+      const data = await api('/api/ict/licenses');
+      if (!el('lKind').options.length) {
+        (data.kinds || []).forEach((k) => {
+          const o = document.createElement('option');
+          o.value = k; o.textContent = k.replace(/_/g, ' ');
+          el('lKind').appendChild(o);
+        });
+      }
+      renderLicTiles(data.summary || {});
+      renderLicenses(data.licenses || []);
+    } catch (error) {
+      el('licList').textContent = '';
+      el('licList').appendChild(make('div', 'empty', error.message || 'Could not load licences.'));
+    }
+  }
+
+  function renderLicenseDetail(l) {
+    currentLicense = l;
+    el('ldTitle').textContent = l.name;
+    el('ldSub').textContent = [l.vendor, l.kind.replace(/_/g, ' '), l.status].filter(Boolean).join('  ·  ');
+    ldNotice('');
+
+    const facts = el('ldFacts');
+    facts.textContent = '';
+    facts.appendChild(fact('Seats', l.seatsTotal > 0
+      ? l.seatsUsed + ' of ' + l.seatsTotal + (l.seatsFree ? '  (' + l.seatsFree + ' unused)' : '')
+      : l.seatsUsed + '  (unlimited)'));
+    facts.appendChild(fact('Renews', l.expiresOn ? fmtDate(l.expiresOn) + (l.health ? '  (' + l.health.label + ')' : '') : null));
+    facts.appendChild(fact('Auto-renew', l.autoRenew ? 'Yes' : 'No'));
+    facts.appendChild(fact('Cost', l.cost === null ? null : (l.currency || 'KES') + ' ' + Number(l.cost).toLocaleString() + (l.billingCycle ? ' / ' + l.billingCycle : '')));
+    facts.appendChild(fact('Purchased', l.purchasedOn ? fmtDate(l.purchasedOn) : null));
+    facts.appendChild(fact('Account', l.accountId));
+    facts.appendChild(fact('Owner', l.ownerName || l.ownerEmail));
+    if (l.notes) facts.appendChild(fact('Notes', l.notes));
+
+    const actions = el('ldActions');
+    actions.textContent = '';
+    const button = (label, icon, cls, fn) => {
+      const b = make('button', 'btn ' + cls);
+      b.type = 'button';
+      const i = make('i', 'fas ' + icon); i.setAttribute('aria-hidden', 'true');
+      b.appendChild(i); b.appendChild(make('span', null, ' ' + label));
+      b.addEventListener('click', fn);
+      actions.appendChild(b);
+    };
+    if (can('licenses.manage')) {
+      button('Edit', 'fa-pen', 'btn-secondary', () => licEdit(l));
+      const full = l.seatsTotal > 0 && l.seatsUsed >= l.seatsTotal;
+      if (!full && l.status === 'active') button('Assign a seat', 'fa-user-plus', 'btn-primary', () => showSeatForm(l));
+    }
+    if (l.consoleUrl) {
+      const link = make('a', 'btn btn-secondary', 'Admin console');
+      link.href = l.consoleUrl; link.target = '_blank'; link.rel = 'noopener';
+      actions.appendChild(link);
+    }
+    if (l.vaultUrl) {
+      const link = make('a', 'btn btn-secondary', 'Where the key is kept');
+      link.href = l.vaultUrl; link.target = '_blank'; link.rel = 'noopener';
+      actions.appendChild(link);
+    }
+
+    const seats = el('ldSeats');
+    seats.textContent = '';
+    if (!l.seats.length) seats.appendChild(make('p', 'muted', 'Nobody has been given a seat yet.'));
+    l.seats.forEach((s) => {
+      const row = make('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap';
+      if (s.releasedAt) row.style.opacity = '.55';
+
+      const who = make('div');
+      who.style.cssText = 'flex:1;min-width:170px';
+      who.appendChild(make('strong', null, s.name));
+      const meta = [s.department, s.email, 'since ' + fmtDate(s.assignedAt),
+                    s.releasedAt ? 'released ' + fmtDate(s.releasedAt) : null].filter(Boolean).join('  ·  ');
+      who.appendChild(make('div', 'muted', meta));
+      row.appendChild(who);
+
+      if (!s.releasedAt && can('licenses.manage')) {
+        const rel = make('button', 'btn btn-secondary', 'Release');
+        rel.type = 'button'; rel.style.fontSize = '12px';
+        rel.addEventListener('click', async () => {
+          rel.disabled = true;
+          try {
+            const data = await api('/api/ict/licenses/seats/' + s.id, { method: 'DELETE' });
+            renderLicenseDetail(data.license);
+            ldNotice('Seat released. The record of who held it is kept.', 'success');
+            loadLicenses();
+          } catch (error) {
+            ldNotice(error.message || 'Could not release that seat.', 'error');
+            rel.disabled = false;
+          }
+        });
+        row.appendChild(rel);
+      } else if (s.releasedAt) {
+        row.appendChild(make('span', 'status s-unknown', 'released'));
+      }
+      seats.appendChild(row);
+    });
+
+    el('licDetailPanel').hidden = false;
+    el('licDetailPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function openLicense(id) {
+    try {
+      const data = await api('/api/ict/licenses/' + id);
+      renderLicenseDetail(data.license);
+    } catch (error) {
+      licNotice(error.message || 'Could not open that licence.', 'error');
+    }
+  }
+
+  function showSeatForm(l) {
+    const wrap = el('ldActions');
+    let form = document.getElementById('ldSeatForm');
+    if (form) form.remove();
+    form = make('form');
+    form.id = 'ldSeatForm';
+    form.style.cssText = 'width:100%;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)';
+    const grid = make('div', 'grid3');
+    [['sfName', 'Name'], ['sfEmail', 'Email'], ['sfDept', 'Department']].forEach(([id, label]) => {
+      const cell = make('div');
+      cell.appendChild(make('label', 'lbl', label));
+      const input = document.createElement('input');
+      input.className = 'in'; input.id = id;
+      if (id === 'sfEmail') input.type = 'email';
+      cell.appendChild(input);
+      grid.appendChild(cell);
+    });
+    form.appendChild(grid);
+    const row = make('div');
+    row.style.cssText = 'display:flex;gap:9px;margin-top:12px';
+    const go = make('button', 'btn btn-primary', 'Assign seat'); go.type = 'submit';
+    const cancel = make('button', 'btn btn-secondary', 'Cancel'); cancel.type = 'button';
+    cancel.addEventListener('click', () => form.remove());
+    row.appendChild(go); row.appendChild(cancel);
+    form.appendChild(row);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      go.disabled = true;
+      try {
+        const data = await api('/api/ict/licenses/' + l.id + '/seats', {
+          method: 'POST',
+          body: JSON.stringify({
+            holderName: el('sfName').value.trim(),
+            holderEmail: el('sfEmail').value.trim(),
+            department: el('sfDept').value.trim()
+          })
+        });
+        renderLicenseDetail(data.license);
+        ldNotice('Seat assigned.', 'success');
+        loadLicenses();
+      } catch (error) {
+        ldNotice(error.message || 'Could not assign a seat.', 'error');
+        go.disabled = false;
+      }
+    });
+    wrap.appendChild(form);
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  el('ldCloseBtn').addEventListener('click', () => { el('licDetailPanel').hidden = true; currentLicense = null; });
+  el('licNewBtn').addEventListener('click', () => { licReset(); el('licFormPanel').hidden = false; });
+  el('licCancelBtn').addEventListener('click', licReset);
+
+  el('licForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const id = el('lId').value;
+    const payload = { autoRenew: el('lAutoRenew').checked };
+    Object.entries(LIC_FIELDS).forEach(([inputId, key]) => {
+      const raw = el(inputId).value.trim();
+      payload[key] = raw === '' ? null : raw;
+    });
+    const button = el('licSaveBtn');
+    button.disabled = true;
+    try {
+      const data = id
+        ? await api('/api/ict/licenses/' + id, { method: 'PATCH', body: JSON.stringify(payload) })
+        : await api('/api/ict/licenses', { method: 'POST', body: JSON.stringify(payload) });
+      licNotice(id ? 'Licence updated.' : 'Licence added.', 'success');
+      licReset();
+      await loadLicenses();
+      if (id) renderLicenseDetail(data.license);
+    } catch (error) {
+      licNotice(error.message || 'Could not save.', 'error');
+    }
+    button.disabled = false;
+  });
 
   /* ---------------- credentials ---------------- */
   const CRED_FIELDS = {

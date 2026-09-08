@@ -61,6 +61,7 @@ function migrateOrder(): array
         'schema-ict-infrastructure.sql',       // domain, hosting, SSL, backups
         'schema-ict-assets.sql',               // equipment, assignments, maintenance
         'schema-ict-credentials.sql',          // credential register (no secrets)
+        'schema-ict-licenses.sql',             // software, licences and seats
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];

@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -85,6 +85,13 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('ictCredentialsSummary')) {
+    function ictCredentialsSummary(PDO $pdo): array {
+        return ['total' => 0, 'critical' => 0, 'noMfa' => 0, 'criticalNoMfa' => 0,
+                'rotationOverdue' => 0, 'noVaultLink' => 0, 'noOwner' => 0];
+    }
 }
 
 if (!function_exists('ictAssetsSummary')) {
@@ -1631,6 +1638,75 @@ Respiratory Society of Kenya");
             'failed'    => count($failed),
             'migrations'=> migrateStatus($pdo),
         ]);
+    }
+
+    // ----- ICT: credential register ---------------------------------------------------------
+
+    if ($route === 'ict/credentials' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictCredentialsList', 'lib/ict-credentials.php');
+        ictRequire($pdo, $user, $config, 'credentials.view');
+        respond(200, [
+            'credentials' => ictCredentialsList($pdo),
+            'summary'     => ictCredentialsSummary($pdo),
+            'kinds'       => ICT_CREDENTIAL_KINDS,
+        ]);
+    }
+
+    if ($route === 'ict/credentials' && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictCredentialCreate', 'lib/ict-credentials.php');
+        ictRequire($pdo, $user, $config, 'credentials.manage');
+
+        [$credential, $errors] = ictCredentialCreate($pdo, input(), (int)$user['userId']);
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        ictAudit($pdo, (int)$user['userId'], 'credential_added', 'credential', (string)$credential['id'],
+                 $credential['name'], null, ['name' => $credential['name'], 'kind' => $credential['kind']]);
+        respond(201, ['credential' => $credential]);
+    }
+
+    if (preg_match('#^ict/credentials/(\d+)$#', $route, $m) && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireModule('ictCredentialUpdate', 'lib/ict-credentials.php');
+        ictRequire($pdo, $user, $config, 'credentials.manage');
+
+        [$credential, $errors, $before] = ictCredentialUpdate($pdo, (int)$m[1], input());
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        [$was, $now] = ictDiff($before ?: [], $credential);
+        $flat = fn(array $a) => array_filter($a, fn($v) => !is_array($v));
+        ictAudit($pdo, (int)$user['userId'], 'credential_updated', 'credential', (string)$credential['id'],
+                 $credential['name'], $flat($was), $flat($now));
+        respond(200, ['credential' => $credential]);
+    }
+
+    /**
+     * Records that someone went to collect a credential and returns where it is kept.
+     *
+     * Reading the register is not sensitive - it holds nothing secret. Following the link to
+     * the password manager is, so that is what gets logged.
+     */
+    if (preg_match('#^ict/credentials/(\d+)/open$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictCredentialOpen', 'lib/ict-credentials.php');
+        ictRequire($pdo, $user, $config, 'credentials.view');
+
+        [$where, $error] = ictCredentialOpen($pdo, (int)$m[1], (int)$user['userId'],
+                                             (string)(input()['reason'] ?? ''));
+        if ($error) respond(404, ['error' => $error]);
+        securityLog($pdo, $config, 'credential_opened', 'warning', 'ict',
+                    $where['name'], (int)$user['userId']);
+        respond(200, $where);
+    }
+
+    if ($route === 'ict/credentials/access-log' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictCredentialAccessLog', 'lib/ict-credentials.php');
+        ictRequire($pdo, $user, $config, 'credentials.manage');
+        respond(200, ['entries' => ictCredentialAccessLog($pdo, null, 60)]);
     }
 
     // ----- ICT: assets --------------------------------------------------------------------

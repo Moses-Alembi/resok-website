@@ -60,6 +60,7 @@ function migrateOrder(): array
         'schema-ict.sql',                      // alters users.role; ICT capabilities, audit
         'schema-ict-infrastructure.sql',       // domain, hosting, SSL, backups
         'schema-ict-assets.sql',               // equipment, assignments, maintenance
+        'schema-ict-credentials.sql',          // credential register (no secrets)
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];

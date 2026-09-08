@@ -140,13 +140,15 @@
     <button class="side-link" data-view="infrastructure" data-cap="infrastructure.view" type="button">
       <i class="fas fa-server"></i> Infrastructure <span class="dot" id="infraDot"></span>
     </button>
+    <button class="side-link" data-view="credentials" data-cap="credentials.view" type="button">
+      <i class="fas fa-key"></i> Credentials
+    </button>
     <button class="side-link" data-view="activity" data-cap="reports.view" type="button"><i class="fas fa-list-timeline"></i> Activity</button>
 
     <div class="side-group">Administration</div>
     <button class="side-link" data-view="staff" data-super="1" type="button"><i class="fas fa-user-shield"></i> Staff &amp; access</button>
 
     <div class="side-group">Later phases</div>
-    <div class="side-soon"><i class="fas fa-key"></i> Credentials</div>
     <div class="side-soon"><i class="fas fa-life-ring"></i> Helpdesk</div>
     <div class="side-soon"><i class="fas fa-list-check"></i> Tasks</div>
   </aside>
@@ -400,6 +402,127 @@
       </div>
     </section>
 
+    <!-- ---------------- Credentials ---------------- -->
+    <section class="view" id="view-credentials">
+      <h1>Credential register</h1>
+      <p class="lede">
+        Which accounts exist, who owns each one, whether two-factor is on, and where the
+        password is kept. <strong>No passwords are stored here</strong> &mdash; the secrets
+        live in the password manager, and this links to them.
+      </p>
+
+      <div class="panel" style="border-left:3px solid var(--brand-primary)">
+        <p style="font-size:13.5px;color:var(--muted);margin:0">
+          <strong style="color:var(--text-dark)">Why it works this way.</strong>
+          Storing the domain, hosting and database passwords in this portal would put them on
+          the same server as the key that protects them &mdash; one compromise would hand over
+          all of it at once. A password manager is built for that job. What was actually
+          missing was knowing which accounts exist and who holds them, and that is what this
+          answers.
+        </p>
+      </div>
+
+      <div id="credNotice" class="notice"></div>
+      <div class="tiles" id="credTiles"></div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <h2 style="margin:0">Accounts</h2>
+          <button class="btn btn-primary" id="credNewBtn" type="button"><i class="fas fa-plus"></i> Add account</button>
+        </div>
+        <div class="scroll"><div id="credList"></div></div>
+      </div>
+
+      <div class="panel" id="credFormPanel" hidden>
+        <h2 id="credFormTitle">Add an account</h2>
+        <form id="credForm" autocomplete="off">
+          <input type="hidden" id="cId" />
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="cName">Account name</label>
+              <input class="in" id="cName" maxlength="160" placeholder="Domain registrar" required />
+            </div>
+            <div>
+              <label class="lbl" for="cKind">Type</label>
+              <select class="in" id="cKind"></select>
+            </div>
+            <div>
+              <label class="lbl" for="cCriticality">Criticality</label>
+              <select class="in" id="cCriticality">
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="normal" selected>Normal</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="cProvider">Provider</label><input class="in" id="cProvider" maxlength="160" placeholder="Namecheap, cPanel, Microsoft" /></div>
+            <div>
+              <label class="lbl" for="cAccountId">Username or account number</label>
+              <input class="in" id="cAccountId" maxlength="190" />
+              <div class="muted" style="margin-top:4px">Never the password.</div>
+            </div>
+            <div><label class="lbl" for="cConsoleUrl">Control panel</label><input class="in" id="cConsoleUrl" maxlength="500" placeholder="https://..." /></div>
+          </div>
+          <div class="grid2">
+            <div>
+              <label class="lbl" for="cVaultUrl">Link to the password manager</label>
+              <input class="in" id="cVaultUrl" maxlength="500" placeholder="https://vault.bitwarden.com/#/vault?itemId=..." />
+            </div>
+            <div>
+              <label class="lbl" for="cVaultRef">Or its name in the vault</label>
+              <input class="in" id="cVaultRef" maxlength="160" placeholder="ReSoK / Domain registrar" />
+            </div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="cOwnerName">Owner</label><input class="in" id="cOwnerName" maxlength="160" /></div>
+            <div>
+              <label class="lbl" for="cBackup">Backup contact</label>
+              <input class="in" id="cBackup" maxlength="160" />
+              <div class="muted" style="margin-top:4px">Who to ask at 2am.</div>
+            </div>
+            <div>
+              <label class="lbl" for="cMfaNotes">How two-factor is done</label>
+              <input class="in" id="cMfaNotes" maxlength="200" placeholder="Authenticator on the office phone" />
+            </div>
+          </div>
+          <div class="grid3">
+            <div><label class="lbl" for="cLastRotated">Password last changed</label><input class="in" id="cLastRotated" type="date" /></div>
+            <div>
+              <label class="lbl" for="cRotationMonths">Change every (months)</label>
+              <input class="in" id="cRotationMonths" type="number" min="0" max="120" value="0" />
+              <div class="muted" style="margin-top:4px">0 for no schedule.</div>
+            </div>
+            <div>
+              <label class="lbl" for="cStatus">Status</label>
+              <select class="in" id="cStatus"><option value="active">Active</option><option value="retired">Retired</option></select>
+            </div>
+          </div>
+          <label class="lbl" for="cMfa" style="display:flex;align-items:center;gap:9px;margin-top:14px">
+            <input type="checkbox" id="cMfa" /> Two-factor authentication is switched on for this account
+          </label>
+          <label class="lbl" for="cNotes">Notes</label>
+          <textarea class="in" id="cNotes" rows="2" placeholder="Anything except the password"></textarea>
+          <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" id="credSaveBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+            <button class="btn btn-secondary" type="button" id="credCancelBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel" id="credLogPanel" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <h2 style="margin:0">Who fetched what</h2>
+          <button class="btn btn-secondary" id="credLogCloseBtn" type="button" style="font-size:12px">Close</button>
+        </div>
+        <p class="muted" style="margin:6px 0 12px">
+          Reading this register is not recorded &mdash; it holds nothing secret. Following a
+          link to the password manager is, because that is when a real credential is collected.
+        </p>
+        <div id="credLogList"></div>
+      </div>
+    </section>
+
     <!-- ---------------- Activity ---------------- -->
     <section class="view" id="view-activity">
       <h1>ICT activity</h1>
@@ -469,6 +592,7 @@
     if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
     if (view === 'assets') loadAssets();
     if (view === 'infrastructure') loadInfrastructure();
+    if (view === 'credentials') loadCredentials();
     if (view === 'activity') loadActivity();
     if (view === 'staff') loadStaff();
     if (view === 'overview') loadOverview();
@@ -1161,6 +1285,247 @@
       await loadInfrastructure();
     } catch (error) {
       infraNotice(error.message || 'Could not save.', 'error');
+    }
+    button.disabled = false;
+  });
+
+
+  /* ---------------- credentials ---------------- */
+  const CRED_FIELDS = {
+    cName: 'name', cKind: 'kind', cCriticality: 'criticality', cProvider: 'provider',
+    cAccountId: 'accountId', cConsoleUrl: 'consoleUrl', cVaultUrl: 'vaultUrl',
+    cVaultRef: 'vaultReference', cOwnerName: 'ownerName', cBackup: 'backupContact',
+    cMfaNotes: 'mfaNotes', cLastRotated: 'lastRotatedOn', cRotationMonths: 'rotationMonths',
+    cStatus: 'status', cNotes: 'notes'
+  };
+
+  function credNotice(message, kind) {
+    const box = el('credNotice');
+    box.textContent = message || '';
+    box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+  }
+
+  function credReset() {
+    el('credForm').reset();
+    el('cId').value = '';
+    el('cMfa').checked = false;
+    el('cRotationMonths').value = '0';
+    el('credFormTitle').textContent = 'Add an account';
+    el('credFormPanel').hidden = true;
+  }
+
+  function credEdit(c) {
+    Object.entries(CRED_FIELDS).forEach(([id, key]) => {
+      const v = c[key];
+      el(id).value = (v === null || v === undefined) ? '' : v;
+    });
+    el('cId').value = c.id;
+    el('cMfa').checked = !!c.mfaEnabled;
+    el('credFormTitle').textContent = 'Edit ' + c.name;
+    el('credFormPanel').hidden = false;
+    el('credFormPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderCredTiles(s) {
+    const mount = el('credTiles');
+    mount.textContent = '';
+    mount.appendChild(tile(s.total || 0, 'Accounts'));
+    mount.appendChild(tile(s.critical || 0, 'Critical'));
+    // The single most useful number here: an important account with no second factor.
+    mount.appendChild(tile(s.criticalNoMfa || 0, 'Critical, no 2FA', (s.criticalNoMfa || 0) > 0 ? 'crit' : 'ok'));
+    mount.appendChild(tile(s.rotationOverdue || 0, 'Change overdue', (s.rotationOverdue || 0) > 0 ? 'warn' : 'ok'));
+    mount.appendChild(tile(s.noVaultLink || 0, 'No vault link', (s.noVaultLink || 0) > 0 ? 'warn' : 'ok'));
+    mount.appendChild(tile(s.noOwner || 0, 'No owner', (s.noOwner || 0) > 0 ? 'warn' : 'ok'));
+  }
+
+  function renderCredentials(list) {
+    const mount = el('credList');
+    mount.textContent = '';
+    if (!list.length) {
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'fas fa-key'));
+      empty.appendChild(make('div', null, 'Nothing recorded yet. Start with the domain registrar and the hosting account.'));
+      mount.appendChild(empty);
+      return;
+    }
+    const table = make('table');
+    const head = make('thead'); const hr = make('tr');
+    ['Account', 'Owner', '2FA', 'Password changed', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    head.appendChild(hr); table.appendChild(head);
+
+    const body = make('tbody');
+    list.forEach((c) => {
+      const tr = make('tr');
+      if (c.status === 'retired') tr.style.opacity = '.55';
+
+      const name = make('td');
+      const top = make('div');
+      const n = make('strong', null, c.name);
+      top.appendChild(n);
+      if (c.criticality !== 'normal') {
+        const pill = make('span', 'status ' + (c.criticality === 'critical' ? 's-critical' : 's-warning'), c.criticality);
+        pill.style.marginLeft = '8px';
+        top.appendChild(pill);
+      }
+      name.appendChild(top);
+      const sub = [c.provider, c.accountId, c.kind.replace(/_/g, ' ')].filter(Boolean).join('  ·  ');
+      if (sub) name.appendChild(make('div', 'muted', sub));
+      tr.appendChild(name);
+
+      const owner = make('td');
+      owner.appendChild(make('div', null, c.ownerName || c.ownerEmail || '—'));
+      if (c.backupContact) owner.appendChild(make('div', 'muted', 'backup: ' + c.backupContact));
+      tr.appendChild(owner);
+
+      const mfa = make('td');
+      mfa.appendChild(make('span', 'status ' + (c.mfaEnabled ? 's-ok' : 's-critical'), c.mfaEnabled ? 'on' : 'OFF'));
+      tr.appendChild(mfa);
+
+      const rot = make('td');
+      rot.appendChild(make('div', null, c.lastRotatedOn ? fmtDate(c.lastRotatedOn) : '—'));
+      if (c.rotation) {
+        const r = make('div', 'muted', c.rotation.label);
+        if (['expired', 'critical', 'warning'].includes(c.rotation.band)) {
+          r.style.color = BAND_COLOUR[c.rotation.band];
+          r.style.fontWeight = '600';
+        }
+        rot.appendChild(r);
+      }
+      tr.appendChild(rot);
+
+      const act = make('td');
+      act.style.whiteSpace = 'nowrap';
+      if (c.vaultUrl || c.vaultReference) {
+        const open = make('button', 'btn btn-primary', 'Open vault');
+        open.type = 'button'; open.style.fontSize = '12px';
+        open.addEventListener('click', () => openVault(c));
+        act.appendChild(open);
+      }
+      if (can('credentials.manage')) {
+        const edit = make('button', 'btn btn-secondary', 'Edit');
+        edit.type = 'button'; edit.style.cssText = 'font-size:12px;margin-left:6px';
+        edit.addEventListener('click', () => credEdit(c));
+        act.appendChild(edit);
+      }
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    mount.appendChild(table);
+  }
+
+  /**
+   * Records that somebody went to collect a credential, then sends them to the vault.
+   *
+   * The window is opened before the request, not after: a browser blocks window.open when it
+   * is not the direct result of a click, so opening it afterwards would be swallowed as a
+   * pop-up on exactly the journey that has to work.
+   */
+  async function openVault(c) {
+    const reason = window.prompt('What is this needed for? (recorded in the access log)', '');
+    if (reason === null) return;
+
+    const tab = c.vaultUrl ? window.open('', '_blank', 'noopener') : null;
+    try {
+      const where = await api('/api/ict/credentials/' + c.id + '/open', {
+        method: 'POST', body: JSON.stringify({ reason })
+      });
+      if (where.vaultUrl && tab) {
+        tab.location.href = where.vaultUrl;
+        credNotice('Opened ' + where.name + ' in the password manager. The access was logged.', 'success');
+      } else {
+        if (tab) tab.close();
+        credNotice('Look for "' + (where.vaultReference || where.name) + '" in the password manager. The access was logged.', 'success');
+      }
+    } catch (error) {
+      if (tab) tab.close();
+      credNotice(error.message || 'Could not open that record.', 'error');
+    }
+  }
+
+  async function loadCredentials() {
+    try {
+      const data = await api('/api/ict/credentials');
+      if (!el('cKind').options.length) {
+        (data.kinds || []).forEach((k) => {
+          const o = document.createElement('option');
+          o.value = k; o.textContent = k.replace(/_/g, ' ');
+          el('cKind').appendChild(o);
+        });
+      }
+      renderCredTiles(data.summary || {});
+      renderCredentials(data.credentials || []);
+
+      // The access log is a manager's view, so the way in only exists for one.
+      let logBtn = document.getElementById('credLogBtn');
+      if (can('credentials.manage') && !logBtn) {
+        logBtn = make('button', 'btn btn-secondary', 'Access log');
+        logBtn.id = 'credLogBtn';
+        logBtn.type = 'button';
+        logBtn.style.marginLeft = '8px';
+        logBtn.addEventListener('click', loadCredLog);
+        el('credNewBtn').parentNode.appendChild(logBtn);
+      }
+    } catch (error) {
+      el('credList').textContent = '';
+      el('credList').appendChild(make('div', 'empty', error.message || 'Could not load the register.'));
+    }
+  }
+
+  async function loadCredLog() {
+    try {
+      const data = await api('/api/ict/credentials/access-log');
+      const mount = el('credLogList');
+      mount.textContent = '';
+      const entries = data.entries || [];
+      if (!entries.length) {
+        mount.appendChild(make('p', 'muted', 'Nobody has fetched a credential yet.'));
+      } else {
+        entries.forEach((e) => {
+          const row = make('div', 'tl');
+          row.appendChild(make('span', 't', fmtDate(e.at)));
+          const what = make('span');
+          what.appendChild(make('strong', null, e.credential));
+          if (e.reason) what.appendChild(document.createTextNode(' — ' + e.reason));
+          row.appendChild(what);
+          if (e.actor) {
+            const who = make('span', 'muted', e.actor);
+            who.style.marginLeft = 'auto';
+            row.appendChild(who);
+          }
+          mount.appendChild(row);
+        });
+      }
+      el('credLogPanel').hidden = false;
+      el('credLogPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+      credNotice(error.message || 'Could not load the access log.', 'error');
+    }
+  }
+
+  el('credLogCloseBtn').addEventListener('click', () => { el('credLogPanel').hidden = true; });
+  el('credNewBtn').addEventListener('click', () => { credReset(); el('credFormPanel').hidden = false; });
+  el('credCancelBtn').addEventListener('click', credReset);
+
+  el('credForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const id = el('cId').value;
+    const payload = { mfaEnabled: el('cMfa').checked };
+    Object.entries(CRED_FIELDS).forEach(([inputId, key]) => {
+      const raw = el(inputId).value.trim();
+      payload[key] = raw === '' ? null : raw;
+    });
+
+    const button = el('credSaveBtn');
+    button.disabled = true;
+    try {
+      if (id) await api('/api/ict/credentials/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+      else await api('/api/ict/credentials', { method: 'POST', body: JSON.stringify(payload) });
+      credNotice(id ? 'Account updated.' : 'Account added.', 'success');
+      credReset();
+      await loadCredentials();
+    } catch (error) {
+      credNotice(error.message || 'Could not save.', 'error');
     }
     button.disabled = false;
   });

@@ -134,6 +134,9 @@
   <aside class="sidebar" id="sidebar">
     <div class="side-group">Operations</div>
     <button class="side-link active" data-view="overview" type="button"><i class="fas fa-gauge-high"></i> Overview</button>
+    <button class="side-link" data-view="tickets" type="button">
+      <i class="fas fa-life-ring"></i> Helpdesk
+    </button>
     <button class="side-link" data-view="assets" data-cap="assets.view" type="button">
       <i class="fas fa-laptop"></i> Assets
     </button>
@@ -152,7 +155,6 @@
     <button class="side-link" data-view="staff" data-super="1" type="button"><i class="fas fa-user-shield"></i> Staff &amp; access</button>
 
     <div class="side-group">Later phases</div>
-    <div class="side-soon"><i class="fas fa-life-ring"></i> Helpdesk</div>
     <div class="side-soon"><i class="fas fa-list-check"></i> Tasks</div>
   </aside>
 
@@ -162,6 +164,99 @@
       <h1>ICT Overview</h1>
       <p class="lede">The state of the organisation's digital infrastructure, drawn live from the records below.</p>
       <div id="overviewBody"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i>Loading&hellip;</div></div>
+    </section>
+
+    <!-- ---------------- Helpdesk ---------------- -->
+    <section class="view" id="view-tickets">
+      <h1>Helpdesk</h1>
+      <p class="lede">
+        Problems reported by staff and members. The queue is ordered so the thing that has
+        been waiting longest at the highest priority is at the top &mdash; nobody has to sort it.
+      </p>
+      <div id="tkNotice" class="notice"></div>
+      <div class="tiles" id="tkTiles"></div>
+
+      <div class="panel">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <input class="in" id="tkSearch" style="flex:1;min-width:180px"
+                 placeholder="Reference, subject or who reported it" autocomplete="off" />
+          <select class="in" id="tkStatusFilter" style="width:auto;min-width:150px">
+            <option value="open">Open</option>
+            <option value="">All</option>
+            <option value="new">New</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In progress</option>
+            <option value="waiting">Waiting</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;white-space:nowrap">
+            <input type="checkbox" id="tkMine" /> Only mine
+          </label>
+          <button class="btn btn-primary" id="tkNewBtn" type="button"><i class="fas fa-plus"></i> Raise a ticket</button>
+        </div>
+        <div class="scroll"><div id="tkList"></div></div>
+      </div>
+
+      <div class="panel" id="tkFormPanel" hidden>
+        <h2>Raise a ticket</h2>
+        <p class="muted" style="margin:-4px 0 12px">
+          Only the subject is needed. Everything else can be filled in later by whoever picks it up.
+        </p>
+        <form id="tkForm" autocomplete="off">
+          <label class="lbl" for="tkSubject">What is the problem?</label>
+          <input class="in" id="tkSubject" maxlength="200" placeholder="The printer in reception jams on every third page" required />
+          <div class="grid3">
+            <div>
+              <label class="lbl" for="tkCategory">Category</label>
+              <select class="in" id="tkCategory"></select>
+            </div>
+            <div>
+              <label class="lbl" for="tkPriority">Priority</label>
+              <select class="in" id="tkPriority"></select>
+            </div>
+            <div>
+              <label class="lbl" for="tkRequester">Reported by</label>
+              <input class="in" id="tkRequester" maxlength="160" placeholder="Leave blank if it is you" />
+            </div>
+          </div>
+          <label class="lbl" for="tkDescription">Anything else worth knowing</label>
+          <textarea class="in" id="tkDescription" rows="3" placeholder="When it started, what you have already tried"></textarea>
+          <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit" id="tkSaveBtn"><i class="fas fa-paper-plane"></i> Submit</button>
+            <button class="btn btn-secondary" type="button" id="tkCancelBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel" id="tkDetailPanel" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div>
+            <h2 id="tdSubject" style="margin-bottom:2px"></h2>
+            <p class="muted" id="tdMeta"></p>
+          </div>
+          <button class="btn btn-secondary" id="tdCloseBtn" type="button" style="font-size:12px">Close</button>
+        </div>
+        <div id="tdNotice" class="notice" style="margin-top:12px"></div>
+
+        <div id="tdControls" style="margin-top:16px"></div>
+        <div id="tdFacts" style="margin-top:16px"></div>
+
+        <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line)">
+          <h3 style="font-size:15px;margin-bottom:10px">Conversation</h3>
+          <div id="tdThread"></div>
+          <form id="tdReplyForm" style="margin-top:14px">
+            <textarea class="in" id="tdReply" rows="3" placeholder="Add a reply"></textarea>
+            <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap">
+              <button class="btn btn-primary" type="submit" id="tdReplyBtn"><i class="fas fa-comment"></i> Send</button>
+              <label id="tdInternalWrap" style="display:flex;align-items:center;gap:8px;font-size:13px" hidden>
+                <input type="checkbox" id="tdInternal" />
+                Internal note &mdash; the person who reported this will not see it
+              </label>
+            </div>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- ---------------- Assets ---------------- -->
@@ -687,6 +782,7 @@
     el('sidebar').classList.remove('open');
     // The view is in the URL so a link can point straight at one, and a reload stays put.
     if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
+    if (view === 'tickets') loadTickets();
     if (view === 'assets') loadAssets();
     if (view === 'infrastructure') loadInfrastructure();
     if (view === 'licenses') loadLicenses();
@@ -778,6 +874,359 @@
     }
   }
 
+
+
+  /* ---------------- helpdesk ---------------- */
+  let currentTicket = null;
+  let ticketMeta = { categories: [], priorities: [], statuses: [], isStaff: false };
+  let assignees = null;
+
+  const TK_STATUS_TONE = {
+    new: 's-critical', assigned: 's-notice', in_progress: 's-notice',
+    waiting: 's-warning', resolved: 's-ok', closed: 's-unknown'
+  };
+  const TK_PRIORITY_TONE = {
+    urgent: 's-critical', high: 's-warning', normal: 's-unknown', low: 's-unknown'
+  };
+  const fmtWhen = (v) => {
+    if (!v) return '—';
+    const d = new Date(String(v).replace(' ', 'T'));
+    return isNaN(d) ? String(v) : d.toLocaleString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
+
+  function tkNotice(m, k) {
+    const b = el('tkNotice');
+    b.textContent = m || '';
+    b.className = 'notice' + (m ? ' show ' + (k || 'success') : '');
+  }
+  function tdNotice(m, k) {
+    const b = el('tdNotice');
+    b.textContent = m || '';
+    b.className = 'notice' + (m ? ' show ' + (k || 'success') : '');
+  }
+
+  function renderTkTiles(s) {
+    const mount = el('tkTiles');
+    mount.textContent = '';
+    if (!s) { mount.hidden = true; return; }
+    mount.hidden = false;
+    mount.appendChild(tile(s.open || 0, 'Open'));
+    mount.appendChild(tile(s.unassigned || 0, 'Unassigned', (s.unassigned || 0) > 0 ? 'warn' : 'ok'));
+    mount.appendChild(tile(s.overdue || 0, 'Overdue', (s.overdue || 0) > 0 ? 'crit' : 'ok'));
+    mount.appendChild(tile(s.resolvedThisMonth || 0, 'Resolved, 30 days', 'ok'));
+    const resp = make('div', 'tile');
+    resp.appendChild(make('div', 'n', s.medianResponseHours === null ? '—' : s.medianResponseHours + 'h'));
+    resp.appendChild(make('div', 'l', 'Median first reply'));
+    mount.appendChild(resp);
+    const fix = make('div', 'tile');
+    fix.appendChild(make('div', 'n', s.medianResolutionHours === null ? '—' : s.medianResolutionHours + 'h'));
+    fix.appendChild(make('div', 'l', 'Median to resolve'));
+    mount.appendChild(fix);
+  }
+
+  function renderTickets(list) {
+    const mount = el('tkList');
+    mount.textContent = '';
+    if (!list.length) {
+      const empty = make('div', 'empty');
+      empty.appendChild(make('i', 'far fa-circle-check'));
+      empty.appendChild(make('div', null, ticketMeta.isStaff
+        ? 'Nothing in the queue.'
+        : 'You have not reported anything. Use "Raise a ticket" if something is broken.'));
+      mount.appendChild(empty);
+      return;
+    }
+    const table = make('table');
+    const head = make('thead'); const hr = make('tr');
+    ['Ref', 'Problem', 'Priority', 'Status', 'Waiting', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    head.appendChild(hr); table.appendChild(head);
+
+    const body = make('tbody');
+    list.forEach((t) => {
+      const tr = make('tr');
+      if (['resolved', 'closed'].includes(t.status)) tr.style.opacity = '.6';
+
+      const ref = make('td');
+      const code = make('code', null, t.reference);
+      code.style.cssText = 'font-size:12px;background:var(--bg);padding:3px 7px;border-radius:5px;white-space:nowrap';
+      ref.appendChild(code);
+      tr.appendChild(ref);
+
+      const subj = make('td');
+      const s = make('div', null, t.subject); s.style.fontWeight = '600';
+      subj.appendChild(s);
+      const sub = [t.requesterName, t.category, t.assetTag].filter(Boolean).join('  ·  ');
+      subj.appendChild(make('div', 'muted', sub));
+      tr.appendChild(subj);
+
+      const pri = make('td');
+      pri.appendChild(make('span', 'status ' + (TK_PRIORITY_TONE[t.priority] || 's-unknown'), t.priority));
+      tr.appendChild(pri);
+
+      const st = make('td');
+      st.appendChild(make('span', 'status ' + (TK_STATUS_TONE[t.status] || 's-unknown'), t.status.replace(/_/g, ' ')));
+      if (t.assigneeEmail) st.appendChild(make('div', 'muted', t.assigneeEmail));
+      tr.appendChild(st);
+
+      const wait = make('td');
+      wait.appendChild(make('div', null, fmtWhen(t.createdAt)));
+      if (t.breach) {
+        // Named rather than a generic "overdue" - waiting for a first reply and waiting for
+        // a fix are different failures and get chased differently.
+        const b = make('div', 'muted', (t.breach.kind === 'response' ? 'no reply yet, ' : 'unresolved, ')
+          + t.breach.hoursLate + 'h over');
+        b.style.cssText = 'color:' + BAND_COLOUR.expired + ';font-weight:600';
+        wait.appendChild(b);
+      } else if (t.resolutionHours !== null) {
+        wait.appendChild(make('div', 'muted', 'fixed in ' + t.resolutionHours + 'h'));
+      }
+      tr.appendChild(wait);
+
+      const act = make('td');
+      const open = make('button', 'btn btn-secondary', 'Open');
+      open.type = 'button'; open.style.fontSize = '12px';
+      open.addEventListener('click', () => openTicket(t.id));
+      act.appendChild(open);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    mount.appendChild(table);
+  }
+
+  async function loadTickets() {
+    const params = new URLSearchParams();
+    const search = el('tkSearch').value.trim();
+    if (search) params.set('search', search);
+    params.set('status', el('tkStatusFilter').value);
+    if (el('tkMine').checked) params.set('mine', '1');
+
+    try {
+      const data = await api('/api/ict/tickets&' + params.toString());
+      ticketMeta = {
+        categories: data.categories || [], priorities: data.priorities || [],
+        statuses: data.statuses || [], isStaff: !!data.isStaff
+      };
+      if (!el('tkCategory').options.length) {
+        ticketMeta.categories.forEach((c) => {
+          const o = document.createElement('option');
+          o.value = c; o.textContent = c.replace(/_/g, ' ');
+          el('tkCategory').appendChild(o);
+        });
+        ticketMeta.priorities.forEach((p) => {
+          const o = document.createElement('option');
+          o.value = p; o.textContent = p;
+          if (p === 'normal') o.selected = true;
+          el('tkPriority').appendChild(o);
+        });
+      }
+      // Only ICT staff have a queue to filter or a workload to narrow to.
+      el('tkMine').parentNode.hidden = !ticketMeta.isStaff;
+      el('tkStatusFilter').hidden = !ticketMeta.isStaff;
+      renderTkTiles(data.summary);
+      renderTickets(data.tickets || []);
+    } catch (error) {
+      el('tkList').textContent = '';
+      el('tkList').appendChild(make('div', 'empty', error.message || 'Could not load tickets.'));
+    }
+  }
+
+  function renderTicketDetail(t, isStaff) {
+    currentTicket = t;
+    el('tdSubject').textContent = t.subject;
+    el('tdMeta').textContent = [t.reference, t.requesterName, t.department, t.category]
+      .filter(Boolean).join('  ·  ');
+    tdNotice('');
+    el('tdInternalWrap').hidden = !isStaff;
+
+    /* ---- the controls staff get, and a requester does not ---- */
+    const controls = el('tdControls');
+    controls.textContent = '';
+    if (isStaff) {
+      const row = make('div');
+      row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end';
+
+      const select = (label, id, options, value) => {
+        const cell = make('div');
+        cell.appendChild(make('label', 'lbl', label));
+        const sel = document.createElement('select');
+        sel.className = 'in'; sel.id = id; sel.style.minWidth = '150px';
+        options.forEach((o) => {
+          const opt = document.createElement('option');
+          opt.value = o.value; opt.textContent = o.label;
+          if (o.value === value) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        cell.appendChild(sel);
+        row.appendChild(cell);
+        return sel;
+      };
+
+      select('Status', 'tdStatus', ticketMeta.statuses.map((s) => ({ value: s, label: s.replace(/_/g, ' ') })), t.status);
+      select('Priority', 'tdPriority', ticketMeta.priorities.map((p) => ({ value: p, label: p })), t.priority);
+      const assigneeOptions = [{ value: '', label: 'Nobody' }].concat(
+        (assignees || []).map((a) => ({ value: String(a.id), label: a.email })));
+      select('Assigned to', 'tdAssignee', assigneeOptions, t.assigneeUserId === null ? '' : String(t.assigneeUserId));
+
+      const apply = make('button', 'btn btn-primary', 'Apply');
+      apply.type = 'button';
+      apply.style.marginBottom = '0';
+      apply.addEventListener('click', async () => {
+        apply.disabled = true;
+        const payload = {
+          status: el('tdStatus').value,
+          priority: el('tdPriority').value,
+          assigneeUserId: el('tdAssignee').value === '' ? null : Number(el('tdAssignee').value)
+        };
+        if (payload.status === 'resolved' || payload.status === 'closed') {
+          const resolution = window.prompt('What fixed it? (recorded on the ticket)', t.resolution || '');
+          if (resolution === null) { apply.disabled = false; return; }
+          payload.resolution = resolution;
+        }
+        try {
+          const data = await api('/api/ict/tickets/' + t.id, { method: 'PATCH', body: JSON.stringify(payload) });
+          renderTicketDetail(data.ticket, true);
+          tdNotice('Ticket updated.', 'success');
+          loadTickets();
+        } catch (error) {
+          tdNotice(error.message || 'Could not update the ticket.', 'error');
+          apply.disabled = false;
+        }
+      });
+      const wrap = make('div');
+      wrap.appendChild(apply);
+      row.appendChild(wrap);
+      controls.appendChild(row);
+    }
+
+    /* ---- facts ---- */
+    const facts = el('tdFacts');
+    facts.textContent = '';
+    facts.appendChild(fact('Status', t.status.replace(/_/g, ' ') + '  ·  ' + t.priority));
+    facts.appendChild(fact('Raised', fmtWhen(t.createdAt)));
+    facts.appendChild(fact('First reply', t.firstResponseAt
+      ? fmtWhen(t.firstResponseAt) + '  (' + t.responseHours + 'h)'
+      : 'not yet'));
+    if (t.resolvedAt) facts.appendChild(fact('Resolved', fmtWhen(t.resolvedAt) + '  (' + t.resolutionHours + 'h)'));
+    if (t.assigneeEmail) facts.appendChild(fact('Assigned to', t.assigneeEmail));
+    if (t.assetTag) facts.appendChild(fact('Asset', t.assetTag));
+    if (t.description) facts.appendChild(fact('Reported', t.description));
+    if (t.resolution) facts.appendChild(fact('Resolution', t.resolution));
+    if (t.breach) {
+      const b = fact('Overdue', (t.breach.kind === 'response' ? 'No reply yet, ' : 'Unresolved, ')
+        + t.breach.hoursLate + ' hours past target');
+      b.style.color = BAND_COLOUR.expired;
+      facts.appendChild(b);
+    }
+
+    /* ---- thread ---- */
+    const thread = el('tdThread');
+    thread.textContent = '';
+    if (!t.comments.length) thread.appendChild(make('p', 'muted', 'Nothing said yet.'));
+    t.comments.forEach((c) => {
+      const row = make('div');
+      row.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px';
+      if (c.isSystem) row.style.opacity = '.7';
+
+      const head = make('div');
+      head.style.cssText = 'display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:3px';
+      head.appendChild(make('strong', null, c.author));
+      head.appendChild(make('span', 'muted', fmtWhen(c.at)));
+      if (c.isInternal) head.appendChild(make('span', 'status s-warning', 'internal'));
+      row.appendChild(head);
+
+      const body = make('div', null, c.body);
+      body.style.whiteSpace = 'pre-wrap';
+      if (c.isSystem) body.style.fontStyle = 'italic';
+      row.appendChild(body);
+      thread.appendChild(row);
+    });
+
+    el('tkDetailPanel').hidden = false;
+    el('tkDetailPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function openTicket(id) {
+    try {
+      // Fetched once and reused - the list of people a ticket can go to does not change
+      // between clicks.
+      if (assignees === null && can('tickets.manage')) {
+        try {
+          const list = await api('/api/ict/tickets/assignees');
+          assignees = list.assignees || [];
+        } catch (error) {
+          assignees = [];
+        }
+      }
+      const data = await api('/api/ict/tickets/' + id);
+      renderTicketDetail(data.ticket, !!data.isStaff);
+    } catch (error) {
+      tkNotice(error.message || 'Could not open that ticket.', 'error');
+    }
+  }
+
+  el('tdReplyForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!currentTicket) return;
+    const body = el('tdReply').value.trim();
+    if (!body) return;
+    const button = el('tdReplyBtn');
+    button.disabled = true;
+    try {
+      const data = await api('/api/ict/tickets/' + currentTicket.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ comment: body, internal: el('tdInternal').checked })
+      });
+      el('tdReply').value = '';
+      el('tdInternal').checked = false;
+      renderTicketDetail(data.ticket, ticketMeta.isStaff);
+      loadTickets();
+    } catch (error) {
+      tdNotice(error.message || 'Could not send that.', 'error');
+    }
+    button.disabled = false;
+  });
+
+  el('tdCloseBtn').addEventListener('click', () => { el('tkDetailPanel').hidden = true; currentTicket = null; });
+  el('tkNewBtn').addEventListener('click', () => {
+    el('tkForm').reset();
+    el('tkFormPanel').hidden = false;
+    el('tkSubject').focus();
+  });
+  el('tkCancelBtn').addEventListener('click', () => { el('tkFormPanel').hidden = true; });
+
+  el('tkForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = el('tkSaveBtn');
+    button.disabled = true;
+    try {
+      const data = await api('/api/ict/tickets', {
+        method: 'POST',
+        body: JSON.stringify({
+          subject: el('tkSubject').value.trim(),
+          category: el('tkCategory').value,
+          priority: el('tkPriority').value,
+          requesterName: el('tkRequester').value.trim(),
+          description: el('tkDescription').value.trim()
+        })
+      });
+      tkNotice('Raised as ' + data.ticket.reference + '.', 'success');
+      el('tkForm').reset();
+      el('tkFormPanel').hidden = true;
+      await loadTickets();
+    } catch (error) {
+      tkNotice(error.message || 'Could not raise the ticket.', 'error');
+    }
+    button.disabled = false;
+  });
+
+  let tkSearchTimer = null;
+  el('tkSearch').addEventListener('input', () => {
+    clearTimeout(tkSearchTimer);
+    tkSearchTimer = setTimeout(loadTickets, 300);
+  });
+  el('tkStatusFilter').addEventListener('change', loadTickets);
+  el('tkMine').addEventListener('change', loadTickets);
 
   /* ---------------- assets ---------------- */
   let assetCategories = {};

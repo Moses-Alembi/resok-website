@@ -78,6 +78,26 @@
         <div id="cpdTokens"></div>
       </section>
 
+      <section class="panel" id="ictReportPanel">
+        <h2>Something not working?</h2>
+        <p style="color:var(--muted);font-size:13.5px;line-height:1.55;margin:-4px 0 14px">
+          Report an ICT problem &mdash; a laptop, the printer, email, the website. You only
+          need to say what is wrong; ICT will come back to you here.
+        </p>
+        <div id="ictReportNotice" class="notice"></div>
+        <form id="ictReportForm" autocomplete="off">
+          <input class="in" id="ictSubject" maxlength="200" required
+                 placeholder="The printer in reception jams on every third page"
+                 style="width:100%;border:1px solid #d0d5dd;border-radius:7px;padding:10px 12px;font:inherit;font-size:14px" />
+          <textarea id="ictDescription" rows="2" placeholder="Anything else worth knowing (optional)"
+                 style="width:100%;border:1px solid #d0d5dd;border-radius:7px;padding:10px 12px;font:inherit;font-size:14px;margin-top:10px"></textarea>
+          <button class="btn btn-primary" type="submit" id="ictReportBtn" style="margin-top:12px">
+            <i class="fas fa-paper-plane"></i> Report it
+          </button>
+        </form>
+        <div id="ictMyTickets" style="margin-top:18px"></div>
+      </section>
+
       <section class="panel">
         <h2>Recent Payments</h2>
         <div id="paymentRows"></div>
@@ -229,6 +249,79 @@
       }
     }
     loadCpdTokens();
+
+
+    /**
+     * Reporting an ICT problem, from where members already are.
+     *
+     * Deliberately here rather than only on the ICT page: if reporting a fault means finding
+     * a different screen first, people send a WhatsApp message instead - and then the
+     * helpdesk queue looks empty while the real problems go unrecorded.
+     */
+    function ictReportNotice(message, kind) {
+      const box = document.getElementById("ictReportNotice");
+      box.textContent = message || "";
+      box.className = "notice" + (message ? " show " + (kind || "success") : "");
+    }
+
+    async function loadMyTickets() {
+      const mount = document.getElementById("ictMyTickets");
+      try {
+        const data = await window.ResokPortal.api("/api/ict/tickets&status=open");
+        mount.textContent = "";
+        const tickets = data.tickets || [];
+        if (!tickets.length) return;
+
+        const heading = document.createElement("h3");
+        heading.style.cssText = "font-size:14px;margin-bottom:8px";
+        heading.textContent = "What you have reported";
+        mount.appendChild(heading);
+
+        tickets.forEach((t) => {
+          const row = document.createElement("div");
+          row.style.cssText = "display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap";
+          const ref = document.createElement("code");
+          ref.style.cssText = "font-size:11.5px;background:var(--bg);padding:2px 6px;border-radius:4px";
+          ref.textContent = t.reference;
+          row.appendChild(ref);
+          const subj = document.createElement("span");
+          subj.style.flex = "1";
+          subj.textContent = t.subject;
+          row.appendChild(subj);
+          const status = document.createElement("span");
+          status.style.cssText = "color:var(--muted);font-size:12px";
+          status.textContent = t.status.replace(/_/g, " ");
+          row.appendChild(status);
+          mount.appendChild(row);
+        });
+      } catch (error) {
+        // The helpdesk may not be deployed. The form simply does not list anything.
+      }
+    }
+
+    document.getElementById("ictReportForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = document.getElementById("ictReportBtn");
+      const subject = document.getElementById("ictSubject").value.trim();
+      if (!subject) return;
+      button.disabled = true;
+      try {
+        const data = await window.ResokPortal.api("/api/ict/tickets", {
+          method: "POST",
+          body: JSON.stringify({
+            subject,
+            description: document.getElementById("ictDescription").value.trim()
+          })
+        });
+        ictReportNotice("Reported as " + data.ticket.reference + ". ICT will reply here.", "success");
+        document.getElementById("ictReportForm").reset();
+        loadMyTickets();
+      } catch (error) {
+        ictReportNotice(error.message || "Could not report that just now.", "error");
+      }
+      button.disabled = false;
+    });
+    loadMyTickets();
 
   </script>
 </body>

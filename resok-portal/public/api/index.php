@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'ict-issue', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -1974,28 +1974,12 @@ Respiratory Society of Kenya");
         respond(201, ['asset' => $asset]);
     }
 
-    /**
-     * Everything one person is holding - what to run before somebody leaves.
-     *
-     * Takes a name or an email. It used to take only an email, which meant it answered
-     * nothing: of the handovers on the register, one has an email address on it. Most people
-     * issued equipment here have no account, so the name is the only handle that exists.
-     */
+    /** Everything one person is holding - what to run before somebody leaves. */
     if ($route === 'ict/assets/held-by' && $method === 'GET') {
         $user = auth($config);
-        requireModule('ictIssueList', 'lib/ict-issue.php');
-        ictRequire($pdo, $user, $config, 'assets.view');
-
-        $email = trim((string)($_GET['email'] ?? ''));
-        $name  = trim((string)($_GET['name'] ?? ''));
-        if ($email === '' && $name === '') {
-            respond(400, ['error' => 'Give a name or an email to look up.']);
-        }
-        if ($name !== '') {
-            respond(200, ['assets' => ictIssueList($pdo, ['state' => 'out', 'holder' => $name])['issues']]);
-        }
         requireModule('ictAssetsHeldBy', 'lib/ict-assets.php');
-        respond(200, ['assets' => ictAssetsHeldBy($pdo, $email)]);
+        ictRequire($pdo, $user, $config, 'assets.view');
+        respond(200, ['assets' => ictAssetsHeldBy($pdo, (string)($_GET['email'] ?? ''))]);
     }
 
     /**
@@ -2058,73 +2042,6 @@ Respiratory Society of Kenya");
                  $asset['assetTag'] . ' from ' . ($was['holder']['name'] ?? 'unknown'),
                  ['condition' => $was['condition'] ?? null], ['condition' => $asset['condition']]);
         respond(200, ['asset' => $asset]);
-    }
-
-    // ----- ICT: the issue book ----------------------------------------------------------
-
-    /**
-     * The register itself, newest handover first.
-     *
-     * state=out is the default because "what is out right now" is the question the book gets
-     * opened for; returned and unsigned are the other two worth having.
-     */
-    if ($route === 'ict/issues' && $method === 'GET') {
-        $user = auth($config);
-        requireModule('ictIssueList', 'lib/ict-issue.php');
-        ictRequire($pdo, $user, $config, 'assets.view');
-
-        $page = ictIssueList($pdo, [
-            'state'  => (string)($_GET['state'] ?? 'out'),
-            'q'      => (string)($_GET['q'] ?? ''),
-            'holder' => (string)($_GET['holder'] ?? ''),
-            'from'   => (string)($_GET['from'] ?? ''),
-            'to'     => (string)($_GET['to'] ?? ''),
-            'limit'  => (int)($_GET['limit'] ?? 100),
-            'offset' => (int)($_GET['offset'] ?? 0),
-        ]);
-        respond(200, $page + ['summary' => ictIssueSummary($pdo)]);
-    }
-
-    /** Who is holding what, grouped by person rather than by spelling. */
-    if ($route === 'ict/issues/holders' && $method === 'GET') {
-        $user = auth($config);
-        requireModule('ictIssueHolders', 'lib/ict-issue.php');
-        ictRequire($pdo, $user, $config, 'assets.view');
-        respond(200, [
-            'holders' => ictIssueHolders($pdo),
-            'summary' => ictIssueSummary($pdo),
-        ]);
-    }
-
-    /** One handover - what the printable form is built from. */
-    if (preg_match('#^ict/issues/(\d+)$#', $route, $m) && $method === 'GET') {
-        $user = auth($config);
-        requireModule('ictIssueFind', 'lib/ict-issue.php');
-        ictRequire($pdo, $user, $config, 'assets.view');
-
-        $issue = ictIssueFind($pdo, (int)$m[1]);
-        if (!$issue) respond(404, ['error' => 'No handover with that id.']);
-        respond(200, ['issue' => $issue]);
-    }
-
-    /**
-     * Records a signature against a handover.
-     *
-     * Needs assets.assign rather than assets.view: this is the step that turns a typed row
-     * into evidence, and it should be limited to whoever actually hands equipment over.
-     */
-    if (preg_match('#^ict/issues/(\d+)/acknowledge$#', $route, $m) && $method === 'POST') {
-        $user = auth($config);
-        requireModule('ictIssueAcknowledge', 'lib/ict-issue.php');
-        ictRequire($pdo, $user, $config, 'assets.assign');
-
-        [$issue, $error] = ictIssueAcknowledge($pdo, (int)$m[1], input(), (int)$user['userId']);
-        if ($error) respond(400, ['error' => $error]);
-        ictAudit($pdo, (int)$user['userId'], 'issue_acknowledged', 'asset',
-                 (string)$issue['assetId'],
-                 $issue['reference'] . ' by ' . $issue['holderName'],
-                 null, ['via' => $issue['acknowledgedVia'], 'ref' => $issue['acknowledgementRef']]);
-        respond(200, ['issue' => $issue]);
     }
 
     // ----- ICT: maintenance -----------------------------------------------------------------

@@ -63,7 +63,6 @@ function migrateOrder(): array
         'schema-ict-credentials.sql',          // credential register (no secrets)
         'schema-ict-licenses.sql',             // software, licences and seats
         'schema-ict-tickets.sql',              // helpdesk tickets and comments
-        'schema-ict-issue.sql',                // alters ict_assignments; handover signatures
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];

@@ -1510,6 +1510,10 @@ Respiratory Society of Kenya");
             'enabled' => (bool)(int)($row['mfa_enabled'] ?? 0),
             'enrolledAt' => $row['mfa_enrolled_at'] ?? null,
             'recoveryRemaining' => is_array($remaining) ? count($remaining) : 0,
+            // Stated in both branches. The unavailable branch above says available:false, so
+            // a caller that only ever saw this one had to infer the good case from a missing
+            // key - which reads as false in JavaScript exactly when it should read as true.
+            'available' => true,
             'requiredForRole' => mfaRequiredForRole((string)($user['role'] ?? 'member')),
         ]);
     }

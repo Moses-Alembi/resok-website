@@ -57,6 +57,26 @@
     .btn{border:0;border-radius:6px;padding:11px 16px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;
       background:var(--brand-primary);color:#fff;display:inline-flex;align-items:center;gap:8px}
     .notice{margin-top:16px;padding:12px 14px;border-radius:6px;font-size:13.5px;background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}
+    .notice.ok{background:#ecfdf3;color:#05603a;border-color:#a6f4c5}
+    .notice.warn{background:#fffaeb;color:#93370d;border-color:#fedf89}
+    .btn.ghost{background:#fff;color:var(--text-dark);border:1px solid var(--line)}
+    .btn.danger{background:#fff;color:var(--fail);border:1px solid #fecdd3}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .mfa-state{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+    .mfa-state .pill{border-radius:999px;padding:3px 11px;font-size:12px;font-weight:800}
+    .mfa-state .pill.on{background:#ecfdf3;color:#05603a}
+    .mfa-state .pill.off{background:#fef3f2;color:#b42318}
+    .mfa-grid{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;margin-top:18px}
+    .mfa-qr{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;flex:0 0 auto}
+    .mfa-steps{flex:1;min-width:270px;font-size:13.5px;line-height:1.65}
+    .mfa-steps ol{margin:0 0 12px 18px}
+    .mfa-secret{font-family:Consolas,monospace;font-size:13px;letter-spacing:.09em;background:#f5f7fa;
+      border:1px solid var(--line);border-radius:6px;padding:9px 11px;word-break:break-all;margin:8px 0 14px}
+    .mfa-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+    .mfa-in{border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:14px}
+    .codes{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:12px 0}
+    .codes span{font-family:Consolas,monospace;font-size:14px;letter-spacing:.08em;background:#fff;
+      border:1px solid var(--line);border-radius:6px;padding:8px 10px;text-align:center}
     @media(max-width:640px){.tally{margin-left:0}}
   </style>
 </head>
@@ -79,6 +99,85 @@
           <div class="sub" id="postureNote"></div>
         </div>
         <div class="tally" id="tally"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="mfaPanel" hidden>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div>
+          <h2 style="font-size:18px">Two-factor authentication</h2>
+          <p style="color:var(--muted);font-size:13.5px;margin-top:6px;max-width:60ch">
+            A second factor on your own account, from an authenticator app. Your password can be
+            guessed, reused or phished; a code that changes every thirty seconds cannot be any of
+            those. This is the strongest single control available on an administrator account.
+          </p>
+        </div>
+        <div class="mfa-state" id="mfaState"></div>
+      </div>
+
+      <div id="mfaNotice" class="notice" hidden></div>
+
+      <!-- Off, and not yet being set up -->
+      <div id="mfaOff" hidden>
+        <div class="mfa-row">
+          <button class="btn" id="mfaStartBtn" type="button"><i class="fas fa-shield-halved"></i> Set up two-factor</button>
+        </div>
+      </div>
+
+      <!-- Mid-enrolment: the secret exists but is not active until a code proves the app has it -->
+      <div id="mfaSetup" hidden>
+        <div class="mfa-grid">
+          <div class="mfa-qr" id="mfaQr"></div>
+          <div class="mfa-steps">
+            <ol>
+              <li>Open Google Authenticator, Microsoft Authenticator or 1Password.</li>
+              <li>Scan the code, or type the key below if the camera will not read it.</li>
+              <li>Enter the six digits it shows, to prove the app is working before this is switched on.</li>
+            </ol>
+            <div class="mfa-secret" id="mfaSecret"></div>
+            <div class="mfa-row">
+              <input class="mfa-in" id="mfaCodeIn" inputmode="numeric" autocomplete="one-time-code"
+                     maxlength="6" placeholder="000000" style="width:130px;letter-spacing:.3em;text-align:center" />
+              <button class="btn" id="mfaConfirmBtn" type="button">Turn it on</button>
+              <button class="btn ghost" id="mfaCancelBtn" type="button">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shown once, immediately after enrolling -->
+      <div id="mfaCodes" hidden>
+        <div class="notice warn" style="margin-top:18px">
+          <strong>Save these now.</strong> They are the only way back in if you lose the phone,
+          and they are not stored anywhere they can be read again &mdash; only hashed, the same way
+          a password is. Closing this page without keeping them means losing them.
+        </div>
+        <div class="codes" id="mfaCodeList"></div>
+        <div class="mfa-row">
+          <button class="btn" id="mfaPrintCodes" type="button"><i class="fas fa-print"></i> Print</button>
+          <button class="btn ghost" id="mfaCopyCodes" type="button"><i class="fas fa-copy"></i> Copy</button>
+          <button class="btn ghost" id="mfaCodesDone" type="button">I have saved them</button>
+        </div>
+      </div>
+
+      <!-- On -->
+      <div id="mfaOn" hidden>
+        <div id="mfaOnDetail" style="font-size:13.5px;color:var(--muted);margin-top:4px"></div>
+        <div class="mfa-row" style="margin-top:14px">
+          <button class="btn danger" id="mfaDisableBtn" type="button">Turn off two-factor</button>
+        </div>
+        <div id="mfaDisableForm" hidden style="margin-top:14px">
+          <p style="font-size:13.5px;color:var(--muted);margin-bottom:8px;max-width:60ch">
+            Confirm with your password. A stolen session must not be able to quietly remove the
+            control that would have stopped it.
+          </p>
+          <div class="mfa-row">
+            <input class="mfa-in" id="mfaPassword" type="password" autocomplete="current-password"
+                   placeholder="Your password" style="min-width:230px" />
+            <button class="btn danger" id="mfaDisableConfirm" type="button">Turn it off</button>
+            <button class="btn ghost" id="mfaDisableCancel" type="button">Keep it on</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -130,6 +229,7 @@
     </section>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/portal-state.js?v=20260908-screening"></script>
   <script>
     /**
@@ -139,6 +239,196 @@
      */
     const ICONS = { pass: "fa-circle-check", warn: "fa-triangle-exclamation", fail: "fa-circle-xmark", info: "fa-circle-info" };
     const el = (id) => document.getElementById(id);
+
+    /* ---------------- two-factor enrolment ---------------- */
+    /*
+     * Four states, and the page only ever shows one: off, mid-enrolment, the recovery codes
+     * that appear exactly once, and on.
+     *
+     * The secret is written to the account by /setup but stays inactive until /enable is
+     * given a working code. That ordering is the point of the two-step flow: an account
+     * whose secret was saved from a QR the user never actually scanned would be locked out
+     * of itself at the next sign-in.
+     */
+    let mfaSecret = null;
+
+    function mfaNotice(message, kind) {
+      const box = el("mfaNotice");
+      box.textContent = message || "";
+      box.className = "notice" + (kind ? " " + kind : "");
+      box.hidden = !message;
+    }
+
+    function mfaShow(which) {
+      ["mfaOff", "mfaSetup", "mfaCodes", "mfaOn"].forEach((id) => { el(id).hidden = id !== which; });
+    }
+
+    function mfaRenderState(status) {
+      const state = el("mfaState");
+      state.textContent = "";
+      const pill = document.createElement("span");
+      pill.className = "pill " + (status.enabled ? "on" : "off");
+      pill.textContent = status.enabled ? "on" : "off";
+      state.appendChild(pill);
+
+      // Said plainly rather than left to be inferred from a grey pill: this account is
+      // reachable with a password alone, and the role makes that worse.
+      if (!status.enabled && status.requiredForRole) {
+        const warn = document.createElement("span");
+        warn.style.cssText = "color:var(--fail);font-size:12.5px";
+        warn.textContent = "required for this role";
+        state.appendChild(warn);
+      }
+    }
+
+    async function loadMfa() {
+      try {
+        const status = await window.ResokPortal.api("/api/auth/mfa/status");
+        el("mfaPanel").hidden = false;
+        mfaRenderState(status);
+
+        if (status.available === false) {
+          mfaShow(null);
+          mfaNotice("Two-factor is unavailable on this server: its columns are missing. "
+                  + "Apply schema-security.sql from the panel below.", "warn");
+          return;
+        }
+        if (status.enabled) {
+          const when = status.enrolledAt ? new Date(String(status.enrolledAt).replace(" ", "T")) : null;
+          el("mfaOnDetail").textContent =
+            "Enabled" + (when && !isNaN(when) ? " on " + when.toLocaleDateString("en-KE",
+              { day: "numeric", month: "long", year: "numeric" }) : "")
+            + " \u00b7 " + status.recoveryRemaining + " recovery code"
+            + (status.recoveryRemaining === 1 ? "" : "s") + " unused.";
+          mfaShow("mfaOn");
+        } else {
+          mfaShow("mfaOff");
+        }
+      } catch (error) {
+        el("mfaPanel").hidden = false;
+        mfaShow(null);
+        mfaNotice(error.message || "Could not read the two-factor status.", "");
+      }
+    }
+
+    el("mfaStartBtn").addEventListener("click", async () => {
+      const button = el("mfaStartBtn");
+      button.disabled = true;
+      mfaNotice("");
+      try {
+        const data = await window.ResokPortal.api("/api/auth/mfa/setup", { method: "POST" });
+        mfaSecret = data.secret;
+        el("mfaSecret").textContent = data.secret;
+        const qr = el("mfaQr");
+        qr.textContent = "";
+        if (window.QRCode) {
+          new window.QRCode(qr, { text: data.uri, width: 168, height: 168,
+                                  correctLevel: window.QRCode.CorrectLevel.M });
+        } else {
+          // The key alone is enough to enrol by hand, so a blocked CDN costs convenience,
+          // not the ability to turn this on.
+          const note = document.createElement("div");
+          note.style.cssText = "font-size:12.5px;color:var(--muted);max-width:168px";
+          note.textContent = "The QR library did not load. Type the key into your app instead.";
+          qr.appendChild(note);
+        }
+        mfaShow("mfaSetup");
+        el("mfaCodeIn").focus();
+      } catch (error) {
+        mfaNotice(error.message || "Could not start the setup.", "");
+      }
+      button.disabled = false;
+    });
+
+    el("mfaCancelBtn").addEventListener("click", () => { mfaSecret = null; mfaNotice(""); mfaShow("mfaOff"); });
+
+    el("mfaConfirmBtn").addEventListener("click", async () => {
+      const button = el("mfaConfirmBtn");
+      const code = el("mfaCodeIn").value.trim();
+      if (!/^[0-9]{6}$/.test(code)) { mfaNotice("Enter the six digits from your app.", "warn"); return; }
+      button.disabled = true;
+      mfaNotice("");
+      try {
+        const data = await window.ResokPortal.api("/api/auth/mfa/enable", {
+          method: "POST", body: JSON.stringify({ code })
+        });
+        const list = el("mfaCodeList");
+        list.textContent = "";
+        (data.recoveryCodes || []).forEach((c) => {
+          const span = document.createElement("span");
+          span.textContent = c;
+          list.appendChild(span);
+        });
+        el("mfaCodeIn").value = "";
+        mfaShow("mfaCodes");
+        mfaRenderState({ enabled: true, requiredForRole: false });
+      } catch (error) {
+        mfaNotice(error.message || "That did not work.", "");
+      }
+      button.disabled = false;
+    });
+
+    el("mfaCodesDone").addEventListener("click", () => { mfaNotice(""); loadMfa(); });
+
+    el("mfaCopyCodes").addEventListener("click", async () => {
+      const codes = [...el("mfaCodeList").children].map((n) => n.textContent).join("\n");
+      try {
+        await navigator.clipboard.writeText(codes);
+        mfaNotice("Copied. Put them somewhere that is not this computer.", "ok");
+      } catch (error) {
+        mfaNotice("Could not copy automatically - select them and copy by hand.", "warn");
+      }
+    });
+
+    el("mfaPrintCodes").addEventListener("click", () => {
+      const codes = [...el("mfaCodeList").children].map((n) => n.textContent);
+      const w = window.open("", "_blank", "width=520,height=640");
+      if (!w) { mfaNotice("Allow pop-ups to print the codes.", "warn"); return; }
+      const doc = w.document;
+      doc.title = "ReSoK recovery codes";
+      const style = doc.createElement("style");
+      style.textContent = "body{font-family:Arial,sans-serif;padding:30px;font-size:13px}"
+        + "h1{font-size:16px;margin:0 0 4px}p{color:#555;margin:0 0 18px}"
+        + "ul{list-style:none;padding:0;columns:2;font-family:Consolas,monospace;font-size:15px;letter-spacing:.08em}"
+        + "li{padding:5px 0}@media print{@page{margin:14mm}}";
+      doc.head.appendChild(style);
+      const h1 = doc.createElement("h1");
+      h1.textContent = "ReSoK Members' Portal - recovery codes";
+      doc.body.appendChild(h1);
+      const p = doc.createElement("p");
+      p.textContent = "Each code works once. Keep this somewhere physically secure; anyone "
+                    + "holding it can sign in as you without your phone.";
+      doc.body.appendChild(p);
+      const ul = doc.createElement("ul");
+      codes.forEach((c) => { const li = doc.createElement("li"); li.textContent = c; ul.appendChild(li); });
+      doc.body.appendChild(ul);
+      w.setTimeout(() => w.print(), 250);
+    });
+
+    el("mfaDisableBtn").addEventListener("click", () => { el("mfaDisableForm").hidden = false; el("mfaPassword").focus(); });
+    el("mfaDisableCancel").addEventListener("click", () => { el("mfaDisableForm").hidden = true; el("mfaPassword").value = ""; });
+
+    el("mfaDisableConfirm").addEventListener("click", async () => {
+      const button = el("mfaDisableConfirm");
+      button.disabled = true;
+      mfaNotice("");
+      try {
+        await window.ResokPortal.api("/api/auth/mfa/disable", {
+          method: "POST", body: JSON.stringify({ password: el("mfaPassword").value })
+        });
+        el("mfaPassword").value = "";
+        el("mfaDisableForm").hidden = true;
+        mfaNotice("Two-factor is off. This account is now reachable with a password alone.", "warn");
+        await loadMfa();
+      } catch (error) {
+        mfaNotice(error.message || "Could not turn it off.", "");
+      }
+      button.disabled = false;
+    });
+
+    el("mfaCodeIn").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") { event.preventDefault(); el("mfaConfirmBtn").click(); }
+    });
 
     function renderPosture(data) {
       const map = { "good": "good", "needs attention": "needs", "at risk": "risk" };
@@ -283,6 +573,9 @@
     });
 
     async function load() {
+      // Started alongside the assessment rather than after it: an assessment that fails to
+      // load must not also hide the panel that fixes the biggest thing it would report.
+      loadMfa();
       try {
         const data = await window.ResokPortal.api("/api/security/assessment");
         el("loadError").hidden = true;

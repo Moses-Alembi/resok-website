@@ -59,6 +59,7 @@ function migrateOrder(): array
         'schema-tokens.sql',                   // attendance and CPD tokens
         'schema-ict.sql',                      // alters users.role; ICT capabilities, audit
         'schema-ict-infrastructure.sql',       // domain, hosting, SSL, backups
+        'schema-ict-assets.sql',               // equipment, assignments, maintenance
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];

@@ -1,5 +1,10 @@
 
 
+-- IMPORTANT: users.role is declared in schema.sql, schema-ict.sql and schema-blog.sql,
+-- and all three must list the SAME complete set. MySQL does not reject a row holding a
+-- value a redefined enum no longer has - it rewrites it to the empty string, silently.
+-- That is how every ICT account lost its role and, with it, every permission it held.
+-- Adding a role means adding it to all three.
 CREATE TABLE IF NOT EXISTS users (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   email VARCHAR(190) NOT NULL,
@@ -8,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
   verification_token VARCHAR(128) NULL,
   reset_token VARCHAR(128) NULL,
   reset_expires DATETIME NULL,
-  role ENUM('member', 'admin') NOT NULL DEFAULT 'member',
+  -- See the note above the table: this list must match schema-ict.sql and schema-blog.sql.
+  role ENUM('member','author','editor','content_manager','analytics_manager','ict','admin') NOT NULL DEFAULT 'member',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

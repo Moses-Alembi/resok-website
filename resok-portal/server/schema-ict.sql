@@ -18,7 +18,12 @@
 -- requireAdmin() still tests for 'admin' exactly, so an 'ict' account is refused everywhere
 -- an admin is required.
 -- ---------------------------------------------------------------------------------------
-ALTER TABLE users MODIFY COLUMN role ENUM('member','admin','ict') NOT NULL DEFAULT 'member';
+-- IMPORTANT: users.role is declared in schema.sql, schema-ict.sql and schema-blog.sql,
+-- and all three must list the SAME complete set. MySQL does not reject a row holding a
+-- value a redefined enum no longer has - it rewrites it to the empty string, silently.
+-- That is how every ICT account lost its role and, with it, every permission it held.
+-- Adding a role means adding it to all three.
+ALTER TABLE users MODIFY COLUMN role ENUM('member','author','editor','content_manager','analytics_manager','ict','admin') NOT NULL DEFAULT 'member';
 
 -- ---------------------------------------------------------------------------------------
 -- Capabilities, as rows rather than columns.

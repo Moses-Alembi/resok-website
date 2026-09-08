@@ -21,7 +21,7 @@
 -- Roles. schema.sql has ENUM('member','admin'); the spec needs finer editorial roles.
 -- ---------------------------------------------------------------------------------------
 ALTER TABLE users
-  MODIFY COLUMN role ENUM('member','author','editor','content_manager','analytics_manager','admin')
+  MODIFY COLUMN role ENUM('member','author','editor','content_manager','analytics_manager','ict','admin')
   NOT NULL DEFAULT 'member';
 
 -- ---------------------------------------------------------------------------------------

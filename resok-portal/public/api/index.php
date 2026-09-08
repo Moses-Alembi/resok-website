@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -85,6 +85,13 @@ if (!function_exists('cryptoEncrypt')) {
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
     // without this a missing crypto.php would fatal on every member the admin panel lists.
     function cryptoConfig(?array $set = null): array { return []; }
+}
+
+if (!function_exists('ictAssetsSummary')) {
+    function ictAssetsSummary(PDO $pdo): array {
+        return ['total' => 0, 'byStatus' => [], 'value' => 0.0,
+                'warrantyExpiring' => 0, 'maintenanceDue' => 0];
+    }
 }
 
 if (!function_exists('ictInfraSummary')) {
@@ -1624,6 +1631,122 @@ Respiratory Society of Kenya");
             'failed'    => count($failed),
             'migrations'=> migrateStatus($pdo),
         ]);
+    }
+
+    // ----- ICT: assets --------------------------------------------------------------------
+
+    if ($route === 'ict/assets' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictAssetsList', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.view');
+        respond(200, [
+            'assets'  => ictAssetsList($pdo, [
+                'search'   => trim((string)($_GET['search'] ?? '')),
+                'status'   => (string)($_GET['status'] ?? ''),
+                'category' => (string)($_GET['category'] ?? ''),
+            ]),
+            'summary'    => ictAssetsSummary($pdo),
+            'categories' => ICT_ASSET_CATEGORIES,
+        ]);
+    }
+
+    if ($route === 'ict/assets' && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictAssetCreate', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.manage');
+
+        [$asset, $errors] = ictAssetCreate($pdo, input(), (int)$user['userId']);
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        ictAudit($pdo, (int)$user['userId'], 'asset_added', 'asset', (string)$asset['id'],
+                 $asset['assetTag'] . ' ' . $asset['name'], null,
+                 ['assetTag' => $asset['assetTag'], 'name' => $asset['name']]);
+        respond(201, ['asset' => $asset]);
+    }
+
+    /** Everything one person is holding - what to run before somebody leaves. */
+    if ($route === 'ict/assets/held-by' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictAssetsHeldBy', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.view');
+        respond(200, ['assets' => ictAssetsHeldBy($pdo, (string)($_GET['email'] ?? ''))]);
+    }
+
+    /**
+     * One asset with its whole history. This is what a QR scan opens, so it accepts either
+     * the numeric id or the tag printed on the sticker.
+     */
+    if (preg_match('#^ict/assets/([A-Za-z0-9-]+)$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictAssetFind', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.view');
+
+        $asset = ctype_digit($m[1])
+            ? ictAssetFind($pdo, (int)$m[1])
+            : ictAssetFindByTag($pdo, $m[1]);
+        if (!$asset) respond(404, ['error' => 'No asset with that tag or id.']);
+        respond(200, ['asset' => $asset]);
+    }
+
+    if (preg_match('#^ict/assets/(\d+)$#', $route, $m) && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireModule('ictAssetUpdate', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.manage');
+
+        [$asset, $errors, $before] = ictAssetUpdate($pdo, (int)$m[1], input());
+        if ($errors) {
+            respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
+        }
+        [$was, $now] = ictDiff($before ?: [], $asset);
+        // Nested arrays are the holder and the history, not fields anyone edited here.
+        $flat = fn(array $a) => array_filter($a, fn($v) => !is_array($v));
+        ictAudit($pdo, (int)$user['userId'], 'asset_updated', 'asset', (string)$asset['id'],
+                 $asset['assetTag'], $flat($was), $flat($now));
+        respond(200, ['asset' => $asset]);
+    }
+
+    // ----- ICT: assignment ------------------------------------------------------------------
+
+    if (preg_match('#^ict/assets/(\d+)/assign$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictAssetAssign', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.assign');
+
+        [$asset, $error] = ictAssetAssign($pdo, (int)$m[1], input(), (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        ictAudit($pdo, (int)$user['userId'], 'asset_assigned', 'asset', (string)$asset['id'],
+                 $asset['assetTag'] . ' to ' . $asset['holder']['name'],
+                 null, ['holder' => $asset['holder']['name']]);
+        respond(200, ['asset' => $asset]);
+    }
+
+    if (preg_match('#^ict/assets/(\d+)/return$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictAssetReturn', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.assign');
+
+        $was = ictAssetFind($pdo, (int)$m[1]);
+        [$asset, $error] = ictAssetReturn($pdo, (int)$m[1], input(), (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        ictAudit($pdo, (int)$user['userId'], 'asset_returned', 'asset', (string)$asset['id'],
+                 $asset['assetTag'] . ' from ' . ($was['holder']['name'] ?? 'unknown'),
+                 ['condition' => $was['condition'] ?? null], ['condition' => $asset['condition']]);
+        respond(200, ['asset' => $asset]);
+    }
+
+    // ----- ICT: maintenance -----------------------------------------------------------------
+
+    if (preg_match('#^ict/assets/(\d+)/maintenance$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictMaintenanceAdd', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'maintenance.manage');
+
+        [$asset, $error] = ictMaintenanceAdd($pdo, (int)$m[1], input(), (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        ictAudit($pdo, (int)$user['userId'], 'maintenance_recorded', 'asset', (string)$asset['id'],
+                 $asset['assetTag'] . ': ' . ($asset['maintenance'][0]['kind'] ?? 'repair'));
+        respond(201, ['asset' => $asset]);
     }
 
     // ----- ICT: digital infrastructure -----------------------------------------------------

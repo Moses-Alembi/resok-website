@@ -100,7 +100,7 @@ function ictEnsureTables(PDO $pdo): bool
         // too so a portal whose database user can ALTER does not need the manual import,
         // and ignored when it cannot.
         try {
-            $pdo->exec("ALTER TABLE users MODIFY COLUMN role ENUM('member','admin','ict') NOT NULL DEFAULT 'member'");
+            $pdo->exec("ALTER TABLE users MODIFY COLUMN role ENUM('member','author','editor','content_manager','analytics_manager','ict','admin') NOT NULL DEFAULT 'member'");
         } catch (Throwable $e) {
             error_log('Could not widen the role column; import schema-ict.sql: ' . $e->getMessage());
         }

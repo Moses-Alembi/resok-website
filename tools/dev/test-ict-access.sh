@@ -25,13 +25,18 @@ DELETE FROM users WHERE email IN ('t-ict@local','t-admin@local','t-member@local'
 INSERT INTO users (email, password_hash, email_verified, role) VALUES
   ('t-ict@local','$HASH',1,'ict'),
   ('t-admin@local','$HASH',1,'admin'),
-  ('t-member@local','$HASH',1,'member'),
-  ('dev@localhost','$HASH',1,'admin');" >/dev/null
+  ('t-member@local','$HASH',1,'member');" >/dev/null
 
-login() {  # login <email> -> prints the cookie jar path
-    local jar; jar=$(mktemp)
+# The super admin is the address named in config.local.php. It persists between runs and is
+# the login used to browse the site, so it is neither created nor deleted here.
+SUPER_EMAIL=$(grep -oE "super_admins' => \['[^']+" resok-portal/public/api/config.local.php | sed "s/.*\['//")
+SUPER_PASS="LocalDev2026!"
+if [ -z "$SUPER_EMAIL" ]; then echo "  no super_admins in config.local.php - cannot test"; exit 2; fi
+
+login() {  # login <email> [password] -> prints the cookie jar path
+    local jar pass; jar=$(mktemp); pass="${2:-TestPass123}"
     curl -s -c "$jar" -X POST "${API}auth/login" -H 'Content-Type: application/json' \
-         -d "{\"email\":\"$1\",\"password\":\"TestPass123\"}" >/dev/null
+         -d "{\"email\":\"$1\",\"password\":\"$pass\"}" >/dev/null
     echo "$jar"
 }
 get()  { curl -s -b "$1" --max-time 10 "${API}$2"; }
@@ -40,7 +45,7 @@ put()  { curl -s -b "$1" -X PUT --max-time 10 "${API}$2" -H 'Content-Type: appli
 ICT=$(login t-ict@local)
 ADMIN=$(login t-admin@local)
 MEMBER=$(login t-member@local)
-SUPER=$(login dev@localhost)
+SUPER=$(login "$SUPER_EMAIL" "LocalDev2026!")
 ICT_ID=$($MYSQL -N -e "SELECT id FROM users WHERE email='t-ict@local';")
 
 echo "An ICT officer with no capabilities yet:"
@@ -79,7 +84,7 @@ check "a valid set is accepted"          '"capabilities"' "$(put "$SUPER" "ict/s
 check "the change was audited"           'capabilities_changed' "$($MYSQL -N -e "SELECT action FROM ict_audit ORDER BY id DESC LIMIT 1;")"
 
 echo
-$MYSQL -e "DELETE FROM users WHERE email IN ('t-ict@local','t-admin@local','t-member@local','dev@localhost');" >/dev/null
+$MYSQL -e "DELETE FROM users WHERE email IN ('t-ict@local','t-admin@local','t-member@local');" >/dev/null
 rm -f "$ICT" "$ADMIN" "$MEMBER" "$SUPER"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

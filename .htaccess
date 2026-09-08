@@ -138,7 +138,23 @@ Options -Indexes
   Header set Permissions-Policy "geolocation=(), camera=(), microphone=()"
   # The portal carries a logged-in session, so it must not be loadable in someone else's
   # frame. X-Frame-Options for older browsers, frame-ancestors for current ones.
-  Header always set Strict-Transport-Security "max-age=15768000" env=HTTPS
+  # HSTS.
+  #
+  # This was gated on env=HTTPS alone, and TLS is terminated at the host's proxy - so Apache
+  # often never sees HTTPS=on and the header was not sent at all on the bare domain. The
+  # force-HTTPS rule above already checks X-Forwarded-Proto for exactly the same reason.
+  #
+  # The effect was visible on a phone: someone typing resok.org had no HSTS record for that
+  # host, so the browser made one request in the clear before the redirect, and showed a
+  # "not secure" warning while it did. With the header present, the browser goes straight to
+  # HTTPS from the second visit onwards and never makes that hop again.
+  #
+  # A year rather than six months, and includeSubDomains: webmail and cpanel already force
+  # HTTPS themselves, and nothing else under the domain is served over plain HTTP - checked
+  # before adding it, because this would break any subdomain that still needed it.
+  SetEnvIf X-Forwarded-Proto "^https$" RESOK_SECURE=1
+  SetEnvIf HTTPS "^on$" RESOK_SECURE=1
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=RESOK_SECURE
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Content-Security-Policy "frame-ancestors 'self'"
 </IfModule>

@@ -73,12 +73,23 @@ patch "$MANAGER" "ict/credentials/$CID" '{"rotationMonths":12}' >/dev/null
 
 echo
 echo "The numbers worth acting on:"
-OUT=$(get "$MANAGER" 'ict/credentials')
-check "counts a critical account"       '"critical":1'      "$OUT"
-check "counts critical without 2FA"     '"criticalNoMfa":1' "$OUT"
-check "rotation overdue is counted"     '"rotationOverdue":1' "$OUT"
+# Measured as a delta, not an absolute. Asserting "critical":1 only holds on an empty
+# register, and a test that passes only on an empty database is one that gets switched off.
+count() { get "$MANAGER" 'ict/credentials' | $PHP -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["summary"][$argv[1]] ?? "?";' "$1"; }
+
+WITH_MFA_OFF=$(count criticalNoMfa)
+OVERDUE=$(count rotationOverdue)
+check "the critical account is counted"  'yes' \
+      "$([ "$(count critical)" -ge 1 ] && echo yes || echo no)"
+check "counted as critical without 2FA"  'yes' \
+      "$([ "$WITH_MFA_OFF" -ge 1 ] && echo yes || echo no)"
+check "its overdue rotation is counted"  'yes' \
+      "$([ "$OVERDUE" -ge 1 ] && echo yes || echo no)"
+
 patch "$MANAGER" "ict/credentials/$CID" '{"mfaEnabled":true}' >/dev/null
-check "turning 2FA on clears that count" '"criticalNoMfa":0' "$(get "$MANAGER" 'ict/credentials')"
+AFTER=$(count criticalNoMfa)
+check "turning 2FA on drops that count by one" 'yes' \
+      "$([ "$AFTER" -eq "$((WITH_MFA_OFF - 1))" ] && echo yes || echo no)"
 
 echo
 echo "Going to fetch a credential is logged:"

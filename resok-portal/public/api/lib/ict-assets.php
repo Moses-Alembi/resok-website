@@ -25,6 +25,10 @@ const ICT_ASSET_CATEGORIES = [
     'phone' => 'PHN', 'printer' => 'PRN', 'scanner' => 'SCN', 'projector' => 'PRJ',
     'server' => 'SRV', 'router' => 'RTR', 'switch' => 'SWT', 'access_point' => 'WAP',
     'ups' => 'UPS', 'cctv' => 'CCT', 'storage' => 'STO', 'accessory' => 'ACC',
+    // The organisation's register is not ICT-only - half of it is furniture, appliances and
+    // clinical equipment. One register that answers "what do we own" beats two that each
+    // answer half.
+    'furniture' => 'FUR', 'appliance' => 'APP', 'medical' => 'MED', 'office' => 'OFF',
     'other' => 'GEN',
 ];
 

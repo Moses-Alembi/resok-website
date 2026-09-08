@@ -25,7 +25,12 @@ CREATE TABLE IF NOT EXISTS ict_assets (
 
   category ENUM('laptop','desktop','monitor','tablet','phone','printer','scanner',
                 'projector','server','router','switch','access_point','ups',
-                'cctv','storage','accessory','other') NOT NULL DEFAULT 'other',
+                'cctv','storage','accessory',
+                -- Added after importing the 2025 register, which is an organisational
+                -- asset list rather than an ICT-only one: half of it is furniture,
+                -- appliances and clinical equipment. Splitting that across two systems
+                -- would leave nobody able to answer "what do we own".
+                'furniture','appliance','medical','office','other') NOT NULL DEFAULT 'other',
   name VARCHAR(160) NOT NULL,
   manufacturer VARCHAR(120) NULL,
   model VARCHAR(120) NULL,

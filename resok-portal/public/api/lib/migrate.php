@@ -67,6 +67,7 @@ function migrateOrder(): array
         'schema-member-years.sql',             // which years each member has paid for
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-elections.sql',                // board elections: posts, candidates, roll
+        'schema-elections-ballot.sql',         // the ballot; depends on the roll above
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];
 }

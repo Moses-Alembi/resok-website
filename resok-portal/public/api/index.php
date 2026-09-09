@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'membership', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'membership', 'elections', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -1997,6 +1997,195 @@ Respiratory Society of Kenya");
         requireModule('ictCredentialAccessLog', 'lib/ict-credentials.php');
         ictRequire($pdo, $user, $config, 'credentials.manage');
         respond(200, ['entries' => ictCredentialAccessLog($pdo, null, 60)]);
+    }
+
+    // ----- Elections: members --------------------------------------------------------------
+
+    /** Elections a member can see. Drafts are never listed. */
+    if ($route === 'elections' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionsList', 'lib/elections.php');
+        respond(200, ['elections' => electionsList($pdo, false)]);
+    }
+
+    /**
+     * One election with its posts and candidates.
+     *
+     * Withdrawn candidates are visible here with their status, because a member looking at
+     * the election should be able to see that somebody stood down rather than wonder why a
+     * name they remember is missing.
+     */
+    if (preg_match('#^elections/([A-Za-z0-9-]+)$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionFind', 'lib/elections.php');
+        $election = electionFind($pdo, $m[1]);
+        if (!$election || $election['status'] === 'draft') respond(404, ['error' => 'No such election.']);
+        respond(200, [
+            'election'  => $election,
+            'positions' => electionPositions($pdo, (int)$election['id']),
+            'voter'     => electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']),
+            'results'   => $election['status'] === 'published'
+                ? electionResults($pdo, (int)$election['id']) : null,
+        ]);
+    }
+
+    /** The ballot paper, for a voter on the roll. */
+    if (preg_match('#^elections/([A-Za-z0-9-]+)/ballot$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionBallotFor', 'lib/elections.php');
+        [$ballot, $error] = electionBallotFor($pdo, $m[1], (int)$user['userId']);
+        if ($error) respond(403, ['error' => $error]);
+        respond(200, $ballot);
+    }
+
+    /**
+     * Casting a vote.
+     *
+     * Deliberately not rate limited. throttleCheck only blocks once a lockout has been
+     * recorded, and lockouts come from throttleFailure - which voting would never call,
+     * because there is no such thing as a failed vote. The call would imply a protection it
+     * does not provide, while leaving a client-scoped counter that could one day lock out
+     * everyone voting from a single hospital's network.
+     *
+     * What actually prevents a second ballot is the SELECT ... FOR UPDATE on the roll row
+     * inside electionCastVote, and the unique key behind it. Double voting is a database
+     * error, not something a counter is asked to notice.
+     */
+    if (preg_match('#^elections/([A-Za-z0-9-]+)/vote$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionCastVote', 'lib/elections.php');
+
+        $data = input();
+        $choices = is_array($data['choices'] ?? null) ? $data['choices'] : [];
+        if (!$choices) respond(400, ['error' => 'No choices were submitted.']);
+
+        [$receipt, $error] = electionCastVote($pdo, $m[1], (int)$user['userId'], $choices,
+                                              throttleClientHash($config));
+        if ($error) respond(400, ['error' => $error]);
+        securityLog($pdo, $config, 'election_vote_cast', 'info', 'election',
+                    'Ballot recorded', (int)$user['userId']);
+        respond(200, $receipt);
+    }
+
+    // ----- Elections: returning officer ----------------------------------------------------
+
+    if ($route === 'admin/elections' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionsList', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        respond(200, ['elections' => electionsList($pdo, true)]);
+    }
+
+    if ($route === 'admin/elections' && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionCreate', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        [$election, $error] = electionCreate($pdo, input(), (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'election_created', null, $election['title']);
+        respond(201, ['election' => $election]);
+    }
+
+    if (preg_match('#^admin/elections/(\d+)$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionFind', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        $election = electionFind($pdo, $m[1]);
+        if (!$election) respond(404, ['error' => 'No such election.']);
+        respond(200, [
+            'election'  => $election,
+            'positions' => electionPositions($pdo, (int)$m[1]),
+            'roll'      => electionRollSummary($pdo, (int)$m[1]),
+        ]);
+    }
+
+    if (preg_match('#^admin/elections/(\d+)/positions$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionPositionSave', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        $data = input();
+        [$positions, $error] = electionPositionSave($pdo, (int)$m[1], $data,
+                                                    isset($data['id']) ? (int)$data['id'] : null);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['positions' => $positions]);
+    }
+
+    if (preg_match('#^admin/elections/positions/(\d+)/candidates$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionCandidateSave', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        $data = input();
+        [$positions, $error] = electionCandidateSave($pdo, (int)$m[1], $data,
+                                                     isset($data['id']) ? (int)$data['id'] : null);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['positions' => $positions]);
+    }
+
+    /**
+     * Drawing the roll. The eligibility year is passed explicitly rather than inferred, so
+     * the rule that produced a roll is a decision somebody made and can be seen to have made.
+     */
+    if (preg_match('#^admin/elections/(\d+)/roll$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionDrawRoll', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        $year = (int)(input()['paidYear'] ?? 0);
+        if ($year < 2000 || $year > 2100) respond(400, ['error' => 'Give the year membership must be paid for.']);
+        [$summary, $error] = electionDrawRoll($pdo, (int)$m[1], $year);
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'election_roll_drawn', null,
+                       'Election ' . $m[1] . ': ' . $summary['onRoll'] . ' voters, paid ' . $year);
+        respond(200, ['roll' => $summary]);
+    }
+
+    if (preg_match('#^admin/elections/(\d+)/randomise$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionRandomiseBallot', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        [$positions, $error] = electionRandomiseBallot($pdo, (int)$m[1]);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['positions' => $positions]);
+    }
+
+    if (preg_match('#^admin/elections/(\d+)/status$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionSetStatus', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        [$election, $error] = electionSetStatus($pdo, (int)$m[1], (string)(input()['status'] ?? ''));
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'election_' . $election['status'], null,
+                       $election['title']);
+        respond(200, ['election' => $election]);
+    }
+
+    /**
+     * The count.
+     *
+     * Logged on every read. ReSoK's ballot is recorded rather than secret, which means
+     * somebody can see how the vote went before it is declared - so the question "who looked,
+     * and when" needs an answer that does not depend on anybody's memory.
+     */
+    if (preg_match('#^admin/elections/(\d+)/tally$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionTally', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        [$tally, $error] = electionTally($pdo, (int)$m[1]);
+        if ($error) respond(400, ['error' => $error]);
+        securityLog($pdo, $config, 'election_tally_viewed', 'warning', 'election',
+                    'Count read for election ' . $m[1], (int)$user['userId']);
+        respond(200, $tally);
+    }
+
+    if (preg_match('#^admin/elections/(\d+)/declare$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionDeclareResult', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        $note = trim((string)(input()['note'] ?? '')) ?: null;
+        [$results, $error] = electionDeclareResult($pdo, (int)$m[1], (int)$user['userId'], $note);
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'election_result_declared', null,
+                       'Election ' . $m[1] . ', declaration ' . $results['declaration']);
+        respond(200, ['results' => $results]);
     }
 
     // ----- ReSoK Virtual Academy: catalogue ------------------------------------------------

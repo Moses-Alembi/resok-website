@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Returning Officer - ReSoK Elections</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--ink:#253141;--muted:#667085;
+      --bg:#f5f7fa;--line:#e5e7eb;--radius:10px;--shadow:0 2px 12px rgba(15,23,42,.07);
+      --pass:#0f7a38;--warn:#b54708;--fail:#b42318;--info:#175cd3}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink)}
+    a{color:inherit;text-decoration:none}
+    [hidden]{display:none!important}
+    .topbar{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+    .topbar-inner{max-width:1180px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+    .topbar img{height:42px;display:block}
+    .back{color:var(--muted);font-size:14px;font-weight:600}
+    .wrap{max-width:1180px;margin:0 auto;padding:24px 20px;display:grid;gap:20px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
+    h1{font-size:22px;letter-spacing:-.01em}
+    h2{font-size:17px}
+    h3{font-size:15px}
+    .lede{color:var(--muted);font-size:14px;margin-top:7px;line-height:1.65;max-width:75ch}
+
+    .btn{border:0;border-radius:7px;padding:10px 16px;font:inherit;font-weight:700;font-size:13.5px;
+      cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+    .btn-primary{background:var(--brand-primary);color:#fff}
+    .btn-primary:hover{background:#007a26}
+    .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn-ghost:hover{border-color:var(--brand-primary);color:var(--brand-primary)}
+    .btn-danger{background:#fff;color:var(--fail);border:1px solid #fecdca}
+    .btn-sm{padding:7px 12px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+
+    .in{border:1px solid var(--line);border-radius:7px;padding:10px 12px;font:inherit;font-size:14px;width:100%}
+    .in:focus{outline:2px solid rgba(0,147,46,.3);outline-offset:1px}
+    label>span{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+    .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+    .tile{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px}
+    .tile .n{font-size:23px;font-weight:800;line-height:1.15}
+    .tile .l{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+    .tile.warn .n{color:var(--warn)} .tile.bad .n{color:var(--fail)} .tile.ok .n{color:var(--pass)}
+
+    .status{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700}
+    .s-draft{background:#f2f4f7;color:#475467}
+    .s-nominations{background:#fff8e6;color:#93370d}
+    .s-nominations_closed{background:#fff8e6;color:#93370d}
+    .s-open{background:#ecfdf3;color:#05603a}
+    .s-closed{background:#eff8ff;color:#175cd3}
+    .s-published{background:#eff8ff;color:#175cd3}
+    .s-cancelled{background:#fef3f2;color:#b42318}
+
+    .row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+    .row:last-child{border-bottom:0}
+    .row .grow{flex:1;min-width:0}
+    .row .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+    .clickable{cursor:pointer}
+    .clickable:hover{background:#f9fafb}
+
+    .note{border-radius:7px;padding:12px 14px;font-size:13.5px;margin-top:14px;line-height:1.6}
+    .note.info{background:#eff8ff;color:#175cd3;border:1px solid #b2ddff}
+    .note.warn{background:#fff8e6;color:#93370d;border:1px solid #fedf89}
+    .note.bad{background:#fef3f2;color:#b42318;border:1px solid #fecdca}
+    .note.ok{background:#ecfdf3;color:#05603a;border:1px solid #a6f4c5}
+    .empty{color:var(--muted);padding:26px 0;font-size:13.5px;text-align:center}
+
+    .steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .step{border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--muted)}
+    .step.done{background:#ecfdf3;color:#05603a;border-color:#a6f4c5}
+    .step.now{background:var(--brand-primary);color:#fff;border-color:var(--brand-primary);font-weight:700}
+
+    @media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="admin-review"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <a href="admin-review" class="back"><i class="fas fa-arrow-left"></i> Back to admin</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <div id="pageNotice"></div>
+
+    <!-- ---------------- List ---------------- -->
+    <section class="panel" id="viewList">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div>
+          <h1>Returning Officer</h1>
+          <p class="lede">
+            Elections are run from here. Everything on this page is restricted to super
+            administrators, and every reading of a count is written to the security log.
+          </p>
+        </div>
+        <button class="btn btn-primary" id="newBtn" type="button"><i class="fas fa-plus"></i> New election</button>
+      </div>
+      <div id="listBody" style="margin-top:20px"><div class="empty">Loading&hellip;</div></div>
+    </section>
+
+    <!-- ---------------- Create ---------------- -->
+    <section class="panel" id="viewNew" hidden>
+      <h1>New election</h1>
+      <p class="lede">
+        The nomination window is optional. Leave both dates empty to enter a slate agreed
+        elsewhere; fill them in to let members put names forward. Nominations must close
+        before voting opens.
+      </p>
+      <div style="display:grid;gap:14px;margin-top:20px;max-width:720px">
+        <label><span>Title</span><input class="in" id="nTitle" placeholder="ReSoK Board Election 2027" /></label>
+        <label><span>Description</span><textarea class="in" id="nDescription" rows="3"></textarea></label>
+        <label><span>Membership judged on</span><input class="in" id="nCutoff" type="date" /></label>
+        <div class="grid2">
+          <label><span>Nominations open</span><input class="in" id="nNomOpen" type="datetime-local" /></label>
+          <label><span>Nominations close</span><input class="in" id="nNomClose" type="datetime-local" /></label>
+        </div>
+        <div class="grid2">
+          <label><span>Voting opens</span><input class="in" id="nOpens" type="datetime-local" /></label>
+          <label><span>Voting closes</span><input class="in" id="nCloses" type="datetime-local" /></label>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="nCreate" type="button">Create as draft</button>
+          <button class="btn btn-ghost" id="nCancel" type="button">Cancel</button>
+        </div>
+      </div>
+      <div id="newNotice"></div>
+    </section>
+
+    <!-- ---------------- One election ---------------- -->
+    <div id="viewOne" hidden style="display:grid;gap:20px">
+      <section class="panel">
+        <button class="btn btn-ghost btn-sm" id="backBtn" type="button" style="margin-bottom:14px">
+          <i class="fas fa-arrow-left"></i> All elections
+        </button>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+          <div><h1 id="eTitle"></h1><div class="lede" id="eDates"></div></div>
+          <span class="status" id="eStatus"></span>
+        </div>
+        <div class="steps" id="eSteps"></div>
+        <div id="eLock"></div>
+        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap" id="eTransitions"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Electoral roll</h2>
+        <p class="lede">
+          Drawn once and frozen. Only members who paid for the year chosen <em>and</em> can sign
+          in reach it &mdash; an entry for somebody who cannot open the portal is not an
+          entitlement to vote, it is a turnout figure that can never be reached.
+        </p>
+        <div class="tiles" id="rollTiles" style="margin-top:16px"></div>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <label style="max-width:190px"><span>Paid for year</span>
+            <input class="in" id="rollYear" type="number" min="2000" max="2100" value="2025" /></label>
+          <button class="btn btn-primary" id="drawRoll" type="button"><i class="fas fa-list-check"></i> Draw the roll</button>
+        </div>
+        <div id="rollNotice"></div>
+      </section>
+
+      <section class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <h2>Posts and candidates</h2>
+          <button class="btn btn-ghost btn-sm" id="randomiseBtn" type="button">
+            <i class="fas fa-shuffle"></i> Randomise ballot order
+          </button>
+        </div>
+        <p class="lede">
+          Being first on a ballot paper is worth votes, so the order is randomised rather than
+          alphabetical &mdash; and frozen with everything else when voting opens.
+        </p>
+        <div id="positionsBody" style="margin-top:16px"></div>
+
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+          <h3>Add a post</h3>
+          <div class="grid3" style="margin-top:10px">
+            <label><span>Title</span><input class="in" id="pTitle" placeholder="Chairperson" /></label>
+            <label><span>Seats</span><input class="in" id="pSeats" type="number" min="1" value="1" /></label>
+            <label><span>Choices per voter</span><input class="in" id="pChoices" type="number" min="1" value="1" /></label>
+          </div>
+          <button class="btn btn-primary btn-sm" id="addPost" type="button" style="margin-top:12px">Add post</button>
+        </div>
+        <div id="postNotice"></div>
+      </section>
+
+      <section class="panel" id="nominationsPanel" hidden>
+        <h2>Nominations</h2>
+        <p class="lede">
+          Approving a nomination puts that name on the ballot. A nomination the nominee has not
+          accepted is shown as waiting &mdash; standing for a board should not happen to somebody
+          without their agreement.
+        </p>
+        <div id="nominationsBody" style="margin-top:16px"></div>
+        <div id="nomNotice"></div>
+      </section>
+
+      <section class="panel" id="countPanel" hidden>
+        <h2>The count</h2>
+        <p class="lede">
+          Not available until voting has closed, and every reading of it is logged. A tie for
+          the last seat stops a declaration rather than being resolved by a sort order.
+        </p>
+        <div id="countBody" style="margin-top:16px"></div>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-ghost" id="loadTally" type="button"><i class="fas fa-calculator"></i> Read the count</button>
+          <button class="btn btn-primary" id="declareBtn" type="button" hidden><i class="fas fa-gavel"></i> Declare the result</button>
+        </div>
+        <div id="countNotice"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="js/portal-state.js?v=20260909-errstatus"></script>
+  <script>
+  /**
+   * The returning officer's console.
+   *
+   * Every action here is one a member cannot take, and several cannot be undone - opening an
+   * election freezes it, declaring a result writes it. So the page states what each step will
+   * do before offering it, and shows the refusal from the server rather than hiding buttons
+   * that would fail: an officer who is told "close nominations first" has learned the rule,
+   * where a greyed-out button teaches nothing.
+   *
+   * Everything from the server is written with textContent or created nodes, never innerHTML.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined && text !== null) n.textContent = text;
+      return n;
+    };
+    const fmt = (v) => {
+      if (!v) return '—';
+      const d = new Date(String(v).replace(' ', 'T'));
+      return isNaN(d) ? String(v) : d.toLocaleString('en-KE',
+        { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+    const notice = (id, message, kind) => {
+      const box = el(id);
+      box.textContent = '';
+      if (message) box.appendChild(make('div', 'note ' + (kind || 'info'), message));
+    };
+
+    let elections = [];
+    let current = null;      // { election, positions, roll }
+
+    function show(view) {
+      ['List', 'New', 'One'].forEach((n) => { el('view' + n).hidden = n !== view; });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    /* ---------------- list ---------------- */
+    async function loadList() {
+      const mount = el('listBody');
+      try {
+        const data = await api('/api/admin/elections');
+        elections = data.elections || [];
+        mount.textContent = '';
+        if (!elections.length) {
+          mount.appendChild(make('div', 'empty', 'No elections yet. Create one to begin.'));
+          return;
+        }
+        elections.forEach((e) => {
+          const row = make('div', 'row clickable');
+          row.addEventListener('click', () => openElection(e.id));
+          const grow = make('div', 'grow');
+          grow.appendChild(make('strong', null, e.title));
+          grow.appendChild(make('div', 'sub',
+            'Voting ' + fmt(e.opensAt) + ' — ' + fmt(e.closesAt)));
+          row.appendChild(grow);
+          row.appendChild(make('span', 'status s-' + e.status, e.status.replace(/_/g, ' ')));
+          mount.appendChild(row);
+        });
+      } catch (error) {
+        mount.textContent = '';
+        if (error.status === 401) { window.location.href = 'login'; return; }
+        mount.appendChild(make('div', 'empty', error.message || 'Could not load elections.'));
+      }
+    }
+
+    /* ---------------- create ---------------- */
+    el('newBtn').addEventListener('click', () => { notice('newNotice', ''); show('New'); });
+    el('nCancel').addEventListener('click', () => show('List'));
+    el('nCreate').addEventListener('click', async () => {
+      const button = el('nCreate');
+      button.disabled = true;
+      try {
+        const data = await api('/api/admin/elections', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: el('nTitle').value.trim(),
+            description: el('nDescription').value.trim(),
+            eligibilityCutoff: el('nCutoff').value,
+            nominationsOpenAt: el('nNomOpen').value,
+            nominationsCloseAt: el('nNomClose').value,
+            opensAt: el('nOpens').value,
+            closesAt: el('nCloses').value
+          })
+        });
+        await loadList();
+        openElection(data.election.id);
+      } catch (error) {
+        notice('newNotice', error.message || 'The election was not created.', 'bad');
+      }
+      button.disabled = false;
+    });
+
+    /* ---------------- one election ---------------- */
+    async function openElection(id) {
+      show('One');
+      notice('pageNotice', '');
+      try {
+        current = await api('/api/admin/elections/' + id);
+        renderElection();
+        renderRoll();
+        renderPositions();
+        await renderNominations();
+        renderCount();
+      } catch (error) {
+        notice('pageNotice', error.message || 'That election could not be opened.', 'bad');
+      }
+    }
+
+    const STEPS = [
+      ['draft', 'Draft'], ['nominations', 'Nominations'], ['nominations_closed', 'Nominations closed'],
+      ['open', 'Voting'], ['closed', 'Counting'], ['published', 'Declared']
+    ];
+
+    function renderElection() {
+      const e = current.election;
+      el('eTitle').textContent = e.title;
+      el('eDates').textContent =
+        'Nominations ' + fmt(e.nominationsOpenAt) + ' — ' + fmt(e.nominationsCloseAt)
+        + '  ·  Voting ' + fmt(e.opensAt) + ' — ' + fmt(e.closesAt);
+      el('eStatus').className = 'status s-' + e.status;
+      el('eStatus').textContent = e.status.replace(/_/g, ' ');
+
+      const steps = el('eSteps');
+      steps.textContent = '';
+      const at = STEPS.findIndex(([key]) => key === e.status);
+      STEPS.forEach(([key, label], i) => {
+        steps.appendChild(make('span',
+          'step' + (i < at ? ' done' : i === at ? ' now' : ''), label));
+      });
+
+      // Said once, plainly, because it is the thing most likely to surprise: after this
+      // point nothing about the election can be edited, ever.
+      el('eLock').textContent = '';
+      if (e.locked) {
+        el('eLock').appendChild(make('div', 'note warn',
+          'Voting opened on ' + fmt(e.openedAt) + '. Posts, candidates and the roll are final '
+          + 'and cannot be changed.'));
+      }
+
+      const actions = el('eTransitions');
+      actions.textContent = '';
+      const move = (status, label, style) => {
+        const b = make('button', 'btn ' + (style || 'btn-ghost'), label);
+        b.type = 'button';
+        b.addEventListener('click', () => setStatus(status, label));
+        actions.appendChild(b);
+      };
+      if (e.status === 'draft') move('nominations', 'Open nominations', 'btn-primary');
+      if (e.status === 'nominations') move('nominations_closed', 'Close nominations', 'btn-primary');
+      if (['draft', 'nominations', 'nominations_closed', 'roll_published'].includes(e.status)) {
+        move('open', 'Open voting', e.status === 'nominations_closed' ? 'btn-primary' : 'btn-ghost');
+      }
+      if (e.status === 'open') move('closed', 'Close voting', 'btn-primary');
+      if (e.status === 'closed') move('published', 'Publish the result', 'btn-primary');
+      if (!['published', 'cancelled'].includes(e.status)) move('cancelled', 'Cancel', 'btn-danger');
+    }
+
+    async function setStatus(status, label) {
+      if (status === 'open' && !window.confirm(
+        'Opening voting freezes this election. Posts, candidates and the roll can never be '
+        + 'changed again. Continue?')) return;
+      if (status === 'cancelled' && !window.confirm('Cancel this election?')) return;
+      try {
+        await api('/api/admin/elections/' + current.election.id + '/status', {
+          method: 'POST', body: JSON.stringify({ status })
+        });
+        notice('pageNotice', label + ' — done.', 'ok');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('pageNotice', error.message || 'That step was refused.', 'bad');
+      }
+    }
+
+    /* ---------------- roll ---------------- */
+    function renderRoll() {
+      const roll = current.roll || {};
+      const mount = el('rollTiles');
+      mount.textContent = '';
+      const tile = (n, label, tone) => {
+        const t = make('div', 'tile' + (tone ? ' ' + tone : ''));
+        t.appendChild(make('div', 'n', String(n)));
+        t.appendChild(make('div', 'l', label));
+        mount.appendChild(t);
+      };
+      tile(roll.onRoll || 0, 'on the roll', (roll.onRoll || 0) > 0 ? 'ok' : 'warn');
+      tile(roll.voted || 0, 'have voted');
+      tile((roll.turnout || 0) + '%', 'turnout');
+      el('drawRoll').disabled = !!current.election.locked;
+    }
+
+    el('drawRoll').addEventListener('click', async () => {
+      const year = Number(el('rollYear').value);
+      if (!window.confirm('Draw the roll for members who paid for ' + year
+          + '? This replaces any roll already drawn.')) return;
+      try {
+        const data = await api('/api/admin/elections/' + current.election.id + '/roll', {
+          method: 'POST', body: JSON.stringify({ paidYear: year })
+        });
+        const r = data.roll || {};
+        let message = r.onRoll + ' member(s) on the roll.';
+        // The exclusions matter more than the total. A roll far smaller than the membership
+        // is a warning, and the reason is what somebody can act on before voting opens.
+        if (r.eligibleButCannotSignIn) {
+          message += ' ' + r.eligibleButCannotSignIn + ' paid member(s) are left off because '
+                   + 'they have never claimed their portal account.';
+        }
+        notice('rollNotice', message, r.eligibleButCannotSignIn ? 'warn' : 'ok');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('rollNotice', error.message || 'The roll was not drawn.', 'bad');
+      }
+    });
+
+    /* ---------------- posts and candidates ---------------- */
+    function renderPositions() {
+      const mount = el('positionsBody');
+      mount.textContent = '';
+      const positions = current.positions || [];
+      if (!positions.length) {
+        mount.appendChild(make('div', 'empty', 'No posts yet. Add the first one below.'));
+        return;
+      }
+      positions.forEach((p) => {
+        const head = make('div', 'row');
+        const grow = make('div', 'grow');
+        grow.appendChild(make('strong', null, p.title));
+        grow.appendChild(make('div', 'sub',
+          p.seats + (p.seats === 1 ? ' seat' : ' seats')
+          + ' · ' + p.maxChoices + ' choice' + (p.maxChoices === 1 ? '' : 's') + ' per voter'
+          + ' · ' + p.candidates.filter((c) => c.standing).length + ' standing'));
+        head.appendChild(grow);
+        mount.appendChild(head);
+
+        p.candidates.forEach((c) => {
+          const row = make('div', 'row');
+          row.style.paddingLeft = '18px';
+          const grow2 = make('div', 'grow');
+          grow2.appendChild(make('span', null, c.name));
+          grow2.appendChild(make('div', 'sub', c.status + (c.headline ? ' · ' + c.headline : '')));
+          row.appendChild(grow2);
+          if (!current.election.locked && c.status !== 'approved') {
+            const approve = make('button', 'btn btn-primary btn-sm', 'Approve');
+            approve.type = 'button';
+            approve.addEventListener('click', () => approveCandidate(p.id, c));
+            row.appendChild(approve);
+          }
+          mount.appendChild(row);
+        });
+      });
+    }
+
+    async function approveCandidate(positionId, candidate) {
+      try {
+        await api('/api/admin/elections/positions/' + positionId + '/candidates', {
+          method: 'POST',
+          body: JSON.stringify({ id: candidate.id, name: candidate.name, status: 'approved' })
+        });
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('postNotice', error.message || 'That candidate was not approved.', 'bad');
+      }
+    }
+
+    el('addPost').addEventListener('click', async () => {
+      try {
+        await api('/api/admin/elections/' + current.election.id + '/positions', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: el('pTitle').value.trim(),
+            seats: Number(el('pSeats').value),
+            maxChoices: Number(el('pChoices').value)
+          })
+        });
+        el('pTitle').value = '';
+        notice('postNotice', '');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('postNotice', error.message || 'The post was not added.', 'bad');
+      }
+    });
+
+    el('randomiseBtn').addEventListener('click', async () => {
+      try {
+        await api('/api/admin/elections/' + current.election.id + '/randomise', { method: 'POST' });
+        notice('postNotice', 'Ballot order randomised.', 'ok');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('postNotice', error.message || 'The order was not changed.', 'bad');
+      }
+    });
+
+    /* ---------------- nominations ---------------- */
+    async function renderNominations() {
+      const panel = el('nominationsPanel');
+      const mount = el('nominationsBody');
+      mount.textContent = '';
+      const e = current.election;
+      if (!['nominations', 'nominations_closed'].includes(e.status)) { panel.hidden = true; return; }
+      panel.hidden = false;
+      try {
+        const data = await api('/api/admin/elections/' + e.id + '/nominations');
+        const list = data.nominations || [];
+        if (!list.length) {
+          mount.appendChild(make('div', 'empty', 'No nominations received yet.'));
+          return;
+        }
+        list.forEach((n) => {
+          const row = make('div', 'row');
+          const grow = make('div', 'grow');
+          grow.appendChild(make('strong', null, n.name));
+          const bits = [n.position];
+          if (n.nominatedBy) bits.push('nominated by ' + n.nominatedBy);
+          bits.push(n.accepted ? 'accepted' : (n.blocker || n.status));
+          grow.appendChild(make('div', 'sub', bits.join(' · ')));
+          row.appendChild(grow);
+          if (n.status === 'nominated') {
+            const approve = make('button', 'btn btn-primary btn-sm', 'Approve');
+            approve.type = 'button';
+            // Approving somebody who has not accepted would put a name on a ballot without
+            // their agreement, so the button says why it is not offered yet.
+            approve.disabled = !n.accepted;
+            approve.title = n.accepted ? '' : 'Waiting for the nominee to accept';
+            approve.addEventListener('click', () => approveCandidate(n.positionId, n));
+            row.appendChild(approve);
+          }
+          mount.appendChild(row);
+        });
+      } catch (error) {
+        mount.appendChild(make('div', 'empty', error.message || 'Nominations could not be loaded.'));
+      }
+    }
+
+    /* ---------------- the count ---------------- */
+    function renderCount() {
+      const e = current.election;
+      el('countPanel').hidden = !['closed', 'published'].includes(e.status);
+      el('countBody').textContent = '';
+      el('declareBtn').hidden = true;
+      notice('countNotice', '');
+    }
+
+    el('loadTally').addEventListener('click', async () => {
+      try {
+        const tally = await api('/api/admin/elections/' + current.election.id + '/tally');
+        const mount = el('countBody');
+        mount.textContent = '';
+        (tally.positions || []).forEach((p) => {
+          const head = make('div', 'row');
+          const grow = make('div', 'grow');
+          grow.appendChild(make('strong', null, p.title));
+          grow.appendChild(make('div', 'sub',
+            p.seats + (p.seats === 1 ? ' seat' : ' seats')
+            + ' · ' + p.ballotsCast + ' ballot(s) · ' + p.abstentions + ' abstention(s)'));
+          head.appendChild(grow);
+          if (p.tieForLastSeat) head.appendChild(make('span', 'status s-cancelled', 'tied'));
+          mount.appendChild(head);
+
+          p.candidates.forEach((c, i) => {
+            const row = make('div', 'row');
+            row.style.paddingLeft = '18px';
+            const g = make('div', 'grow');
+            g.appendChild(make('span', null, c.name));
+            g.appendChild(make('div', 'sub', c.status));
+            row.appendChild(g);
+            row.appendChild(make('strong', null, String(c.votes)));
+            mount.appendChild(row);
+          });
+        });
+        const tied = (tally.positions || []).some((p) => p.tieForLastSeat);
+        el('declareBtn').hidden = current.election.status !== 'closed';
+        notice('countNotice', tied
+          ? 'One or more posts are tied for the last seat. That has to be resolved under the '
+            + 'society’s rules before a result can be declared.'
+          : 'This reading has been recorded in the security log.', tied ? 'warn' : 'info');
+      } catch (error) {
+        notice('countNotice', error.message || 'The count could not be read.', 'bad');
+      }
+    });
+
+    el('declareBtn').addEventListener('click', async () => {
+      if (!window.confirm('Declare this result? The count is written as it stands now and '
+          + 'does not change afterwards.')) return;
+      try {
+        await api('/api/admin/elections/' + current.election.id + '/declare', {
+          method: 'POST', body: JSON.stringify({ note: '' })
+        });
+        notice('countNotice', 'Result declared. Publish it to make it visible to members.', 'ok');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('countNotice', error.message || 'The result was not declared.', 'bad');
+      }
+    });
+
+    el('backBtn').addEventListener('click', () => { show('List'); loadList(); });
+    loadList();
+  })();
+  </script>
+</body>
+</html>

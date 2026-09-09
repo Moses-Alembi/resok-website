@@ -81,10 +81,7 @@
     .btn:disabled{opacity:.5;cursor:not-allowed}
 
     /* ---------- hero ---------- */
-    .hero{background:
-        radial-gradient(1100px 460px at 78% -12%, rgba(0,147,46,.42), transparent 62%),
-        linear-gradient(168deg, #041f11 0%, var(--forest) 46%, #0a4526 100%);
-      color:#dbeadf;padding:64px 0 70px;position:relative;overflow:hidden}
+    .hero{background:var(--forest);color:#dbeadf;padding:64px 0 70px;position:relative;overflow:hidden}
     .hero:after{content:"";position:absolute;right:-90px;bottom:-120px;width:400px;height:400px;
       border-radius:50%;border:1px solid rgba(255,255,255,.07)}
     .hero-in{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:0 22px}
@@ -143,7 +140,7 @@
     .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
       display:flex;flex-direction:column;cursor:pointer;transition:transform .16s,box-shadow .16s,border-color .16s}
     .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--line-dk)}
-    .card-top{height:104px;background:linear-gradient(135deg,var(--forest),var(--green));
+    .card-top{height:104px;background:var(--green);
       display:flex;align-items:flex-end;padding:13px;position:relative}
     .card-top>i{position:absolute;right:15px;top:14px;font-size:40px;color:rgba(255,255,255,.2)}
     .tag{background:rgba(255,255,255,.95);color:var(--green-dk);border-radius:999px;padding:4px 11px;
@@ -194,35 +191,400 @@
       background:var(--paper);border:1px dashed var(--line-dk);border-radius:var(--r)}
     .empty b{display:block;color:var(--ink);font-size:15.5px;margin-bottom:5px}
 
-    /* ---------- footer ---------- */
-    .foot{background:var(--forest);color:#a9c2b2;padding:48px 0 26px;margin-top:20px}
-    .foot-grid{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:32px}
-    .foot h5{color:#fff;font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;margin-bottom:13px}
-    .foot ul{list-style:none;display:flex;flex-direction:column;gap:9px}
-    .foot a{font-size:13.5px;color:#a9c2b2}
-    .foot a:hover{color:#fff}
-    .foot .about{font-size:13.5px;max-width:38ch;margin-top:12px}
-    .foot .social{display:flex;gap:10px;margin-top:16px}
-    .foot .social a{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.08);
-      display:flex;align-items:center;justify-content:center;color:#cfe0d5}
-    .foot .social a:hover{background:var(--green);color:#fff}
-    .foot-btm{margin-top:34px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);
-      display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:12.5px}
 
     @media(max-width:980px){
       .catalogue{grid-template-columns:1fr}
       .filters{position:static}
       .course-hd,.player{grid-template-columns:1fr}
       .side{position:static}
-      .foot-grid{grid-template-columns:1fr 1fr}
     }
     @media(max-width:720px){
       .top-search{display:none}
       .hero{padding:44px 0 48px}
       section.band{padding:38px 0}
-      .foot-grid{grid-template-columns:1fr}
       .stats{gap:26px}
     }
+
+    /* ---------- site footer, lifted from index.html so it stays uniform ---------- */
+    /* The two brand variables the footer rules reference, mapped onto the academy palette. */
+    :root{--brand-primary:var(--green);--brand-secondary:var(--red)}
+/* =============== BUTTON TYPOGRAPHY =============== */
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    .nav-cta,
+    .btn-primary,
+    .quick-link-btn,
+    .about-split-link,
+    .site-footer-donate a {
+      font-family: var(--heading-font);
+    }
+/* =============== FOOTER =============== */
+.site-footer {
+  background: #000;
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.site-footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 3%;
+}
+.site-footer-top {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: center;
+  column-gap: 34px;
+  position: relative;
+  z-index: 0;
+  color: #0a2e38;
+}
+.site-footer-top::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  background: #ffffff;
+  z-index: -1;
+}
+.site-footer-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0;
+}
+.site-footer-brand-row img {
+  width: auto;
+  height: 64px;
+  max-width: min(340px, 60vw);
+  object-fit: contain;
+}
+.site-footer-brand-row span {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #0a2e38;
+}
+.site-footer-top-social {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 100%;
+  padding: 0 18px;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+.site-footer-top-social a {
+  color: #0a2e38;
+  font-size: 0.9rem;
+  transition: color .25s ease;
+}
+.site-footer-top-social a:hover {
+  color: var(--brand-secondary);
+}
+.site-footer-donate {
+  justify-self: end;
+  padding: 16px 0;
+}
+.site-footer-donate a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-secondary);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  height: 42px;
+  min-width: 110px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background-color .25s ease, transform .25s ease;
+}
+.site-footer-donate a:hover {
+  background: var(--brand-primary);
+  transform: translateY(-2px);
+}
+.site-footer-mid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr 1fr 1fr 1.35fr;
+  gap: 28px;
+  padding: 42px 0;
+  position: relative;
+}
+.site-footer-top::after,
+.site-footer-mid::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 50vw);
+  bottom: 0;
+  width: 100vw;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.site-footer-top::after {
+  background: rgba(0, 0, 0, 0.08);
+}
+.site-footer-head {
+  margin: 0 0 14px;
+  color: #fff;
+  font-size: 0.98rem;
+  line-height: 1.15;
+  font-weight: 700;
+}
+.site-footer-text {
+  font-size: 0.7rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 18px;
+}
+.site-footer-subscribe {
+  display: flex;
+  align-items: stretch;
+  max-width: 420px;
+}
+.site-footer-subscribe input {
+  border: 0;
+  outline: 0;
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 14px 16px;
+  font-size: 0.75rem;
+}
+.site-footer-subscribe input::placeholder {
+  color: rgba(255, 255, 255, 0.58);
+}
+.site-footer-subscribe button {
+  border: 0;
+  width: 56px;
+  background: var(--brand-secondary);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color .25s ease;
+}
+.site-footer-subscribe button:hover {
+  background: var(--brand-primary);
+}
+.site-footer-col h4 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #fff;
+  font-weight: 700;
+}
+.site-footer-divider {
+  width: 52px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  margin: 14px 0 18px;
+}
+.site-footer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.site-footer-list li {
+  margin: 0 0 8px;
+}
+.site-footer-list a {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  transition: color .25s ease;
+}
+.site-footer-list a:hover {
+  color: var(--brand-secondary);
+}
+.site-footer-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.site-footer-gallery-grid img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.site-footer-bottom {
+  position: relative;
+  z-index: 0;
+  text-align: center;
+  padding: 18px 0 20px;
+  background: #000;
+  color: #fff;
+  font-size: 0.8rem;
+}
+.site-footer-bottom::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  background: #000;
+  z-index: -1;
+}
+.site-footer .fas,
+.site-footer .far,
+.site-footer .fab {
+  color: inherit !important;
+}
+@media (max-width: 1200px) {
+.site-footer-head,
+  .site-footer-col h4 {
+    font-size: 0.94rem;
+  }
+.site-footer-list a {
+    font-size: 0.86rem;
+  }
+.site-footer-bottom {
+    font-size: 0.88rem;
+  }
+}
+@media (max-width: 900px) {
+.site-footer-top {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    justify-content: stretch;
+  }
+.site-footer-brand-row {
+    padding: 14px 0;
+    gap: 8px;
+    min-width: 0;
+    justify-content: center;
+  }
+.site-footer-top-social {
+    justify-content: center;
+    border-left: 0;
+    border-right: 0;
+    padding: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+.site-footer-donate {
+    justify-self: center;
+    padding: 0 0 16px;
+  }
+.site-footer-brand-row img {
+    width: auto;
+    height: 54px;
+    max-width: min(280px, 55vw);
+  }
+.site-footer-top-social {
+    border: 0;
+    padding: 0;
+    justify-content: center;
+    gap: 10px;
+    min-height: auto;
+  }
+.site-footer-donate {
+    justify-self: end;
+    padding: 0;
+  }
+.site-footer-mid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "newsletter newsletter newsletter"
+      "conference touch resources"
+      "gallery gallery gallery";
+    align-items: start;
+    gap: 24px 24px;
+    padding: 34px 0;
+  }
+.site-footer-mid > :nth-child(1) { grid-area: newsletter; }
+.site-footer-mid > :nth-child(2) { grid-area: conference; }
+.site-footer-mid > :nth-child(3) { grid-area: touch; }
+.site-footer-mid > :nth-child(4) { grid-area: resources; }
+.site-footer-mid > :nth-child(5) { grid-area: gallery; }
+.site-footer-subscribe {
+    max-width: 420px;
+  }
+.site-footer-head,
+  .site-footer-col h4 {
+    font-size: 0.96rem;
+  }
+.site-footer-list a,
+  .site-footer-text {
+    font-size: 0.82rem;
+  }
+}
+@media (max-width: 768px) {
+.site-footer-top-social {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 600px) {
+.site-footer-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+.site-footer-brand-row {
+    width: auto;
+    padding: 10px 0;
+    justify-content: flex-start;
+  }
+.site-footer-top-social {
+    display: none;
+  }
+.site-footer-donate {
+    justify-self: auto;
+    padding: 0;
+    margin-left: auto;
+  }
+.site-footer-brand-row span {
+    font-size: 0.8rem;
+    max-width: 74px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+.site-footer-top-social a {
+    font-size: 0.82rem;
+  }
+.site-footer-donate a {
+    min-width: 86px;
+    height: 36px;
+    font-size: 0.82rem;
+    padding: 0 10px;
+  }
+.site-footer-mid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "newsletter newsletter newsletter"
+      "col1 col2 col3"
+      "gallery gallery gallery";
+    gap: 20px 16px;
+    padding: 30px 0;
+  }
+.site-footer-mid > :nth-child(1) { grid-area: newsletter; }
+.site-footer-mid > :nth-child(2) { grid-area: col1; }
+.site-footer-mid > :nth-child(3) { grid-area: col2; }
+.site-footer-mid > :nth-child(4) { grid-area: col3; }
+.site-footer-mid > :nth-child(5) { grid-area: gallery; }
+.site-footer-subscribe {
+    max-width: 100%;
+  }
+.site-footer-col h4 {
+    font-size: 0.92rem;
+  }
+.site-footer-list a {
+    font-size: 0.82rem;
+  }
+.site-footer-divider {
+    margin: 10px 0 12px;
+  }
+.site-footer-gallery-grid {
+    gap: 6px;
+  }
+}
   </style>
 </head>
 <body>
@@ -407,52 +769,89 @@
   </section>
 </div>
 
-<footer class="foot">
-  <div class="shell">
-    <div class="foot-grid">
-      <div>
-        <h5>ReSoK Virtual Academy</h5>
-        <p class="about">
-          The online learning arm of the Respiratory Society of Kenya, bringing respiratory
-          health education to clinicians and the public across Kenya and beyond.
-        </p>
-        <div class="social">
-          <a href="https://twitter.com/resokenya" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fab fa-x-twitter"></i></a>
-          <a href="https://www.facebook.com/resokenya" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-          <a href="https://www.linkedin.com/company/respiratory-society-of-kenya" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-        </div>
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-top">
+      <div class="site-footer-brand-row">
+        <img src="../../assets/img/logo.png" alt="ReSoK logo">
       </div>
-      <div>
-        <h5>Learn</h5>
-        <ul>
-          <li><a href="#" data-nav="">All courses</a></li>
-          <li><a href="#mine" data-nav="mine">My learning</a></li>
-          <li><a href="login">Sign in</a></li>
-          <li><a href="register">Create an account</a></li>
-        </ul>
-      </div>
-      <div>
-        <h5>ReSoK</h5>
-        <ul>
-          <li><a href="../../index.html">Main website</a></li>
-          <li><a href="../../about.html">About the society</a></li>
-          <li><a href="../../membership.html">Membership</a></li>
-          <li><a href="../../contact.html">Contact us</a></li>
-        </ul>
-      </div>
-      <div>
-        <h5>Members</h5>
-        <ul>
-          <li><a href="dashboard">Members' portal</a></li>
-          <li><a href="events">Events &amp; CMEs</a></li>
-          <li><a href="certificates">My certificates</a></li>
-          <li><a href="card">Membership card</a></li>
-        </ul>
+      <div class="site-footer-top-social" aria-label="Social links">
+        <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+        <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+        <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+        <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+        <a href="https://www.instagram.com/respiratorysocietyofkenya" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+      </div><div class="site-footer-donate">
+        <a href="dashboard">Membership</a>
       </div>
     </div>
-    <div class="foot-btm">
-      <span>&copy; 2026 Respiratory Society of Kenya. All rights reserved.</span>
-      <span>Developed and Designed by ReSoK ICT</span>
+
+    <div class="site-footer-mid">
+      <div>
+        <h3 class="site-footer-head">Sign Up For A Newsletter</h3>
+        <p class="site-footer-text">
+          Get updates on CMEs, webinars, projects, and announcements directly in your inbox.
+        </p>
+        <form class="site-footer-subscribe" action="mailto:info@resok.org?subject=ReSoK%20Newsletter%20Signup" method="post" enctype="text/plain">
+          <input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address">
+          <button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button>
+        </form>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Society</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="../../index.html">Home</a></li>
+          <li><a href="../../about.html">About</a></li>
+          <li><a href="../../conferences.html">Conferences</a></li>
+          <li><a href="dashboard">Membership</a></li>
+          <li><a href="https://www.resok.org/faqs" target="_blank" rel="noopener">FAQs</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Get In Touch</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="../../contact.html">Contact Us</a></li>
+          <li><a href="../../blog.html">Blog</a></li>
+          <li><a href="../../contact.html">Location</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Resources</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="../../knowledge.html">Knowledge Hub</a></li>
+          <li><a href="../../guidelines.html">Guidelines</a></li>
+          <li><a href="../../patient-resources.html">Patient Resources</a></li>
+          <li><a href="../../projects.html">Projects</a></li>
+          <li><a href="../../workshops-and-training.html">Workshops</a></li>
+          <li><a href="../../learning.html">Learning</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Our Gallery</h4>
+        <div class="site-footer-divider"></div>
+        <div class="site-footer-gallery-grid">
+          <img src="../../assets/img/footer/F1.jpg" alt="Gallery 1" loading="lazy">
+          <img src="../../assets/img/footer/F2.jpg" alt="Gallery 2" loading="lazy">
+          <img src="../../assets/img/footer/F3.jpg" alt="Gallery 3" loading="lazy">
+          <img src="../../assets/img/footer/F4.jpeg" alt="Gallery 4" loading="lazy">
+          <img src="../../assets/img/footer/F5.png" alt="Gallery 5" loading="lazy">
+          <img src="../../assets/img/footer/F6.png" alt="Gallery 6" loading="lazy">
+          <img src="../../assets/img/footer/F7.jpg" alt="Gallery 7" loading="lazy">
+          <img src="../../assets/img/footer/F8.jpg" alt="Gallery 8" loading="lazy">
+</div>
+      </div>
+    </div>
+
+    <div class="site-footer-bottom">
+      &copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT
     </div>
   </div>
 </footer>

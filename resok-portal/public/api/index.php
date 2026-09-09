@@ -3235,14 +3235,26 @@ Respiratory Society of Kenya");
              ORDER BY mp.created_at DESC
              LIMIT 500'
         )->fetchAll();
-        respond(200, array_map(function ($row) {
-            return array_merge(mapMember($row), [
-                'email' => $row['email'],
-                'paymentCount' => (int)$row['payment_count'],
-                'paidTotal' => (float)$row['paid_total'],
-                'latestPaymentAt' => $row['latest_payment_at']
-            ]);
-        }, $rows));
+
+        // Which years each member has paid for, fetched once for the whole list rather than
+        // once per member - this is a few hundred rows on a page that draws a column per year.
+        requireModule('membershipYearsByMember', 'lib/membership.php');
+        $years = membershipYearsByMember($pdo);
+
+        respond(200, [
+            'members' => array_map(function ($row) use ($years) {
+                $paid = $years[(int)$row['id']] ?? [];
+                return array_merge(mapMember($row), [
+                    'email' => $row['email'],
+                    'paymentCount' => (int)$row['payment_count'],
+                    'paidTotal' => (float)$row['paid_total'],
+                    'latestPaymentAt' => $row['latest_payment_at'],
+                    'yearsPaid' => $paid,
+                    'lastYearPaid' => $paid ? max($paid) : null,
+                ]);
+            }, $rows),
+            'years' => membershipYearRange($pdo),
+        ]);
     }
 
     if (preg_match('#^members/(\d+)/approve$#', $route, $m) && $method === 'POST') {

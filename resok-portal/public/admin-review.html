@@ -79,7 +79,7 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th><input type="checkbox" id="selectAllRows" /></th><th>Member</th><th>Contact</th><th>Status</th><th>Membership ID</th><th>Paid</th></tr>
+              <tr id="memberHead"><th><input type="checkbox" id="selectAllRows" /></th><th>Member</th><th>Contact</th><th>Status</th><th>Membership ID</th><th>Paid</th></tr>
             </thead>
             <tbody id="memberRows"></tbody>
           </table>
@@ -455,6 +455,9 @@
   <script src="js/portal-state.js?v=20260909-errstatus"></script>
   <script>
     let members = [];
+    // Which years the register covers, so the table knows what columns to draw. Comes from
+    // the server with the members rather than being assumed here.
+    let yearRange = { from: null, to: null, currentYear: new Date().getFullYear() };
     let selectedMember = null;
     const selectedIds = new Set();
 
@@ -571,8 +574,51 @@
       document.getElementById("bulkCount").textContent = `${selectedIds.size} selected`;
     }
 
+    /*
+     * Which years get a column.
+     *
+     * Drawn from the years the register actually holds rather than a list written into the
+     * page, so next year's column appears when next year's payments do - no edit here, and
+     * no column standing empty in January. YEAR_COLUMNS_FROM is only where the display
+     * starts; the earlier years are still in the database and still on the member's own
+     * record.
+     */
+    const YEAR_COLUMNS_FROM = 2024;
+
+    function yearColumns() {
+      const to = Math.max(yearRange.to || 0, yearRange.currentYear || new Date().getFullYear());
+      const from = Math.max(YEAR_COLUMNS_FROM, yearRange.from || YEAR_COLUMNS_FROM);
+      if (!to || to < from) return [];
+      return Array.from({ length: to - from + 1 }, (unused, i) => from + i);
+    }
+
+    function renderYearHead() {
+      const head = document.getElementById("memberHead");
+      head.querySelectorAll("th[data-year]").forEach((th) => th.remove());
+      yearColumns().forEach((year) => {
+        const th = document.createElement("th");
+        th.dataset.year = String(year);
+        th.textContent = String(year);
+        th.style.textAlign = "center";
+        head.appendChild(th);
+      });
+    }
+
+    function yearCells(member) {
+      const paid = new Set(member.yearsPaid || []);
+      return yearColumns().map((year) => {
+        const yes = paid.has(year);
+        // A tick and a dash, not a blank. A blank cell reads as "no data" and this is a
+        // statement: the register says they did not pay that year.
+        return `<td style="text-align:center;color:${yes ? "#0f7a38" : "#c0c8c2"}" title="${year}">`
+             + (yes ? "&#10003;" : "&ndash;") + "</td>";
+      }).join("");
+    }
+
     function renderRows() {
+      renderYearHead();
       const rows = filteredMembers();
+      const span = 6 + yearColumns().length;
       document.getElementById("memberRows").innerHTML = rows.length ? rows.map((member) => `
         <tr data-id="${esc(member.id)}" class="${selectedMember?.id === member.id ? "selected" : ""}">
           <td><input type="checkbox" class="row-select" data-id="${esc(member.id)}" ${selectedIds.has(String(member.id)) ? "checked" : ""} /></td>
@@ -581,8 +627,9 @@
           <td><span class="status ${statusClass(member.membershipStatus)}">${esc(statusLabel(member.membershipStatus))}</span></td>
           <td>${esc(member.membershipId || "Pending")}</td>
           <td>${money(member.paidTotal)}</td>
+          ${yearCells(member)}
         </tr>
-      `).join("") : `<tr><td colspan="6">No members match this view.</td></tr>`;
+      `).join("") : `<tr><td colspan="${span}">No members match this view.</td></tr>`;
 
       document.querySelectorAll("#memberRows tr[data-id]").forEach((row) => {
         row.addEventListener("click", (event) => {
@@ -822,7 +869,12 @@
         return;
       }
       try {
-        members = await window.ResokPortal.api("/api/members");
+        const payload = await window.ResokPortal.api("/api/members");
+        // The route used to return a bare array and now returns members alongside the year
+        // range. Both shapes are accepted so a cached copy of this page cannot render empty
+        // against a newer API, or an older API against this page.
+        members = Array.isArray(payload) ? payload : (payload.members || []);
+        if (!Array.isArray(payload) && payload.years) yearRange = payload.years;
       } catch (error) {
         // A refusal is not an absence. 401 and 403 mean the server is there and answering,
         // and the answer is "sign in" - falling back to demo data would hide the one thing

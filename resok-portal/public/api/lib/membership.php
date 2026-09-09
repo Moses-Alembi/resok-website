@@ -339,3 +339,130 @@ function membershipRenewalSummary(PDO $pdo): array
     }
     return $out;
 }
+
+/* ======================================================================================= */
+/* Membership years                                                                         */
+/*                                                                                          */
+/* The society's membership runs by calendar year: paying for 2026 makes somebody a member  */
+/* for 2026, whether they paid in January or November. member_payment_years holds one row    */
+/* per member per year, so "who has paid this year" is a query rather than a column that     */
+/* needs adding each January.                                                                */
+/* ======================================================================================= */
+
+/**
+ * The years one member has paid for, newest first.
+ *
+ * @return list<array<string,mixed>>
+ */
+function membershipYearsPaid(PDO $pdo, int $memberProfileId): array
+{
+    try {
+        $stmt = $pdo->prepare('SELECT year, amount, currency, paid_on, receipt, method, source
+                               FROM member_payment_years
+                               WHERE member_profile_id = ? ORDER BY year DESC');
+        $stmt->execute([$memberProfileId]);
+    } catch (Throwable $e) {
+        error_log('Membership years unavailable: ' . $e->getMessage());
+        return [];
+    }
+    return array_map(fn($r) => [
+        'year'     => (int)$r['year'],
+        'amount'   => $r['amount'] === null ? null : (float)$r['amount'],
+        'currency' => $r['currency'],
+        'paidOn'   => $r['paid_on'],
+        'receipt'  => $r['receipt'],
+        'method'   => $r['method'],
+        'source'   => $r['source'],
+    ], $stmt->fetchAll());
+}
+
+/**
+ * Every member's paid years in one query, keyed by profile id.
+ *
+ * The admin list shows a column per year for a few hundred members; asking per member would
+ * be a query per row.
+ *
+ * @return array<int,list<int>>
+ */
+function membershipYearsByMember(PDO $pdo): array
+{
+    try {
+        $stmt = $pdo->query('SELECT member_profile_id, year FROM member_payment_years ORDER BY year');
+        if (!$stmt) return [];
+    } catch (Throwable $e) {
+        error_log('Membership years unavailable: ' . $e->getMessage());
+        return [];
+    }
+    $out = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $out[(int)$row['member_profile_id']][] = (int)$row['year'];
+    }
+    return $out;
+}
+
+/** The span of years the register covers, so the admin table knows what columns to draw. */
+function membershipYearRange(PDO $pdo): array
+{
+    try {
+        $row = $pdo->query('SELECT MIN(year) AS lo, MAX(year) AS hi FROM member_payment_years')->fetch();
+    } catch (Throwable $e) {
+        return ['from' => null, 'to' => null, 'currentYear' => (int)date('Y')];
+    }
+    return [
+        'from' => isset($row['lo']) ? (int)$row['lo'] : null,
+        'to'   => isset($row['hi']) ? (int)$row['hi'] : null,
+        'currentYear' => (int)date('Y'),
+    ];
+}
+
+/**
+ * The renewal date implied by the last year somebody paid for.
+ *
+ * A membership year ends on 31 December, so paying for 2025 makes the membership run to
+ * 2025-12-31 and the existing standing calculation - due soon, grace, lapsed - takes it from
+ * there. Deriving the date rather than adding a second set of rules means there is still one
+ * definition of what being current means, whether the date came from an approval, a portal
+ * renewal, or the historical register.
+ */
+function membershipDueFromYear(?int $lastPaidYear): ?string
+{
+    return $lastPaidYear ? sprintf('%04d-12-31', $lastPaidYear) : null;
+}
+
+/**
+ * What each member's standing would become if the register's years were applied.
+ *
+ * Deliberately a report rather than a write. Applying a rule like "active means paid for
+ * this year" to a register that stops at last year changes the standing of everybody in it
+ * at once, and that is a decision for the office, not a side effect of an import.
+ *
+ * @return array<string,mixed>
+ */
+function membershipYearImpact(PDO $pdo): array
+{
+    $out = ['currentYear' => (int)date('Y'), 'total' => 0, 'byStanding' => [], 'unchanged' => 0];
+    try {
+        $stmt = $pdo->query('SELECT mp.id, mp.membership_status, mp.renewal_due,
+                                    MAX(y.year) AS last_year
+                             FROM member_profiles mp
+                             LEFT JOIN member_payment_years y ON y.member_profile_id = mp.id
+                             GROUP BY mp.id, mp.membership_status, mp.renewal_due');
+        if (!$stmt) return $out;
+    } catch (Throwable $e) {
+        error_log('Membership year impact unavailable: ' . $e->getMessage());
+        return $out;
+    }
+
+    foreach ($stmt->fetchAll() as $row) {
+        $out['total']++;
+        $due = membershipDueFromYear($row['last_year'] === null ? null : (int)$row['last_year']);
+        $would = membershipStanding([
+            'membership_status' => $row['membership_status'],
+            'renewal_due' => $due,
+        ]);
+        $key = $would['standing'];
+        $out['byStanding'][$key] = ($out['byStanding'][$key] ?? 0) + 1;
+        if ((string)($row['renewal_due'] ?? '') === (string)$due) $out['unchanged']++;
+    }
+    return $out;
+}

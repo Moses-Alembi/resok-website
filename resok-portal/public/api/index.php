@@ -2088,7 +2088,7 @@ Respiratory Society of Kenya");
             'positions'   => electionPositions($pdo, (int)$election['id']),
             'canNominate' => $entry !== null && $election['nominationsOpen'],
             'members'     => $entry ? electionNominatableMembers($pdo, (int)$election['id']) : [],
-            'nominations' => electionNominations($pdo, (int)$election['id']),
+            'nominations' => electionNominations($pdo, (int)$election['id'], (int)$user['userId']),
         ]);
     }
 

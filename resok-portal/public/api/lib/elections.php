@@ -103,7 +103,14 @@ function electionsList(PDO $pdo, bool $includeDrafts = false): array
 {
     if (!electionsEnsureTables($pdo)) return [];
     $sql = 'SELECT * FROM elections';
-    if (!$includeDrafts) $sql .= " WHERE status IN ('roll_published','open','closed','published')";
+    // Everything except a draft, because a draft is the only state members are not meant to
+    // see. The nomination statuses were missing from this list when the phase was added,
+    // which hid the election from exactly the people it was asking to nominate - the one
+    // audience it existed for.
+    if (!$includeDrafts) {
+        $sql .= " WHERE status IN ('nominations','nominations_closed','roll_published',
+                                   'open','closed','published')";
+    }
     $sql .= ' ORDER BY opens_at DESC';
     $stmt = $pdo->query($sql);
     return $stmt ? array_map('electionShape', $stmt->fetchAll()) : [];
@@ -1101,14 +1108,18 @@ function electionRespondToNomination(PDO $pdo, int $candidateId, int $userId, bo
  *
  * @return list<array<string,mixed>>
  */
-function electionNominations(PDO $pdo, int $electionId): array
+function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = null): array
 {
     if (!electionsEnsureTables($pdo)) return [];
+    // The nominee's own user id comes along so the page can tell which nominations belong to
+    // whoever is reading. Accepting is the nominee's act alone, and a button offered to
+    // somebody who cannot use it is a form that lies.
     $stmt = $pdo->prepare('SELECT c.*, p.title AS position_title,
-                                  r.name AS nominated_by
+                                  r.name AS nominated_by, mp.user_id AS nominee_user_id
                            FROM election_candidates c
                            JOIN election_positions p ON p.id = c.position_id
                            LEFT JOIN election_roll r ON r.id = c.nominated_by_roll_id
+                           LEFT JOIN member_profiles mp ON mp.id = c.member_profile_id
                            WHERE p.election_id = ?
                            ORDER BY p.position, c.nominated_at, c.id');
     $stmt->execute([$electionId]);
@@ -1125,6 +1136,8 @@ function electionNominations(PDO $pdo, int $electionId): array
         'nominatedAt'  => $c['nominated_at'],
         'accepted'     => !empty($c['accepted_at']),
         'acceptedAt'   => $c['accepted_at'],
+        'mine'         => $viewerUserId !== null
+                          && (int)($c['nominee_user_id'] ?? 0) === $viewerUserId,
         // What stops this nomination becoming a candidacy, so the officer sees the reason
         // rather than a name that will not approve and no explanation why.
         'blocker'      => empty($c['accepted_at']) && $c['status'] === 'nominated'

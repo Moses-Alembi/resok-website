@@ -140,6 +140,35 @@
 
         <div id="eActions" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap"></div>
 
+        <!-- Nominations -->
+        <div id="eNominateBox" hidden style="margin-top:24px;border:1px solid var(--line);border-radius:11px;padding:20px">
+          <h2>Nominate a candidate</h2>
+          <p class="lede" style="margin-bottom:16px">
+            You may nominate one member for each post, and you may nominate yourself.
+            Nominating someone else asks them to accept before their name goes on the ballot.
+          </p>
+          <div style="display:grid;gap:14px;max-width:520px">
+            <label>
+              <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Post</span>
+              <select id="nomPosition" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit"></select>
+            </label>
+            <label>
+              <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Member</span>
+              <select id="nomMember" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit"></select>
+            </label>
+            <label>
+              <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">A short note (optional)</span>
+              <input id="nomHeadline" maxlength="255" placeholder="e.g. Pulmonologist, Nairobi"
+                     style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+            </label>
+            <div><button class="btn btn-primary" id="nomSubmit" type="button">
+              <i class="fas fa-user-plus"></i> Submit nomination
+            </button></div>
+          </div>
+          <div id="nomNotice"></div>
+        </div>
+
+        <div id="eNominations" style="margin-top:26px"></div>
         <div id="eResults" style="margin-top:26px"></div>
         <div id="eCandidates" style="margin-top:26px"></div>
       </section>
@@ -309,7 +338,142 @@
 
       if (current.results) renderResults(current.results);
       renderCandidates();
+      loadNominations();
     }
+
+    /* ---------------- nominations ---------------- */
+    let nominations = null;
+
+    async function loadNominations() {
+      el('eNominateBox').hidden = true;
+      el('eNominations').textContent = '';
+      const e = current.election;
+      // Only fetched for an election that has reached the nomination phase. Elections set up
+      // without one - a slate agreed elsewhere - have nothing to show here.
+      if (!['nominations', 'nominations_closed'].includes(e.status)) return;
+      try {
+        nominations = await api('/api/elections/' + encodeURIComponent(e.slug) + '/nominations');
+        renderNominationForm();
+        renderNominationList();
+      } catch (error) {
+        el('eNominations').appendChild(make('div', 'note bad',
+          error.message || 'Nominations could not be loaded.'));
+      }
+    }
+
+    function renderNominationForm() {
+      if (!nominations.canNominate) return;
+      const posts = el('nomPosition');
+      const members = el('nomMember');
+      posts.textContent = '';
+      members.textContent = '';
+
+      (nominations.positions || []).forEach((position) => {
+        const option = document.createElement('option');
+        option.value = String(position.id);
+        option.textContent = position.title
+          + ' (' + position.seats + (position.seats === 1 ? ' seat' : ' seats') + ')';
+        posts.appendChild(option);
+      });
+      (nominations.members || []).forEach((member) => {
+        const option = document.createElement('option');
+        option.value = String(member.memberProfileId);
+        option.textContent = member.name + (member.membershipId ? ' · ' + member.membershipId : '');
+        members.appendChild(option);
+      });
+      el('eNominateBox').hidden = false;
+    }
+
+    function renderNominationList() {
+      const mount = el('eNominations');
+      mount.textContent = '';
+      const list = nominations.nominations || [];
+      if (!list.length) {
+        mount.appendChild(make('h2', null, 'Nominations received'));
+        mount.appendChild(make('div', 'empty', 'No nominations yet.'));
+        return;
+      }
+      mount.appendChild(make('h2', null, 'Nominations received'));
+
+      const byPosition = {};
+      list.forEach((n) => { (byPosition[n.position] = byPosition[n.position] || []).push(n); });
+
+      Object.keys(byPosition).forEach((title) => {
+        const box = make('div', 'post');
+        box.style.marginTop = '16px';
+        const head = make('div', 'post-head');
+        head.appendChild(make('h3', null, title));
+        box.appendChild(head);
+
+        byPosition[title].forEach((n) => {
+          const row = make('div', 'choice');
+          row.style.cursor = 'default';
+          const who = make('div');
+          who.style.flex = '1';
+          who.appendChild(make('div', 'who', n.name));
+          const detail = [];
+          if (n.nominatedBy) detail.push('Nominated by ' + n.nominatedBy);
+          detail.push(n.accepted ? 'Accepted' : (n.blocker || n.status));
+          who.appendChild(make('div', 'head', detail.join(' · ')));
+          if (n.headline) who.appendChild(make('div', 'manifesto', n.headline));
+          row.appendChild(who);
+
+          // Accept and decline appear only on a nomination the signed-in member has been
+          // given and has not yet answered. Everything else is read-only here.
+          if (n.mine && !n.accepted && n.status === 'nominated') {
+            const actions = make('div');
+            actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+            const yes = make('button', 'btn btn-primary', 'Accept');
+            yes.type = 'button';
+            yes.style.padding = '8px 14px';
+            yes.addEventListener('click', () => respond(n.id, 'accept'));
+            const no = make('button', 'btn btn-ghost', 'Decline');
+            no.type = 'button';
+            no.style.padding = '8px 14px';
+            no.addEventListener('click', () => respond(n.id, 'decline'));
+            actions.appendChild(yes);
+            actions.appendChild(no);
+            row.appendChild(actions);
+          }
+          box.appendChild(row);
+        });
+        mount.appendChild(box);
+      });
+    }
+
+    async function respond(candidateId, action) {
+      try {
+        await api('/api/elections/nominations/' + candidateId + '/' + action, { method: 'POST' });
+        notice('eNotice', action === 'accept'
+          ? 'You have accepted the nomination. The returning officer will confirm your candidacy.'
+          : 'You have declined the nomination.', 'ok');
+        await loadNominations();
+      } catch (error) {
+        notice('eNotice', error.message || 'That could not be recorded.', 'bad');
+      }
+    }
+
+    el('nomSubmit').addEventListener('click', async () => {
+      const button = el('nomSubmit');
+      button.disabled = true;
+      notice('nomNotice', '');
+      try {
+        const result = await api('/api/elections/' + encodeURIComponent(current.election.slug) + '/nominate', {
+          method: 'POST',
+          body: JSON.stringify({
+            positionId: Number(el('nomPosition').value),
+            memberProfileId: Number(el('nomMember').value),
+            headline: el('nomHeadline').value.trim()
+          })
+        });
+        el('nomHeadline').value = '';
+        notice('nomNotice', result.message || 'Nomination recorded.', 'ok');
+        await loadNominations();
+      } catch (error) {
+        notice('nomNotice', error.message || 'The nomination was not recorded.', 'bad');
+      }
+      button.disabled = false;
+    });
 
     function renderCandidates() {
       const mount = el('eCandidates');

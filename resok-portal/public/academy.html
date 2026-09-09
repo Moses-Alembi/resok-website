@@ -83,32 +83,37 @@
     /* ---------- hero ---------- */
     /*
      * The forest colour is the background, not a fallback that only appears on failure. The
-     * video sits on top of it and the scrim sits on top of that, so the hero looks finished
-     * at every stage - before the video loads, if it never loads, and if it is deliberately
-     * not loaded at all. Nothing here waits on a 30MB file to become readable.
+     * video sits on top of it, so the hero looks finished at every stage - before the video
+     * loads, if it never loads, and if it is deliberately not loaded at all. Nothing here
+     * waits on a 30MB file to become readable.
+     *
+     * No tint over the footage. Legibility comes from a shadow on the text itself, which
+     * darkens the few pixels behind each glyph rather than dulling the whole picture.
      */
     .hero{background:var(--forest);color:#dbeadf;padding:64px 0 70px;position:relative;overflow:hidden}
     .hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;
       opacity:0;transition:opacity .6s ease}
     .hero-video.ready{opacity:1}
-    /* A flat wash, not a gradient: enough contrast for white text over any frame. */
-    .hero-scrim{position:absolute;inset:0;z-index:1;background:rgba(6,48,26,.74)}
     .hero:after{content:"";position:absolute;right:-90px;bottom:-120px;width:400px;height:400px;
       border-radius:50%;border:1px solid rgba(255,255,255,.07);z-index:2}
-    .hero-in{position:relative;z-index:3;max-width:1220px;margin:0 auto;padding:0 22px}
+    .hero-in{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:0 22px}
     .kicker{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.09);
       border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 14px;font-size:12px;
       font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#a9cfb8}
     .hero h1{margin-top:18px;font-size:clamp(29px,4.4vw,46px);line-height:1.12;color:#fff;
-      letter-spacing:-.025em;max-width:16ch;text-wrap:balance}
-    .hero p{margin-top:15px;max-width:54ch;font-size:16px;color:#b3ceba}
+      letter-spacing:-.025em;max-width:16ch;text-wrap:balance;
+      text-shadow:0 2px 18px rgba(0,0,0,.55)}
+    .hero p{margin-top:15px;max-width:54ch;font-size:16px;color:#cfe3d6;
+      text-shadow:0 1px 12px rgba(0,0,0,.5)}
     .hero-search{margin-top:28px;max-width:560px;display:flex;gap:9px}
     .hero-search input{flex:1;min-width:0;border:0;border-radius:9px;padding:15px 17px;font:inherit;font-size:15px;color:var(--ink)}
     .hero-search input:focus{outline:3px solid rgba(255,255,255,.28)}
     .stats{margin-top:36px;display:flex;gap:40px;flex-wrap:wrap;padding-top:26px;
       border-top:1px solid rgba(255,255,255,.11)}
-    .stats b{display:block;font-size:25px;color:#fff;font-weight:700;line-height:1.15;letter-spacing:-.02em}
-    .stats small{font-size:11.5px;letter-spacing:.11em;text-transform:uppercase;color:#8bb59b}
+    .stats b{display:block;font-size:25px;color:#fff;font-weight:700;line-height:1.15;
+      letter-spacing:-.02em;text-shadow:0 1px 12px rgba(0,0,0,.5)}
+    .stats small{font-size:11.5px;letter-spacing:.11em;text-transform:uppercase;color:#a9cfb8;
+      text-shadow:0 1px 10px rgba(0,0,0,.5)}
 
     /* ---------- generic section ---------- */
     section.band{padding:52px 0}
@@ -634,7 +639,6 @@
   <div class="hero">
     <video class="hero-video" id="heroVideo" muted playsinline webkit-playsinline loop
            preload="none" aria-hidden="true" tabindex="-1"></video>
-    <div class="hero-scrim"></div>
     <div class="hero-in">
       <span class="kicker"><i class="fas fa-lungs"></i> Respiratory Society of Kenya</span>
       <h1>Learn respiratory health, free and online</h1>

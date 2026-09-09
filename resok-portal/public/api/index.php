@@ -2067,6 +2067,57 @@ Respiratory Society of Kenya");
         respond(200, $receipt);
     }
 
+    // ----- Elections: nominations ----------------------------------------------------------
+
+    /**
+     * The nomination form: who may be nominated, and for what.
+     *
+     * The list of nominatable members comes from the roll rather than the whole register.
+     * Offering names that would be refused on submission is a form that lies about what it
+     * will accept.
+     */
+    if (preg_match('#^elections/([A-Za-z0-9-]+)/nominations$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionNominations', 'lib/elections.php');
+        $election = electionFind($pdo, $m[1]);
+        if (!$election || $election['status'] === 'draft') respond(404, ['error' => 'No such election.']);
+
+        $entry = electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']);
+        respond(200, [
+            'election'    => $election,
+            'positions'   => electionPositions($pdo, (int)$election['id']),
+            'canNominate' => $entry !== null && $election['nominationsOpen'],
+            'members'     => $entry ? electionNominatableMembers($pdo, (int)$election['id']) : [],
+            'nominations' => electionNominations($pdo, (int)$election['id']),
+        ]);
+    }
+
+    if (preg_match('#^elections/([A-Za-z0-9-]+)/nominate$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionNominate', 'lib/elections.php');
+        [$result, $error] = electionNominate($pdo, $m[1], (int)$user['userId'], input());
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, $result);
+    }
+
+    /** A nominee accepting or declining a nomination somebody else made for them. */
+    if (preg_match('#^elections/nominations/(\d+)/(accept|decline)$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionRespondToNomination', 'lib/elections.php');
+        [$result, $error] = electionRespondToNomination($pdo, (int)$m[1], (int)$user['userId'],
+                                                        $m[2] === 'accept');
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, $result);
+    }
+
+    /** Every nomination for an election, for the officer reviewing them. */
+    if (preg_match('#^admin/elections/(\d+)/nominations$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionNominations', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        respond(200, ['nominations' => electionNominations($pdo, (int)$m[1])]);
+    }
+
     // ----- Elections: returning officer ----------------------------------------------------
 
     if ($route === 'admin/elections' && $method === 'GET') {

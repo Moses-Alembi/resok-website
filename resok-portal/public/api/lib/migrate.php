@@ -68,6 +68,7 @@ function migrateOrder(): array
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-elections.sql',                // board elections: posts, candidates, roll
         'schema-elections-ballot.sql',         // the ballot; depends on the roll above
+        'migration-election-nominations.sql',   // nomination phase; alters elections
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];
 }

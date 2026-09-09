@@ -29,7 +29,16 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/membership.php';
 
-const ELECTION_STATUSES = ['draft', 'roll_published', 'open', 'closed', 'published', 'cancelled'];
+/**
+ * Every status the column allows, in the order an election passes through them.
+ *
+ * Must stay identical to the enum in the database. A list here that is missing a value the
+ * column has means electionSetStatus refuses a legitimate transition; a value here the column
+ * lacks means the write fails at the database instead. Both were one edit away when the
+ * nomination phase was added.
+ */
+const ELECTION_STATUSES = ['draft', 'nominations', 'nominations_closed', 'roll_published',
+                           'open', 'closed', 'published', 'cancelled'];
 const ELECTION_CANDIDATE_STATUSES = ['nominated', 'approved', 'withdrawn', 'disqualified'];
 
 function electionsEnsureTables(PDO $pdo): bool
@@ -59,12 +68,24 @@ function electionShape(array $row): array
     // A status can be set early or left behind; the window is what decides.
     $live = $row['status'] === 'open' && $opens && $closes && $now >= $opens && $now <= $closes;
 
+    // The same test for the nomination window. An election runs in two parts - members put
+    // names forward, then members vote on them - and each part has its own dates.
+    $nomOpen = !empty($row['nominations_open_at'])
+        ? new DateTimeImmutable((string)$row['nominations_open_at']) : null;
+    $nomClose = !empty($row['nominations_close_at'])
+        ? new DateTimeImmutable((string)$row['nominations_close_at']) : null;
+    $nominating = $row['status'] === 'nominations' && $nomOpen && $nomClose
+                  && $now >= $nomOpen && $now <= $nomClose;
+
     return [
         'id'          => (int)$row['id'],
         'slug'        => $row['slug'],
         'title'       => $row['title'],
         'description' => $row['description'],
         'eligibilityCutoff' => $row['eligibility_cutoff'],
+        'nominationsOpenAt'  => $row['nominations_open_at'] ?? null,
+        'nominationsCloseAt' => $row['nominations_close_at'] ?? null,
+        'nominationsOpen'    => $nominating,
         'opensAt'     => $row['opens_at'],
         'closesAt'    => $row['closes_at'],
         'status'      => $row['status'],
@@ -530,14 +551,40 @@ function electionCreate(PDO $pdo, array $data, ?int $adminUserId): array
         return [null, 'Voting must close after it opens.'];
     }
 
+    // The nomination window. Optional, because an officer entering a slate agreed elsewhere
+    // is a legitimate way to run a small election - but where it is given, it has to finish
+    // before voting starts. Nominations still open once the ballot is live would mean names
+    // arriving for a paper people are already marking.
+    $nomOpens = trim((string)($data['nominationsOpenAt'] ?? ''));
+    $nomCloses = trim((string)($data['nominationsCloseAt'] ?? ''));
+    if (($nomOpens === '') !== ($nomCloses === '')) {
+        return [null, 'Give both nomination dates, or neither.'];
+    }
+    if ($nomOpens !== '') {
+        foreach ([[$nomOpens, 'nominations opening'], [$nomCloses, 'nominations closing']] as [$value, $what]) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2})?/', $value)) {
+                return [null, 'Give a valid ' . $what . ' date and time.'];
+            }
+        }
+        if (strtotime(str_replace('T', ' ', $nomCloses)) <= strtotime(str_replace('T', ' ', $nomOpens))) {
+            return [null, 'Nominations must close after they open.'];
+        }
+        if (strtotime(str_replace('T', ' ', $nomCloses)) > strtotime(str_replace('T', ' ', $opens))) {
+            return [null, 'Nominations must close before voting opens.'];
+        }
+    }
+
     $pdo->prepare('INSERT INTO elections
-                    (slug, title, description, eligibility_cutoff, opens_at, closes_at,
+                    (slug, title, description, eligibility_cutoff,
+                     nominations_open_at, nominations_close_at, opens_at, closes_at,
                      status, created_by)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
         ->execute([
             electionSlug($pdo, $title), mb_substr($title, 0, 200),
             trim((string)($data['description'] ?? '')) ?: null,
             $cutoff,
+            $nomOpens !== '' ? str_replace('T', ' ', $nomOpens) : null,
+            $nomCloses !== '' ? str_replace('T', ' ', $nomCloses) : null,
             str_replace('T', ' ', $opens), str_replace('T', ' ', $closes),
             // Always a draft. An election is opened by a deliberate act, never as a side
             // effect of creating it.
@@ -717,8 +764,35 @@ function electionSetStatus(PDO $pdo, int $electionId, string $status): array
     $election = electionFind($pdo, (string)$electionId);
     if (!$election) return [null, 'That election no longer exists.'];
 
-    if ($status === 'open') {
+    if ($status === 'nominations') {
         if ($election['locked']) return [null, 'This election has already been opened once.'];
+        if (!electionPositions($pdo, $electionId)) {
+            return [null, 'Add the posts being contested before opening nominations.'];
+        }
+        if (!$election['nominationsOpenAt'] || !$election['nominationsCloseAt']) {
+            return [null, 'Set the nomination opening and closing dates first.'];
+        }
+        // The roll decides who may nominate as well as who may vote, so it has to exist
+        // before nominations open, not just before voting does.
+        if (electionRollSummary($pdo, $electionId)['onRoll'] < 1) {
+            return [null, 'Draw the electoral roll first - it decides who may nominate.'];
+        }
+        $pdo->prepare("UPDATE elections SET status = 'nominations' WHERE id = ?")->execute([$electionId]);
+
+    } elseif ($status === 'nominations_closed') {
+        if ($election['status'] !== 'nominations') {
+            return [null, 'Only an election in its nomination phase can have nominations closed.'];
+        }
+        $pdo->prepare("UPDATE elections SET status = 'nominations_closed' WHERE id = ?")
+            ->execute([$electionId]);
+
+    } elseif ($status === 'open') {
+        if ($election['locked']) return [null, 'This election has already been opened once.'];
+
+        // Voting cannot start while names can still be added to the ballot.
+        if ($election['status'] === 'nominations') {
+            return [null, 'Close nominations before opening the vote.'];
+        }
 
         $roll = electionRollSummary($pdo, $electionId);
         if ($roll['onRoll'] < 1) {
@@ -863,4 +937,219 @@ function electionResults(PDO $pdo, int $electionId): array
         ];
     }
     return ['declaration' => $latest, 'positions' => array_values($positions)];
+}
+
+/* ======================================================================================= */
+/* Nominations                                                                              */
+/*                                                                                          */
+/* The first half of an election. Members put names forward during a window, the returning   */
+/* officer approves or rejects each one, and voting then opens on the approved list.         */
+/* ======================================================================================= */
+
+/**
+ * A member nominates somebody for a post.
+ *
+ * Four things are checked, and the reasons matter more than the rules.
+ *
+ * The nominator must be on the roll: the electorate nominates its own board, and somebody
+ * who cannot vote in an election should not be able to shape its ballot paper either.
+ *
+ * The nominee must be a member in good standing. A board seat carries obligations that a
+ * lapsed member has not kept up, and finding that out after they are elected is worse.
+ *
+ * One nomination per member per post, which the unique key enforces. Without it a single
+ * member could fill a ballot with names and the officer's list becomes a moderation queue
+ * rather than a record of what the membership proposed.
+ *
+ * A nomination of somebody else is not an acceptance. Standing for a board is not something
+ * that should happen to a person without their agreement, so a name put forward by another
+ * member waits at 'nominated' until they accept; nominating yourself accepts at the same
+ * moment, because there is nobody else to ask.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function electionNominate(PDO $pdo, string $key, int $userId, array $data): array
+{
+    if (!electionsEnsureTables($pdo)) return [null, 'The election tables are not available.'];
+
+    $election = electionFind($pdo, $key);
+    if (!$election) return [null, 'No such election.'];
+
+    if (!$election['nominationsOpen']) {
+        if ($election['status'] !== 'nominations') {
+            return [null, 'Nominations are not open for this election.'];
+        }
+        $now = new DateTimeImmutable('now');
+        $opens = $election['nominationsOpenAt']
+            ? new DateTimeImmutable((string)$election['nominationsOpenAt']) : null;
+        return [null, ($opens && $now < $opens)
+            ? 'Nominations open on ' . $opens->format('j F Y \a\t H:i') . '.'
+            : 'Nominations have closed.'];
+    }
+
+    $nominator = electionRollEntry($pdo, (int)$election['id'], $userId);
+    if (!$nominator) {
+        return [null, 'Only members on the electoral roll may nominate candidates.'];
+    }
+
+    $positionId = (int)($data['positionId'] ?? 0);
+    $stmt = $pdo->prepare('SELECT * FROM election_positions WHERE id = ? AND election_id = ? LIMIT 1');
+    $stmt->execute([$positionId, (int)$election['id']]);
+    $position = $stmt->fetch();
+    if (!$position) return [null, 'Choose a post to nominate for.'];
+
+    // Who is being nominated. A member id where the nominee is in the register, which is the
+    // normal case; a bare name only where the officer is entering a paper nomination.
+    $memberId = (int)($data['memberProfileId'] ?? 0);
+    if ($memberId < 1) return [null, 'Choose the member you are nominating.'];
+
+    $stmt = $pdo->prepare('SELECT mp.id, mp.membership_status, mp.renewal_due, mp.membership_id,
+                                  mp.user_id,
+                                  TRIM(CONCAT_WS(" ", NULLIF(mp.title,""), NULLIF(mp.first_name,""),
+                                                      NULLIF(mp.surname,""))) AS full_name
+                           FROM member_profiles mp WHERE mp.id = ? LIMIT 1');
+    $stmt->execute([$memberId]);
+    $nominee = $stmt->fetch();
+    if (!$nominee) return [null, 'That member is not in the register.'];
+    if (!membershipHasBenefits($nominee)) {
+        return [null, 'That member is not in good standing and cannot be nominated.'];
+    }
+
+    // One entry per nominee per post. A second member proposing the same person is a
+    // seconder, and ReSoK's rules do not currently require one to be recorded - so this
+    // refuses rather than silently creating a duplicate candidate on the ballot. If the
+    // constitution turns out to need seconders, they belong in their own table beside this
+    // one, not as extra candidate rows.
+    $stmt = $pdo->prepare('SELECT id FROM election_candidates
+                           WHERE position_id = ? AND member_profile_id = ? LIMIT 1');
+    $stmt->execute([$positionId, $memberId]);
+    if ($stmt->fetch()) {
+        return [null, 'That member has already been nominated for ' . $position['title'] . '.'];
+    }
+
+    $isSelf = (int)$nominee['user_id'] === $userId;
+
+    try {
+        $pdo->prepare('INSERT INTO election_candidates
+                        (position_id, member_profile_id, nominated_by_roll_id, nominated_at,
+                         accepted_at, name, membership_id, headline, status, ballot_order)
+                       VALUES (?, ?, ?, NOW(), ' . ($isSelf ? 'NOW()' : 'NULL') . ', ?, ?, ?, ?, 0)')
+            ->execute([
+                $positionId, $memberId, $nominator['id'],
+                mb_substr((string)$nominee['full_name'], 0, 160),
+                $nominee['membership_id'],
+                mb_substr(trim((string)($data['headline'] ?? '')), 0, 255) ?: null,
+                'nominated',
+            ]);
+    } catch (Throwable $e) {
+        // The unique key on (position_id, nominated_by_roll_id) is what lands here.
+        return [null, 'You have already nominated somebody for ' . $position['title'] . '.'];
+    }
+
+    return [[
+        'nominated' => true,
+        'name'      => $nominee['full_name'],
+        'position'  => $position['title'],
+        'accepted'  => $isSelf,
+        'message'   => $isSelf
+            ? 'You have been nominated for ' . $position['title']
+              . '. The returning officer will confirm your candidacy.'
+            : $nominee['full_name'] . ' has been nominated for ' . $position['title']
+              . '. They will be asked to accept before their name goes on the ballot.',
+    ], null];
+}
+
+/**
+ * A nominee accepts or declines a nomination somebody else made for them.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function electionRespondToNomination(PDO $pdo, int $candidateId, int $userId, bool $accept): array
+{
+    if (!electionsEnsureTables($pdo)) return [null, 'The election tables are not available.'];
+
+    $stmt = $pdo->prepare('SELECT c.*, p.title AS position_title, p.election_id, mp.user_id
+                           FROM election_candidates c
+                           JOIN election_positions p ON p.id = c.position_id
+                           LEFT JOIN member_profiles mp ON mp.id = c.member_profile_id
+                           WHERE c.id = ? LIMIT 1');
+    $stmt->execute([$candidateId]);
+    $candidate = $stmt->fetch();
+    if (!$candidate) return [null, 'That nomination no longer exists.'];
+    if ((int)$candidate['user_id'] !== $userId) {
+        return [null, 'That nomination is not yours to answer.'];
+    }
+
+    [$election, $error] = electionRequireUnlocked($pdo, (int)$candidate['election_id']);
+    if ($error) return [null, $error];
+
+    if ($accept) {
+        $pdo->prepare('UPDATE election_candidates SET accepted_at = NOW() WHERE id = ?')
+            ->execute([$candidateId]);
+        return [['accepted' => true, 'position' => $candidate['position_title']], null];
+    }
+    // Declining is recorded, not deleted. That somebody was nominated and chose not to stand
+    // is part of the history of the election.
+    $pdo->prepare("UPDATE election_candidates
+                   SET status = 'withdrawn', withdrawn_reason = 'Declined the nomination'
+                   WHERE id = ?")->execute([$candidateId]);
+    return [['accepted' => false, 'position' => $candidate['position_title']], null];
+}
+
+/**
+ * Nominations awaiting the returning officer, and what is blocking each one.
+ *
+ * @return list<array<string,mixed>>
+ */
+function electionNominations(PDO $pdo, int $electionId): array
+{
+    if (!electionsEnsureTables($pdo)) return [];
+    $stmt = $pdo->prepare('SELECT c.*, p.title AS position_title,
+                                  r.name AS nominated_by
+                           FROM election_candidates c
+                           JOIN election_positions p ON p.id = c.position_id
+                           LEFT JOIN election_roll r ON r.id = c.nominated_by_roll_id
+                           WHERE p.election_id = ?
+                           ORDER BY p.position, c.nominated_at, c.id');
+    $stmt->execute([$electionId]);
+
+    return array_map(fn($c) => [
+        'id'           => (int)$c['id'],
+        'positionId'   => (int)$c['position_id'],
+        'position'     => $c['position_title'],
+        'name'         => $c['name'],
+        'membershipId' => $c['membership_id'],
+        'headline'     => $c['headline'],
+        'status'       => $c['status'],
+        'nominatedBy'  => $c['nominated_by'],
+        'nominatedAt'  => $c['nominated_at'],
+        'accepted'     => !empty($c['accepted_at']),
+        'acceptedAt'   => $c['accepted_at'],
+        // What stops this nomination becoming a candidacy, so the officer sees the reason
+        // rather than a name that will not approve and no explanation why.
+        'blocker'      => empty($c['accepted_at']) && $c['status'] === 'nominated'
+            ? 'Waiting for the nominee to accept' : null,
+    ], $stmt->fetchAll());
+}
+
+/**
+ * Members who may be nominated, for the picker on the nomination form.
+ *
+ * The roll is the source rather than the whole register: only members of this electorate can
+ * stand, and offering names that will be refused on submission is a form that lies.
+ *
+ * @return list<array<string,mixed>>
+ */
+function electionNominatableMembers(PDO $pdo, int $electionId): array
+{
+    if (!electionsEnsureTables($pdo)) return [];
+    $stmt = $pdo->prepare('SELECT r.member_profile_id, r.name, r.membership_id
+                           FROM election_roll r WHERE r.election_id = ?
+                           ORDER BY r.name');
+    $stmt->execute([$electionId]);
+    return array_map(fn($r) => [
+        'memberProfileId' => (int)$r['member_profile_id'],
+        'name'            => $r['name'],
+        'membershipId'    => $r['membership_id'],
+    ], $stmt->fetchAll());
 }

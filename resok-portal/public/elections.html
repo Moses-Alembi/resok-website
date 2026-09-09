@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elections - ReSoK Members' Portal</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#2c3e50;--bg-light:#f8f9fa;
+      --card-shadow:0 2px 12px rgba(0,0,0,0.06);--radius:12px;--line:#e5e7eb;--muted:#667085}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg-light);color:var(--text-dark)}
+    a{text-decoration:none;color:inherit}
+    [hidden]{display:none!important}
+    .dashboard-nav{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+    .dashboard-nav-inner{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:70px}
+    .dashboard-logo img{height:40px;display:block}
+    .dashboard-container{max-width:1400px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:240px 1fr;gap:24px}
+    .dashboard-sidebar{background:#fff;border-radius:var(--radius);padding:20px 0;box-shadow:var(--card-shadow);height:fit-content;position:sticky;top:94px}
+    .sidebar-nav{list-style:none}
+    .sidebar-nav li a{display:flex;align-items:center;gap:12px;padding:14px 24px;color:#555;font-weight:500;font-size:14px;border-left:3px solid transparent;transition:all .2s}
+    .sidebar-nav li a:hover,.sidebar-nav li a.active{background:rgba(0,147,46,0.08);color:var(--brand-primary);border-left-color:var(--brand-primary)}
+    .sidebar-nav li a i{width:20px;text-align:center}
+    .sidebar-divider{height:1px;background:#eee;margin:12px 24px}
+    .sidebar-logout{color:var(--brand-secondary)!important}
+    .dashboard-main{display:flex;flex-direction:column;gap:24px;min-width:0}
+    .panel{background:#fff;border-radius:var(--radius);padding:26px;box-shadow:var(--card-shadow)}
+    h1{font-size:22px;letter-spacing:-.01em}
+    h2{font-size:17px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:8px;max-width:70ch;line-height:1.65}
+
+    .btn{border:0;border-radius:8px;padding:12px 20px;font:inherit;font-weight:700;font-size:14px;
+      cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .btn-primary{background:var(--brand-primary);color:#fff}
+    .btn-primary:hover{background:#007a26}
+    .btn-ghost{background:#fff;border:1px solid #ddd;color:#555}
+    .btn-ghost:hover{border-color:var(--brand-primary);color:var(--brand-primary)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+
+    .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700}
+    .pill.open{background:#ecfdf3;color:#05603a}
+    .pill.closed{background:#f2f4f7;color:#475467}
+    .pill.soon{background:#fff8e6;color:#93370d}
+    .pill.done{background:#eff8ff;color:#175cd3}
+
+    .card{border:1px solid var(--line);border-radius:11px;padding:18px;display:flex;gap:16px;
+      align-items:flex-start;flex-wrap:wrap;cursor:pointer;transition:border-color .15s}
+    .card:hover{border-color:var(--brand-primary)}
+    .card h3{font-size:16px;margin-bottom:5px}
+    .card .when{color:var(--muted);font-size:13px}
+    .card .go{margin-left:auto;align-self:center;color:var(--brand-primary);font-weight:700;font-size:13.5px}
+
+    /* The ballot itself */
+    .post{border:1px solid var(--line);border-radius:11px;margin-bottom:18px;overflow:hidden}
+    .post-head{background:#f7faf8;padding:15px 18px;border-bottom:1px solid var(--line)}
+    .post-head h3{font-size:16px}
+    .post-head .rule{color:var(--muted);font-size:13px;margin-top:4px}
+    .choice{display:flex;gap:13px;padding:14px 18px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start}
+    .choice:last-child{border-bottom:0}
+    .choice:hover{background:#f7faf8}
+    .choice input{margin-top:3px;width:18px;height:18px;accent-color:var(--brand-primary);flex:0 0 auto;cursor:pointer}
+    .choice .who{font-weight:600;font-size:15px}
+    .choice .head{color:var(--muted);font-size:13.5px;margin-top:2px}
+    .choice.abstain .who{color:var(--muted);font-weight:500;font-style:italic}
+    .manifesto{font-size:13.5px;color:#475467;margin-top:7px;line-height:1.6;white-space:pre-wrap}
+
+    .note{border-radius:9px;padding:14px 16px;font-size:14px;margin-top:16px;line-height:1.6}
+    .note.info{background:#eff8ff;color:#175cd3;border:1px solid #b2ddff}
+    .note.warn{background:#fff8e6;color:#93370d;border:1px solid #fedf89}
+    .note.bad{background:#fef3f2;color:#b42318;border:1px solid #fecdca}
+    .note.ok{background:#ecfdf3;color:#05603a;border:1px solid #a6f4c5}
+    .empty{color:var(--muted);text-align:center;padding:40px 12px;font-size:14px}
+
+    .review{border:2px solid var(--brand-primary);border-radius:11px;padding:20px;margin-top:20px;background:#f7faf8}
+    .review h3{font-size:16px;margin-bottom:12px}
+    .review dl{display:grid;grid-template-columns:1fr;gap:12px}
+    .review dt{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .review dd{font-size:15px;font-weight:600;margin-top:3px}
+
+    .result-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+    .result-row:last-child{border-bottom:0}
+    .result-row .votes{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+    .result-row.won .who{font-weight:700;color:#05603a}
+    .bar{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:6px}
+    .bar span{display:block;height:100%;background:var(--brand-primary)}
+
+    @media(max-width:1024px){.dashboard-container{grid-template-columns:1fr}.dashboard-sidebar{position:static}}
+  </style>
+</head>
+<body>
+  <nav class="dashboard-nav">
+    <div class="dashboard-nav-inner">
+      <a href="dashboard" class="dashboard-logo"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <div style="font-size:14px;color:var(--muted)" id="whoami">&nbsp;</div>
+    </div>
+  </nav>
+
+  <div class="dashboard-container">
+    <aside class="dashboard-sidebar">
+      <ul class="sidebar-nav">
+        <li><a href="dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="profile"><i class="fas fa-user"></i> My Profile</a></li>
+        <li><a href="payment"><i class="fas fa-credit-card"></i> Payments</a></li>
+        <li class="sidebar-divider"></li>
+        <li><a href="events"><i class="fas fa-calendar-alt"></i> Events &amp; CMEs</a></li>
+        <li><a href="academy"><i class="fas fa-graduation-cap"></i> Virtual Academy</a></li>
+        <li><a href="elections" class="active"><i class="fas fa-check-to-slot"></i> Elections</a></li>
+        <li><a href="card"><i class="fas fa-id-card"></i> Membership Card</a></li>
+        <li class="sidebar-divider"></li>
+        <li><a href="#" class="sidebar-logout" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+      </ul>
+    </aside>
+
+    <main class="dashboard-main">
+      <!-- ---------------- List ---------------- -->
+      <section class="panel" id="viewList">
+        <h1>Elections</h1>
+        <p class="lede">
+          ReSoK board elections. You can vote in an election if you were on the electoral roll
+          when it was drawn &mdash; that is decided by your membership, not by when you sign in.
+        </p>
+        <div id="listBody" style="margin-top:22px"><div class="empty">Loading&hellip;</div></div>
+      </section>
+
+      <!-- ---------------- One election ---------------- -->
+      <section class="panel" id="viewOne" hidden>
+        <button class="btn btn-ghost" id="backBtn" type="button" style="margin-bottom:18px">
+          <i class="fas fa-arrow-left"></i> All elections
+        </button>
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div style="flex:1;min-width:240px">
+            <h1 id="eTitle"></h1>
+            <p class="lede" id="eDescription"></p>
+          </div>
+          <span class="pill" id="eStatus"></span>
+        </div>
+        <div id="eWhen" style="color:var(--muted);font-size:13.5px;margin-top:12px"></div>
+        <div id="eNotice"></div>
+
+        <div id="eActions" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap"></div>
+
+        <div id="eResults" style="margin-top:26px"></div>
+        <div id="eCandidates" style="margin-top:26px"></div>
+      </section>
+
+      <!-- ---------------- The ballot ---------------- -->
+      <section class="panel" id="viewBallot" hidden>
+        <button class="btn btn-ghost" id="ballotBackBtn" type="button" style="margin-bottom:18px">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <h1 id="bTitle"></h1>
+        <p class="lede" id="bVoter"></p>
+
+        <div class="note warn">
+          <strong>Your vote is final.</strong> Once you submit this ballot it cannot be changed
+          or withdrawn, and nobody can change it for you. Check your choices on the next screen
+          before confirming.
+        </div>
+
+        <form id="ballotForm" style="margin-top:22px"></form>
+        <div id="bNotice"></div>
+
+        <div id="bReview" hidden></div>
+
+        <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap" id="bActions">
+          <button class="btn btn-primary" id="bReviewBtn" type="button">
+            Review my ballot <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/portal-state.js?v=20260909-errstatus"></script>
+  <script>
+  /**
+   * The member side of an election: what is running, the ballot paper, and declared results.
+   *
+   * Everything from the server is written with textContent or created nodes, never innerHTML.
+   * Candidate names and manifestos are typed by people and read by the whole membership.
+   *
+   * The ballot has a deliberate review step. A vote here cannot be changed once submitted, so
+   * the last thing between a member and an irreversible act should be a plain list of what
+   * they are about to do - not a button they pressed while reading something else.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => {
+      const node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (text !== undefined && text !== null) node.textContent = text;
+      return node;
+    };
+    const fmt = (value) => {
+      if (!value) return '';
+      const d = new Date(String(value).replace(' ', 'T'));
+      return isNaN(d) ? String(value)
+        : d.toLocaleString('en-KE', { day: 'numeric', month: 'long', year: 'numeric',
+                                      hour: '2-digit', minute: '2-digit' });
+    };
+
+    let current = null;      // the election being looked at
+    let ballot = null;       // the ballot paper being filled in
+
+    function show(view) {
+      ['List', 'One', 'Ballot'].forEach((n) => { el('view' + n).hidden = n !== view; });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    function notice(id, message, kind) {
+      const box = el(id);
+      box.textContent = '';
+      if (message) box.appendChild(make('div', 'note ' + (kind || 'info'), message));
+    }
+
+    /** The single word that describes where an election has got to. */
+    function statusPill(election) {
+      if (election.status === 'published') return ['done', 'Result declared'];
+      if (election.status === 'closed') return ['closed', 'Voting closed'];
+      if (election.votingOpen) return ['open', 'Voting open'];
+      if (election.status === 'open') return ['soon', 'Not open yet'];
+      if (election.status === 'roll_published') return ['soon', 'Roll published'];
+      if (election.status === 'cancelled') return ['closed', 'Cancelled'];
+      return ['closed', election.status];
+    }
+
+    /* ---------------- list ---------------- */
+    async function loadList() {
+      const mount = el('listBody');
+      try {
+        const data = await api('/api/elections');
+        mount.textContent = '';
+        if (!(data.elections || []).length) {
+          mount.appendChild(make('div', 'empty', 'No elections are running at the moment.'));
+          return;
+        }
+        data.elections.forEach((election) => {
+          const card = make('div', 'card');
+          card.addEventListener('click', () => openElection(election.slug));
+          const left = make('div');
+          left.style.minWidth = '200px';
+          left.appendChild(make('h3', null, election.title));
+          left.appendChild(make('div', 'when',
+            'Voting ' + fmt(election.opensAt) + ' — ' + fmt(election.closesAt)));
+          card.appendChild(left);
+          const [cls, label] = statusPill(election);
+          card.appendChild(make('span', 'pill ' + cls, label));
+          card.appendChild(make('span', 'go', 'Open'));
+          mount.appendChild(card);
+        });
+      } catch (error) {
+        mount.textContent = '';
+        mount.appendChild(make('div', 'empty', error.message || 'Could not load elections.'));
+      }
+    }
+
+    /* ---------------- one election ---------------- */
+    async function openElection(slug) {
+      show('One');
+      el('eTitle').textContent = 'Loading…';
+      el('eDescription').textContent = '';
+      el('eActions').textContent = '';
+      el('eResults').textContent = '';
+      el('eCandidates').textContent = '';
+      notice('eNotice', '');
+      try {
+        current = await api('/api/elections/' + encodeURIComponent(slug));
+        renderElection();
+      } catch (error) {
+        el('eTitle').textContent = 'Not available';
+        notice('eNotice', error.message || 'That election could not be opened.', 'bad');
+      }
+    }
+
+    function renderElection() {
+      const e = current.election;
+      document.title = e.title + ' - ReSoK Members’ Portal';
+      el('eTitle').textContent = e.title;
+      el('eDescription').textContent = e.description || '';
+      const [cls, label] = statusPill(e);
+      el('eStatus').className = 'pill ' + cls;
+      el('eStatus').textContent = label;
+      el('eWhen').textContent = 'Voting opens ' + fmt(e.opensAt) + ' and closes ' + fmt(e.closesAt) + '.';
+
+      // What this member can do, which depends on the roll rather than on the status alone.
+      const actions = el('eActions');
+      actions.textContent = '';
+      const voter = current.voter;
+
+      if (!voter) {
+        notice('eNotice',
+          'You are not on the electoral roll for this election. If you believe that is wrong, '
+          + 'contact the ReSoK office before voting closes.', 'warn');
+      } else if (voter.voted) {
+        notice('eNotice', 'Your ballot was recorded on ' + fmt(voter.votedAt)
+          + '. A vote cannot be changed once cast.', 'ok');
+      } else if (e.votingOpen) {
+        const go = make('button', 'btn btn-primary');
+        go.type = 'button';
+        go.appendChild(make('i', 'fas fa-check-to-slot'));
+        go.appendChild(document.createTextNode(' Vote now'));
+        go.addEventListener('click', () => openBallot(e.slug));
+        actions.appendChild(go);
+      } else if (e.status === 'open') {
+        notice('eNotice', 'Voting has not opened yet. It opens on ' + fmt(e.opensAt) + '.', 'info');
+      }
+
+      if (current.results) renderResults(current.results);
+      renderCandidates();
+    }
+
+    function renderCandidates() {
+      const mount = el('eCandidates');
+      mount.textContent = '';
+      const positions = current.positions || [];
+      if (!positions.length) return;
+      mount.appendChild(make('h2', null, 'Posts and candidates'));
+
+      positions.forEach((position) => {
+        const box = make('div', 'post');
+        box.style.marginTop = '16px';
+        const head = make('div', 'post-head');
+        head.appendChild(make('h3', null, position.title));
+        head.appendChild(make('div', 'rule',
+          position.seats + (position.seats === 1 ? ' seat' : ' seats')
+          + (position.description ? ' · ' + position.description : '')));
+        box.appendChild(head);
+
+        position.candidates.forEach((candidate) => {
+          const row = make('div', 'choice');
+          row.style.cursor = 'default';
+          const who = make('div');
+          who.style.flex = '1';
+          who.appendChild(make('div', 'who', candidate.name));
+          if (candidate.headline) who.appendChild(make('div', 'head', candidate.headline));
+          if (candidate.manifesto) who.appendChild(make('div', 'manifesto', candidate.manifesto));
+          // A name that stood down stays visible and is marked, so a member does not wonder
+          // why somebody they remember is missing from the ballot.
+          if (candidate.status !== 'approved') {
+            who.appendChild(make('div', 'head', 'Not standing — ' + candidate.status));
+          }
+          row.appendChild(who);
+          box.appendChild(row);
+        });
+        mount.appendChild(box);
+      });
+    }
+
+    function renderResults(results) {
+      const mount = el('eResults');
+      mount.textContent = '';
+      if (!results || !(results.positions || []).length) return;
+      mount.appendChild(make('h2', null, 'Declared result'));
+
+      results.positions.forEach((position) => {
+        const box = make('div', 'post');
+        box.style.marginTop = '16px';
+        const head = make('div', 'post-head');
+        head.appendChild(make('h3', null, position.title));
+        head.appendChild(make('div', 'rule',
+          position.seats + (position.seats === 1 ? ' seat' : ' seats')
+          + ' · declared ' + fmt(position.declaredAt)));
+        box.appendChild(head);
+
+        const total = position.candidates.reduce((sum, c) => sum + c.votes, 0)
+                      + (position.abstentions || 0);
+        const body = make('div');
+        body.style.padding = '6px 18px 14px';
+        position.candidates.forEach((candidate) => {
+          const row = make('div', 'result-row' + (candidate.elected ? ' won' : ''));
+          const who = make('div');
+          who.style.flex = '1';
+          who.appendChild(make('span', 'who', candidate.name));
+          if (candidate.elected) {
+            const tag = make('span', 'pill open', 'Elected');
+            tag.style.marginLeft = '9px';
+            who.appendChild(tag);
+          }
+          const bar = make('div', 'bar');
+          const fill = make('span');
+          fill.style.width = total > 0 ? Math.round(candidate.votes / total * 100) + '%' : '0%';
+          bar.appendChild(fill);
+          who.appendChild(bar);
+          row.appendChild(who);
+          row.appendChild(make('span', 'votes', String(candidate.votes)));
+          body.appendChild(row);
+        });
+        if (position.abstentions) {
+          const row = make('div', 'result-row');
+          row.appendChild(make('span', null, 'Abstentions'));
+          row.appendChild(make('span', 'votes', String(position.abstentions)));
+          body.appendChild(row);
+        }
+        box.appendChild(body);
+        mount.appendChild(box);
+      });
+    }
+
+    /* ---------------- the ballot ---------------- */
+    async function openBallot(slug) {
+      show('Ballot');
+      el('bTitle').textContent = 'Loading…';
+      el('ballotForm').textContent = '';
+      el('bReview').hidden = true;
+      notice('bNotice', '');
+      try {
+        ballot = await api('/api/elections/' + encodeURIComponent(slug) + '/ballot');
+        renderBallot();
+      } catch (error) {
+        el('bTitle').textContent = 'Ballot not available';
+        notice('bNotice', error.message || 'This ballot could not be opened.', 'bad');
+        el('bActions').hidden = true;
+      }
+    }
+
+    function renderBallot() {
+      el('bActions').hidden = false;
+      el('bTitle').textContent = ballot.election.title;
+      el('bVoter').textContent = 'Voting as ' + ballot.voter.name
+        + (ballot.voter.membershipId ? ' · ' + ballot.voter.membershipId : '');
+
+      const form = el('ballotForm');
+      form.textContent = '';
+
+      ballot.positions.forEach((position) => {
+        const box = make('div', 'post');
+        const head = make('div', 'post-head');
+        head.appendChild(make('h3', null, position.title));
+        head.appendChild(make('div', 'rule',
+          position.seats + (position.seats === 1 ? ' seat' : ' seats')
+          + ' · choose ' + (position.maxChoices === 1 ? 'one candidate'
+                                                          : 'up to ' + position.maxChoices)));
+        box.appendChild(head);
+
+        // Radio where there is one choice, checkbox where there are several. The control
+        // itself tells the voter what is allowed, before any validation message has to.
+        const single = position.maxChoices === 1;
+        position.candidates.forEach((candidate) => {
+          const row = make('label', 'choice');
+          const input = document.createElement('input');
+          input.type = single ? 'radio' : 'checkbox';
+          input.name = 'pos-' + position.id;
+          input.value = String(candidate.id);
+          input.dataset.position = String(position.id);
+          row.appendChild(input);
+          const who = make('div');
+          who.style.flex = '1';
+          who.appendChild(make('div', 'who', candidate.name));
+          if (candidate.headline) who.appendChild(make('div', 'head', candidate.headline));
+          if (candidate.manifesto) who.appendChild(make('div', 'manifesto', candidate.manifesto));
+          row.appendChild(who);
+          box.appendChild(row);
+        });
+
+        if (position.allowAbstain) {
+          const row = make('label', 'choice abstain');
+          const input = document.createElement('input');
+          input.type = single ? 'radio' : 'checkbox';
+          input.name = 'pos-' + position.id;
+          input.value = 'abstain';
+          input.dataset.position = String(position.id);
+          input.dataset.abstain = '1';
+          row.appendChild(input);
+          const who = make('div');
+          who.appendChild(make('div', 'who', 'Abstain — vote for nobody for this post'));
+          row.appendChild(who);
+          box.appendChild(row);
+        }
+        form.appendChild(box);
+      });
+
+      // Ticking abstain clears the candidates, and choosing a candidate clears abstain.
+      // Otherwise a voter can submit a ballot that says both.
+      form.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!input.dataset || !input.dataset.position) return;
+        const group = form.querySelectorAll('input[name="pos-' + input.dataset.position + '"]');
+        if (input.type === 'checkbox' && input.checked) {
+          group.forEach((other) => {
+            if (other === input) return;
+            if (input.dataset.abstain === '1' || other.dataset.abstain === '1') other.checked = false;
+          });
+        }
+      });
+    }
+
+    /** What the voter has marked, as the API expects it. */
+    function collectChoices() {
+      const choices = {};
+      const problems = [];
+      ballot.positions.forEach((position) => {
+        const picked = [...el('ballotForm').querySelectorAll(
+          'input[name="pos-' + position.id + '"]:checked')];
+        if (!picked.length) {
+          if (!position.allowAbstain) problems.push('Choose a candidate for ' + position.title + '.');
+          return;
+        }
+        if (picked.some((input) => input.dataset.abstain === '1')) {
+          choices[position.id] = 'abstain';
+          return;
+        }
+        if (picked.length > position.maxChoices) {
+          problems.push(position.title + ': choose at most ' + position.maxChoices + '.');
+          return;
+        }
+        choices[position.id] = picked.map((input) => Number(input.value));
+      });
+      return { choices, problems };
+    }
+
+    el('bReviewBtn').addEventListener('click', () => {
+      const { choices, problems } = collectChoices();
+      if (problems.length) { notice('bNotice', problems.join(' '), 'bad'); return; }
+      if (!Object.keys(choices).length) {
+        notice('bNotice', 'Mark at least one post before submitting.', 'bad');
+        return;
+      }
+      notice('bNotice', '');
+
+      const review = el('bReview');
+      review.textContent = '';
+      const box = make('div', 'review');
+      box.appendChild(make('h3', null, 'Check your ballot before confirming'));
+      const list = document.createElement('dl');
+
+      ballot.positions.forEach((position) => {
+        const choice = choices[position.id];
+        const dt = make('dt', null, position.title);
+        let text = 'No selection';
+        if (choice === 'abstain') text = 'Abstained';
+        else if (Array.isArray(choice)) {
+          text = choice.map((id) => {
+            const found = position.candidates.find((c) => c.id === id);
+            return found ? found.name : String(id);
+          }).join(', ');
+        }
+        list.appendChild(dt);
+        list.appendChild(make('dd', null, text));
+      });
+      box.appendChild(list);
+      box.appendChild(make('div', 'note warn',
+        'Submitting is final. Your ballot cannot be changed or withdrawn afterwards.'));
+
+      const row = make('div');
+      row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-top:16px';
+      const confirm = make('button', 'btn btn-primary');
+      confirm.type = 'button';
+      confirm.id = 'bConfirmBtn';
+      confirm.appendChild(make('i', 'fas fa-check'));
+      confirm.appendChild(document.createTextNode(' Confirm and submit my vote'));
+      confirm.addEventListener('click', () => submitBallot(choices, confirm));
+      const back = make('button', 'btn btn-ghost', 'Change my choices');
+      back.type = 'button';
+      back.addEventListener('click', () => {
+        review.hidden = true;
+        el('bActions').hidden = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      row.appendChild(confirm);
+      row.appendChild(back);
+      box.appendChild(row);
+
+      review.appendChild(box);
+      review.hidden = false;
+      el('bActions').hidden = true;
+      review.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    async function submitBallot(choices, button) {
+      button.disabled = true;
+      try {
+        await api('/api/elections/' + encodeURIComponent(ballot.election.slug) + '/vote', {
+          method: 'POST', body: JSON.stringify({ choices })
+        });
+        el('bReview').hidden = true;
+        el('bActions').hidden = true;
+        el('ballotForm').textContent = '';
+        notice('bNotice',
+          'Your ballot has been recorded. Thank you for voting. '
+          + 'The result will be published here once voting closes and the count is declared.', 'ok');
+      } catch (error) {
+        notice('bNotice', error.message || 'Your ballot was not recorded.', 'bad');
+        button.disabled = false;
+      }
+    }
+
+    /* ---------------- wiring ---------------- */
+    el('backBtn').addEventListener('click', () => { show('List'); loadList(); });
+    el('ballotBackBtn').addEventListener('click', () => {
+      if (current) openElection(current.election.slug); else show('List');
+    });
+    el('logoutLink').addEventListener('click', (event) => {
+      event.preventDefault();
+      window.ResokPortal.logout();
+    });
+
+    (async () => {
+      try {
+        const me = await api('/api/members/me');
+        el('whoami').textContent = [me.title, me.firstName, me.surname].filter(Boolean).join(' ');
+      } catch (error) {
+        if (error.status === 401) { window.location.href = 'login'; return; }
+      }
+      loadList();
+    })();
+  })();
+  </script>
+</body>
+</html>

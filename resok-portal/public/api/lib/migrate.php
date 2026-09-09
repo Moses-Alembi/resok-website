@@ -66,6 +66,7 @@ function migrateOrder(): array
         'schema-ict-tickets.sql',              // helpdesk tickets and comments
         'schema-member-years.sql',             // which years each member has paid for
         'schema-blog.sql',                     // blog tables, which reference users
+        'schema-elections.sql',                // board elections: posts, candidates, roll
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];
 }

@@ -97,7 +97,13 @@
       // lands mid-page, tear the local session down and send the member to login with an
       // explanation, rather than surfacing a bare "request failed" on whatever they clicked.
       if (response.status === 401 && data?.reason === "idle") endSessionForInactivity();
-      throw new Error(data?.error || data?.message || "Request failed");
+      // The status travels with the error. Without it every caller has to guess what went
+      // wrong from the wording of a message written for a human, and "not signed in" and
+      // "the server is not there" are opposite problems that need opposite handling.
+      const failure = new Error(data?.error || data?.message || "Request failed");
+      failure.status = response.status;
+      failure.payload = data;
+      throw failure;
     }
     return data;
   }

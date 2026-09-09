@@ -452,7 +452,7 @@
   </footer>
 
 
-  <script src="js/portal-state.js?v=20260908-screening"></script>
+  <script src="js/portal-state.js?v=20260909-errstatus"></script>
   <script>
     let members = [];
     let selectedMember = null;
@@ -824,10 +824,16 @@
       try {
         members = await window.ResokPortal.api("/api/members");
       } catch (error) {
-        // Demo data only where there is genuinely no backend to talk to - someone opening
-        // the file to look at the layout. Anywhere else the error is the answer, and
-        // swallowing it would hide a broken API behind three plausible-looking members.
-        if (!isLocalPreview()) throw error;
+        // A refusal is not an absence. 401 and 403 mean the server is there and answering,
+        // and the answer is "sign in" - falling back to demo data would hide the one thing
+        // the administrator needs to be told, which is exactly what happened here: an
+        // unauthenticated admin on localhost was shown three invented members instead of a
+        // login page.
+        //
+        // Demo data is only for having no backend at all: a fetch that never reached a
+        // server, so there is no status to read. That is the case it was written for -
+        // someone opening the file to look at the layout.
+        if (error.status || !isLocalPreview()) throw error;
         apiUnavailable = true;
         if (!members.length) members = demoMembers();
         showNote("No API reachable - showing local preview data.", "error");
@@ -859,12 +865,21 @@
       try {
         await loadMembers();
       } catch (error) {
-        const message = error.message || "";
-        if (!isLocalPreview() && /token|unauthorized/i.test(message)) {
+        // Keyed on the status rather than on the wording of the message, and no longer
+        // exempting localhost. The exemption existed to keep the offline preview usable,
+        // but that case has no status at all - the fetch never reached a server - so it is
+        // already excluded, and localhost has both a working API and a login page. An
+        // administrator who is simply not signed in should be sent to sign in, wherever
+        // they are.
+        if (error.status === 401) {
           window.location.href = "login";
           return;
         }
-        showNote(message || "Admin access required. Please log in as an admin.", "error");
+        if (error.status === 403) {
+          showNote("That account is signed in, but it is not an administrator.", "error");
+          return;
+        }
+        showNote(error.message || "Admin access required. Please log in as an admin.", "error");
       }
     });
 

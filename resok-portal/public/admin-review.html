@@ -462,8 +462,21 @@
       return ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
     }
 
+    /*
+     * Whether the API has actually proved unreachable. Starts false, so the real call is
+     * always attempted and demo data is a fallback rather than a default.
+     *
+     * This used to ask whether localStorage held a token. That stopped being a question
+     * about being signed in the moment the session moved into an httpOnly cookie: nothing
+     * writes that key any more - portal-state only ever removes it, on logout - so on
+     * localhost it read as "not signed in" forever. A signed-in administrator got Jane Doe
+     * and two other invented members, and every real member in the database was invisible,
+     * with no error to suggest anything was wrong.
+     */
+    let apiUnavailable = false;
+
     function useLocalPreviewData() {
-      return isLocalPreview() && !stateToken();
+      return isLocalPreview() && apiUnavailable;
     }
 
     function demoMembers() {
@@ -501,10 +514,6 @@
           paidTotal: 5000
         }
       ];
-    }
-
-    function stateToken() {
-      return localStorage.getItem("token") || window.ResokPortal.getState().token;
     }
 
     function showNote(message, type = "success") {
@@ -812,7 +821,17 @@
         await renderDetail();
         return;
       }
-      members = await window.ResokPortal.api("/api/members");
+      try {
+        members = await window.ResokPortal.api("/api/members");
+      } catch (error) {
+        // Demo data only where there is genuinely no backend to talk to - someone opening
+        // the file to look at the layout. Anywhere else the error is the answer, and
+        // swallowing it would hide a broken API behind three plausible-looking members.
+        if (!isLocalPreview()) throw error;
+        apiUnavailable = true;
+        if (!members.length) members = demoMembers();
+        showNote("No API reachable - showing local preview data.", "error");
+      }
       if (selectedMember) selectedMember = members.find((member) => member.id === selectedMember.id) || null;
       renderStats();
       renderRows();

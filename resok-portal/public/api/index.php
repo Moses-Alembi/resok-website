@@ -2222,6 +2222,38 @@ Respiratory Society of Kenya");
         respond(200, ['nominations' => $nominations]);
     }
 
+    /** Every member, with whether they are on the roll and whether they could actually vote. */
+    if (preg_match('#^admin/elections/(\d+)/roll/members$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('electionRollCandidates', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        respond(200, ['members' => electionRollCandidates($pdo, (int)$m[1])]);
+    }
+
+    /**
+     * Adding or removing one voter by hand.
+     *
+     * The reason is required and goes to the admin log, because a roll corrected by hand can
+     * only be defended if the corrections can be named.
+     */
+    if (preg_match('#^admin/elections/(\d+)/roll/(add|remove)$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionRollAdd', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+
+        $data = input();
+        $memberId = (int)($data['memberProfileId'] ?? 0);
+        $reason = (string)($data['reason'] ?? '');
+        [$result, $error] = $m[2] === 'add'
+            ? electionRollAdd($pdo, (int)$m[1], $memberId, $reason)
+            : electionRollRemove($pdo, (int)$m[1], $memberId, $reason);
+        if ($error) respond(400, ['error' => $error]);
+
+        logAdminAction($pdo, (int)$user['userId'], 'election_roll_' . $m[2], $memberId,
+                       'Election ' . $m[1] . ': ' . $result['name'] . ' - ' . trim($reason));
+        respond(200, ['roll' => electionRollSummary($pdo, (int)$m[1])] + $result);
+    }
+
     if (preg_match('#^admin/elections/(\d+)/randomise$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
         requireModule('electionRandomiseBallot', 'lib/elections.php');

@@ -1424,3 +1424,142 @@ function electionUpdate(PDO $pdo, int $electionId, array $data): array
     $pdo->prepare('UPDATE elections SET ' . implode(', ', $set) . ' WHERE id = ?')->execute($args);
     return [electionFind($pdo, (string)$electionId), null];
 }
+
+/* ======================================================================================= */
+/* Editing the roll                                                                         */
+/*                                                                                          */
+/* The roll is drawn by a rule, then corrected by hand where the rule and the truth differ:  */
+/* a member who paid by cheque that has not been entered, an honorary member, somebody who   */
+/* joined between the cutoff and the election. Every manual change is recorded with a reason */
+/* in the admin audit log, so a challenged roll can be answered with "drawn by this rule,    */
+/* then these people added and these removed, for these reasons" rather than a bare list.    */
+/* ======================================================================================= */
+
+/**
+ * Every member, with whether they are on the roll and whether they could actually vote.
+ *
+ * Includes members who have never claimed their portal account, because the officer asked to
+ * see them - but says so on each row. Somebody who cannot sign in cannot vote, so putting
+ * them on a roll adds a denominator that can never be reached rather than a voter.
+ *
+ * @return list<array<string,mixed>>
+ */
+function electionRollCandidates(PDO $pdo, int $electionId): array
+{
+    if (!electionsEnsureTables($pdo)) return [];
+    $stmt = $pdo->prepare(
+        "SELECT mp.id AS member_profile_id, u.id AS user_id, u.email, u.email_verified,
+                TRIM(CONCAT_WS(' ', NULLIF(mp.title,''), NULLIF(mp.first_name,''),
+                                    NULLIF(mp.surname,''))) AS name,
+                mp.membership_id, mp.membership_status, mp.renewal_due,
+                (SELECT GROUP_CONCAT(y.year ORDER BY y.year) FROM member_payment_years y
+                  WHERE y.member_profile_id = mp.id) AS years_paid,
+                r.id AS roll_id, r.standing_at_cutoff, r.voted_at
+         FROM member_profiles mp
+         JOIN users u ON u.id = mp.user_id
+         LEFT JOIN election_roll r ON r.member_profile_id = mp.id AND r.election_id = ?
+         ORDER BY name"
+    );
+    $stmt->execute([$electionId]);
+
+    return array_map(function ($row) {
+        $standing = membershipStanding($row);
+        return [
+            'memberProfileId' => (int)$row['member_profile_id'],
+            'name'         => $row['name'] ?: '(no name recorded)',
+            'membershipId' => $row['membership_id'],
+            'email'        => $row['email'],
+            'yearsPaid'    => $row['years_paid'] ? array_map('intval', explode(',', $row['years_paid'])) : [],
+            'standing'     => $standing['standing'],
+            'inGoodStanding' => $standing['benefits'],
+            // The two things that decide whether a roll entry is worth anything.
+            'canSignIn'    => (bool)(int)$row['email_verified'],
+            'onRoll'       => !empty($row['roll_id']),
+            'rollId'       => $row['roll_id'] === null ? null : (int)$row['roll_id'],
+            'addedBy'      => $row['standing_at_cutoff'],
+            'voted'        => !empty($row['voted_at']),
+        ];
+    }, $stmt->fetchAll());
+}
+
+/**
+ * Puts one member on the roll by hand.
+ *
+ * Refused once voting has opened, like every other change to an election. Refused for
+ * somebody who has already voted - which cannot happen, since they would have to be on the
+ * roll to vote - and harmless if they are already on it.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function electionRollAdd(PDO $pdo, int $electionId, int $memberProfileId, string $reason): array
+{
+    [$election, $error] = electionRequireUnlocked($pdo, $electionId);
+    if ($error) return [null, $error];
+
+    $reason = trim($reason);
+    if ($reason === '') {
+        return [null, 'Give a reason for adding them - it is what answers a challenge to the roll.'];
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT mp.id, u.id AS user_id, u.email, u.email_verified, mp.membership_id,
+                TRIM(CONCAT_WS(' ', NULLIF(mp.title,''), NULLIF(mp.first_name,''),
+                                    NULLIF(mp.surname,''))) AS name
+         FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.id = ? LIMIT 1"
+    );
+    $stmt->execute([$memberProfileId]);
+    $member = $stmt->fetch();
+    if (!$member) return [null, 'That member is not in the register.'];
+
+    try {
+        $pdo->prepare('INSERT INTO election_roll
+                        (election_id, member_profile_id, user_id, name, membership_id, email,
+                         standing_at_cutoff)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)
+                       ON DUPLICATE KEY UPDATE standing_at_cutoff = VALUES(standing_at_cutoff)')
+            ->execute([$electionId, $memberProfileId, (int)$member['user_id'],
+                       mb_substr((string)$member['name'], 0, 160), $member['membership_id'],
+                       $member['email'], mb_substr('added by hand: ' . $reason, 0, 40)]);
+    } catch (Throwable $e) {
+        return [null, 'They were not added: ' . $e->getMessage()];
+    }
+
+    return [[
+        'name' => $member['name'],
+        // Said back plainly rather than left to be discovered: an entry for somebody who
+        // cannot open the portal is a voter who can never vote.
+        'canSignIn' => (bool)(int)$member['email_verified'],
+    ], null];
+}
+
+/**
+ * Takes one member off the roll by hand.
+ *
+ * Refused for somebody who has already voted. Removing them would delete their ballot along
+ * with the roll entry it hangs from, which is the one change an election must never make -
+ * a vote that was cast cannot be un-cast by an administrator.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function electionRollRemove(PDO $pdo, int $electionId, int $memberProfileId, string $reason): array
+{
+    [$election, $error] = electionRequireUnlocked($pdo, $electionId);
+    if ($error) return [null, $error];
+
+    $reason = trim($reason);
+    if ($reason === '') {
+        return [null, 'Give a reason for removing them - it is what answers a challenge to the roll.'];
+    }
+
+    $stmt = $pdo->prepare('SELECT id, name, voted_at FROM election_roll
+                           WHERE election_id = ? AND member_profile_id = ? LIMIT 1');
+    $stmt->execute([$electionId, $memberProfileId]);
+    $entry = $stmt->fetch();
+    if (!$entry) return [null, 'They are not on the roll.'];
+    if (!empty($entry['voted_at'])) {
+        return [null, 'They have already voted. A ballot that has been cast cannot be removed.'];
+    }
+
+    $pdo->prepare('DELETE FROM election_roll WHERE id = ?')->execute([(int)$entry['id']]);
+    return [['name' => $entry['name']], null];
+}

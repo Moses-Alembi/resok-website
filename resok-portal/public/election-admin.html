@@ -186,6 +186,30 @@
           <button class="btn btn-primary" id="drawRoll" type="button"><i class="fas fa-list-check"></i> Draw the roll</button>
         </div>
         <div id="rollNotice"></div>
+
+        <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <h3>Who is on it</h3>
+            <button class="btn btn-ghost btn-sm" id="loadMembers" type="button">
+              <i class="fas fa-users"></i> Show every member
+            </button>
+          </div>
+          <p class="lede">
+            The roll is drawn by rule, then corrected here where the rule and the truth differ
+            &mdash; a cheque not yet entered, an honorary member. Every change is recorded with
+            its reason, so a challenged roll can be answered rather than only shown.
+          </p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px" id="memberFilters" hidden>
+            <input class="in" id="memberSearch" style="flex:1;min-width:200px" placeholder="Search name, membership number or email" />
+            <select class="in" id="memberShow" style="width:auto;min-width:190px">
+              <option value="all">Everyone</option>
+              <option value="on">On the roll</option>
+              <option value="off">Not on the roll</option>
+              <option value="cannot">Cannot sign in</option>
+            </select>
+          </div>
+          <div id="memberList" style="margin-top:12px"></div>
+        </div>
       </section>
 
       <section class="panel">
@@ -472,6 +496,117 @@
         notice('rollNotice', error.message || 'The roll was not drawn.', 'bad');
       }
     });
+
+    /* ---------------- who is on the roll ---------------- */
+    let rollMembers = [];
+
+    el('loadMembers').addEventListener('click', loadMembers);
+    el('memberSearch').addEventListener('input', renderMembers);
+    el('memberShow').addEventListener('change', renderMembers);
+
+    async function loadMembers() {
+      const mount = el('memberList');
+      mount.textContent = '';
+      mount.appendChild(make('div', 'empty', 'Loading…'));
+      try {
+        const data = await api('/api/admin/elections/' + current.election.id + '/roll/members');
+        rollMembers = data.members || [];
+        el('memberFilters').hidden = false;
+        renderMembers();
+      } catch (error) {
+        mount.textContent = '';
+        mount.appendChild(make('div', 'empty', error.message || 'Could not load the members.'));
+      }
+    }
+
+    function renderMembers() {
+      const mount = el('memberList');
+      mount.textContent = '';
+      const needle = el('memberSearch').value.trim().toLowerCase();
+      const show = el('memberShow').value;
+
+      const list = rollMembers.filter((m) => {
+        if (show === 'on' && !m.onRoll) return false;
+        if (show === 'off' && m.onRoll) return false;
+        if (show === 'cannot' && m.canSignIn) return false;
+        if (!needle) return true;
+        return (m.name + ' ' + (m.membershipId || '') + ' ' + (m.email || '')).toLowerCase().includes(needle);
+      });
+
+      const counts = {
+        on: rollMembers.filter((m) => m.onRoll).length,
+        cannot: rollMembers.filter((m) => !m.canSignIn).length
+      };
+      const summary = make('div', 'sub');
+      summary.style.marginBottom = '8px';
+      summary.textContent = rollMembers.length + ' members · ' + counts.on + ' on the roll · '
+        + counts.cannot + ' cannot sign in yet · showing ' + list.length;
+      mount.appendChild(summary);
+
+      if (!list.length) {
+        mount.appendChild(make('div', 'empty', 'Nobody matches that.'));
+        return;
+      }
+
+      list.slice(0, 300).forEach((m) => {
+        const row = make('div', 'row');
+        const grow = make('div', 'grow');
+        grow.appendChild(make('strong', null, m.name));
+        const bits = [];
+        if (m.membershipId) bits.push(m.membershipId);
+        bits.push(m.yearsPaid.length ? 'paid ' + m.yearsPaid.join(', ') : 'no payments recorded');
+        if (m.addedBy && m.addedBy.startsWith('added by hand')) bits.push('added by hand');
+        grow.appendChild(make('div', 'sub', bits.join(' · ')));
+        row.appendChild(grow);
+
+        // Stated on every row, because it decides whether a roll entry is worth anything.
+        // Somebody who has never claimed their account cannot vote however they are listed.
+        if (!m.canSignIn) row.appendChild(make('span', 'status s-nominations', 'cannot sign in'));
+        if (m.voted) row.appendChild(make('span', 'status s-open', 'voted'));
+
+        if (!current.election.locked) {
+          const button = make('button', 'btn btn-sm ' + (m.onRoll ? 'btn-danger' : 'btn-ghost'),
+                              m.onRoll ? 'Remove' : 'Add');
+          button.type = 'button';
+          button.disabled = m.voted;
+          if (m.voted) button.title = 'They have already voted and cannot be removed';
+          button.addEventListener('click', () => changeRoll(m));
+          row.appendChild(button);
+        } else if (m.onRoll) {
+          row.appendChild(make('span', 'status s-closed', 'on the roll'));
+        }
+        mount.appendChild(row);
+      });
+
+      if (list.length > 300) {
+        mount.appendChild(make('div', 'sub', 'Showing the first 300. Search to narrow it down.'));
+      }
+    }
+
+    async function changeRoll(m) {
+      const action = m.onRoll ? 'remove' : 'add';
+      const reason = window.prompt(
+        (m.onRoll ? 'Remove ' : 'Add ') + m.name + (m.onRoll ? ' from' : ' to') + ' the roll.\n\n'
+        + 'Why? This is recorded, and it is what answers a challenge to the roll.', '');
+      if (reason === null) return;
+      try {
+        const data = await api('/api/admin/elections/' + current.election.id + '/roll/' + action, {
+          method: 'POST',
+          body: JSON.stringify({ memberProfileId: m.memberProfileId, reason })
+        });
+        let message = m.name + (action === 'add' ? ' added to the roll.' : ' removed from the roll.');
+        if (action === 'add' && data.canSignIn === false) {
+          message += ' They have not claimed their portal account, so they still cannot vote '
+                   + 'until they do.';
+        }
+        notice('rollNotice', message, data.canSignIn === false ? 'warn' : 'ok');
+        current = await api('/api/admin/elections/' + current.election.id);
+        renderRoll();
+        await loadMembers();
+      } catch (error) {
+        notice('rollNotice', error.message || 'Nothing was changed.', 'bad');
+      }
+    }
 
     /* ---------------- posts and candidates ---------------- */
     function renderPositions() {

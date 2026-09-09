@@ -1641,7 +1641,15 @@ Respiratory Society of Kenya");
         $stmt->execute([$data['token']]);
         $user = $stmt->fetch();
         if (!$user) respond(400, ['error' => 'Invalid or expired reset link']);
-        $pdo->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?')->execute([password_hash($data['password'], PASSWORD_DEFAULT), (int)$user['id']]);
+        // Completing a reset marks the address verified, because completing a reset is
+        // exactly what verification tests: the link went to that mailbox and somebody who
+        // could open it came back with the token. Without this the endpoint ends by saying
+        // "you can now log in" to accounts that login then refuses for being unverified -
+        // which is every account created for an existing member rather than by someone
+        // signing up, since only the sign-up flow sends a verification mail.
+        $pdo->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL,
+                       email_verified = 1 WHERE id = ?')
+            ->execute([password_hash($data['password'], PASSWORD_DEFAULT), (int)$user['id']]);
         respond(200, ['message' => 'Password updated. You can now log in.']);
     }
 

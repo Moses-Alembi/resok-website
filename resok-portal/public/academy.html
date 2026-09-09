@@ -4,213 +4,392 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ReSoK Virtual Academy</title>
-  <meta name="description" content="Free and members' courses in respiratory health from the Respiratory Society of Kenya." />
+  <meta name="description" content="Free respiratory health courses from the Respiratory Society of Kenya. Learn online, at your own pace, with a certificate on completion." />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
   <style>
     /*
-     * The academy is its own place. It shares the ReSoK green so it is recognisably the same
-     * organisation, but not the members' portal chrome: a learner arriving from a shared link
-     * is not necessarily a member, and wrapping the catalogue in a members' dashboard would
-     * tell them they are in the wrong place before they have read anything.
+     * Laid out the way an open-course platform is laid out - search-led hero, subject grid,
+     * then a filtered listing with a sidebar - because that is the shape learners already
+     * know how to read. The identity is ReSoK's own: the society green against a deep
+     * forest ground, not the borrowed palette of any other platform.
+     *
+     * One rule runs through the whole page: every number shown is a number the database can
+     * produce. A platform with two courses that claims fifty million learners is the first
+     * thing a visitor stops believing, and the second is everything else on the page.
      */
     :root{
-      --green:#00932e; --green-dark:#00701f; --red:#bc0b22;
-      --ink:#16241c; --body:#3f5147; --muted:#6b7d72;
-      --paper:#ffffff; --ground:#f4f7f4; --line:#dfe7e1;
-      --shadow:0 1px 3px rgba(22,36,28,.06), 0 8px 24px rgba(22,36,28,.05);
-      --radius:14px;
+      --green:#00932e; --green-dk:#00701f; --green-lt:#e8f4ec; --forest:#06301a;
+      --red:#bc0b22;
+      --ink:#132019; --body:#3d4f45; --muted:#6d7f74; --faint:#93a49a;
+      --paper:#fff; --ground:#f6f8f6; --line:#e2e9e4; --line-dk:#cfdad3;
+      --shadow:0 1px 2px rgba(19,32,25,.05), 0 6px 20px rgba(19,32,25,.05);
+      --shadow-lg:0 12px 34px rgba(19,32,25,.13);
+      --r:12px;
     }
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--ground);color:var(--body);line-height:1.6}
+    html{scroll-behavior:smooth}
+    body{font-family:'Segoe UI',Tahoma,system-ui,sans-serif;background:var(--ground);color:var(--body);
+      line-height:1.6;-webkit-font-smoothing:antialiased}
     a{color:inherit;text-decoration:none}
     [hidden]{display:none!important}
-    img{max-width:100%}
+    img{max-width:100%;display:block}
+    button{font:inherit}
+    ::selection{background:rgba(0,147,46,.18)}
 
-    .bar{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40}
-    .bar-in{max-width:1160px;margin:0 auto;padding:0 22px;height:70px;display:flex;align-items:center;gap:18px}
-    .bar-in img{height:38px;display:block}
-    .mark{font-weight:700;color:var(--ink);font-size:15px;letter-spacing:-.01em;line-height:1.2}
-    .mark small{display:block;font-weight:600;font-size:11.5px;color:var(--green);letter-spacing:.14em;text-transform:uppercase}
-    .bar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+    .shell{max-width:1220px;margin:0 auto;padding:0 22px}
 
-    .btn{border:0;border-radius:8px;padding:11px 18px;font:inherit;font-weight:700;font-size:13.5px;
-      cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
+    /* ---------- header ---------- */
+    .top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:60}
+    .top-in{max-width:1220px;margin:0 auto;padding:0 22px;height:72px;display:flex;align-items:center;gap:16px}
+    .brand{display:flex;align-items:center;gap:11px;flex:0 0 auto}
+    .brand img{height:38px}
+    .brand-txt{line-height:1.15}
+    .brand-txt b{display:block;font-size:14.5px;color:var(--ink);letter-spacing:-.01em}
+    .brand-txt span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.15em;
+      text-transform:uppercase;color:var(--green)}
+
+    .explore{position:relative;flex:0 0 auto}
+    .explore>button{background:transparent;border:0;color:var(--ink);font-weight:600;font-size:14px;
+      cursor:pointer;padding:9px 4px;display:flex;align-items:center;gap:7px}
+    .explore>button:hover{color:var(--green)}
+    .menu{position:absolute;top:46px;left:-14px;background:var(--paper);border:1px solid var(--line);
+      border-radius:var(--r);box-shadow:var(--shadow-lg);padding:8px;min-width:264px;z-index:70}
+    .menu a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--body)}
+    .menu a:hover{background:var(--green-lt);color:var(--green-dk)}
+    .menu a i{width:17px;text-align:center;color:var(--green);font-size:13px}
+    .menu a span{margin-left:auto;color:var(--faint);font-size:12.5px}
+    .menu .none{padding:12px;color:var(--muted);font-size:13.5px}
+
+    .top-search{flex:1;min-width:0;position:relative;max-width:430px}
+    .top-search i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:13px}
+    .top-search input{width:100%;border:1px solid var(--line-dk);border-radius:999px;padding:10px 16px 10px 38px;
+      font:inherit;font-size:14px;background:var(--ground);color:var(--ink)}
+    .top-search input:focus{outline:0;border-color:var(--green);background:var(--paper);
+      box-shadow:0 0 0 3px rgba(0,147,46,.13)}
+    .top-right{margin-left:auto;display:flex;align-items:center;gap:9px;flex:0 0 auto}
+
+    .btn{border:0;border-radius:8px;padding:11px 18px;font-weight:700;font-size:13.5px;cursor:pointer;
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      transition:background .15s,border-color .15s,color .15s;white-space:nowrap}
     .btn-primary{background:var(--green);color:#fff}
-    .btn-primary:hover{background:var(--green-dark)}
-    .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+    .btn-primary:hover{background:var(--green-dk)}
+    .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line-dk)}
     .btn-ghost:hover{border-color:var(--green);color:var(--green)}
-    .btn-plain{background:transparent;color:var(--muted);padding:8px 0}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .btn-light{background:#fff;color:var(--forest)}
+    .btn-light:hover{background:#eaf3ed}
+    .btn-sm{padding:8px 13px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
 
-    .hero{background:linear-gradient(160deg,#062d16,#0b4a24 62%,#0d5a2b);color:#e8f3ec;padding:56px 22px 60px}
-    .hero-in{max-width:1160px;margin:0 auto}
-    .hero h1{font-size:clamp(27px,4vw,40px);line-height:1.15;color:#fff;letter-spacing:-.02em;max-width:17ch;text-wrap:balance}
-    .hero p{margin-top:14px;max-width:56ch;font-size:15.5px;color:#bcd6c6}
-    .hero-stats{margin-top:28px;display:flex;gap:34px;flex-wrap:wrap}
-    .hero-stats div span{display:block;font-size:23px;font-weight:700;color:#fff;line-height:1.2}
-    .hero-stats div small{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8fb79f}
+    /* ---------- hero ---------- */
+    .hero{background:
+        radial-gradient(1100px 460px at 78% -12%, rgba(0,147,46,.42), transparent 62%),
+        linear-gradient(168deg, #041f11 0%, var(--forest) 46%, #0a4526 100%);
+      color:#dbeadf;padding:64px 0 70px;position:relative;overflow:hidden}
+    .hero:after{content:"";position:absolute;right:-90px;bottom:-120px;width:400px;height:400px;
+      border-radius:50%;border:1px solid rgba(255,255,255,.07)}
+    .hero-in{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:0 22px}
+    .kicker{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.09);
+      border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 14px;font-size:12px;
+      font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#a9cfb8}
+    .hero h1{margin-top:18px;font-size:clamp(29px,4.4vw,46px);line-height:1.12;color:#fff;
+      letter-spacing:-.025em;max-width:16ch;text-wrap:balance}
+    .hero p{margin-top:15px;max-width:54ch;font-size:16px;color:#b3ceba}
+    .hero-search{margin-top:28px;max-width:560px;display:flex;gap:9px}
+    .hero-search input{flex:1;min-width:0;border:0;border-radius:9px;padding:15px 17px;font:inherit;font-size:15px;color:var(--ink)}
+    .hero-search input:focus{outline:3px solid rgba(255,255,255,.28)}
+    .stats{margin-top:36px;display:flex;gap:40px;flex-wrap:wrap;padding-top:26px;
+      border-top:1px solid rgba(255,255,255,.11)}
+    .stats b{display:block;font-size:25px;color:#fff;font-weight:700;line-height:1.15;letter-spacing:-.02em}
+    .stats small{font-size:11.5px;letter-spacing:.11em;text-transform:uppercase;color:#8bb59b}
 
-    .wrap{max-width:1160px;margin:0 auto;padding:30px 22px 70px}
-    .toolbar{display:flex;gap:11px;flex-wrap:wrap;align-items:center;margin-bottom:24px}
-    .in{border:1px solid var(--line);border-radius:9px;padding:11px 13px;font:inherit;font-size:14px;background:var(--paper);color:var(--ink)}
-    .in:focus{outline:2px solid rgba(0,147,46,.35);outline-offset:1px}
+    /* ---------- generic section ---------- */
+    section.band{padding:52px 0}
+    section.band.tight{padding:38px 0}
+    .head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+    .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--green)}
+    h2.t{font-size:clamp(20px,2.4vw,26px);color:var(--ink);letter-spacing:-.018em;margin-top:5px;text-wrap:balance}
+    .lede{font-size:15px;color:var(--muted);max-width:66ch;margin-top:8px}
 
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:20px}
-    .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
-      box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;cursor:pointer;
-      transition:transform .16s,box-shadow .16s}
-    .card:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(22,36,28,.11)}
-    .card-top{height:118px;background:linear-gradient(135deg,#0b4a24,#00932e);display:flex;
-      align-items:flex-end;padding:14px;position:relative}
-    .card-top i{font-size:44px;color:rgba(255,255,255,.22);position:absolute;right:16px;top:16px}
-    .chip{background:rgba(255,255,255,.94);color:var(--green-dark);border-radius:999px;
-      padding:4px 11px;font-size:11.5px;font-weight:700;letter-spacing:.03em}
-    .card-body{padding:16px 17px 18px;display:flex;flex-direction:column;flex:1}
-    .card-body h3{font-size:16.5px;color:var(--ink);line-height:1.32;margin-bottom:7px;text-wrap:balance}
-    .card-body p{font-size:13.5px;color:var(--muted);flex:1}
-    .card-foot{margin-top:14px;padding-top:13px;border-top:1px solid var(--line);
-      display:flex;gap:14px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
-    .card-foot i{color:var(--green);margin-right:5px}
+    /* ---------- subject grid ---------- */
+    .subjects{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+    .subject{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:18px;
+      cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s}
+    .subject:hover{border-color:var(--green);transform:translateY(-2px);box-shadow:var(--shadow)}
+    .subject i{width:40px;height:40px;border-radius:10px;background:var(--green-lt);color:var(--green-dk);
+      display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:13px}
+    .subject b{display:block;color:var(--ink);font-size:14.5px}
+    .subject small{color:var(--muted);font-size:12.5px}
 
-    .bar-progress{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:12px}
-    .bar-progress span{display:block;height:100%;background:var(--green);border-radius:999px}
+    /* ---------- catalogue: sidebar + grid ---------- */
+    .catalogue{display:grid;grid-template-columns:232px 1fr;gap:30px;align-items:start}
+    .filters{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:18px;
+      position:sticky;top:92px}
+    .fgroup{margin-bottom:20px}
+    .fgroup:last-child{margin-bottom:0}
+    .fgroup h4{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--faint);margin-bottom:10px}
+    .fopt{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:14px;cursor:pointer;color:var(--body)}
+    .fopt:hover{color:var(--green-dk)}
+    .fopt input{accent-color:var(--green);width:15px;height:15px;cursor:pointer}
+    .fclear{background:transparent;border:0;color:var(--red);font-size:12.5px;font-weight:700;cursor:pointer;padding:0}
 
-    .panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
-      box-shadow:var(--shadow);padding:26px}
-    .lede{font-size:15px;color:var(--muted);max-width:68ch;margin-top:8px}
-    h2.sec{font-size:19px;color:var(--ink);letter-spacing:-.01em}
-    .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+    .results-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+    .results-bar .count{font-size:14px;color:var(--muted)}
+    .results-bar .count b{color:var(--ink)}
+    .sel{margin-left:auto;border:1px solid var(--line-dk);border-radius:8px;padding:8px 11px;
+      font:inherit;font-size:13.5px;background:var(--paper);color:var(--ink)}
 
-    .outline{margin-top:22px;display:flex;flex-direction:column;gap:16px}
-    .mod{border:1px solid var(--line);border-radius:11px;overflow:hidden}
-    .mod-head{background:#f7faf8;padding:13px 16px;border-bottom:1px solid var(--line)}
-    .mod-head strong{color:var(--ink);font-size:14.5px}
-    .mod-head small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:20px}
+    .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+      display:flex;flex-direction:column;cursor:pointer;transition:transform .16s,box-shadow .16s,border-color .16s}
+    .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--line-dk)}
+    .card-top{height:104px;background:linear-gradient(135deg,var(--forest),var(--green));
+      display:flex;align-items:flex-end;padding:13px;position:relative}
+    .card-top>i{position:absolute;right:15px;top:14px;font-size:40px;color:rgba(255,255,255,.2)}
+    .tag{background:rgba(255,255,255,.95);color:var(--green-dk);border-radius:999px;padding:4px 11px;
+      font-size:11.5px;font-weight:700}
+    .tag.members{background:rgba(188,11,34,.94);color:#fff}
+    .card-b{padding:15px 16px 17px;display:flex;flex-direction:column;flex:1}
+    .card-b h3{font-size:16px;color:var(--ink);line-height:1.34;margin-bottom:6px;letter-spacing:-.01em;text-wrap:balance}
+    .card-b p{font-size:13.5px;color:var(--muted);flex:1}
+    .meta{margin-top:13px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:13px;
+      flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+    .meta i{color:var(--green);margin-right:5px}
+    .prog{height:6px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:12px}
+    .prog span{display:block;height:100%;background:var(--green);border-radius:999px;transition:width .3s}
+
+    /* ---------- panels, course + lesson ---------- */
+    .panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:26px}
+    .crumb{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:13.5px;
+      margin-bottom:16px;cursor:pointer;background:transparent;border:0;padding:0}
+    .crumb:hover{color:var(--green)}
+    .course-hd{display:grid;grid-template-columns:1fr 296px;gap:26px;align-items:start}
+    .mod{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px;background:var(--paper)}
+    .mod-h{background:#f3f7f4;padding:13px 16px;border-bottom:1px solid var(--line)}
+    .mod-h b{color:var(--ink);font-size:14.5px}
+    .mod-h small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
     .les{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:14px}
     .les:last-child{border-bottom:0}
     .les.open{cursor:pointer}
-    .les.open:hover{background:#f7faf8}
-    .les .ic{width:26px;height:26px;border-radius:50%;background:var(--ground);color:var(--muted);
-      display:flex;align-items:center;justify-content:center;font-size:11px;flex:0 0 auto}
-    .les.done .ic{background:rgba(0,147,46,.13);color:var(--green)}
-    .les .mins{margin-left:auto;color:var(--muted);font-size:12.5px;flex:0 0 auto}
+    .les.open:hover{background:#f3f7f4}
+    .les .ic{width:26px;height:26px;border-radius:50%;background:var(--ground);color:var(--faint);
+      display:flex;align-items:center;justify-content:center;font-size:10.5px;flex:0 0 auto}
+    .les.done .ic{background:var(--green-lt);color:var(--green)}
+    .les .mins{margin-left:auto;color:var(--faint);font-size:12.5px;flex:0 0 auto}
+    .les.current{background:var(--green-lt);box-shadow:inset 3px 0 0 var(--green)}
 
-    .player{display:grid;grid-template-columns:1fr 310px;gap:22px;align-items:start}
-    .lesson-body{font-size:15.3px;color:var(--body);line-height:1.75}
-    .lesson-body p{margin-bottom:15px}
-    .lesson-body p:last-child{margin-bottom:0}
+    .player{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
+    .side{position:sticky;top:92px}
+    .prose{font-size:15.4px;color:var(--body);line-height:1.78}
+    .prose p{margin-bottom:15px}
+    .prose p:last-child{margin-bottom:0}
     .frame{position:relative;padding-top:56.25%;background:#000;border-radius:11px;overflow:hidden;margin-bottom:20px}
     .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-    .side{position:sticky;top:92px}
-    .side .les{font-size:13.5px;padding:10px 14px}
-    .les.current{background:rgba(0,147,46,.07);box-shadow:inset 3px 0 0 var(--green)}
 
     .note{border-radius:9px;padding:12px 14px;font-size:13.5px;margin-top:16px}
-    .note.info{background:#eef6f1;color:#14532d;border:1px solid #bfe0cd}
+    .note.info{background:var(--green-lt);color:#12532c;border:1px solid #c2e2ce}
     .note.warn{background:#fff8e6;color:#7a4b06;border:1px solid #f3dda6}
-    .note.bad{background:#fdf0f1;color:#8c1024;border:1px solid #f5ccd2}
-    .empty{color:var(--muted);text-align:center;padding:46px 10px;font-size:14px}
-    .crumb{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:13.5px;margin-bottom:16px;cursor:pointer}
-    .crumb:hover{color:var(--green)}
+    .note.bad{background:#fdeff1;color:#8c1024;border:1px solid #f5ccd2}
+    .empty{color:var(--muted);text-align:center;padding:50px 14px;font-size:14px;
+      background:var(--paper);border:1px dashed var(--line-dk);border-radius:var(--r)}
+    .empty b{display:block;color:var(--ink);font-size:15.5px;margin-bottom:5px}
 
-    footer.foot{border-top:1px solid var(--line);background:var(--paper);padding:22px;text-align:center;
-      color:var(--muted);font-size:12.5px}
+    /* ---------- footer ---------- */
+    .foot{background:var(--forest);color:#a9c2b2;padding:48px 0 26px;margin-top:20px}
+    .foot-grid{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:32px}
+    .foot h5{color:#fff;font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;margin-bottom:13px}
+    .foot ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+    .foot a{font-size:13.5px;color:#a9c2b2}
+    .foot a:hover{color:#fff}
+    .foot .about{font-size:13.5px;max-width:38ch;margin-top:12px}
+    .foot .social{display:flex;gap:10px;margin-top:16px}
+    .foot .social a{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.08);
+      display:flex;align-items:center;justify-content:center;color:#cfe0d5}
+    .foot .social a:hover{background:var(--green);color:#fff}
+    .foot-btm{margin-top:34px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);
+      display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:12.5px}
 
-    @media(max-width:860px){.player{grid-template-columns:1fr}.side{position:static}}
-    @media(max-width:560px){.hero{padding:38px 18px 42px}.wrap{padding:22px 16px 50px}.bar-in{padding:0 16px}}
+    @media(max-width:980px){
+      .catalogue{grid-template-columns:1fr}
+      .filters{position:static}
+      .course-hd,.player{grid-template-columns:1fr}
+      .side{position:static}
+      .foot-grid{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:720px){
+      .top-search{display:none}
+      .hero{padding:44px 0 48px}
+      section.band{padding:38px 0}
+      .foot-grid{grid-template-columns:1fr}
+      .stats{gap:26px}
+    }
   </style>
 </head>
 <body>
-  <nav class="bar">
-    <div class="bar-in">
-      <a href="../../index.html"><img src="assets/img/logo.png" alt="ReSoK" /></a>
-      <a href="academy" class="mark">ReSoK<small>Virtual Academy</small></a>
-      <div class="bar-right">
-        <button class="btn btn-ghost" id="myCoursesBtn" type="button" hidden>
-          <i class="fas fa-graduation-cap"></i> My learning
-        </button>
-        <a class="btn btn-ghost" href="dashboard" id="portalLink" hidden>Members' portal</a>
-        <a class="btn btn-primary" href="login" id="signInLink">Sign in</a>
-      </div>
-    </div>
-  </nav>
 
-  <!-- ---------------- Catalogue ---------------- -->
-  <section id="viewCatalogue">
-    <div class="hero">
-      <div class="hero-in">
-        <h1>Respiratory education, open to anyone who needs it</h1>
-        <p>
-          Short courses from the Respiratory Society of Kenya. Browse the whole catalogue
-          without an account &mdash; you only need to sign in when you want your progress kept
-          and your certificate issued.
-        </p>
-        <div class="hero-stats" id="heroStats"></div>
-      </div>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="#">
+      <img src="assets/img/logo.png" alt="ReSoK" />
+      <span class="brand-txt"><b>ReSoK</b><span>Virtual Academy</span></span>
+    </a>
+
+    <div class="explore">
+      <button type="button" id="exploreBtn" aria-haspopup="true" aria-expanded="false">
+        Explore <i class="fas fa-chevron-down" style="font-size:10px"></i>
+      </button>
+      <div class="menu" id="exploreMenu" hidden></div>
     </div>
 
-    <div class="wrap">
-      <div class="toolbar">
-        <input class="in" id="q" style="flex:1;min-width:210px" placeholder="Search courses" autocomplete="off" />
-        <select class="in" id="category" style="min-width:170px"><option value="">Every subject</option></select>
-        <select class="in" id="level" style="min-width:160px">
-          <option value="">Any level</option>
-          <option value="introductory">Introductory</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-      <div class="grid" id="courseGrid"><div class="empty">Loading the catalogue&hellip;</div></div>
+    <div class="top-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input id="topSearch" type="search" placeholder="Search courses" autocomplete="off" aria-label="Search courses" />
     </div>
-  </section>
 
-  <!-- ---------------- My learning ---------------- -->
-  <section id="viewMine" hidden>
-    <div class="wrap">
-      <div class="crumb" id="mineBack"><i class="fas fa-arrow-left"></i> All courses</div>
-      <h2 class="sec">My learning</h2>
-      <p class="lede">Everything you have started, most recent first.</p>
-      <div class="grid" id="mineGrid" style="margin-top:24px"></div>
+    <div class="top-right">
+      <button class="btn btn-ghost btn-sm" id="myLearningBtn" type="button" hidden>
+        <i class="fas fa-graduation-cap"></i> My learning
+      </button>
+      <a class="btn btn-ghost btn-sm" href="dashboard" id="portalLink" hidden>Members' portal</a>
+      <a class="btn btn-primary btn-sm" href="login" id="signInLink">Sign in</a>
     </div>
-  </section>
+  </div>
+</header>
 
-  <!-- ---------------- One course ---------------- -->
-  <section id="viewCourse" hidden>
-    <div class="wrap">
-      <div class="crumb" id="courseBack"><i class="fas fa-arrow-left"></i> All courses</div>
-      <div class="panel">
-        <div class="eyebrow" id="cCategory"></div>
-        <h2 class="sec" id="cTitle" style="margin-top:6px;font-size:25px"></h2>
-        <p class="lede" id="cSummary"></p>
-        <div class="card-foot" style="border-top:0;padding-top:14px;margin-top:6px" id="cFacts"></div>
-        <div id="cProgressWrap" hidden>
-          <div class="bar-progress"><span id="cProgressBar"></span></div>
-          <div style="font-size:12.5px;color:var(--muted);margin-top:7px" id="cProgressText"></div>
+<!-- ============ Catalogue ============ -->
+<div id="viewCatalogue">
+  <div class="hero">
+    <div class="hero-in">
+      <span class="kicker"><i class="fas fa-lungs"></i> Respiratory Society of Kenya</span>
+      <h1>Learn respiratory health, free and online</h1>
+      <p>
+        Short, practical courses written by ReSoK clinicians and educators. Browse the whole
+        catalogue without an account &mdash; sign in only when you want your progress kept and
+        your certificate issued.
+      </p>
+      <form class="hero-search" id="heroForm">
+        <input id="heroSearch" type="search" placeholder="What do you want to learn?" aria-label="Search courses" />
+        <button class="btn btn-light" type="submit"><i class="fas fa-magnifying-glass"></i> Search</button>
+      </form>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+
+  <section class="band tight" id="subjectsBand" hidden>
+    <div class="shell">
+      <div class="head">
+        <div>
+          <div class="eyebrow">Browse by subject</div>
+          <h2 class="t">Where would you like to start?</h2>
         </div>
-        <div id="cNotice"></div>
-        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-primary" id="cEnrolBtn" type="button"></button>
-        </div>
-        <div id="cDescription" class="lesson-body" style="margin-top:24px"></div>
       </div>
-
-      <div style="margin-top:26px">
-        <h2 class="sec">What the course covers</h2>
-        <div class="outline" id="cOutline"></div>
-      </div>
+      <div class="subjects" id="subjects"></div>
     </div>
   </section>
 
-  <!-- ---------------- Lesson ---------------- -->
-  <section id="viewLesson" hidden>
-    <div class="wrap">
-      <div class="crumb" id="lessonBack"><i class="fas fa-arrow-left"></i> Back to the course</div>
+  <section class="band" id="coursesBand">
+    <div class="shell">
+      <div class="head">
+        <div>
+          <div class="eyebrow">Catalogue</div>
+          <h2 class="t">All courses</h2>
+          <p class="lede">
+            Every course is free to take. Where one is a membership benefit it is marked, and
+            you will need an active ReSoK membership to enrol.
+          </p>
+        </div>
+      </div>
+
+      <div class="catalogue">
+        <aside class="filters">
+          <div class="fgroup">
+            <h4>Subject</h4>
+            <div id="fCategories"></div>
+          </div>
+          <div class="fgroup">
+            <h4>Level</h4>
+            <label class="fopt"><input type="radio" name="level" value="" checked /> Any level</label>
+            <label class="fopt"><input type="radio" name="level" value="introductory" /> Introductory</label>
+            <label class="fopt"><input type="radio" name="level" value="intermediate" /> Intermediate</label>
+            <label class="fopt"><input type="radio" name="level" value="advanced" /> Advanced</label>
+          </div>
+          <button class="fclear" id="clearFilters" type="button">Clear all filters</button>
+        </aside>
+
+        <div>
+          <div class="results-bar">
+            <span class="count" id="resultCount"></span>
+            <select class="sel" id="sort">
+              <option value="newest">Newest first</option>
+              <option value="title">Title A&ndash;Z</option>
+              <option value="shortest">Shortest first</option>
+            </select>
+          </div>
+          <div class="grid" id="courseGrid"><div class="empty">Loading the catalogue&hellip;</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ My learning ============ -->
+<div id="viewMine" hidden>
+  <section class="band">
+    <div class="shell">
+      <button class="crumb" id="mineBack" type="button"><i class="fas fa-arrow-left"></i> All courses</button>
+      <div class="head">
+        <div>
+          <div class="eyebrow">Your progress</div>
+          <h2 class="t">My learning</h2>
+          <p class="lede">Everything you have started, most recently opened first.</p>
+        </div>
+      </div>
+      <div class="grid" id="mineGrid"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ One course ============ -->
+<div id="viewCourse" hidden>
+  <section class="band">
+    <div class="shell">
+      <button class="crumb" id="courseBack" type="button"><i class="fas fa-arrow-left"></i> All courses</button>
+      <div class="course-hd">
+        <div>
+          <div class="eyebrow" id="cCategory"></div>
+          <h2 class="t" id="cTitle" style="font-size:29px"></h2>
+          <p class="lede" id="cSummary"></p>
+          <div class="prose" id="cDescription" style="margin-top:20px"></div>
+
+          <h2 class="t" style="font-size:19px;margin-top:34px;margin-bottom:14px">What the course covers</h2>
+          <div id="cOutline"></div>
+        </div>
+
+        <aside class="panel side">
+          <div class="meta" style="margin-top:0;padding-top:0;border-top:0;flex-direction:column;gap:11px" id="cFacts"></div>
+          <div id="cProgressWrap" hidden style="margin-top:16px">
+            <div class="prog"><span id="cProgressBar"></span></div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:7px" id="cProgressText"></div>
+          </div>
+          <button class="btn btn-primary" id="cEnrolBtn" type="button" style="width:100%;margin-top:18px"></button>
+          <div id="cNotice"></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ Lesson ============ -->
+<div id="viewLesson" hidden>
+  <section class="band">
+    <div class="shell">
+      <button class="crumb" id="lessonBack" type="button"><i class="fas fa-arrow-left"></i> Back to the course</button>
       <div class="player">
         <div class="panel">
           <div class="eyebrow" id="lModule"></div>
-          <h2 class="sec" id="lTitle" style="margin-top:6px;font-size:22px;margin-bottom:18px"></h2>
+          <h2 class="t" id="lTitle" style="font-size:23px;margin-bottom:18px"></h2>
           <div id="lMedia"></div>
-          <div class="lesson-body" id="lBody"></div>
+          <div class="prose" id="lBody"></div>
           <div id="lNotice"></div>
           <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn btn-primary" id="lDoneBtn" type="button"><i class="fas fa-check"></i> Mark as done</button>
@@ -219,521 +398,699 @@
         </div>
         <aside class="side">
           <div class="panel" style="padding:0;overflow:hidden">
-            <div class="mod-head"><strong id="sCourseTitle"></strong><small id="sProgress"></small></div>
+            <div class="mod-h"><b id="sCourseTitle"></b><small id="sProgress"></small></div>
             <div id="sLessons"></div>
           </div>
         </aside>
       </div>
     </div>
   </section>
+</div>
 
-  <footer class="foot">
-    ReSoK Virtual Academy &middot; Respiratory Society of Kenya &middot; Developed and Designed by ReSoK ICT
-  </footer>
+<footer class="foot">
+  <div class="shell">
+    <div class="foot-grid">
+      <div>
+        <h5>ReSoK Virtual Academy</h5>
+        <p class="about">
+          The online learning arm of the Respiratory Society of Kenya, bringing respiratory
+          health education to clinicians and the public across Kenya and beyond.
+        </p>
+        <div class="social">
+          <a href="https://twitter.com/resokenya" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fab fa-x-twitter"></i></a>
+          <a href="https://www.facebook.com/resokenya" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.linkedin.com/company/respiratory-society-of-kenya" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+      </div>
+      <div>
+        <h5>Learn</h5>
+        <ul>
+          <li><a href="#" data-nav="">All courses</a></li>
+          <li><a href="#mine" data-nav="mine">My learning</a></li>
+          <li><a href="login">Sign in</a></li>
+          <li><a href="register">Create an account</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>ReSoK</h5>
+        <ul>
+          <li><a href="../../index.html">Main website</a></li>
+          <li><a href="../../about.html">About the society</a></li>
+          <li><a href="../../membership.html">Membership</a></li>
+          <li><a href="../../contact.html">Contact us</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Members</h5>
+        <ul>
+          <li><a href="dashboard">Members' portal</a></li>
+          <li><a href="events">Events &amp; CMEs</a></li>
+          <li><a href="certificates">My certificates</a></li>
+          <li><a href="card">Membership card</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-btm">
+      <span>&copy; 2026 Respiratory Society of Kenya. All rights reserved.</span>
+      <span>Developed and Designed by ReSoK ICT</span>
+    </div>
+  </div>
+</footer>
 
-  <script src="js/portal-state.js?v=20260908-screening"></script>
-  <script>
+<script src="js/portal-state.js?v=20260908-screening"></script>
+<script>
+/**
+ * The academy front end: catalogue, one course, and the lesson player.
+ *
+ * Four views in one page, switched on the hash, so a course can be linked to directly and a
+ * reload stays where it was.
+ *
+ * Everything from the server is written with textContent or created nodes, never innerHTML.
+ * Course titles and lesson bodies are typed by authors and read by the public; one pasted
+ * angle bracket should stay an angle bracket.
+ *
+ * Signed out is a first-class state, not an error. The catalogue is public, so every call
+ * needing a session is made only once a session is known to exist, and the parts that need
+ * one say so rather than failing.
+ *
+ * Sorting and subject filtering happen here rather than on the server. The catalogue is one
+ * request and a few dozen rows; a round trip per filter click would be slower and would make
+ * the page useless the moment the connection is poor, which is the connection most of these
+ * learners have.
+ */
+(() => {
+  const api = (path, options) => window.ResokPortal.api(path, options);
+  const el = (id) => document.getElementById(id);
+  const make = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  };
+
+  const SUBJECT_ICON = {
+    'Getting started': 'fa-compass', 'Diagnostics': 'fa-stethoscope', 'Asthma': 'fa-lungs',
+    'Tuberculosis': 'fa-viruses', 'COPD': 'fa-wind', 'Paediatrics': 'fa-child',
+    'Research': 'fa-flask', 'Public health': 'fa-people-group', 'Tobacco control': 'fa-ban-smoking'
+  };
+  const LESSON_ICON = {
+    video: 'fa-play', text: 'fa-align-left', slides: 'fa-images',
+    document: 'fa-file-lines', link: 'fa-arrow-up-right-from-square'
+  };
+
+  let signedIn = false;
+  let allCourses = [];
+  let categories = [];
+  let filterCategory = '';
+  let filterLevel = '';
+  let search = '';
+  let currentCourse = null;
+  let currentEnrolment = null;
+  let currentLesson = null;
+  let openedAt = 0;
+
+  /* ---------------- views ---------------- */
+  function show(view) {
+    ['Catalogue', 'Mine', 'Course', 'Lesson'].forEach((name) => {
+      el('view' + name).hidden = name !== view;
+    });
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  function route() {
+    closeExplore();
+    const hash = location.hash.slice(1);
+    if (hash.startsWith('lesson/')) return openLesson(Number(hash.slice(7)));
+    if (hash.startsWith('course/')) return openCourse(hash.slice(7));
+    if (hash === 'mine') return openMine();
+    show('Catalogue');
+    document.title = 'ReSoK Virtual Academy';
+    if (!allCourses.length) loadCatalogue();
+  }
+  const go = (hash) => {
+    if (location.hash.slice(1) === hash) route();
+    else location.hash = hash;
+  };
+
+  /* ---------------- catalogue ---------------- */
+  async function loadCatalogue() {
+    try {
+      const data = await api('/api/academy/courses');
+      allCourses = data.courses || [];
+      categories = data.categories || [];
+      renderStats();
+      renderSubjects();
+      renderCategoryFilter();
+      renderExplore();
+      applyFilters();
+    } catch (error) {
+      const grid = el('courseGrid');
+      grid.textContent = '';
+      const box = make('div', 'empty');
+      box.appendChild(make('b', null, 'The catalogue could not be loaded'));
+      box.appendChild(make('span', null, error.message || 'Please try again shortly.'));
+      grid.appendChild(box);
+    }
+  }
+
   /**
-   * The academy front end: catalogue, one course, and the lesson player.
+   * Only figures the database can produce.
    *
-   * Four views in one page, switched on the hash so a course can be linked to directly and a
-   * reload stays where it was.
-   *
-   * Everything from the server is written with textContent or created nodes, never innerHTML.
-   * Course titles and lesson bodies are typed by authors and read by the public; one pasted
-   * angle bracket should stay an angle bracket.
-   *
-   * Signed out is a first-class state, not an error. The catalogue is public, so every call
-   * that needs a session is made only after a session is known to exist, and the pages that
-   * need one say so rather than failing.
+   * An open-course platform usually opens with large numbers, and inventing them here would
+   * be the first thing a visitor stops believing. These four come from the catalogue that
+   * was just loaded, so they are small at first and grow as real courses are added.
    */
-  (() => {
-    const api = (path, options) => window.ResokPortal.api(path, options);
-    const el = (id) => document.getElementById(id);
-    const make = (tag, cls, text) => {
-      const node = document.createElement(tag);
-      if (cls) node.className = cls;
-      if (text !== undefined && text !== null) node.textContent = text;
-      return node;
+  function renderStats() {
+    const mount = el('stats');
+    mount.textContent = '';
+    const lessons = allCourses.reduce((sum, c) => sum + (c.lessonCount || 0), 0);
+    const minutes = allCourses.reduce((sum, c) => sum + (c.estimatedMinutes || 0), 0);
+    const hours = minutes >= 60 ? Math.round(minutes / 60) + 'h' : minutes + ' min';
+    const stat = (value, label) => {
+      const box = make('div');
+      box.appendChild(make('b', null, String(value)));
+      box.appendChild(make('small', null, label));
+      mount.appendChild(box);
     };
+    stat(allCourses.length, allCourses.length === 1 ? 'course' : 'courses');
+    stat(lessons, lessons === 1 ? 'lesson' : 'lessons');
+    stat(hours, 'of material');
+    stat('Free', 'to enrol');
+  }
 
-    const CATEGORY_ICON = {
-      'Getting started': 'fa-compass', 'Diagnostics': 'fa-stethoscope',
-      'Asthma': 'fa-lungs', 'Tuberculosis': 'fa-viruses', 'Research': 'fa-flask'
-    };
-
-    let signedIn = false;
-    let courses = [];
-    let currentCourse = null;
-    let currentEnrolment = null;
-    let currentLesson = null;
-    let openedAt = 0;
-
-    /* ---------------- view switching ---------------- */
-    function show(view) {
-      ['Catalogue', 'Mine', 'Course', 'Lesson'].forEach((name) => {
-        el('view' + name).hidden = ('view' + name) !== ('view' + view);
+  function renderSubjects() {
+    el('subjectsBand').hidden = categories.length < 2;
+    const mount = el('subjects');
+    mount.textContent = '';
+    categories.forEach((c) => {
+      const box = make('div', 'subject');
+      const icon = make('i', 'fas ' + (SUBJECT_ICON[c.name] || 'fa-book-open'));
+      box.appendChild(icon);
+      box.appendChild(make('b', null, c.name));
+      box.appendChild(make('small', null, c.courses + (c.courses === 1 ? ' course' : ' courses')));
+      box.addEventListener('click', () => {
+        filterCategory = c.name;
+        renderCategoryFilter();
+        applyFilters();
+        el('coursesBand').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
-      window.scrollTo({ top: 0, behavior: 'auto' });
-    }
+      mount.appendChild(box);
+    });
+  }
 
-    function route() {
-      const hash = location.hash.slice(1);
-      if (hash.startsWith('lesson/')) return openLesson(Number(hash.slice(7)));
-      if (hash.startsWith('course/')) return openCourse(hash.slice(7));
-      if (hash === 'mine') return openMine();
-      show('Catalogue');
-      loadCatalogue();
-    }
-    const go = (hash) => {
-      if (location.hash.slice(1) === hash) route();
-      else location.hash = hash;
+  function renderCategoryFilter() {
+    const mount = el('fCategories');
+    mount.textContent = '';
+    const option = (value, label, count) => {
+      const wrap = make('label', 'fopt');
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'category';
+      input.value = value;
+      input.checked = filterCategory === value;
+      input.addEventListener('change', () => { filterCategory = value; applyFilters(); });
+      wrap.appendChild(input);
+      wrap.appendChild(document.createTextNode(' ' + label + (count === null ? '' : ' (' + count + ')')));
+      mount.appendChild(wrap);
     };
+    option('', 'Every subject', null);
+    categories.forEach((c) => option(c.name, c.name, c.courses));
+  }
 
-    /* ---------------- catalogue ---------------- */
-    function courseCard(course, options = {}) {
-      const card = make('div', 'card');
-      card.addEventListener('click', () => go('course/' + course.slug));
-
-      const top = make('div', 'card-top');
-      const icon = make('i', 'fas ' + (CATEGORY_ICON[course.category] || 'fa-book-open'));
-      top.appendChild(icon);
-      if (course.category) top.appendChild(make('span', 'chip', course.category));
-      card.appendChild(top);
-
-      const body = make('div', 'card-body');
-      body.appendChild(make('h3', null, course.title));
-      body.appendChild(make('p', null, course.summary || ''));
-
-      if (options.withProgress) {
-        const bar = make('div', 'bar-progress');
-        const fill = make('span');
-        fill.style.width = Math.max(2, course.progress || 0) + '%';
-        bar.appendChild(fill);
-        body.appendChild(bar);
-        body.appendChild(make('div', 'card-foot',
-          course.completedAt ? 'Finished' : (course.progress || 0) + '% complete'));
-      } else {
-        const foot = make('div', 'card-foot');
-        const add = (iconClass, text) => {
-          const span = make('span');
-          span.appendChild(make('i', 'fas ' + iconClass));
-          span.appendChild(document.createTextNode(text));
-          foot.appendChild(span);
-        };
-        add('fa-clock', ' ' + course.duration);
-        add('fa-layer-group', ' ' + (course.lessonCount || 0) + ' lessons');
-        add('fa-signal', ' ' + course.level);
-        if (course.membersOnly) add('fa-id-card', ' Members');
-        body.appendChild(foot);
-      }
-      card.appendChild(body);
-      return card;
+  function renderExplore() {
+    const menu = el('exploreMenu');
+    menu.textContent = '';
+    if (!categories.length) {
+      menu.appendChild(make('div', 'none', 'No subjects yet.'));
+      return;
     }
-
-    function renderCatalogue() {
-      const grid = el('courseGrid');
-      grid.textContent = '';
-      if (!courses.length) {
-        grid.appendChild(make('div', 'empty',
-          'No courses match that. Clear the filters to see everything.'));
-        return;
-      }
-      courses.forEach((course) => grid.appendChild(courseCard(course)));
-    }
-
-    async function loadCatalogue() {
-      const grid = el('courseGrid');
-      try {
-        const query = '?q=' + encodeURIComponent(el('q').value.trim())
-                    + '&category=' + encodeURIComponent(el('category').value)
-                    + '&level=' + encodeURIComponent(el('level').value);
-        const data = await api('/api/academy/courses' + query);
-        courses = data.courses || [];
-        renderCatalogue();
-        fillCategories(data.categories || []);
-        renderHeroStats(data.categories || []);
-      } catch (error) {
-        grid.textContent = '';
-        grid.appendChild(make('div', 'empty', error.message || 'Could not load the catalogue.'));
-      }
-    }
-
-    function fillCategories(categories) {
-      const select = el('category');
-      if (select.dataset.filled === '1') return;
-      categories.forEach((c) => {
-        const option = document.createElement('option');
-        option.value = c.name;
-        option.textContent = c.name + ' (' + c.courses + ')';
-        select.appendChild(option);
+    categories.forEach((c) => {
+      const link = make('a');
+      link.href = '#';
+      link.appendChild(make('i', 'fas ' + (SUBJECT_ICON[c.name] || 'fa-book-open')));
+      link.appendChild(document.createTextNode(c.name));
+      link.appendChild(make('span', null, String(c.courses)));
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        closeExplore();
+        filterCategory = c.name;
+        renderCategoryFilter();
+        go('');
+        applyFilters();
+        el('coursesBand').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
-      select.dataset.filled = '1';
+      menu.appendChild(link);
+    });
+  }
+
+  function applyFilters() {
+    const needle = search.toLowerCase();
+    let list = allCourses.filter((c) => {
+      if (filterCategory && c.category !== filterCategory) return false;
+      if (filterLevel && c.level !== filterLevel) return false;
+      if (!needle) return true;
+      return (c.title + ' ' + (c.summary || '') + ' ' + (c.category || '')).toLowerCase().includes(needle);
+    });
+
+    const sort = el('sort').value;
+    if (sort === 'title') list.sort((a, b) => a.title.localeCompare(b.title));
+    else if (sort === 'shortest') list.sort((a, b) => (a.estimatedMinutes || 0) - (b.estimatedMinutes || 0));
+
+    const count = el('resultCount');
+    count.textContent = '';
+    count.appendChild(make('b', null, String(list.length)));
+    count.appendChild(document.createTextNode(
+      (list.length === 1 ? ' course' : ' courses')
+      + (allCourses.length && list.length !== allCourses.length ? ' of ' + allCourses.length : '')));
+
+    renderGrid(el('courseGrid'), list, {});
+  }
+
+  function renderGrid(mount, list, options) {
+    mount.textContent = '';
+    if (!list.length) {
+      const box = make('div', 'empty');
+      box.appendChild(make('b', null, options.emptyTitle || 'Nothing matches that'));
+      box.appendChild(make('span', null, options.emptyBody
+        || 'Try a different subject or level, or clear the filters.'));
+      mount.appendChild(box);
+      return;
     }
+    list.forEach((course) => mount.appendChild(courseCard(course, options)));
+  }
 
-    function renderHeroStats(categories) {
-      const mount = el('heroStats');
-      if (mount.dataset.filled === '1') return;
-      const minutes = courses.reduce((sum, c) => sum + (c.estimatedMinutes || 0), 0);
-      const lessons = courses.reduce((sum, c) => sum + (c.lessonCount || 0), 0);
-      const stat = (value, label) => {
-        const box = make('div');
-        box.appendChild(make('span', null, String(value)));
-        box.appendChild(make('small', null, label));
-        return box;
-      };
-      mount.textContent = '';
-      mount.appendChild(stat(courses.length, courses.length === 1 ? 'course' : 'courses'));
-      mount.appendChild(stat(lessons, 'lessons'));
-      mount.appendChild(stat(Math.max(1, Math.round(minutes / 60)) + 'h', 'of material'));
-      if (categories.length) mount.appendChild(stat(categories.length, 'subjects'));
-      mount.dataset.filled = '1';
-    }
+  function courseCard(course, options = {}) {
+    const card = make('div', 'card');
+    card.addEventListener('click', () => go('course/' + course.slug));
 
-    /* ---------------- my learning ---------------- */
-    async function openMine() {
-      if (!signedIn) { location.href = 'login'; return; }
-      show('Mine');
-      const grid = el('mineGrid');
-      grid.textContent = '';
-      grid.appendChild(make('div', 'empty', 'Loading…'));
-      try {
-        const data = await api('/api/academy/my-courses');
-        grid.textContent = '';
-        if (!(data.courses || []).length) {
-          grid.appendChild(make('div', 'empty',
-            'Nothing started yet. Pick something from the catalogue.'));
-          return;
-        }
-        data.courses.forEach((c) => grid.appendChild(courseCard(c, { withProgress: true })));
-      } catch (error) {
-        grid.textContent = '';
-        grid.appendChild(make('div', 'empty', error.message || 'Could not load your courses.'));
-      }
-    }
+    const top = make('div', 'card-top');
+    top.appendChild(make('i', 'fas ' + (SUBJECT_ICON[course.category] || 'fa-book-open')));
+    if (course.membersOnly) top.appendChild(make('span', 'tag members', 'Members only'));
+    else if (course.category) top.appendChild(make('span', 'tag', course.category));
+    card.appendChild(top);
 
-    /* ---------------- one course ---------------- */
-    async function openCourse(slug) {
-      show('Course');
-      el('cTitle').textContent = 'Loading…';
-      el('cSummary').textContent = '';
-      el('cOutline').textContent = '';
-      el('cNotice').textContent = '';
-      try {
-        const data = await api('/api/academy/courses/' + encodeURIComponent(slug));
-        currentCourse = data.course;
-        currentEnrolment = data.enrolment;
-        renderCourse();
-      } catch (error) {
-        el('cTitle').textContent = 'Course not found';
-        el('cSummary').textContent = error.message || 'That course is not in the catalogue.';
-      }
-    }
+    const body = make('div', 'card-b');
+    body.appendChild(make('h3', null, course.title));
+    body.appendChild(make('p', null, course.summary || ''));
 
-    function renderCourse() {
-      const c = currentCourse;
-      document.title = c.title + ' - ReSoK Virtual Academy';
-      el('cCategory').textContent = c.category || 'Course';
-      el('cTitle').textContent = c.title;
-      el('cSummary').textContent = c.summary || '';
-
-      const facts = el('cFacts');
-      facts.textContent = '';
+    if (options.withProgress) {
+      const bar = make('div', 'prog');
+      const fill = make('span');
+      fill.style.width = Math.max(3, course.progress || 0) + '%';
+      bar.appendChild(fill);
+      body.appendChild(bar);
+      body.appendChild(make('div', 'meta',
+        course.completedAt ? 'Finished' : (course.progress || 0) + '% complete'));
+    } else {
+      const meta = make('div', 'meta');
       const fact = (iconClass, text) => {
         const span = make('span');
         span.appendChild(make('i', 'fas ' + iconClass));
-        span.appendChild(document.createTextNode(' ' + text));
-        facts.appendChild(span);
+        span.appendChild(document.createTextNode(text));
+        meta.appendChild(span);
       };
-      fact('fa-clock', c.duration);
-      fact('fa-layer-group', (c.lessonCount || 0) + ' lessons');
-      fact('fa-signal', c.level);
-      if (c.certificateEnabled) fact('fa-award', 'Certificate on completion');
-      if (c.membersOnly) fact('fa-id-card', 'ReSoK members only');
-
-      const description = el('cDescription');
-      description.textContent = '';
-      (c.description || '').split(/\n+/).filter(Boolean)
-        .forEach((para) => description.appendChild(make('p', null, para)));
-
-      // Progress, and the button, both follow one question: is there an enrolment.
-      const enrolled = !!currentEnrolment;
-      el('cProgressWrap').hidden = !enrolled;
-      if (enrolled) {
-        el('cProgressBar').style.width = Math.max(2, currentEnrolment.progress) + '%';
-        el('cProgressText').textContent = currentEnrolment.completedAt
-          ? 'Finished' : currentEnrolment.progress + '% complete';
-      }
-
-      const button = el('cEnrolBtn');
-      button.textContent = '';
-      if (!signedIn) {
-        button.appendChild(make('i', 'fas fa-right-to-bracket'));
-        button.appendChild(document.createTextNode(' Sign in to enrol'));
-      } else if (enrolled) {
-        button.appendChild(make('i', 'fas fa-play'));
-        button.appendChild(document.createTextNode(
-          currentEnrolment.progress > 0 ? ' Continue' : ' Start the course'));
-      } else {
-        button.appendChild(make('i', 'fas fa-plus'));
-        button.appendChild(document.createTextNode(' Enrol - free'));
-      }
-
-      renderOutline();
+      fact('fa-clock', course.duration);
+      fact('fa-layer-group', (course.lessonCount || 0) + ' lessons');
+      fact('fa-signal', course.level);
+      if (course.certificateEnabled) fact('fa-award', 'Certificate');
+      body.appendChild(meta);
     }
+    card.appendChild(body);
+    return card;
+  }
 
-    function renderOutline() {
-      const mount = el('cOutline');
-      mount.textContent = '';
-      const enrolled = !!currentEnrolment;
-      const done = enrolled ? currentEnrolment.lessons : {};
-
-      (currentCourse.modules || []).forEach((module, index) => {
-        const box = make('div', 'mod');
-        const head = make('div', 'mod-head');
-        head.appendChild(make('strong', null, 'Module ' + (index + 1) + ' · ' + module.title));
-        if (module.summary) head.appendChild(make('small', null, module.summary));
-        box.appendChild(head);
-
-        if (!module.lessons.length) {
-          box.appendChild(make('div', 'les', 'No lessons in this module yet.'));
-        }
-        module.lessons.forEach((lesson) => {
-          const complete = !!(done[lesson.id] && done[lesson.id].completed);
-          const row = make('div', 'les' + (complete ? ' done' : '') + (enrolled ? ' open' : ''));
-          const ic = make('div', 'ic');
-          ic.appendChild(make('i', 'fas ' + (complete ? 'fa-check' : lessonIcon(lesson.kind))));
-          row.appendChild(ic);
-          row.appendChild(make('span', null, lesson.title));
-          row.appendChild(make('span', 'mins', lesson.minutes ? lesson.minutes + ' min' : ''));
-          // Only a learner who is enrolled can open a lesson, and the row says so by being
-          // inert rather than by opening onto a refusal.
-          if (enrolled) row.addEventListener('click', () => go('lesson/' + lesson.id));
-          box.appendChild(row);
-        });
-        mount.appendChild(box);
+  /* ---------------- my learning ---------------- */
+  async function openMine() {
+    if (!signedIn) { location.href = 'login'; return; }
+    show('Mine');
+    document.title = 'My learning - ReSoK Virtual Academy';
+    const grid = el('mineGrid');
+    grid.textContent = '';
+    grid.appendChild(make('div', 'empty', 'Loading…'));
+    try {
+      const data = await api('/api/academy/my-courses');
+      renderGrid(grid, data.courses || [], {
+        withProgress: true,
+        emptyTitle: 'Nothing started yet',
+        emptyBody: 'Pick something from the catalogue and it will appear here.'
       });
+    } catch (error) {
+      grid.textContent = '';
+      grid.appendChild(make('div', 'empty', error.message || 'Could not load your courses.'));
+    }
+  }
+
+  /* ---------------- one course ---------------- */
+  async function openCourse(slug) {
+    show('Course');
+    el('cTitle').textContent = 'Loading…';
+    el('cSummary').textContent = '';
+    el('cOutline').textContent = '';
+    el('cFacts').textContent = '';
+    notice('cNotice', '');
+    try {
+      const data = await api('/api/academy/courses/' + encodeURIComponent(slug));
+      currentCourse = data.course;
+      currentEnrolment = data.enrolment;
+      renderCourse();
+    } catch (error) {
+      el('cTitle').textContent = 'Course not found';
+      el('cSummary').textContent = error.message || 'That course is not in the catalogue.';
+      el('cEnrolBtn').hidden = true;
+    }
+  }
+
+  function renderCourse() {
+    const c = currentCourse;
+    document.title = c.title + ' - ReSoK Virtual Academy';
+    el('cCategory').textContent = c.category || 'Course';
+    el('cTitle').textContent = c.title;
+    el('cSummary').textContent = c.summary || '';
+    el('cEnrolBtn').hidden = false;
+
+    const facts = el('cFacts');
+    facts.textContent = '';
+    const fact = (iconClass, text) => {
+      const span = make('span');
+      span.appendChild(make('i', 'fas ' + iconClass));
+      span.appendChild(document.createTextNode(text));
+      facts.appendChild(span);
+    };
+    fact('fa-clock', c.duration);
+    fact('fa-layer-group', (c.lessonCount || 0) + ' lessons');
+    fact('fa-signal', c.level);
+    if (c.certificateEnabled) fact('fa-award', 'Certificate on completion');
+    if (c.membersOnly) fact('fa-id-card', 'ReSoK members only');
+
+    const description = el('cDescription');
+    description.textContent = '';
+    (c.description || '').split(/\n+/).filter(Boolean)
+      .forEach((para) => description.appendChild(make('p', null, para)));
+
+    const enrolled = !!currentEnrolment;
+    el('cProgressWrap').hidden = !enrolled;
+    if (enrolled) {
+      el('cProgressBar').style.width = Math.max(3, currentEnrolment.progress) + '%';
+      el('cProgressText').textContent = currentEnrolment.completedAt
+        ? 'Finished' : currentEnrolment.progress + '% complete';
     }
 
-    const lessonIcon = (kind) => ({
-      video: 'fa-play', text: 'fa-align-left', slides: 'fa-images',
-      document: 'fa-file-lines', link: 'fa-arrow-up-right-from-square'
-    }[kind] || 'fa-circle');
+    const button = el('cEnrolBtn');
+    button.textContent = '';
+    if (!signedIn) {
+      button.appendChild(make('i', 'fas fa-right-to-bracket'));
+      button.appendChild(document.createTextNode(' Sign in to enrol'));
+    } else if (enrolled) {
+      button.appendChild(make('i', 'fas fa-play'));
+      button.appendChild(document.createTextNode(
+        currentEnrolment.progress > 0 ? ' Continue learning' : ' Start the course'));
+    } else {
+      button.appendChild(make('i', 'fas fa-plus'));
+      button.appendChild(document.createTextNode(' Enrol — free'));
+    }
+    renderOutline();
+  }
 
-    el('cEnrolBtn').addEventListener('click', async () => {
-      if (!signedIn) { location.href = 'login'; return; }
-      if (currentEnrolment) {
-        const next = firstUnfinishedLesson();
-        if (next) go('lesson/' + next);
-        return;
+  function renderOutline() {
+    const mount = el('cOutline');
+    mount.textContent = '';
+    const enrolled = !!currentEnrolment;
+    const done = enrolled ? currentEnrolment.lessons : {};
+
+    (currentCourse.modules || []).forEach((module, index) => {
+      const box = make('div', 'mod');
+      const head = make('div', 'mod-h');
+      head.appendChild(make('b', null, 'Module ' + (index + 1) + ' · ' + module.title));
+      if (module.summary) head.appendChild(make('small', null, module.summary));
+      box.appendChild(head);
+
+      if (!module.lessons.length) box.appendChild(make('div', 'les', 'No lessons in this module yet.'));
+      module.lessons.forEach((lesson) => {
+        const complete = !!(done[lesson.id] && done[lesson.id].completed);
+        const row = make('div', 'les' + (complete ? ' done' : '') + (enrolled ? ' open' : ''));
+        const ic = make('div', 'ic');
+        ic.appendChild(make('i', 'fas ' + (complete ? 'fa-check' : (LESSON_ICON[lesson.kind] || 'fa-circle'))));
+        row.appendChild(ic);
+        row.appendChild(make('span', null, lesson.title));
+        row.appendChild(make('span', 'mins', lesson.minutes ? lesson.minutes + ' min' : ''));
+        // Inert until enrolled, so a lesson never opens onto a refusal.
+        if (enrolled) row.addEventListener('click', () => go('lesson/' + lesson.id));
+        box.appendChild(row);
+      });
+      mount.appendChild(box);
+    });
+  }
+
+  el('cEnrolBtn').addEventListener('click', async () => {
+    if (!signedIn) { location.href = 'login'; return; }
+    if (currentEnrolment) {
+      const next = firstUnfinishedLesson();
+      if (next) go('lesson/' + next);
+      return;
+    }
+    const button = el('cEnrolBtn');
+    button.disabled = true;
+    try {
+      const data = await api('/api/academy/courses/' + encodeURIComponent(currentCourse.slug) + '/enrol',
+                             { method: 'POST', body: '{}' });
+      currentEnrolment = data.enrolment;
+      notice('cNotice', 'You are enrolled. Your progress is kept from here on.', 'info');
+      renderCourse();
+    } catch (error) {
+      notice('cNotice', error.message || 'Could not enrol you.', 'bad');
+    }
+    button.disabled = false;
+  });
+
+  /** The lesson "continue" opens - the first unfinished one, else the first. */
+  function firstUnfinishedLesson() {
+    const done = currentEnrolment ? currentEnrolment.lessons : {};
+    let first = null;
+    for (const module of currentCourse.modules || []) {
+      for (const lesson of module.lessons) {
+        if (first === null) first = lesson.id;
+        if (!(done[lesson.id] && done[lesson.id].completed)) return lesson.id;
       }
-      const button = el('cEnrolBtn');
-      button.disabled = true;
-      try {
-        const data = await api('/api/academy/courses/' + encodeURIComponent(currentCourse.slug) + '/enrol',
-                               { method: 'POST', body: '{}' });
-        currentEnrolment = data.enrolment;
-        notice('cNotice', 'You are enrolled. Your progress is kept from here on.', 'info');
-        renderCourse();
-      } catch (error) {
-        notice('cNotice', error.message || 'Could not enrol you.', 'bad');
+    }
+    return first;
+  }
+
+  function notice(id, message, kind) {
+    const box = el(id);
+    box.textContent = '';
+    if (!message) return;
+    box.appendChild(make('div', 'note ' + (kind || 'info'), message));
+  }
+
+  /* ---------------- lesson player ---------------- */
+  async function openLesson(lessonId) {
+    show('Lesson');
+    el('lTitle').textContent = 'Loading…';
+    el('lBody').textContent = '';
+    el('lMedia').textContent = '';
+    notice('lNotice', '');
+    try {
+      const data = await api('/api/academy/lessons/' + lessonId);
+      currentLesson = data.lesson;
+      openedAt = Date.now();
+      if (!currentCourse || currentCourse.id !== currentLesson.courseId) {
+        const course = await api('/api/academy/courses/' + currentLesson.courseId);
+        currentCourse = course.course;
+        currentEnrolment = course.enrolment;
       }
+      renderLesson();
+    } catch (error) {
+      el('lTitle').textContent = 'Not available';
+      notice('lNotice', error.message || 'That lesson could not be opened.', 'bad');
+    }
+  }
+
+  function renderLesson() {
+    const l = currentLesson;
+    document.title = l.title + ' - ReSoK Virtual Academy';
+    el('lModule').textContent = l.moduleTitle || '';
+    el('lTitle').textContent = l.title;
+
+    const media = el('lMedia');
+    media.textContent = '';
+    if (l.kind === 'video' && l.source) {
+      const frame = make('div', 'frame');
+      const iframe = document.createElement('iframe');
+      // Built from an extracted id, never from the stored string directly, so a lesson
+      // source cannot turn into an arbitrary embedded page.
+      iframe.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(youTubeId(l.source));
+      iframe.title = l.title;
+      iframe.allow = 'accelerometer; clipboard-write; encrypted-media; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'no-referrer';
+      frame.appendChild(iframe);
+      media.appendChild(frame);
+    } else if (l.source) {
+      const link = make('a', 'btn btn-ghost');
+      link.href = l.source;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.marginBottom = '18px';
+      link.appendChild(make('i', 'fas fa-arrow-up-right-from-square'));
+      link.appendChild(document.createTextNode(
+        l.kind === 'slides' ? ' Open the slides'
+        : l.kind === 'document' ? ' Open the document' : ' Open the resource'));
+      media.appendChild(link);
+    }
+
+    const body = el('lBody');
+    body.textContent = '';
+    (l.body || '').split(/\n+/).filter(Boolean)
+      .forEach((para) => body.appendChild(make('p', null, para)));
+
+    const doneBtn = el('lDoneBtn');
+    doneBtn.textContent = '';
+    doneBtn.disabled = !!l.completed;
+    doneBtn.appendChild(make('i', 'fas ' + (l.completed ? 'fa-check-circle' : 'fa-check')));
+    doneBtn.appendChild(document.createTextNode(l.completed ? ' Done' : ' Mark as done'));
+    renderSidebar();
+  }
+
+  /** A YouTube id from a bare id or any of the usual URL shapes. */
+  function youTubeId(source) {
+    const text = String(source).trim();
+    if (/^[A-Za-z0-9_-]{6,20}$/.test(text)) return text;
+    const match = text.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,20})/);
+    return match ? match[1] : text;
+  }
+
+  function renderSidebar() {
+    el('sCourseTitle').textContent = currentCourse ? currentCourse.title : '';
+    el('sProgress').textContent = currentEnrolment ? currentEnrolment.progress + '% complete' : '';
+
+    const mount = el('sLessons');
+    mount.textContent = '';
+    const done = currentEnrolment ? currentEnrolment.lessons : {};
+    let previous = null;
+    let nextId = null;
+
+    (currentCourse ? currentCourse.modules : []).forEach((module) => {
+      module.lessons.forEach((lesson) => {
+        const complete = !!(done[lesson.id] && done[lesson.id].completed);
+        const isCurrent = lesson.id === currentLesson.id;
+        const row = make('div', 'les open' + (complete ? ' done' : '') + (isCurrent ? ' current' : ''));
+        const ic = make('div', 'ic');
+        ic.appendChild(make('i', 'fas ' + (complete ? 'fa-check' : (LESSON_ICON[lesson.kind] || 'fa-circle'))));
+        row.appendChild(ic);
+        row.appendChild(make('span', null, lesson.title));
+        row.addEventListener('click', () => go('lesson/' + lesson.id));
+        mount.appendChild(row);
+
+        if (previous === currentLesson.id && nextId === null) nextId = lesson.id;
+        previous = lesson.id;
+      });
+    });
+
+    const nextBtn = el('lNextBtn');
+    nextBtn.hidden = nextId === null;
+    nextBtn.onclick = () => go('lesson/' + nextId);
+  }
+
+  el('lDoneBtn').addEventListener('click', async () => {
+    if (!currentLesson) return;
+    const button = el('lDoneBtn');
+    button.disabled = true;
+    try {
+      // Seconds since the lesson opened. Bounded on the server too - a tab left open
+      // overnight must not record fourteen hours against a six-minute lesson.
+      const seconds = Math.round((Date.now() - openedAt) / 1000);
+      const data = await api('/api/academy/lessons/' + currentLesson.id + '/progress', {
+        method: 'POST', body: JSON.stringify({ seconds, completed: true })
+      });
+      currentEnrolment = data.enrolment;
+      currentLesson.completed = true;
+      renderLesson();
+      if (currentEnrolment.completedAt) {
+        notice('lNotice', 'That was the last lesson — the course is complete.', 'info');
+      }
+    } catch (error) {
+      notice('lNotice', error.message || 'Could not record that.', 'bad');
       button.disabled = false;
-    });
-
-    /** The lesson to open on "continue" - the first one not yet finished, else the first. */
-    function firstUnfinishedLesson() {
-      const done = currentEnrolment ? currentEnrolment.lessons : {};
-      let first = null;
-      for (const module of currentCourse.modules || []) {
-        for (const lesson of module.lessons) {
-          if (first === null) first = lesson.id;
-          if (!(done[lesson.id] && done[lesson.id].completed)) return lesson.id;
-        }
-      }
-      return first;
     }
+  });
 
-    function notice(id, message, kind) {
-      const box = el(id);
-      box.textContent = '';
-      if (!message) return;
-      box.appendChild(make('div', 'note ' + (kind || 'info'), message));
+  /* ---------------- explore menu ---------------- */
+  const closeExplore = () => {
+    el('exploreMenu').hidden = true;
+    el('exploreBtn').setAttribute('aria-expanded', 'false');
+  };
+  el('exploreBtn').addEventListener('click', (event) => {
+    event.stopPropagation();
+    const menu = el('exploreMenu');
+    menu.hidden = !menu.hidden;
+    el('exploreBtn').setAttribute('aria-expanded', String(!menu.hidden));
+  });
+  document.addEventListener('click', (event) => {
+    if (!el('exploreMenu').hidden && !event.target.closest('.explore')) closeExplore();
+  });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeExplore(); });
+
+  /* ---------------- wiring ---------------- */
+  let searchTimer = null;
+  const setSearch = (value, mirrorId) => {
+    search = value;
+    if (mirrorId) el(mirrorId).value = value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      if (location.hash.slice(1) !== '') go('');
+      applyFilters();
+    }, 250);
+  };
+  el('topSearch').addEventListener('input', (e) => setSearch(e.target.value, 'heroSearch'));
+  el('heroSearch').addEventListener('input', (e) => setSearch(e.target.value, 'topSearch'));
+  el('heroForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    applyFilters();
+    el('coursesBand').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  el('sort').addEventListener('change', applyFilters);
+  document.querySelectorAll('input[name="level"]').forEach((input) => {
+    input.addEventListener('change', () => { filterLevel = input.value; applyFilters(); });
+  });
+  el('clearFilters').addEventListener('click', () => {
+    filterCategory = '';
+    filterLevel = '';
+    search = '';
+    el('topSearch').value = '';
+    el('heroSearch').value = '';
+    document.querySelector('input[name="level"][value=""]').checked = true;
+    renderCategoryFilter();
+    applyFilters();
+  });
+
+  el('courseBack').addEventListener('click', () => go(''));
+  el('mineBack').addEventListener('click', () => go(''));
+  el('lessonBack').addEventListener('click', () => {
+    if (currentCourse) go('course/' + currentCourse.slug); else go('');
+  });
+  el('myLearningBtn').addEventListener('click', () => go('mine'));
+  document.querySelectorAll('[data-nav]').forEach((link) => {
+    link.addEventListener('click', (event) => { event.preventDefault(); go(link.dataset.nav); });
+  });
+  window.addEventListener('hashchange', route);
+
+  async function boot() {
+    // Whether anyone is signed in is asked once, with a call that is meaningless to an
+    // anonymous visitor and harmless when it fails. Everything session-shaped waits for it.
+    try {
+      await api('/api/academy/my-courses');
+      signedIn = true;
+    } catch (error) {
+      signedIn = false;
     }
-
-    /* ---------------- the lesson player ---------------- */
-    async function openLesson(lessonId) {
-      show('Lesson');
-      el('lTitle').textContent = 'Loading…';
-      el('lBody').textContent = '';
-      el('lMedia').textContent = '';
-      notice('lNotice', '');
-      try {
-        const data = await api('/api/academy/lessons/' + lessonId);
-        currentLesson = data.lesson;
-        openedAt = Date.now();
-        // The course may not be loaded if the lesson was opened from a link.
-        if (!currentCourse || currentCourse.id !== currentLesson.courseId) {
-          const course = await api('/api/academy/courses/' + currentLesson.courseId);
-          currentCourse = course.course;
-          currentEnrolment = course.enrolment;
-        }
-        renderLesson();
-      } catch (error) {
-        el('lTitle').textContent = 'Not available';
-        notice('lNotice', error.message || 'That lesson could not be opened.', 'bad');
-      }
-    }
-
-    function renderLesson() {
-      const l = currentLesson;
-      document.title = l.title + ' - ReSoK Virtual Academy';
-      el('lModule').textContent = l.moduleTitle || '';
-      el('lTitle').textContent = l.title;
-
-      const media = el('lMedia');
-      media.textContent = '';
-      if (l.kind === 'video' && l.source) {
-        const frame = make('div', 'frame');
-        const iframe = document.createElement('iframe');
-        // Built from the id rather than accepting a full URL from the record, so a lesson
-        // source can never turn into an arbitrary embedded page.
-        iframe.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(youTubeId(l.source));
-        iframe.title = l.title;
-        iframe.allow = 'accelerometer; clipboard-write; encrypted-media; picture-in-picture';
-        iframe.allowFullscreen = true;
-        iframe.referrerPolicy = 'no-referrer';
-        frame.appendChild(iframe);
-        media.appendChild(frame);
-      } else if (l.source) {
-        const link = make('a', 'btn btn-ghost');
-        link.href = l.source;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.appendChild(make('i', 'fas fa-arrow-up-right-from-square'));
-        link.appendChild(document.createTextNode(
-          l.kind === 'slides' ? ' Open the slides' :
-          l.kind === 'document' ? ' Open the document' : ' Open the resource'));
-        media.appendChild(link);
-      }
-
-      const body = el('lBody');
-      body.textContent = '';
-      (l.body || '').split(/\n+/).filter(Boolean)
-        .forEach((para) => body.appendChild(make('p', null, para)));
-
-      const doneBtn = el('lDoneBtn');
-      doneBtn.disabled = false;
-      doneBtn.textContent = '';
-      if (l.completed) {
-        doneBtn.appendChild(make('i', 'fas fa-check-circle'));
-        doneBtn.appendChild(document.createTextNode(' Done'));
-        doneBtn.disabled = true;
-      } else {
-        doneBtn.appendChild(make('i', 'fas fa-check'));
-        doneBtn.appendChild(document.createTextNode(' Mark as done'));
-      }
-      renderSidebar();
-    }
-
-    /** A YouTube id from either a bare id or any of the usual URL shapes. */
-    function youTubeId(source) {
-      const text = String(source).trim();
-      if (/^[A-Za-z0-9_-]{6,20}$/.test(text)) return text;
-      const match = text.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,20})/);
-      return match ? match[1] : text;
-    }
-
-    function renderSidebar() {
-      el('sCourseTitle').textContent = currentCourse ? currentCourse.title : '';
-      el('sProgress').textContent = currentEnrolment
-        ? currentEnrolment.progress + '% complete' : '';
-
-      const mount = el('sLessons');
-      mount.textContent = '';
-      const done = currentEnrolment ? currentEnrolment.lessons : {};
-      let previous = null;
-      let nextId = null;
-
-      (currentCourse ? currentCourse.modules : []).forEach((module) => {
-        module.lessons.forEach((lesson) => {
-          const complete = !!(done[lesson.id] && done[lesson.id].completed);
-          const isCurrent = lesson.id === currentLesson.id;
-          const row = make('div', 'les open' + (complete ? ' done' : '') + (isCurrent ? ' current' : ''));
-          const ic = make('div', 'ic');
-          ic.appendChild(make('i', 'fas ' + (complete ? 'fa-check' : lessonIcon(lesson.kind))));
-          row.appendChild(ic);
-          row.appendChild(make('span', null, lesson.title));
-          row.addEventListener('click', () => go('lesson/' + lesson.id));
-          mount.appendChild(row);
-
-          if (previous === currentLesson.id && nextId === null) nextId = lesson.id;
-          previous = lesson.id;
-        });
-      });
-
-      const nextBtn = el('lNextBtn');
-      nextBtn.hidden = nextId === null;
-      nextBtn.onclick = () => go('lesson/' + nextId);
-    }
-
-    el('lDoneBtn').addEventListener('click', async () => {
-      if (!currentLesson) return;
-      const button = el('lDoneBtn');
-      button.disabled = true;
-      try {
-        // Seconds since the lesson opened. Bounded server-side too - a tab left open
-        // overnight must not record fourteen hours against a six-minute lesson.
-        const seconds = Math.round((Date.now() - openedAt) / 1000);
-        const data = await api('/api/academy/lessons/' + currentLesson.id + '/progress', {
-          method: 'POST', body: JSON.stringify({ seconds, completed: true })
-        });
-        currentEnrolment = data.enrolment;
-        currentLesson.completed = true;
-        renderLesson();
-        if (currentEnrolment.completedAt) {
-          notice('lNotice', 'That was the last lesson - the course is complete.', 'info');
-        }
-      } catch (error) {
-        notice('lNotice', error.message || 'Could not record that.', 'bad');
-        button.disabled = false;
-      }
-    });
-
-    /* ---------------- boot ---------------- */
-    el('courseBack').addEventListener('click', () => go(''));
-    el('mineBack').addEventListener('click', () => go(''));
-    el('lessonBack').addEventListener('click', () => {
-      if (currentCourse) go('course/' + currentCourse.slug); else go('');
-    });
-    el('myCoursesBtn').addEventListener('click', () => go('mine'));
-
-    let searchTimer = null;
-    el('q').addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(loadCatalogue, 300);
-    });
-    el('category').addEventListener('change', loadCatalogue);
-    el('level').addEventListener('change', loadCatalogue);
-    window.addEventListener('hashchange', route);
-
-    async function boot() {
-      // Whether anyone is signed in is asked once, with a call that is meaningless to an
-      // anonymous visitor and harmless when it fails. Everything session-shaped on the page
-      // waits for the answer.
-      try {
-        await api('/api/academy/my-courses');
-        signedIn = true;
-      } catch (error) {
-        signedIn = false;
-      }
-      el('myCoursesBtn').hidden = !signedIn;
-      el('portalLink').hidden = !signedIn;
-      el('signInLink').hidden = signedIn;
-      route();
-    }
-    boot();
-  })();
-  </script>
+    el('myLearningBtn').hidden = !signedIn;
+    el('portalLink').hidden = !signedIn;
+    el('signInLink').hidden = signedIn;
+    await loadCatalogue();
+    route();
+  }
+  boot();
+})();
+</script>
 </body>
 </html>

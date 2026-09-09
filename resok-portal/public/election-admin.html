@@ -453,6 +453,19 @@
           + ' · ' + p.maxChoices + ' choice' + (p.maxChoices === 1 ? '' : 's') + ' per voter'
           + ' · ' + p.candidates.filter((c) => c.standing).length + ' standing'));
         head.appendChild(grow);
+        // Removing a post takes its candidates and nominations with it, so the confirmation
+        // says so rather than leaving the officer to find out.
+        if (!current.election.locked) {
+          const remove = make('button', 'btn btn-danger btn-sm', 'Remove');
+          remove.type = 'button';
+          remove.addEventListener('click', () => {
+            const n = p.candidates.length;
+            if (!window.confirm('Remove ' + p.title + '?'
+                + (n ? ' This also removes ' + n + ' nomination(s) or candidate(s) on it.' : ''))) return;
+            removeThing('position', p.id);
+          });
+          head.appendChild(remove);
+        }
         mount.appendChild(head);
 
         p.candidates.forEach((c) => {
@@ -468,9 +481,28 @@
             approve.addEventListener('click', () => approveCandidate(p.id, c));
             row.appendChild(approve);
           }
+          if (!current.election.locked) {
+            const drop = make('button', 'btn btn-danger btn-sm', 'Remove');
+            drop.type = 'button';
+            drop.addEventListener('click', () => {
+              if (!window.confirm('Remove ' + c.name + ' from ' + p.title + '?')) return;
+              removeThing('candidate', c.id);
+            });
+            row.appendChild(drop);
+          }
           mount.appendChild(row);
         });
       });
+    }
+
+    async function removeThing(what, id) {
+      try {
+        await api('/api/admin/elections/' + what + '/' + id, { method: 'DELETE' });
+        notice('postNotice', '');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('postNotice', error.message || 'That could not be removed.', 'bad');
+      }
     }
 
     async function approveCandidate(positionId, candidate) {

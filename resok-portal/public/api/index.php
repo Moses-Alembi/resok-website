@@ -2189,6 +2189,15 @@ Respiratory Society of Kenya");
         respond(200, ['roll' => $summary]);
     }
 
+    if (preg_match('#^admin/elections/(position|candidate)/(\d+)$#', $route, $m) && $method === 'DELETE') {
+        $user = auth($config);
+        requireModule('electionDelete', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        [$positions, $error] = electionDelete($pdo, $m[1], (int)$m[2]);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['positions' => $positions]);
+    }
+
     if (preg_match('#^admin/elections/(\d+)/randomise$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
         requireModule('electionRandomiseBallot', 'lib/elections.php');

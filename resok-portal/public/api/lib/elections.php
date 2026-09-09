@@ -1166,3 +1166,45 @@ function electionNominatableMembers(PDO $pdo, int $electionId): array
         'membershipId'    => $r['membership_id'],
     ], $stmt->fetchAll());
 }
+
+/**
+ * Removes a post, or a candidate, while the election can still be edited.
+ *
+ * Guarded by the same lock as every other edit: once voting has opened nothing goes, because
+ * deleting a post that people have already voted on would destroy their ballots and leave a
+ * turnout figure that no longer reconciles with anything.
+ *
+ * Deleting a post takes its candidates and their nominations with it, which is right - they
+ * exist only in relation to a post that is no longer being contested.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function electionDelete(PDO $pdo, string $what, int $id): array
+{
+    if (!electionsEnsureTables($pdo)) return [null, 'The election tables are not available.'];
+
+    if ($what === 'position') {
+        $stmt = $pdo->prepare('SELECT election_id FROM election_positions WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row) return [null, 'That post does not exist.'];
+        $electionId = (int)$row['election_id'];
+        [$election, $error] = electionRequireUnlocked($pdo, $electionId);
+        if ($error) return [null, $error];
+        $pdo->prepare('DELETE FROM election_positions WHERE id = ?')->execute([$id]);
+    } elseif ($what === 'candidate') {
+        $stmt = $pdo->prepare('SELECT p.election_id FROM election_candidates c
+                               JOIN election_positions p ON p.id = c.position_id
+                               WHERE c.id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row) return [null, 'That candidate does not exist.'];
+        $electionId = (int)$row['election_id'];
+        [$election, $error] = electionRequireUnlocked($pdo, $electionId);
+        if ($error) return [null, $error];
+        $pdo->prepare('DELETE FROM election_candidates WHERE id = ?')->execute([$id]);
+    } else {
+        return [null, 'Unknown thing to delete.'];
+    }
+    return [electionPositions($pdo, $electionId), null];
+}

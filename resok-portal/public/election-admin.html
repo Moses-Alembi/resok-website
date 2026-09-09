@@ -146,6 +146,30 @@
         <div class="steps" id="eSteps"></div>
         <div id="eLock"></div>
         <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap" id="eTransitions"></div>
+
+        <div id="editBox" hidden style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">
+          <h3>Correct the details</h3>
+          <p class="lede">
+            Titles and dates can be corrected until voting opens. After that they are part of
+            what people relied on when they voted, and moving a closing time to admit or
+            exclude late ballots is exactly what an election must be unable to do.
+          </p>
+          <div style="display:grid;gap:12px;margin-top:14px;max-width:720px">
+            <label><span>Title</span><input class="in" id="eeTitle" /></label>
+            <label><span>Description</span><textarea class="in" id="eeDescription" rows="2"></textarea></label>
+            <label style="max-width:220px"><span>Membership judged on</span><input class="in" id="eeCutoff" type="date" /></label>
+            <div class="grid2">
+              <label><span>Nominations open</span><input class="in" id="eeNomOpen" type="datetime-local" /></label>
+              <label><span>Nominations close</span><input class="in" id="eeNomClose" type="datetime-local" /></label>
+            </div>
+            <div class="grid2">
+              <label><span>Voting opens</span><input class="in" id="eeOpens" type="datetime-local" /></label>
+              <label><span>Voting closes</span><input class="in" id="eeCloses" type="datetime-local" /></label>
+            </div>
+            <div><button class="btn btn-primary" id="eeSave" type="button">Save changes</button></div>
+          </div>
+          <div id="editNotice"></div>
+        </div>
       </section>
 
       <section class="panel">
@@ -361,6 +385,20 @@
           + 'and cannot be changed.'));
       }
 
+      // Editing is offered only while the election can still be changed. The lock notice
+      // above already says why it disappears, so this does not repeat it.
+      el('editBox').hidden = !!e.locked;
+      if (!e.locked) {
+        const forDatetime = (v) => v ? String(v).replace(' ', 'T').slice(0, 16) : '';
+        el('eeTitle').value = e.title || '';
+        el('eeDescription').value = e.description || '';
+        el('eeCutoff').value = e.eligibilityCutoff ? String(e.eligibilityCutoff).slice(0, 10) : '';
+        el('eeNomOpen').value = forDatetime(e.nominationsOpenAt);
+        el('eeNomClose').value = forDatetime(e.nominationsCloseAt);
+        el('eeOpens').value = forDatetime(e.opensAt);
+        el('eeCloses').value = forDatetime(e.closesAt);
+      }
+
       const actions = el('eTransitions');
       actions.textContent = '';
       const move = (status, label, style) => {
@@ -494,6 +532,31 @@
         });
       });
     }
+
+    el('eeSave').addEventListener('click', async () => {
+      const button = el('eeSave');
+      button.disabled = true;
+      notice('editNotice', '');
+      try {
+        await api('/api/admin/elections/' + current.election.id, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            title: el('eeTitle').value.trim(),
+            description: el('eeDescription').value.trim(),
+            eligibilityCutoff: el('eeCutoff').value,
+            nominationsOpenAt: el('eeNomOpen').value,
+            nominationsCloseAt: el('eeNomClose').value,
+            opensAt: el('eeOpens').value,
+            closesAt: el('eeCloses').value
+          })
+        });
+        notice('editNotice', 'Saved.', 'ok');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('editNotice', error.message || 'Nothing was changed.', 'bad');
+      }
+      button.disabled = false;
+    });
 
     async function recordAcceptance(n) {
       const note = window.prompt(

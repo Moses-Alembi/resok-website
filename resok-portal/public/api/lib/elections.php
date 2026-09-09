@@ -1311,3 +1311,98 @@ function electionRecordExternalAcceptance(PDO $pdo, int $candidateId, ?int $admi
 
     return [electionNominations($pdo, (int)$candidate['election_id']), null];
 }
+
+/**
+ * Changes an election's own details: title, description, dates.
+ *
+ * Missing until now, which meant a date typed wrongly at creation was permanent - the
+ * election had to be cancelled and set up again. Everything else about an election could be
+ * corrected before it opened; its own dates could not.
+ *
+ * Guarded by the same lock as every other edit. Before voting opens a date is a plan and can
+ * be corrected; after it opens the dates are part of what people relied on when they voted,
+ * and moving a closing time to admit or exclude late ballots is precisely the kind of change
+ * an election has to be unable to make.
+ *
+ * The slug is never regenerated. It is the public address of the election, so a title
+ * corrected after members have been sent a link must not break the link.
+ *
+ * @param array<string,mixed> $data
+ * @return array{0:?array,1:?string}
+ */
+function electionUpdate(PDO $pdo, int $electionId, array $data): array
+{
+    [$election, $error] = electionRequireUnlocked($pdo, $electionId);
+    if ($error) return [null, $error];
+
+    $set = [];
+    $args = [];
+
+    if (array_key_exists('title', $data)) {
+        $title = trim((string)$data['title']);
+        if ($title === '') return [null, 'An election needs a title.'];
+        $set[] = 'title = ?';
+        $args[] = mb_substr($title, 0, 200);
+    }
+    if (array_key_exists('description', $data)) {
+        $set[] = 'description = ?';
+        $args[] = trim((string)$data['description']) ?: null;
+    }
+
+    // Dates are validated together, against whatever the election will hold after the change
+    // rather than against what was sent. Checking only the supplied fields would let a
+    // closing date be moved before an opening date that was not part of this edit.
+    $when = [
+        'nominations_open_at'  => $data['nominationsOpenAt']  ?? $election['nominationsOpenAt'],
+        'nominations_close_at' => $data['nominationsCloseAt'] ?? $election['nominationsCloseAt'],
+        'opens_at'             => $data['opensAt']            ?? $election['opensAt'],
+        'closes_at'            => $data['closesAt']           ?? $election['closesAt'],
+    ];
+    $clean = [];
+    foreach ($when as $column => $value) {
+        $value = trim((string)($value ?? ''));
+        if ($value === '') { $clean[$column] = null; continue; }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2})?/', $value)) {
+            return [null, 'One of the dates is not a valid date and time.'];
+        }
+        $clean[$column] = str_replace('T', ' ', $value);
+    }
+    if (!$clean['opens_at'] || !$clean['closes_at']) {
+        return [null, 'Voting needs an opening and a closing date.'];
+    }
+    if (strtotime($clean['closes_at']) <= strtotime($clean['opens_at'])) {
+        return [null, 'Voting must close after it opens.'];
+    }
+    if (($clean['nominations_open_at'] === null) !== ($clean['nominations_close_at'] === null)) {
+        return [null, 'Give both nomination dates, or neither.'];
+    }
+    if ($clean['nominations_open_at'] !== null) {
+        if (strtotime($clean['nominations_close_at']) <= strtotime($clean['nominations_open_at'])) {
+            return [null, 'Nominations must close after they open.'];
+        }
+        if (strtotime($clean['nominations_close_at']) > strtotime($clean['opens_at'])) {
+            return [null, 'Nominations must close before voting opens.'];
+        }
+    }
+    foreach ($clean as $column => $value) {
+        $set[] = $column . ' = ?';
+        $args[] = $value;
+    }
+
+    if (array_key_exists('eligibilityCutoff', $data)) {
+        $cutoff = trim((string)$data['eligibilityCutoff']);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $cutoff)) {
+            return [null, 'Give the date membership is judged on.'];
+        }
+        $set[] = 'eligibility_cutoff = ?';
+        $args[] = $cutoff;
+    }
+
+    // No "nothing to change" branch: the four dates are always written back, because they
+    // are validated as a set against what the election will hold afterwards rather than as
+    // whatever the caller happened to send. Rewriting them with their own values is what
+    // makes a partial edit - a title on its own - safe to check against the full picture.
+    $args[] = $electionId;
+    $pdo->prepare('UPDATE elections SET ' . implode(', ', $set) . ' WHERE id = ?')->execute($args);
+    return [electionFind($pdo, (string)$electionId), null];
+}

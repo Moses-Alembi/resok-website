@@ -2150,6 +2150,17 @@ Respiratory Society of Kenya");
         ]);
     }
 
+    if (preg_match('#^admin/elections/(\d+)$#', $route, $m)
+        && in_array($method, ['PATCH', 'PUT'], true)) {
+        $user = auth($config);
+        requireModule('electionUpdate', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        [$election, $error] = electionUpdate($pdo, (int)$m[1], input());
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'election_updated', null, $election['title']);
+        respond(200, ['election' => $election]);
+    }
+
     if (preg_match('#^admin/elections/(\d+)/positions$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
         requireModule('electionPositionSave', 'lib/elections.php');

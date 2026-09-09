@@ -54,6 +54,7 @@ function migrateOrder(): array
     return [
         'schema.sql',                          // users, member_profiles, payments, CPD
         'migration-membership-live-fields.sql',// alters member_profiles
+        'migration-membership-renewal.sql',    // alters member_profiles; renewal bookkeeping
         'schema-security.sql',                 // alters users; rate limiting, event log
         'schema-events.sql',                   // cpd_events
         'schema-tokens.sql',                   // attendance and CPD tokens

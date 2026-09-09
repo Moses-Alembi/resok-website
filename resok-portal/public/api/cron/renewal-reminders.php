@@ -2,15 +2,31 @@
 declare(strict_types=1);
 
 /**
- * Renewal reminder cron. Run once a day via cPanel's Cron Jobs (or any scheduler):
+ * Renewal reminders, and the lapse that follows them. Run once a day via cPanel's Cron Jobs
+ * (or any scheduler):
  *   php /path/to/resok-portal/public/api/cron/renewal-reminders.php
  * If the host only offers URL-triggered cron, this file also accepts
  * ?key=<cron_secret> as a GET request (set cron_secret in config.php first).
+ *
+ * This used to match the renewal date exactly - renewal_due = today + 30, + 14, + 1 - which
+ * meant a reminder existed only on one calendar day. If the job did not run that day, for
+ * any of the ordinary reasons a shared host misses a job, that reminder was gone: the next
+ * morning the date no longer matched and nothing would ever match it again. The member's
+ * first news of their renewal was the day it fell due.
+ *
+ * It now works from how far away the date is rather than which day it is, and records the
+ * most urgent band already sent. A run that is missed for a week catches everybody up on the
+ * next run, at whichever stage they have reached by then, and still sends each stage once.
+ *
+ * The second pass is the lapse. Marking the status changes nothing a member can feel -
+ * benefits are decided by the dates, and ended when grace ran out - but it makes the state
+ * queryable, and it is the moment to send one notice.
  */
 
 $isCli = PHP_SAPI === 'cli';
 $config = require __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/portal-mail.php';
+require_once __DIR__ . '/../lib/membership.php';
 
 if (!$isCli) {
     $providedKey = $_GET['key'] ?? '';
@@ -36,34 +52,71 @@ if (empty($columns['last_reminder_days'])) {
     $pdo->exec('ALTER TABLE member_profiles ADD COLUMN last_reminder_days INT NULL AFTER renewal_due');
 }
 
-$reminderDays = [30, 14, 1];
+$reminderBands = MEMBERSHIP_REMINDER_BANDS;
+
 $sent = 0;
+$lapsed = 0;
+$notified = 0;
 
-foreach ($reminderDays as $days) {
-    $stmt = $pdo->prepare(
-        "SELECT mp.*, u.email
-         FROM member_profiles mp
-         JOIN users u ON u.id = mp.user_id
-         WHERE mp.membership_status = 'active'
-           AND mp.renewal_due = DATE_ADD(CURDATE(), INTERVAL ? DAY)
-           AND (mp.last_reminder_days IS NULL OR mp.last_reminder_days <> ?)"
+/* ----------------------------------------------------------------------------------------
+ * Pass one: reminders.
+ * -------------------------------------------------------------------------------------- */
+$stmt = $pdo->prepare(
+    "SELECT mp.*, u.email
+     FROM member_profiles mp
+     JOIN users u ON u.id = mp.user_id
+     WHERE mp.membership_status = 'active'
+       AND mp.renewal_due IS NOT NULL
+       AND mp.renewal_due >= CURDATE()
+       AND mp.renewal_due <= DATE_ADD(CURDATE(), INTERVAL ? DAY)"
+);
+$stmt->execute([max($reminderBands)]);
+
+foreach ($stmt->fetchAll() as $row) {
+    $days = membershipDaysUntil((string)$row['renewal_due']);
+    if ($days === null) continue;
+
+    $band = membershipReminderBand(
+        $days,
+        $row['last_reminder_days'] === null ? null : (int)$row['last_reminder_days'],
+        $reminderBands
     );
-    $stmt->execute([$days, $days]);
+    if ($band === null) continue;
 
-    foreach ($stmt->fetchAll() as $row) {
-        $member = [
-            'title' => $row['title'], 'firstName' => $row['first_name'], 'middleName' => $row['middle_name'], 'surname' => $row['surname'],
-            'email' => $row['email'], 'renewalDue' => $row['renewal_due']
-        ];
-        try {
-            if (sendRenewalReminderEmail($config, $member, $days)) {
-                $pdo->prepare('UPDATE member_profiles SET last_reminder_days = ? WHERE id = ?')->execute([$days, (int)$row['id']]);
-                $sent++;
-            }
-        } catch (Throwable $error) {
-            error_log('Renewal reminder failed for member_profile ' . $row['id'] . ': ' . $error->getMessage());
+    $member = [
+        'title' => $row['title'], 'firstName' => $row['first_name'],
+        'middleName' => $row['middle_name'], 'surname' => $row['surname'],
+        'email' => $row['email'], 'renewalDue' => $row['renewal_due']
+    ];
+    try {
+        // Recorded only on a successful send, so a mail failure is retried tomorrow instead
+        // of being remembered as a reminder the member never received.
+        if (sendRenewalReminderEmail($config, $member, $days)) {
+            $pdo->prepare('UPDATE member_profiles SET last_reminder_days = ? WHERE id = ?')
+                ->execute([$band, (int)$row['id']]);
+            $sent++;
         }
+    } catch (Throwable $error) {
+        error_log('Renewal reminder failed for member_profile ' . $row['id'] . ': ' . $error->getMessage());
+    }
+}
+
+/* ----------------------------------------------------------------------------------------
+ * Pass two: memberships whose grace has run out.
+ * -------------------------------------------------------------------------------------- */
+foreach (membershipMarkLapsed($pdo) as $row) {
+    $lapsed++;
+    $member = [
+        'title' => $row['title'], 'firstName' => $row['first_name'],
+        'middleName' => $row['middle_name'], 'surname' => $row['surname'],
+        'email' => $row['email'], 'renewalDue' => $row['renewal_due']
+    ];
+    try {
+        if (sendMembershipLapsedEmail($config, $member)) $notified++;
+    } catch (Throwable $error) {
+        error_log('Lapse notice failed for member_profile ' . $row['id'] . ': ' . $error->getMessage());
     }
 }
 
 echo "Renewal reminders sent: {$sent}\n";
+echo "Memberships lapsed: {$lapsed} (notified: {$notified})\n";

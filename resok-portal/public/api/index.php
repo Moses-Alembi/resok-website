@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'membership', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -476,7 +476,13 @@ function mapMember(?array $row): ?array {
         'membershipId' => $row['membership_id'],
         'cpdPoints' => (int)$row['cpd_points'],
         'renewalDue' => $row['renewal_due'],
-        'reviewReason' => $row['review_reason']
+        'reviewReason' => $row['review_reason'],
+        // What the dates actually mean today - whether the member is current, due, inside
+        // grace or lapsed, and whether benefits apply. Computed rather than read from the
+        // status column, so it is right on a day the lapse job has not run.
+        'standing' => function_exists('membershipStanding')
+            ? membershipStanding($row)
+            : ['standing' => 'unknown', 'benefits' => true, 'band' => 'notice', 'label' => '']
     ];
 }
 
@@ -2037,13 +2043,17 @@ Respiratory Society of Kenya");
         requireModule('academyEnrol', 'lib/academy.php');
 
         // Membership is read here rather than trusted from the token: a members-only course
-        // has to check the status as it is now, not as it was when the session started.
-        $stmt = $pdo->prepare('SELECT membership_status FROM member_profiles WHERE user_id = ? LIMIT 1');
-        $stmt->execute([(int)$user['userId']]);
-        $status = $stmt->fetch()['membership_status'] ?? null;
+        // has to check standing as it is now, not as it was when the session started.
+        //
+        // Standing rather than the status column, so a member inside their grace period
+        // keeps access - being a fortnight late on a subscription is not the same as having
+        // resigned - and one whose grace has run out loses it the day it runs out, without
+        // waiting for a nightly job to write the word 'expired' somewhere.
+        requireModule('membershipStandingForUser', 'lib/membership.php');
+        $standing = membershipStandingForUser($pdo, (int)$user['userId']);
 
         [$enrolment, $error] = academyEnrol($pdo, (int)$user['userId'], $m[1],
-                                            $status === null ? null : (string)$status);
+                                            $standing['benefits'] ? 'active' : 'lapsed');
         if ($error) respond(400, ['error' => $error]);
         respond(200, ['enrolment' => $enrolment]);
     }
@@ -3154,7 +3164,29 @@ Respiratory Society of Kenya");
 
         $pdo->prepare('UPDATE payments SET status = "paid" WHERE id = ?')->execute([(int)$m[1]]);
         if (!empty($payment['member_profile_id'])) {
-            $pdo->prepare('UPDATE member_profiles SET membership_status = CASE WHEN membership_status IN ("payment_required", "rejected") THEN "under_review" ELSE membership_status END WHERE id = ?')->execute([(int)$payment['member_profile_id']]);
+            $profileId = (int)$payment['member_profile_id'];
+            $stmt = $pdo->prepare('SELECT membership_status FROM member_profiles WHERE id = ? LIMIT 1');
+            $stmt->execute([$profileId]);
+            $before = (string)($stmt->fetch()['membership_status'] ?? '');
+
+            if (in_array($before, ['payment_required', 'rejected'], true)) {
+                // A first subscription still goes to a human. The renewal date is set when
+                // they are approved, because that is when the membership actually begins.
+                $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review",
+                               review_reason = NULL, reviewed_at = NOW() WHERE id = ?')
+                    ->execute([$profileId]);
+            } else {
+                // A renewal. This used to leave the record untouched, so a member paid and
+                // nothing moved - not the status, and not the date they were paying to
+                // extend. Renewals do not need re-approving: the membership was approved
+                // once, and paying is what continues it.
+                requireModule('membershipExtend', 'lib/membership.php');
+                $newDue = membershipExtend($pdo, $profileId);
+                if ($newDue !== null) {
+                    logAdminAction($pdo, (int)$user['userId'], 'membership_renewed', $profileId,
+                                   'Renewed to ' . $newDue);
+                }
+            }
         }
 
         $stmt = $pdo->prepare('SELECT * FROM payments WHERE id = ? LIMIT 1');

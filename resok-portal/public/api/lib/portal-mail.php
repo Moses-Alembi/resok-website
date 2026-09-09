@@ -227,6 +227,63 @@ function sendRenewalReminderEmail(array $config, array $member, int $daysLeft): 
 }
 
 /**
+ * The one notice sent when a membership has actually lapsed.
+ *
+ * Sent once, after the grace period, and deliberately not written as a warning: by this
+ * point the member has already had three reminders and a month of grace, so the useful
+ * content is what has changed and what puts it back, not another countdown.
+ *
+ * It says what they keep as well as what they lose. A member who thinks their account is
+ * gone does not come back; one who knows their record is intact and one payment away often
+ * does.
+ */
+function sendMembershipLapsedEmail(array $config, array $member): bool
+{
+    $email = (string)($member['email'] ?? '');
+    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) return false;
+
+    $name = portalMemberName($member);
+    $portal = rtrim((string)($config['portal_base_url'] ?? ''), '/') ?: 'https://www.resok.org/resok-portal/public';
+    $due = (string)($member['renewalDue'] ?? $member['renewal_due'] ?? '');
+
+    $text = "Dear {$name},
+
+"
+          . "Your ReSoK membership has now lapsed" . ($due ? " - it was due for renewal on {$due}" : '') . ".
+
+"
+          . "Your account, your profile and your CPD record are all unchanged. What has paused are "
+          . "the member benefits: your membership card, members-only courses and member rates at events.
+
+"
+          . "One payment restores everything: {$portal}/payment
+
+"
+          . "If you believe this is a mistake, or you have already paid, reply to this message and "
+          . "we will put it right.
+
+Respiratory Society of Kenya";
+
+    $html = brandedEmailHtml(
+        'Your ReSoK membership has lapsed',
+        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Dear ' . htmlspecialchars($name, ENT_QUOTES) . ',</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Your ReSoK membership has now lapsed'
+        . ($due ? ' &mdash; it was due for renewal on <strong>' . htmlspecialchars($due, ENT_QUOTES) . '</strong>' : '')
+        . '.</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Your account, your profile and your CPD '
+        . 'record are all unchanged. What has paused are the member benefits: your membership card, '
+        . 'members-only courses, and member rates at events.</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">One payment restores everything. If you '
+        . 'believe this is a mistake, or you have already paid, reply to this message and we will put it right.</p>',
+        'Renew My Membership',
+        $portal . '/payment'
+    );
+
+    $mailer = new SimpleMailer($config);
+    return $mailer->send($email, 'Your ReSoK membership has lapsed', $text, [], $html);
+}
+
+/**
  * The six-digit code that releases a CPD token.
  *
  * The token itself is deliberately not in this email. That is the whole point of the code:

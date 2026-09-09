@@ -81,10 +81,21 @@
     .btn:disabled{opacity:.5;cursor:not-allowed}
 
     /* ---------- hero ---------- */
+    /*
+     * The forest colour is the background, not a fallback that only appears on failure. The
+     * video sits on top of it and the scrim sits on top of that, so the hero looks finished
+     * at every stage - before the video loads, if it never loads, and if it is deliberately
+     * not loaded at all. Nothing here waits on a 30MB file to become readable.
+     */
     .hero{background:var(--forest);color:#dbeadf;padding:64px 0 70px;position:relative;overflow:hidden}
+    .hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;
+      opacity:0;transition:opacity .6s ease}
+    .hero-video.ready{opacity:1}
+    /* A flat wash, not a gradient: enough contrast for white text over any frame. */
+    .hero-scrim{position:absolute;inset:0;z-index:1;background:rgba(6,48,26,.74)}
     .hero:after{content:"";position:absolute;right:-90px;bottom:-120px;width:400px;height:400px;
-      border-radius:50%;border:1px solid rgba(255,255,255,.07)}
-    .hero-in{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:0 22px}
+      border-radius:50%;border:1px solid rgba(255,255,255,.07);z-index:2}
+    .hero-in{position:relative;z-index:3;max-width:1220px;margin:0 auto;padding:0 22px}
     .kicker{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.09);
       border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 14px;font-size:12px;
       font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#a9cfb8}
@@ -621,6 +632,9 @@
 <!-- ============ Catalogue ============ -->
 <div id="viewCatalogue">
   <div class="hero">
+    <video class="hero-video" id="heroVideo" muted playsinline webkit-playsinline loop
+           preload="none" aria-hidden="true" tabindex="-1"></video>
+    <div class="hero-scrim"></div>
     <div class="hero-in">
       <span class="kicker"><i class="fas fa-lungs"></i> Respiratory Society of Kenya</span>
       <h1>Learn respiratory health, free and online</h1>
@@ -1473,7 +1487,46 @@
   });
   window.addEventListener('hashchange', route);
 
+  /*
+   * The hero video, loaded on purpose rather than by default.
+   *
+   * It is the same file the homepage uses and it is thirty megabytes. On the homepage that
+   * is a decision already taken; here the page is a course catalogue whose own copy says
+   * learners are often on a poor connection, so it is skipped where it would cost more than
+   * it gives: a narrow screen, a connection the browser reports as slow or metered, or a
+   * reader who has asked for reduced motion. The source is attached only once that check
+   * passes, so preload="none" means those visitors never request the file at all.
+   *
+   * It fades in when it can actually play. Until then - and forever, if it never can - the
+   * flat forest background is what shows, which is a finished hero rather than a gap.
+   */
+  function startHeroVideo() {
+    const video = el('heroVideo');
+    if (!video) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.innerWidth < 760) return;
+
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (connection) {
+      if (connection.saveData) return;
+      if (/^(slow-2g|2g|3g)$/.test(connection.effectiveType || '')) return;
+    }
+
+    const source = document.createElement('source');
+    source.src = '../../assets/img/resok.mp4';
+    source.type = 'video/mp4';
+    video.appendChild(source);
+    video.preload = 'auto';
+    video.addEventListener('canplay', () => video.classList.add('ready'), { once: true });
+    video.load();
+    // Autoplay can still be refused even when muted; the scrimmed background is already
+    // correct, so a refusal needs no handling beyond not throwing.
+    const played = video.play();
+    if (played && typeof played.catch === 'function') played.catch(() => {});
+  }
+
   async function boot() {
+    startHeroVideo();
     // Whether anyone is signed in is asked once, with a call that is meaningless to an
     // anonymous visitor and harmless when it fails. Everything session-shaped waits for it.
     try {

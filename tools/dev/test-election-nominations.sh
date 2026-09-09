@@ -49,6 +49,7 @@ login() { local jar; jar=$(mktemp); curl -s -c "$jar" -X POST "${API}auth/login"
   -H 'Content-Type: application/json' -d "{\"email\":\"$1\",\"password\":\"$2\"}" >/dev/null; echo "$jar"; }
 get()  { curl -s -b "$1" --max-time 20 "${API}$2"; }
 post() { curl -s -b "$1" -X POST --max-time 20 "${API}$2" -H 'Content-Type: application/json' -d "${3:-{\}}"; }
+patch(){ curl -s -b "$1" -X PATCH --max-time 20 "${API}$2" -H 'Content-Type: application/json' -d "$3"; }
 
 OFFICER=$(login dev@resok.local DevAdmin2026!)
 MEM_A=$(login nom-a@resok.local TestPass123)
@@ -161,6 +162,14 @@ check "nominations close"                        '"status":"nominations_closed"'
       "$(post "$OFFICER" "admin/elections/$EID/status" '{"status":"nominations_closed"}')"
 check "nominating after the phase ends is refused" 'not open for this election' \
       "$(post "$MEM_A" 'elections/test-nom-election/nominate' "{\"positionId\":$POSID,\"memberProfileId\":$PID_A}")"
+check "opening before the window starts is refused" 'not due to open until'       "$(post "$OFFICER" "admin/elections/$EID/status" '{"status":"open"}')"
+
+NOW_=$($PHP -r "echo (new DateTime('-1 hour'))->format('Y-m-d H:i');")
+OPENED_=$($PHP -r "echo (new DateTime('-3 hours'))->format('Y-m-d H:i');")
+PAST_=$($PHP -r "echo (new DateTime('-2 hours'))->format('Y-m-d H:i');")
+LATER_=$($PHP -r "echo (new DateTime('+30 days'))->format('Y-m-d H:i');")
+check "the voting window can be brought to now"  '"opensAt"'       "$(patch "$OFFICER" "admin/elections/$EID" "{\"nominationsOpenAt\":\"$OPENED_\",\"nominationsCloseAt\":\"$PAST_\",\"opensAt\":\"$NOW_\",\"closesAt\":\"$LATER_\"}")"
+
 check "and the vote still needs an approved name" 'no approved candidates' \
       "$(post "$OFFICER" "admin/elections/$EID/status" '{"status":"open"}')"
 

@@ -801,6 +801,24 @@ function electionSetStatus(PDO $pdo, int $electionId, string $status): array
             return [null, 'Close nominations before opening the vote.'];
         }
 
+        // The voting window has to be now. Opening an election whose window has not started
+        // used to be allowed, and it was unrecoverable: opening locks the election forever,
+        // so the dates could no longer be corrected, and nobody could vote until a date that
+        // was wrong in the first place. The election was dead with no way back. Found by the
+        // dry run, which is the only thing that walks these steps in order.
+        $now = new DateTimeImmutable('now');
+        $opens = new DateTimeImmutable((string)$election['opensAt']);
+        $closes = new DateTimeImmutable((string)$election['closesAt']);
+        if ($now < $opens) {
+            return [null, 'Voting is not due to open until ' . $opens->format('j F Y \a\t H:i')
+                        . '. Correct that date first, or wait - opening now would freeze the '
+                        . 'election with a date nobody can change.'];
+        }
+        if ($now > $closes) {
+            return [null, 'The voting window closed on ' . $closes->format('j F Y \a\t H:i')
+                        . '. Correct the dates before opening.'];
+        }
+
         $roll = electionRollSummary($pdo, $electionId);
         if ($roll['onRoll'] < 1) {
             return [null, 'The electoral roll is empty. Draw the roll before opening voting.'];

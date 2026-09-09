@@ -1005,46 +1005,84 @@ function electionNominate(PDO $pdo, string $key, int $userId, array $data): arra
     $position = $stmt->fetch();
     if (!$position) return [null, 'Choose a post to nominate for.'];
 
-    // Who is being nominated. A member id where the nominee is in the register, which is the
-    // normal case; a bare name only where the officer is entering a paper nomination.
+    // Two kinds of nominee. A member is identified by their record, and everything about them
+    // is read from it. Somebody outside the membership is described by the nominator, because
+    // there is no record to read - and their details stay on this row rather than becoming a
+    // member_profiles entry, since a nomination is not an application to join and one should
+    // not quietly turn into the other.
     $memberId = (int)($data['memberProfileId'] ?? 0);
-    if ($memberId < 1) return [null, 'Choose the member you are nominating.'];
+    $name = null;
+    $membershipId = null;
+    $email = null;
+    $phone = null;
+    $organisation = null;
+    $isSelf = false;
+    $nomineeUserId = null;
 
-    $stmt = $pdo->prepare('SELECT mp.id, mp.membership_status, mp.renewal_due, mp.membership_id,
-                                  mp.user_id,
-                                  TRIM(CONCAT_WS(" ", NULLIF(mp.title,""), NULLIF(mp.first_name,""),
-                                                      NULLIF(mp.surname,""))) AS full_name
-                           FROM member_profiles mp WHERE mp.id = ? LIMIT 1');
-    $stmt->execute([$memberId]);
-    $nominee = $stmt->fetch();
-    if (!$nominee) return [null, 'That member is not in the register.'];
-    if (!membershipHasBenefits($nominee)) {
-        return [null, 'That member is not in good standing and cannot be nominated.'];
+    if ($memberId > 0) {
+        $stmt = $pdo->prepare('SELECT mp.id, mp.membership_status, mp.renewal_due, mp.membership_id,
+                                      mp.user_id,
+                                      TRIM(CONCAT_WS(" ", NULLIF(mp.title,""), NULLIF(mp.first_name,""),
+                                                          NULLIF(mp.surname,""))) AS full_name
+                               FROM member_profiles mp WHERE mp.id = ? LIMIT 1');
+        $stmt->execute([$memberId]);
+        $nominee = $stmt->fetch();
+        if (!$nominee) return [null, 'That member is not in the register.'];
+        if (!membershipHasBenefits($nominee)) {
+            return [null, 'That member is not in good standing and cannot be nominated.'];
+        }
+        $name = (string)$nominee['full_name'];
+        $membershipId = $nominee['membership_id'];
+        $nomineeUserId = (int)$nominee['user_id'];
+        $isSelf = $nomineeUserId === $userId;
+    } else {
+        $memberId = null;
+        $name = trim((string)($data['name'] ?? ''));
+        $email = strtolower(trim((string)($data['email'] ?? '')));
+        $phone = trim((string)($data['phone'] ?? ''));
+        $organisation = trim((string)($data['organisation'] ?? ''));
+
+        // Full details are required for somebody outside the register, because there is
+        // nothing else to identify them by and the officer has to be able to reach them to
+        // confirm they are willing to stand.
+        if ($name === '') return [null, 'Give the full name of the person you are nominating.'];
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return [null, 'Give a valid email address for the person you are nominating.'];
+        }
+        if ($phone === '') return [null, 'Give a telephone number for the person you are nominating.'];
+        if ($organisation === '') {
+            return [null, 'Give the institution or organisation they work with.'];
+        }
     }
 
-    // One entry per nominee per post. A second member proposing the same person is a
-    // seconder, and ReSoK's rules do not currently require one to be recorded - so this
-    // refuses rather than silently creating a duplicate candidate on the ballot. If the
-    // constitution turns out to need seconders, they belong in their own table beside this
-    // one, not as extra candidate rows.
-    $stmt = $pdo->prepare('SELECT id FROM election_candidates
-                           WHERE position_id = ? AND member_profile_id = ? LIMIT 1');
-    $stmt->execute([$positionId, $memberId]);
+    // One entry per nominee per post. Matched on the member id where there is one and on the
+    // name where there is not, because an external nominee has no id to compare.
+    if ($memberId !== null) {
+        $stmt = $pdo->prepare('SELECT id FROM election_candidates
+                               WHERE position_id = ? AND member_profile_id = ? LIMIT 1');
+        $stmt->execute([$positionId, $memberId]);
+    } else {
+        $stmt = $pdo->prepare('SELECT id FROM election_candidates
+                               WHERE position_id = ? AND member_profile_id IS NULL
+                                 AND LOWER(name) = ? LIMIT 1');
+        $stmt->execute([$positionId, strtolower($name)]);
+    }
     if ($stmt->fetch()) {
-        return [null, 'That member has already been nominated for ' . $position['title'] . '.'];
+        return [null, $name . ' has already been nominated for ' . $position['title'] . '.'];
     }
-
-    $isSelf = (int)$nominee['user_id'] === $userId;
 
     try {
         $pdo->prepare('INSERT INTO election_candidates
                         (position_id, member_profile_id, nominated_by_roll_id, nominated_at,
-                         accepted_at, name, membership_id, headline, status, ballot_order)
-                       VALUES (?, ?, ?, NOW(), ' . ($isSelf ? 'NOW()' : 'NULL') . ', ?, ?, ?, ?, 0)')
+                         accepted_at, name, membership_id, email, phone, organisation,
+                         headline, status, ballot_order)
+                       VALUES (?, ?, ?, NOW(), ' . ($isSelf ? 'NOW()' : 'NULL') . ',
+                               ?, ?, ?, ?, ?, ?, ?, 0)')
             ->execute([
                 $positionId, $memberId, $nominator['id'],
-                mb_substr((string)$nominee['full_name'], 0, 160),
-                $nominee['membership_id'],
+                mb_substr($name, 0, 160), $membershipId,
+                $email ?: null, $phone ?: null,
+                $organisation ? mb_substr($organisation, 0, 190) : null,
                 mb_substr(trim((string)($data['headline'] ?? '')), 0, 255) ?: null,
                 'nominated',
             ]);
@@ -1053,16 +1091,22 @@ function electionNominate(PDO $pdo, string $key, int $userId, array $data): arra
         return [null, 'You have already nominated somebody for ' . $position['title'] . '.'];
     }
 
+    $external = $memberId === null;
     return [[
         'nominated' => true,
-        'name'      => $nominee['full_name'],
+        'name'      => $name,
         'position'  => $position['title'],
+        'external'  => $external,
         'accepted'  => $isSelf,
         'message'   => $isSelf
             ? 'You have been nominated for ' . $position['title']
               . '. The returning officer will confirm your candidacy.'
-            : $nominee['full_name'] . ' has been nominated for ' . $position['title']
-              . '. They will be asked to accept before their name goes on the ballot.',
+            : ($external
+                ? $name . ' has been nominated for ' . $position['title']
+                  . '. They are not a ReSoK member, so the returning officer will contact them '
+                  . 'on the details you gave to confirm they are willing to stand.'
+                : $name . ' has been nominated for ' . $position['title']
+                  . '. They will be asked to accept before their name goes on the ballot.'),
     ], null];
 }
 
@@ -1132,6 +1176,13 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
         'membershipId' => $c['membership_id'],
         'headline'     => $c['headline'],
         'status'       => $c['status'],
+        // Derived, never stored: a candidate with no member record is from outside the
+        // membership. Two columns that must agree eventually disagree.
+        'external'     => empty($c['member_profile_id']),
+        'email'        => $c['email'] ?? null,
+        'phone'        => $c['phone'] ?? null,
+        'organisation' => $c['organisation'] ?? null,
+        'acceptanceNote' => $c['acceptance_note'] ?? null,
         'nominatedBy'  => $c['nominated_by'],
         'nominatedAt'  => $c['nominated_at'],
         'accepted'     => !empty($c['accepted_at']),
@@ -1140,8 +1191,14 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
                           && (int)($c['nominee_user_id'] ?? 0) === $viewerUserId,
         // What stops this nomination becoming a candidacy, so the officer sees the reason
         // rather than a name that will not approve and no explanation why.
+        // A member accepts in the portal. Somebody from outside has no account to accept in,
+        // so the officer has to reach them and record it - and the wording says which of
+        // those two things is being waited on.
         'blocker'      => empty($c['accepted_at']) && $c['status'] === 'nominated'
-            ? 'Waiting for the nominee to accept' : null,
+            ? (empty($c['member_profile_id'])
+                ? 'Contact them to confirm they will stand'
+                : 'Waiting for the nominee to accept')
+            : null,
     ], $stmt->fetchAll());
 }
 
@@ -1207,4 +1264,50 @@ function electionDelete(PDO $pdo, string $what, int $id): array
         return [null, 'Unknown thing to delete.'];
     }
     return [electionPositions($pdo, $electionId), null];
+}
+
+/**
+ * Records that an external nominee has agreed to stand.
+ *
+ * Somebody outside the membership has no portal account, so they cannot accept the way a
+ * member does. The officer reaches them on the details the nominator gave and records the
+ * answer here, along with how it was obtained - "the Chair spoke to them on 12 October" is
+ * evidence, and "somebody said it was fine" is not.
+ *
+ * Refused for a member, who has an account and must accept for themselves. An officer
+ * accepting on a member's behalf would put a name on a ballot without the one thing the
+ * acceptance step exists to establish.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function electionRecordExternalAcceptance(PDO $pdo, int $candidateId, ?int $adminUserId, string $note): array
+{
+    if (!electionsEnsureTables($pdo)) return [null, 'The election tables are not available.'];
+
+    $stmt = $pdo->prepare('SELECT c.*, p.election_id FROM election_candidates c
+                           JOIN election_positions p ON p.id = c.position_id
+                           WHERE c.id = ? LIMIT 1');
+    $stmt->execute([$candidateId]);
+    $candidate = $stmt->fetch();
+    if (!$candidate) return [null, 'That nomination no longer exists.'];
+
+    if (!empty($candidate['member_profile_id'])) {
+        return [null, 'That nominee is a ReSoK member and must accept in the portal themselves.'];
+    }
+    [$election, $error] = electionRequireUnlocked($pdo, (int)$candidate['election_id']);
+    if ($error) return [null, $error];
+
+    $note = trim($note);
+    if ($note === '') {
+        return [null, 'Record how their agreement was obtained - who spoke to them, and when.'];
+    }
+    if (!empty($candidate['accepted_at'])) {
+        return [null, 'Their acceptance is already recorded.'];
+    }
+
+    $pdo->prepare('UPDATE election_candidates
+                   SET accepted_at = NOW(), acceptance_note = ? WHERE id = ?')
+        ->execute([mb_substr($note, 0, 255), $candidateId]);
+
+    return [electionNominations($pdo, (int)$candidate['election_id']), null];
 }

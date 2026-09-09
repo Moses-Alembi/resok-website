@@ -129,6 +129,31 @@ check "with the reason on it"                    'Declined the nomination' \
       "$($MYSQL -N -e "SELECT withdrawn_reason FROM election_candidates WHERE id=$CANDID;")"
 
 echo
+echo "Nominating somebody outside the membership:"
+$MYSQL -e "DELETE FROM election_candidates WHERE position_id=$POSID;" >/dev/null
+check "a name alone is refused"                  'full name of the person'       "$(post "$MEM_A" 'elections/test-nom-election/nominate' "{\"positionId\":$POSID}")"
+check "a bad email is refused"                   'valid email address'       "$(post "$MEM_A" 'elections/test-nom-election/nominate' "{\"positionId\":$POSID,\"name\":\"Dr Outside\",\"email\":\"nope\"}")"
+check "a missing telephone is refused"           'telephone number'       "$(post "$MEM_A" 'elections/test-nom-election/nominate' "{\"positionId\":$POSID,\"name\":\"Dr Outside\",\"email\":\"outside@example.org\"}")"
+check "a missing organisation is refused"        'institution or organisation'       "$(post "$MEM_A" 'elections/test-nom-election/nominate' "{\"positionId\":$POSID,\"name\":\"Dr Outside\",\"email\":\"outside@example.org\",\"phone\":\"0700000000\"}")"
+
+EXT=$(post "$MEM_A" 'elections/test-nom-election/nominate' "{\"positionId\":$POSID,\"name\":\"Dr Outside Person\",\"email\":\"outside@example.org\",\"phone\":\"0700000000\",\"organisation\":\"Kenyatta National Hospital\"}")
+check "full details are accepted"                '"nominated":true'  "$EXT"
+check "and marked as external"                   '"external":true'   "$EXT"
+check "not auto-accepted"                        '"accepted":false'  "$EXT"
+EXTID=$($MYSQL -N -e "SELECT id FROM election_candidates WHERE position_id=$POSID AND member_profile_id IS NULL LIMIT 1;")
+check "no member record was created for them"    '0'       "$($MYSQL -N -e "SELECT COUNT(*) FROM member_profiles mp JOIN users u ON u.id=mp.user_id WHERE u.email='outside@example.org';")"
+check "their details are stored on the candidate" 'Kenyatta National Hospital'       "$($MYSQL -N -e "SELECT organisation FROM election_candidates WHERE id=$EXTID;")"
+check "the same outsider twice is refused"       'already been nominated'       "$(post "$MEM_B" 'elections/test-nom-election/nominate' "{\"positionId\":$POSID,\"name\":\"Dr Outside Person\",\"email\":\"outside@example.org\",\"phone\":\"0700000000\",\"organisation\":\"KNH\"}")"
+
+echo
+echo "Recording an outsider's agreement:"
+check "a member cannot record it"                'Admin access required'       "$(post "$MEM_A" "admin/elections/nominations/$EXTID/accepted" '{"note":"x"}')"
+check "an empty note is refused"                 'who spoke to them'       "$(post "$OFFICER" "admin/elections/nominations/$EXTID/accepted" '{"note":"  "}')"
+check "the officer records it with a note"       '"nominations"'       "$(post "$OFFICER" "admin/elections/nominations/$EXTID/accepted" '{"note":"Chair spoke to them by phone on 9 September"}')"
+check "and the note is kept as evidence"         'Chair spoke to them'       "$($MYSQL -N -e "SELECT acceptance_note FROM election_candidates WHERE id=$EXTID;")"
+check "recording it twice is refused"            'already recorded'       "$(post "$OFFICER" "admin/elections/nominations/$EXTID/accepted" '{"note":"again"}')"
+
+echo
 echo "Voting cannot start while nominations run:"
 check "opening the vote is refused"              'Close nominations before opening' \
       "$(post "$OFFICER" "admin/elections/$EID/status" '{"status":"open"}')"

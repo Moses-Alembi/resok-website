@@ -495,6 +495,23 @@
       });
     }
 
+    async function recordAcceptance(n) {
+      const note = window.prompt(
+        'How was ' + n.name + '’s agreement to stand obtained?\n\n'
+        + 'Record who spoke to them and when — this is the evidence that they consented.',
+        '');
+      if (note === null) return;
+      try {
+        await api('/api/admin/elections/nominations/' + n.id + '/accepted', {
+          method: 'POST', body: JSON.stringify({ note })
+        });
+        notice('nomNotice', n.name + '’s agreement recorded.', 'ok');
+        await openElection(current.election.id);
+      } catch (error) {
+        notice('nomNotice', error.message || 'That could not be recorded.', 'bad');
+      }
+    }
+
     async function removeThing(what, id) {
       try {
         await api('/api/admin/elections/' + what + '/' + id, { method: 'DELETE' });
@@ -568,14 +585,35 @@
           if (n.nominatedBy) bits.push('nominated by ' + n.nominatedBy);
           bits.push(n.accepted ? 'accepted' : (n.blocker || n.status));
           grow.appendChild(make('div', 'sub', bits.join(' · ')));
+
+          // Somebody from outside the membership is marked, and their contact details are
+          // shown here because reaching them is the officer's next action.
+          if (n.external) {
+            const tag = make('span', 'status s-nominations', 'not a member');
+            grow.appendChild(tag);
+            const reach = [n.email, n.phone, n.organisation].filter(Boolean).join(' · ');
+            if (reach) grow.appendChild(make('div', 'sub', reach));
+          }
+          if (n.acceptanceNote) grow.appendChild(make('div', 'sub', 'Agreed: ' + n.acceptanceNote));
           row.appendChild(grow);
+
+          // An external nominee has no account to accept in, so the officer records their
+          // agreement and how it was obtained. A member must accept for themselves.
+          if (n.external && !n.accepted && n.status === 'nominated') {
+            const record = make('button', 'btn btn-ghost btn-sm', 'Record agreement');
+            record.type = 'button';
+            record.addEventListener('click', () => recordAcceptance(n));
+            row.appendChild(record);
+          }
           if (n.status === 'nominated') {
             const approve = make('button', 'btn btn-primary btn-sm', 'Approve');
             approve.type = 'button';
-            // Approving somebody who has not accepted would put a name on a ballot without
-            // their agreement, so the button says why it is not offered yet.
+            // Approving somebody who has not agreed would put a name on a ballot without
+            // their consent, so the button says why it is not offered yet.
             approve.disabled = !n.accepted;
-            approve.title = n.accepted ? '' : 'Waiting for the nominee to accept';
+            approve.title = n.accepted ? ''
+              : (n.external ? 'Contact them and record their agreement first'
+                            : 'Waiting for the nominee to accept');
             approve.addEventListener('click', () => approveCandidate(n.positionId, n));
             row.appendChild(approve);
           }

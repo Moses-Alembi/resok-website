@@ -2198,6 +2198,19 @@ Respiratory Society of Kenya");
         respond(200, ['positions' => $positions]);
     }
 
+    /** Recording that somebody outside the membership has agreed to stand. */
+    if (preg_match('#^admin/elections/nominations/(\d+)/accepted$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('electionRecordExternalAcceptance', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        [$nominations, $error] = electionRecordExternalAcceptance(
+            $pdo, (int)$m[1], (int)$user['userId'], (string)(input()['note'] ?? ''));
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'election_external_acceptance', null,
+                       'Candidate ' . $m[1]);
+        respond(200, ['nominations' => $nominations]);
+    }
+
     if (preg_match('#^admin/elections/(\d+)/randomise$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
         requireModule('electionRandomiseBallot', 'lib/elections.php');

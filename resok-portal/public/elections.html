@@ -153,9 +153,44 @@
               <select id="nomPosition" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit"></select>
             </label>
             <label>
+              <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Who are you nominating?</span>
+              <select id="nomKind" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit">
+                <option value="member">A ReSoK member</option>
+                <option value="external">Someone who is not a ReSoK member</option>
+              </select>
+            </label>
+
+            <label id="nomMemberRow">
               <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Member</span>
               <select id="nomMember" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit"></select>
             </label>
+
+            <div id="nomExternalRows" hidden style="display:grid;gap:14px">
+              <div class="note info" style="margin-top:0">
+                Give their full details. They have no ReSoK account, so the returning officer
+                will contact them on these to confirm they are willing to stand.
+              </div>
+              <label>
+                <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Full name</span>
+                <input id="nomName" maxlength="160" placeholder="Dr Jane Wanjiku"
+                       style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+              </label>
+              <label>
+                <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Email address</span>
+                <input id="nomEmail" type="email" maxlength="190" placeholder="name@example.org"
+                       style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+              </label>
+              <label>
+                <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Telephone</span>
+                <input id="nomPhone" maxlength="40" placeholder="+254 7xx xxx xxx"
+                       style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+              </label>
+              <label>
+                <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Institution or organisation</span>
+                <input id="nomOrg" maxlength="190" placeholder="Kenyatta National Hospital"
+                       style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+              </label>
+            </div>
             <label>
               <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">A short note (optional)</span>
               <input id="nomHeadline" maxlength="255" placeholder="e.g. Pulmonologist, Nairobi"
@@ -453,20 +488,38 @@
       }
     }
 
+    // Which set of fields the form is asking for. Swapped rather than shown together, so a
+    // half-filled member picker cannot travel alongside external details and leave the server
+    // deciding which the nominator meant.
+    el('nomKind').addEventListener('change', () => {
+      const external = el('nomKind').value === 'external';
+      el('nomMemberRow').hidden = external;
+      el('nomExternalRows').hidden = !external;
+    });
+
     el('nomSubmit').addEventListener('click', async () => {
       const button = el('nomSubmit');
       button.disabled = true;
       notice('nomNotice', '');
+      const external = el('nomKind').value === 'external';
+      const payload = {
+        positionId: Number(el('nomPosition').value),
+        headline: el('nomHeadline').value.trim()
+      };
+      if (external) {
+        payload.name = el('nomName').value.trim();
+        payload.email = el('nomEmail').value.trim();
+        payload.phone = el('nomPhone').value.trim();
+        payload.organisation = el('nomOrg').value.trim();
+      } else {
+        payload.memberProfileId = Number(el('nomMember').value);
+      }
       try {
         const result = await api('/api/elections/' + encodeURIComponent(current.election.slug) + '/nominate', {
-          method: 'POST',
-          body: JSON.stringify({
-            positionId: Number(el('nomPosition').value),
-            memberProfileId: Number(el('nomMember').value),
-            headline: el('nomHeadline').value.trim()
-          })
+          method: 'POST', body: JSON.stringify(payload)
         });
-        el('nomHeadline').value = '';
+        ['nomHeadline', 'nomName', 'nomEmail', 'nomPhone', 'nomOrg']
+          .forEach((id) => { el(id).value = ''; });
         notice('nomNotice', result.message || 'Nomination recorded.', 'ok');
         await loadNominations();
       } catch (error) {

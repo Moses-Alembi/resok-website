@@ -69,6 +69,7 @@ function migrateOrder(): array
         'schema-elections.sql',                // board elections: posts, candidates, roll
         'schema-elections-ballot.sql',         // the ballot; depends on the roll above
         'migration-election-nominations.sql',   // nomination phase; alters elections
+        'migration-election-external-nominees.sql', // candidates from outside the membership
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];
 }

@@ -115,7 +115,7 @@ class SimplePdf
     {
         if (!is_file($path)) return false;
         $data = file_get_contents($path);
-        if ($data === false || strncmp($data, "ÿØ", 2) !== 0) return false;
+        if ($data === false || strncmp($data, "\xFF\xD8", 2) !== 0) return false;
 
         $size = @getimagesize($path);
         if (!$size || $size[2] !== IMAGETYPE_JPEG) return false;

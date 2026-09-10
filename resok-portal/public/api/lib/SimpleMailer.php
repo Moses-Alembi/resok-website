@@ -11,6 +11,9 @@ class SimpleMailer
 {
     private array $config;
 
+    /** Why the last send failed, in words fit to show an administrator. Null after a success. */
+    public ?string $lastError = null;
+
     public function __construct(array $config)
     {
         $this->config = $config;
@@ -19,6 +22,7 @@ class SimpleMailer
     /** @param array<int, array{filename:string, content:string, mime:string}> $attachments */
     public function send(string $to, string $subject, string $textBody, array $attachments = [], ?string $htmlBody = null, ?string $replyTo = null): bool
     {
+        $this->lastError = null;
         $host = trim((string)($this->config['smtp_host'] ?? ''));
         if ($host !== '') {
             return $this->sendSmtp($host, $to, $subject, $textBody, $attachments, $htmlBody, $replyTo);
@@ -105,12 +109,14 @@ class SimpleMailer
         do {
             $line = fgets($socket, 515);
             if ($line === false) {
+                $this->lastError = "The server closed the connection during {$stage}.";
                 error_log("SMTP {$stage} failed: connection closed / no response");
                 return false;
             }
         } while (isset($line[3]) && $line[3] === '-');
         $actual = (int)substr($line, 0, 3);
         if ($actual !== $code) {
+            $this->lastError = "Rejected at {$stage}: " . trim($line);
             error_log("SMTP {$stage} failed: expected {$code}, got: " . trim($line));
             return false;
         }
@@ -127,6 +133,7 @@ class SimpleMailer
 
         $socket = @fsockopen(($implicitTls ? 'ssl://' : '') . $host, $port, $errno, $errstr, 15);
         if (!$socket) {
+            $this->lastError = "Could not reach {$host} on port {$port}: {$errstr} (error {$errno}).";
             error_log("SMTP connect failed to {$host}:{$port} - [{$errno}] {$errstr}");
             return false;
         }
@@ -175,8 +182,24 @@ class SimpleMailer
         if ($ok) {
             $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody, $replyTo);
             $escaped = preg_replace('/^\./m', '..', $message);
+            // The host scans outbound mail before accepting it, and that scan is charged
+            // against this read, not the write. A welcome packet carrying the letter artwork
+            // runs to some hundreds of kilobytes, where the 15s that suits a bare verification
+            // link is not enough - and a timeout here loses a message the server was still
+            // willing to take.
+            stream_set_timeout($socket, 90);
             fwrite($socket, $escaped . "\r\n.\r\n");
             $ok = $this->expect($socket, 250, 'message body');
+            if (!$ok) {
+                $meta = stream_get_meta_data($socket);
+                if (!empty($meta['timed_out'])) {
+                    error_log(sprintf(
+                        'SMTP timed out waiting for the server to accept a %d-byte message to %s. '
+                        . 'It may still have been delivered; do not assume it was lost.',
+                        strlen($escaped), $to
+                    ));
+                }
+            }
         }
 
         $send('QUIT');

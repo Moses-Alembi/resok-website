@@ -528,7 +528,9 @@
       const note = document.getElementById("adminNote");
       note.textContent = message;
       note.className = `note show ${type}`;
-      if (message) setTimeout(() => note.className = "note", 4000);
+      // Successes may fade; a failure stays until it is replaced, because the whole point
+      // of reporting it is that somebody has to act on it.
+      if (message && type !== "error") setTimeout(() => note.className = "note", 4000);
     }
 
     function memberName(member) {
@@ -660,7 +662,14 @@
       if (!confirm(`Approve ${selectedIds.size} selected member(s)? This issues membership IDs and sends welcome emails.`)) return;
       try {
         const result = await window.ResokPortal.api("/api/members/bulk-approve", { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds) }) });
-        showNote(`Approved ${result.approved.length} member(s).${result.errors.length ? ` ${result.errors.length} failed.` : ""}`);
+        // Approving and delivering are separate outcomes, and the endpoint reports both per
+        // member. Showing only the first is how a whole batch can be approved while not one
+        // of them receives their letter and card, with nothing on screen to say so.
+        const unsent = result.approved.filter((m) => m.welcomeEmailSent === false);
+        const parts = [`Approved ${result.approved.length} member(s).`];
+        if (result.errors.length) parts.push(`${result.errors.length} could not be approved: ${result.errors[0].error}`);
+        if (unsent.length) parts.push(`${unsent.length} welcome email(s) did not send - ${unsent[0].welcomeEmailError || "the mail server refused the message"}`);
+        showNote(parts.join(" "), unsent.length || result.errors.length ? "error" : "success");
         selectedIds.clear();
         await loadMembers();
       } catch (error) {
@@ -731,6 +740,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
           <button class="btn btn-primary" id="approveBtn"><i class="fas fa-check"></i> Approve / Issue ID</button>
           <button class="btn btn-danger" id="rejectBtn"><i class="fas fa-xmark"></i> Reject</button>
+          <button class="btn" id="welcomePacketBtn"><i class="fas fa-envelope"></i> Send welcome packet</button>
         </div>
         <h3 style="font-size:16px;margin:14px 0 8px">Payments</h3>
         <div class="payments" id="memberPayments"><p class="detail-empty">Loading payments...</p></div>
@@ -745,6 +755,7 @@
 
       document.getElementById("approveBtn").addEventListener("click", approveSelectedMember);
       document.getElementById("rejectBtn").addEventListener("click", rejectSelectedMember);
+      document.getElementById("welcomePacketBtn").addEventListener("click", sendWelcomePacket);
       document.getElementById("cpdForm").addEventListener("submit", addCpdPoints);
       await loadPayments(selectedMember.id);
     }
@@ -835,6 +846,31 @@
         await loadMembers();
       } catch (error) {
         showNote(error.message || "Could not approve member.", "error");
+      }
+    }
+
+    // Re-sends the letter and card to a member who already has them coming - the imported
+    // members who were never approved through the portal, and anyone whose send failed.
+    async function sendWelcomePacket() {
+      if (!selectedMember) return;
+      if (useLocalPreviewData()) {
+        showNote("Local preview: no email is sent.", "error");
+        return;
+      }
+      const to = selectedMember.email || "this member";
+      if (!confirm(`Send the welcome letter and membership card to ${to}?`)) return;
+      const btn = document.getElementById("welcomePacketBtn");
+      const label = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+      try {
+        const result = await window.ResokPortal.api(`/api/members/${selectedMember.id}/welcome-packet`, { method: "POST" });
+        showNote(`Welcome packet sent to ${result.sentTo}. Letter and card attached.`);
+      } catch (error) {
+        showNote(`The welcome packet did NOT send: ${error.message || "the server gave no reason"}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = label;
       }
     }
 

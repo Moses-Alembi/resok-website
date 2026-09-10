@@ -43,7 +43,14 @@ function buildWelcomeLetterPdf(array $member): string
         return $pdf->output();
     }
 
-    error_log('Welcome letter template missing at ' . $template . ' - sending the plain letter instead.');
+    // 'Missing' was the wrong word for two different faults: the file can be present and
+    // still rejected by image(). Saying which one it was is the difference between a
+    // one-line fix and hunting the wrong thing.
+    error_log(sprintf(
+        'Welcome letter artwork unused (%s at %s) - sending the plain letter instead.',
+        is_file($template) ? 'present but rejected by SimplePdf::image()' : 'file not found',
+        $template
+    ));
     return buildPlainWelcomeLetterPdf($member);
 }
 
@@ -175,10 +182,18 @@ function sendVerificationEmail(array $config, string $email, string $token): boo
     return $mailer->send($email, 'Verify your ReSoK membership account', $text, [], $html);
 }
 
-function sendWelcomePacketEmail(array $config, array $member): bool
+// $error is filled in on failure so a caller can say why, rather than only that it did
+// not work. An administrator waiting at a screen cannot read the server's error log.
+function sendWelcomePacketEmail(array $config, array $member, ?string &$error = null): bool
 {
+    $error = null;
     $email = (string)($member['email'] ?? '');
-    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) return false;
+    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+        $error = $email === ''
+            ? 'This member has no email address on file.'
+            : 'The address on file is not a valid email address: ' . $email;
+        return false;
+    }
 
     $name = portalMemberName($member);
     $membershipId = (string)($member['membershipId'] ?? 'Pending');
@@ -201,7 +216,9 @@ function sendWelcomePacketEmail(array $config, array $member): bool
     ];
 
     $mailer = new SimpleMailer($config);
-    return $mailer->send($email, 'Welcome to ReSoK Membership', $text, $attachments, $html);
+    $sent = $mailer->send($email, 'Welcome to ReSoK Membership', $text, $attachments, $html);
+    if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';
+    return $sent;
 }
 
 function sendRenewalReminderEmail(array $config, array $member, int $daysLeft): bool

@@ -710,8 +710,9 @@ function approveMemberById(PDO $pdo, array $config, int $memberId, ?int $adminUs
     $welcomeEmailError = null;
     if ($row && $member) {
         try {
-            $welcomeEmailSent = (bool)sendWelcomePacketEmail($config, array_merge($member, ['email' => $row['email']]));
-            if (!$welcomeEmailSent) $welcomeEmailError = 'The mail server did not accept the message.';
+            $welcomeReason = null;
+            $welcomeEmailSent = (bool)sendWelcomePacketEmail($config, array_merge($member, ['email' => $row['email']]), $welcomeReason);
+            if (!$welcomeEmailSent) $welcomeEmailError = $welcomeReason ?? 'The mail server did not accept the message.';
         } catch (Throwable $mailError) {
             $welcomeEmailSent = false;
             $welcomeEmailError = $mailError->getMessage();
@@ -3570,6 +3571,41 @@ Respiratory Society of Kenya");
         } catch (RuntimeException $approveError) {
             respond(409, ['error' => $approveError->getMessage()]);
         }
+    }
+
+    // Sending the welcome packet is separate from approving, because the two came apart in
+    // practice: members imported straight into the database were never approved through the
+    // portal and so were never sent their letter and card, and a send that fails leaves an
+    // approved member with nothing. This re-sends to a member who already holds a membership
+    // ID, and reports the outcome rather than logging it where nobody looks.
+    if (preg_match('#^members/(\d+)/welcome-packet$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        $row = memberRowByProfileId($pdo, (int)$m[1]);
+        if (!$row) respond(404, ['error' => 'No such member.']);
+
+        $member = mapMember($row);
+        if (!$member) respond(404, ['error' => 'No such member.']);
+        if (($row['membership_status'] ?? '') !== 'active' || empty($row['membership_id'])) {
+            respond(409, ['error' => 'Only an active member with a membership ID can be sent a welcome packet. Approve them first.']);
+        }
+
+        $reason = null;
+        try {
+            $sent = sendWelcomePacketEmail($config, array_merge($member, ['email' => $row['email']]), $reason);
+        } catch (Throwable $packetError) {
+            $sent = false;
+            $reason = $packetError->getMessage();
+            error_log('Welcome packet resend failed: ' . $packetError->getMessage());
+        }
+        logAdminAction($pdo, (int)$user['userId'], $sent ? 'welcome_packet_sent' : 'welcome_packet_failed', (int)$m[1], $reason);
+        respond($sent ? 200 : 502, [
+            'sent' => $sent,
+            'sentTo' => (string)$row['email'],
+            // Never null on a failure: the browser shows this string, and "Request failed"
+            // tells the administrator nothing they can act on.
+            'error' => $sent ? null : ($reason ?? 'The mail server did not accept the message.'),
+        ]);
     }
 
     if (preg_match('#^members/(\d+)/reject$#', $route, $m) && $method === 'POST') {

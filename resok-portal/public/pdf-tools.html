@@ -581,9 +581,24 @@
     /* ---------------- who may use it ---------------- */
     (async () => {
       try {
-        // The same gate the rest of the admin area uses. The work is local, but the page
-        // sits in the members' portal and should not be a public utility.
-        const me = await window.ResokPortal.api('/api/security/assessment');
+        // admin/whoami rather than an endpoint that merely requires an admin. The first
+        // version of this gated on /api/security/assessment, which any administrator can
+        // read - so a plain admin passed straight through it. What matters is the flag in
+        // the answer, not that the call succeeded.
+        const me = await window.ResokPortal.api('/api/admin/whoami');
+        if (!me.isSuperAdmin) {
+          el('gateNotice').appendChild(make('div', 'note bad',
+            'The PDF Toolkit is restricted to super administrators. '
+            + 'You are signed in as ' + (me.email || 'an administrator') + '.'));
+          return;
+        }
+        // With no super_admins list configured, every administrator counts as one. Worth
+        // saying out loud on a page that is supposed to be restricted to a few people.
+        if (!me.superAdminsConfigured) {
+          el('gateNotice').appendChild(make('div', 'note warn',
+            'No super administrator list is configured, so every administrator can reach '
+            + 'this page. Set super_admins in config.local.php to restrict it.'));
+        }
         el('main').hidden = false;
         el('limits').hidden = false;
         renderTools();
@@ -591,7 +606,7 @@
         if (error.status === 401) { window.location.href = 'login'; return; }
         el('gateNotice').appendChild(make('div', 'note bad',
           error.status === 403
-            ? 'This page is restricted to super administrators.'
+            ? 'This page is restricted to administrators.'
             : (error.message || 'Could not confirm your access.')));
       }
     })();

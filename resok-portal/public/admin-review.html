@@ -47,6 +47,7 @@
              super administrator, which is the same gate the API applies - a link that leads
              to a refusal is worse than no link. -->
         <a class="btn btn-secondary" href="election-admin" id="electionsLink" hidden><i class="fas fa-check-to-slot"></i> Elections</a>
+        <a class="btn btn-secondary" href="pdf-tools" id="pdfLink" hidden><i class="fas fa-file-pdf"></i> PDF Toolkit</a>
         <a class="btn btn-secondary" href="security" id="securityLink" hidden><i class="fas fa-shield-halved"></i> Threat Assessment</a>
         <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-rotate"></i> Refresh</button>
         <button class="btn btn-danger" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
@@ -1236,6 +1237,7 @@
         whoami = await window.ResokPortal.api("/api/admin/whoami");
         document.getElementById("securityLink").hidden = !whoami.isSuperAdmin;
         document.getElementById("electionsLink").hidden = !whoami.isSuperAdmin;
+        document.getElementById("pdfLink").hidden = !whoami.isSuperAdmin;
         document.getElementById("adminsPanel").hidden = false;
         document.getElementById("adminsPromote").hidden = !whoami.isSuperAdmin;
         if (whoami.isSuperAdmin && !whoami.superAdminsConfigured) {

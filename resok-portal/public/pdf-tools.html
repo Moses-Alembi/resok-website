@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Toolkit - ReSoK Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--ink:#253141;--muted:#667085;
+      --bg:#f5f7fa;--line:#e5e7eb;--radius:10px;--shadow:0 2px 12px rgba(15,23,42,.07);
+      --warn:#b54708;--fail:#b42318;--pass:#0f7a38;--info:#175cd3}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink)}
+    a{color:inherit;text-decoration:none}
+    [hidden]{display:none!important}
+    .topbar{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+    .topbar-inner{max-width:1120px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+    .topbar img{height:42px;display:block}
+    .back{color:var(--muted);font-size:14px;font-weight:600}
+    .wrap{max-width:1120px;margin:0 auto;padding:24px 20px;display:grid;gap:20px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
+    h1{font-size:22px;letter-spacing:-.01em}
+    h2{font-size:17px}
+    h3{font-size:14px}
+    .lede{color:var(--muted);font-size:14px;margin-top:7px;line-height:1.65;max-width:78ch}
+
+    .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+    .tool{border:1px solid var(--line);border-radius:var(--radius);padding:15px;cursor:pointer;
+      background:#fff;text-align:left;font:inherit;transition:border-color .15s,transform .15s}
+    .tool:hover{border-color:var(--brand-primary);transform:translateY(-2px)}
+    .tool.active{border-color:var(--brand-primary);box-shadow:0 0 0 2px rgba(0,147,46,.15)}
+    .tool i{font-size:19px;color:var(--brand-primary)}
+    .tool b{display:block;margin-top:9px;font-size:14px}
+    .tool span{display:block;color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.45}
+
+    .btn{border:0;border-radius:7px;padding:11px 17px;font:inherit;font-weight:700;font-size:13.5px;
+      cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+    .btn-primary{background:var(--brand-primary);color:#fff}
+    .btn-primary:hover{background:#007a26}
+    .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+
+    .in{border:1px solid var(--line);border-radius:7px;padding:10px 12px;font:inherit;font-size:14px;width:100%;background:#fff}
+    label>span{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+    .row>label{flex:1;min-width:150px}
+
+    .drop{border:2px dashed var(--line);border-radius:var(--radius);padding:26px;text-align:center;
+      color:var(--muted);font-size:14px;cursor:pointer;background:#fcfdfc}
+    .drop:hover,.drop.over{border-color:var(--brand-primary);background:#f5faf7}
+    .drop i{font-size:26px;color:var(--brand-primary);display:block;margin-bottom:9px}
+
+    .files{margin-top:14px;display:grid;gap:8px}
+    .file{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;background:#fff}
+    .file .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .file .meta{color:var(--muted);font-size:12.5px;white-space:nowrap}
+    .file button{border:0;background:transparent;color:var(--fail);cursor:pointer;font-size:13px;padding:4px 6px}
+    .file .move{color:var(--muted)}
+
+    .note{border-radius:7px;padding:12px 14px;font-size:13.5px;margin-top:14px;line-height:1.6}
+    .note.info{background:#eff8ff;color:#175cd3;border:1px solid #b2ddff}
+    .note.warn{background:#fff8e6;color:#93370d;border:1px solid #fedf89}
+    .note.bad{background:#fef3f2;color:#b42318;border:1px solid #fecdca}
+    .note.ok{background:#ecfdf3;color:#05603a;border:1px solid #a6f4c5}
+    .empty{color:var(--muted);font-size:13.5px;padding:18px 0}
+
+    .results{display:grid;gap:8px;margin-top:14px}
+    .result{display:flex;align-items:center;gap:11px;border:1px solid #a6f4c5;background:#f6fef9;
+      border-radius:8px;padding:11px 13px;font-size:13.5px}
+    .result .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    @media(max-width:640px){.wrap{padding:16px}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="admin-review"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <a href="admin-review" class="back"><i class="fas fa-arrow-left"></i> Back to admin</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <div id="gateNotice"></div>
+
+    <section class="panel" id="main" hidden>
+      <h1>PDF Toolkit</h1>
+      <p class="lede">
+        Merge, split, rotate, reorder, watermark and convert PDFs. Everything runs
+        <strong>inside this browser</strong> &mdash; no file is uploaded, and nothing reaches the
+        server or leaves this computer. That matters here: these tools get used on member
+        documents, payment proofs and certificates.
+      </p>
+
+      <div class="tools" style="margin-top:20px" id="tools"></div>
+    </section>
+
+    <section class="panel" id="workspace" hidden>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div><h2 id="toolTitle"></h2><p class="lede" id="toolHelp"></p></div>
+        <button class="btn btn-ghost" id="closeTool" type="button">Close</button>
+      </div>
+
+      <div class="drop" id="drop" style="margin-top:18px">
+        <i class="fas fa-cloud-arrow-up"></i>
+        <span id="dropText">Choose files, or drag them here</span>
+        <input type="file" id="picker" multiple hidden />
+      </div>
+
+      <div class="files" id="files"></div>
+      <div id="options" style="margin-top:16px"></div>
+      <div id="notice"></div>
+
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="run" type="button" disabled></button>
+        <button class="btn btn-ghost" id="clear" type="button">Clear files</button>
+      </div>
+
+      <div class="results" id="results"></div>
+    </section>
+
+    <section class="panel" id="limits" hidden>
+      <h2>What this cannot do</h2>
+      <p class="lede">
+        Stated plainly, because a tool that quietly does a worse job than expected is worse
+        than one that says so.
+      </p>
+      <div class="note warn">
+        <strong>Compression</strong> shrinks a PDF only by rewriting its structure. It cannot
+        re-encode embedded images the way desktop software does, so a scanned document will
+        barely shrink. Expect a few per cent, not ninety.
+      </div>
+      <div class="note warn">
+        <strong>Office conversion</strong> (Word, Excel, PowerPoint) is not here. It needs
+        LibreOffice running on a server, which shared hosting cannot provide.
+      </div>
+      <div class="note warn">
+        <strong>Password protection and unlocking</strong> are not here either. The library
+        that does everything else in this page cannot encrypt or decrypt a PDF, and a button
+        that silently produced an unprotected file would be dangerous.
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="js/portal-state.js?v=20260909-errstatus"></script>
+  <script>
+  /**
+   * A PDF toolkit that runs entirely in the browser.
+   *
+   * The original of this was a FastAPI service: upload a file, a Python process does the
+   * work, download the result. That cannot run on this host - shared cPanel has no place for
+   * a long-lived Python process, and none of the binaries it depends on (LibreOffice, qpdf,
+   * Poppler) can be installed. So the work happens client-side instead.
+   *
+   * That turns out to be the better arrangement here rather than a compromise. These tools
+   * get pointed at member documents, payment proofs and certificates; doing the work in the
+   * browser means none of that is uploaded anywhere, so there is no copy on a server to
+   * secure, log, or delete on a timer.
+   *
+   * What it costs is real and is listed on the page: no Office conversion, no encryption,
+   * and only structural compression. Those need a server, and pretending otherwise with a
+   * button that quietly does something weaker would be worse than leaving them out.
+   */
+  (() => {
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined && text !== null) n.textContent = text;
+      return n;
+    };
+    const notice = (message, kind) => {
+      const box = el('notice');
+      box.textContent = '';
+      if (message) box.appendChild(make('div', 'note ' + (kind || 'info'), message));
+    };
+    const kb = (n) => n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + ' KB'
+                                     : (n / 1024 / 1024).toFixed(1) + ' MB';
+
+    let current = null;
+    let files = [];
+
+    /* ---------------- the tools ---------------- */
+    const TOOLS = {
+      merge: {
+        icon: 'fa-object-group', name: 'Merge',
+        blurb: 'Join several PDFs into one',
+        help: 'Add the PDFs in the order you want them. Drag the arrows to reorder.',
+        accept: 'application/pdf', multiple: true, action: 'Merge into one PDF',
+        min: 2
+      },
+      split: {
+        icon: 'fa-scissors', name: 'Split',
+        blurb: 'Pull out a range of pages',
+        help: 'Give the pages you want, like 1-3,7,10-12. Everything else is left out.',
+        accept: 'application/pdf', multiple: false, action: 'Extract those pages',
+        options: [{ id: 'ranges', label: 'Pages', placeholder: '1-3,7,10-12' }]
+      },
+      organize: {
+        icon: 'fa-list-ol', name: 'Reorder pages',
+        blurb: 'Put pages in a new order',
+        help: 'Give the new order, like 3,1,2. Any page you leave out is removed.',
+        accept: 'application/pdf', multiple: false, action: 'Rebuild in that order',
+        options: [{ id: 'order', label: 'New page order', placeholder: '3,1,2,4' }]
+      },
+      rotate: {
+        icon: 'fa-rotate-right', name: 'Rotate',
+        blurb: 'Turn pages the right way up',
+        help: 'Leave the pages box empty to rotate every page.',
+        accept: 'application/pdf', multiple: false, action: 'Rotate',
+        options: [
+          { id: 'angle', label: 'Angle', type: 'select', choices: ['90', '180', '270'] },
+          { id: 'pages', label: 'Pages (optional)', placeholder: 'all pages' }
+        ]
+      },
+      watermark: {
+        icon: 'fa-stamp', name: 'Watermark',
+        blurb: 'Stamp text across every page',
+        help: 'Useful for marking a document DRAFT or COPY before it goes out.',
+        accept: 'application/pdf', multiple: false, action: 'Add the watermark',
+        options: [
+          { id: 'text', label: 'Text', placeholder: 'DRAFT' },
+          { id: 'opacity', label: 'Opacity', type: 'select', choices: ['0.1', '0.2', '0.3', '0.5'] }
+        ]
+      },
+      imagesToPdf: {
+        icon: 'fa-images', name: 'Images to PDF',
+        blurb: 'Turn photographs into a PDF',
+        help: 'JPEG and PNG. Each image becomes one page, at its own size.',
+        accept: 'image/jpeg,image/png', multiple: true, action: 'Build the PDF', min: 1
+      },
+      pdfToImages: {
+        icon: 'fa-file-image', name: 'PDF to images',
+        blurb: 'Export each page as a picture',
+        help: 'Each page is rendered and offered as a separate PNG.',
+        accept: 'application/pdf', multiple: false, action: 'Render the pages',
+        options: [{ id: 'scale', label: 'Size', type: 'select', choices: ['1', '1.5', '2', '3'] }]
+      },
+      compress: {
+        icon: 'fa-file-zipper', name: 'Compress',
+        blurb: 'Rewrite the file more tightly',
+        help: 'Structural only. A scanned document will barely shrink — see the note below.',
+        accept: 'application/pdf', multiple: false, action: 'Rewrite the file'
+      }
+    };
+
+    function renderTools() {
+      const mount = el('tools');
+      mount.textContent = '';
+      Object.entries(TOOLS).forEach(([key, t]) => {
+        const b = make('button', 'tool');
+        b.type = 'button';
+        b.appendChild(make('i', 'fas ' + t.icon));
+        b.appendChild(make('b', null, t.name));
+        b.appendChild(make('span', null, t.blurb));
+        b.addEventListener('click', () => openTool(key));
+        mount.appendChild(b);
+      });
+    }
+
+    function openTool(key) {
+      current = key;
+      files = [];
+      const t = TOOLS[key];
+      el('workspace').hidden = false;
+      el('toolTitle').textContent = t.name;
+      el('toolHelp').textContent = t.help;
+      el('dropText').textContent = t.multiple ? 'Choose files, or drag them here'
+                                              : 'Choose a file, or drag it here';
+      el('picker').accept = t.accept;
+      el('picker').multiple = !!t.multiple;
+      el('run').textContent = t.action;
+      el('results').textContent = '';
+      notice('');
+      document.querySelectorAll('.tool').forEach((b, i) => {
+        b.classList.toggle('active', Object.keys(TOOLS)[i] === key);
+      });
+
+      const opts = el('options');
+      opts.textContent = '';
+      if (t.options) {
+        const row = make('div', 'row');
+        t.options.forEach((o) => {
+          const label = make('label');
+          label.appendChild(make('span', null, o.label));
+          let field;
+          if (o.type === 'select') {
+            field = document.createElement('select');
+            field.className = 'in';
+            o.choices.forEach((c) => {
+              const opt = document.createElement('option');
+              opt.value = c;
+              opt.textContent = c;
+              field.appendChild(opt);
+            });
+          } else {
+            field = document.createElement('input');
+            field.className = 'in';
+            field.placeholder = o.placeholder || '';
+          }
+          field.id = 'opt-' + o.id;
+          label.appendChild(field);
+          row.appendChild(label);
+        });
+        opts.appendChild(row);
+      }
+      renderFiles();
+      el('workspace').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ---------------- files ---------------- */
+    function addFiles(list) {
+      const t = TOOLS[current];
+      const incoming = Array.from(list);
+      if (!t.multiple) files = [];
+      incoming.forEach((f) => {
+        // 80MB is roughly where a browser tab starts to struggle holding the original, the
+        // parsed document and the output at once. Better to say so than to be killed
+        // half-way through with no explanation.
+        if (f.size > 80 * 1024 * 1024) {
+          notice(f.name + ' is ' + kb(f.size) + '. Files above about 80 MB are too large to '
+               + 'process in a browser tab — split it first, or use desktop software.', 'warn');
+          return;
+        }
+        files.push(f);
+      });
+      if (!t.multiple) files = files.slice(-1);
+      renderFiles();
+    }
+
+    function renderFiles() {
+      const mount = el('files');
+      mount.textContent = '';
+      files.forEach((f, i) => {
+        const row = make('div', 'file');
+        row.appendChild(make('i', 'fas fa-file-pdf'));
+        row.appendChild(make('span', 'grow', f.name));
+        row.appendChild(make('span', 'meta', kb(f.size)));
+        if (TOOLS[current].multiple && files.length > 1) {
+          const up = make('button', 'move', '▲');
+          up.type = 'button';
+          up.title = 'Move up';
+          up.disabled = i === 0;
+          up.addEventListener('click', () => {
+            [files[i - 1], files[i]] = [files[i], files[i - 1]];
+            renderFiles();
+          });
+          const down = make('button', 'move', '▼');
+          down.type = 'button';
+          down.title = 'Move down';
+          down.disabled = i === files.length - 1;
+          down.addEventListener('click', () => {
+            [files[i + 1], files[i]] = [files[i], files[i + 1]];
+            renderFiles();
+          });
+          row.appendChild(up);
+          row.appendChild(down);
+        }
+        const drop = make('button', null, '✕');
+        drop.type = 'button';
+        drop.title = 'Remove';
+        drop.addEventListener('click', () => { files.splice(i, 1); renderFiles(); });
+        row.appendChild(drop);
+        mount.appendChild(row);
+      });
+      const need = TOOLS[current].min || 1;
+      el('run').disabled = files.length < need;
+      if (files.length && files.length < need) {
+        notice('This needs at least ' + need + ' files.', 'info');
+      }
+    }
+
+    /* ---------------- helpers ---------------- */
+    /** "1-3,7,10-12" to a zero-based page list, checked against the document length. */
+    function parsePages(text, count) {
+      const out = [];
+      String(text || '').split(',').forEach((part) => {
+        const chunk = part.trim();
+        if (!chunk) return;
+        const range = chunk.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (range) {
+          const [a, b] = [Number(range[1]), Number(range[2])];
+          for (let n = Math.min(a, b); n <= Math.max(a, b); n++) out.push(n - 1);
+        } else if (/^\d+$/.test(chunk)) {
+          out.push(Number(chunk) - 1);
+        } else {
+          throw new Error('"' + chunk + '" is not a page or a range.');
+        }
+      });
+      const bad = out.find((n) => n < 0 || n >= count);
+      if (bad !== undefined) {
+        throw new Error('This document has ' + count + ' pages, so page ' + (bad + 1)
+                      + ' does not exist.');
+      }
+      return out;
+    }
+
+    function offer(name, bytes, type) {
+      const blob = new Blob([bytes], { type: type || 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const row = make('div', 'result');
+      row.appendChild(make('i', 'fas fa-circle-check'));
+      row.appendChild(make('span', 'grow', name));
+      row.appendChild(make('span', 'meta', kb(blob.size)));
+      const a = make('a', 'btn btn-primary', 'Download');
+      a.href = url;
+      a.download = name;
+      row.appendChild(a);
+      el('results').appendChild(row);
+    }
+
+    const load = async (f) => PDFLib.PDFDocument.load(await f.arrayBuffer(),
+                                                     { ignoreEncryption: true });
+
+    /* ---------------- the work ---------------- */
+    const RUN = {
+      async merge() {
+        const out = await PDFLib.PDFDocument.create();
+        for (const f of files) {
+          const doc = await load(f);
+          const pages = await out.copyPages(doc, doc.getPageIndices());
+          pages.forEach((p) => out.addPage(p));
+        }
+        offer('merged.pdf', await out.save());
+      },
+
+      async split() {
+        const doc = await load(files[0]);
+        const want = parsePages(el('opt-ranges').value, doc.getPageCount());
+        if (!want.length) throw new Error('Give the pages you want, like 1-3,7.');
+        const out = await PDFLib.PDFDocument.create();
+        const pages = await out.copyPages(doc, want);
+        pages.forEach((p) => out.addPage(p));
+        offer(files[0].name.replace(/\.pdf$/i, '') + '-pages.pdf', await out.save());
+      },
+
+      async organize() {
+        const doc = await load(files[0]);
+        const order = parsePages(el('opt-order').value, doc.getPageCount());
+        if (!order.length) throw new Error('Give the new order, like 3,1,2.');
+        const out = await PDFLib.PDFDocument.create();
+        const pages = await out.copyPages(doc, order);
+        pages.forEach((p) => out.addPage(p));
+        const dropped = doc.getPageCount() - new Set(order).size;
+        if (dropped > 0) {
+          notice(dropped + ' page(s) were left out of that order and are not in the result.',
+                 'warn');
+        }
+        offer(files[0].name.replace(/\.pdf$/i, '') + '-reordered.pdf', await out.save());
+      },
+
+      async rotate() {
+        const doc = await load(files[0]);
+        const angle = Number(el('opt-angle').value);
+        const text = el('opt-pages').value.trim();
+        const which = text ? parsePages(text, doc.getPageCount())
+                           : doc.getPageIndices();
+        which.forEach((i) => {
+          const page = doc.getPage(i);
+          // Added to whatever rotation the page already carries, so a page that was already
+          // sideways ends up where the user expects rather than back where it started.
+          const now = page.getRotation().angle;
+          page.setRotation(PDFLib.degrees((now + angle) % 360));
+        });
+        offer(files[0].name.replace(/\.pdf$/i, '') + '-rotated.pdf', await doc.save());
+      },
+
+      async watermark() {
+        const doc = await load(files[0]);
+        const text = el('opt-text').value.trim();
+        if (!text) throw new Error('What should the watermark say?');
+        const opacity = Number(el('opt-opacity').value);
+        const font = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+        doc.getPages().forEach((page) => {
+          const { width, height } = page.getSize();
+          const size = Math.min(width, height) / (text.length > 12 ? 9 : 5);
+          page.drawText(text, {
+            x: width / 2 - (font.widthOfTextAtSize(text, size) / 2) * 0.72,
+            y: height / 2,
+            size,
+            font,
+            color: PDFLib.rgb(0.6, 0.1, 0.15),
+            opacity,
+            rotate: PDFLib.degrees(45)
+          });
+        });
+        offer(files[0].name.replace(/\.pdf$/i, '') + '-watermarked.pdf', await doc.save());
+      },
+
+      async imagesToPdf() {
+        const out = await PDFLib.PDFDocument.create();
+        for (const f of files) {
+          const bytes = await f.arrayBuffer();
+          const img = /png$/i.test(f.type) ? await out.embedPng(bytes)
+                                           : await out.embedJpg(bytes);
+          const page = out.addPage([img.width, img.height]);
+          page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+        }
+        offer('images.pdf', await out.save());
+      },
+
+      async pdfToImages() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const data = await files[0].arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data }).promise;
+        const scale = Number(el('opt-scale').value);
+        const base = files[0].name.replace(/\.pdf$/i, '');
+        for (let n = 1; n <= doc.numPages; n++) {
+          const page = await doc.getPage(n);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+          offer(base + '-page-' + n + '.png', await blob.arrayBuffer(), 'image/png');
+        }
+      },
+
+      async compress() {
+        const before = files[0].size;
+        const doc = await load(files[0]);
+        // Object streams are the only real saving available here. There is no image
+        // re-encoding, which is where desktop compressors get their large reductions.
+        const bytes = await doc.save({ useObjectStreams: true });
+        const saved = Math.round((1 - bytes.length / before) * 100);
+        notice(saved > 1
+          ? 'About ' + saved + '% smaller. Structural rewriting only — see the note below.'
+          : 'This file was already compact; rewriting it saved nothing worth having. '
+            + 'That is expected for text PDFs, and for scans it needs desktop software.',
+          saved > 1 ? 'ok' : 'warn');
+        offer(files[0].name.replace(/\.pdf$/i, '') + '-compressed.pdf', bytes);
+      }
+    };
+
+    /* ---------------- wiring ---------------- */
+    el('picker').addEventListener('change', (e) => addFiles(e.target.files));
+    el('drop').addEventListener('click', () => el('picker').click());
+    ['dragenter', 'dragover'].forEach((ev) => el('drop').addEventListener(ev, (e) => {
+      e.preventDefault(); el('drop').classList.add('over');
+    }));
+    ['dragleave', 'drop'].forEach((ev) => el('drop').addEventListener(ev, (e) => {
+      e.preventDefault(); el('drop').classList.remove('over');
+    }));
+    el('drop').addEventListener('drop', (e) => {
+      if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+    });
+    el('clear').addEventListener('click', () => {
+      files = [];
+      el('results').textContent = '';
+      notice('');
+      renderFiles();
+    });
+    el('closeTool').addEventListener('click', () => {
+      el('workspace').hidden = true;
+      document.querySelectorAll('.tool').forEach((b) => b.classList.remove('active'));
+    });
+
+    el('run').addEventListener('click', async () => {
+      const button = el('run');
+      button.disabled = true;
+      const wasLabel = button.textContent;
+      button.textContent = 'Working…';
+      notice('');
+      el('results').textContent = '';
+      try {
+        await RUN[current]();
+      } catch (error) {
+        // Shown as written. A PDF that will not open is usually damaged or encrypted, and
+        // the library's own message says more than any wording of mine would.
+        notice(error && error.message ? error.message : 'That file could not be processed.',
+               'bad');
+      }
+      button.textContent = wasLabel;
+      button.disabled = false;
+    });
+
+    /* ---------------- who may use it ---------------- */
+    (async () => {
+      try {
+        // The same gate the rest of the admin area uses. The work is local, but the page
+        // sits in the members' portal and should not be a public utility.
+        const me = await window.ResokPortal.api('/api/security/assessment');
+        el('main').hidden = false;
+        el('limits').hidden = false;
+        renderTools();
+      } catch (error) {
+        if (error.status === 401) { window.location.href = 'login'; return; }
+        el('gateNotice').appendChild(make('div', 'note bad',
+          error.status === 403
+            ? 'This page is restricted to super administrators.'
+            : (error.message || 'Could not confirm your access.')));
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

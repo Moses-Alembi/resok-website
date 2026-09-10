@@ -41,4 +41,3 @@ deployment:
       $DEPLOYPATH/assemblies.html
       $DEPLOYPATH/media-learning.html
       $DEPLOYPATH/research.html
-      $DEPLOYPATH/workshops-and-training.html

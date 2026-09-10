@@ -131,8 +131,14 @@
         barely shrink. Expect a few per cent, not ninety.
       </div>
       <div class="note warn">
-        <strong>Office conversion</strong> (Word, Excel, PowerPoint) is not here. It needs
-        LibreOffice running on a server, which shared hosting cannot provide.
+        <strong>Word conversion works, but not faithfully.</strong> Word to PDF handles simple
+        documents and loses headers, footers and complex layout; its output is page images, so
+        the text cannot be selected or searched. PDF to Word recovers the wording only &mdash;
+        tables, columns and images are not reproduced. Faithful conversion needs LibreOffice
+        on a server, which shared hosting cannot provide.
+      </div>
+      <div class="note warn">
+        <strong>Excel and PowerPoint</strong> are not here at all, for the same reason.
       </div>
       <div class="note warn">
         <strong>Password protection and unlocking</strong> are not here either. The library
@@ -144,6 +150,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" integrity="sha384-nFoSjZIoH3CCp8W639jJyQkuPHinJ2NHe7on1xvlUA7SuGfJAfvMldrsoAVm6ECz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/portal-state.js?v=20260909-errstatus"></script>
   <script>
   /**
@@ -237,6 +245,21 @@
         help: 'Each page is rendered and offered as a separate PNG.',
         accept: 'application/pdf', multiple: false, action: 'Render the pages',
         options: [{ id: 'scale', label: 'Size', type: 'select', choices: ['1', '1.5', '2', '3'] }]
+      },
+      wordToPdf: {
+        icon: 'fa-file-word', name: 'Word to PDF',
+        blurb: 'Turn a .docx into a PDF',
+        help: 'Simple documents convert well. Headers, footers and complex layout do not '
+            + 'survive, and the result is page images rather than selectable text.',
+        accept: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        multiple: false, action: 'Convert to PDF'
+      },
+      pdfToWord: {
+        icon: 'fa-file-lines', name: 'PDF to Word',
+        blurb: 'Pull the text out for editing',
+        help: 'Text and paragraphs only. Tables, columns, images and layout are not kept - '
+            + 'this recovers the wording, it does not reproduce the document.',
+        accept: 'application/pdf', multiple: false, action: 'Extract the text'
       },
       compress: {
         icon: 'fa-file-zipper', name: 'Compress',
@@ -518,6 +541,80 @@
           const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
           offer(base + '-page-' + n + '.png', await blob.arrayBuffer(), 'image/png');
         }
+      },
+
+      async wordToPdf() {
+        const f = files[0];
+        if (!/\.docx$/i.test(f.name)) {
+          throw new Error('This needs a .docx file. The older .doc format is not supported.');
+        }
+        // mammoth reads the document's own structure rather than imitating how Word paints
+        // it, which is why headers, footers and floated layout do not come through.
+        const result = await mammoth.convertToHtml({ arrayBuffer: await f.arrayBuffer() });
+        const html = result.value;
+        if (!html || !html.trim()) throw new Error('No readable text was found in that document.');
+
+        const holder = document.createElement('div');
+        holder.style.cssText = 'width:170mm;font-family:Georgia,serif;font-size:11pt;line-height:1.5;color:#111';
+        holder.innerHTML = html;
+
+        await html2pdf().set({
+          margin: [15, 20, 15, 20],
+          filename: f.name.replace(/\.docx$/i, '') + '.pdf',
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(holder).save();
+
+        // Whatever mammoth could not carry across is reported rather than dropped silently.
+        const lost = (result.messages || []).filter((m) => m.type === 'warning').length;
+        notice(lost
+          ? 'Converted, but ' + lost + ' formatting feature(s) could not be carried across. '
+            + 'Check the result before sending it out.'
+          : 'Converted. The result is page images, so its text cannot be selected or searched.',
+          lost ? 'warn' : 'ok');
+      },
+
+      async pdfToWord() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const doc = await pdfjsLib.getDocument({ data: await files[0].arrayBuffer() }).promise;
+
+        const paras = [];
+        for (let n = 1; n <= doc.numPages; n++) {
+          const page = await doc.getPage(n);
+          const content = await page.getTextContent();
+          // Items are positioned fragments, not sentences. Grouping them by vertical
+          // position is what rebuilds the lines; without it every fragment lands on its own.
+          const lines = new Map();
+          content.items.forEach((it) => {
+            const y = Math.round(it.transform[5]);
+            if (!lines.has(y)) lines.set(y, []);
+            lines.get(y).push(it.str);
+          });
+          Array.from(lines.keys()).sort((a, b) => b - a).forEach((y) => {
+            const line = lines.get(y).join('').replace(/\s+/g, ' ').trim();
+            if (line) paras.push(line);
+          });
+          if (n < doc.numPages) paras.push('');
+        }
+        if (!paras.some((p) => p)) {
+          throw new Error('No text could be read. This looks like a scanned PDF - its pages '
+                        + 'are images, and reading them needs OCR, which this page cannot do.');
+        }
+
+        const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        // Word opens an HTML document saved as .doc, which avoids hand-building an OOXML
+        // package for what is, in the end, plain text.
+        const body = paras.map((p) => p ? '<p>' + esc(p) + '</p>' : '<p>&nbsp;</p>').join('\n');
+        const out = '<html xmlns:w="urn:schemas-microsoft-com:office:word"><head>'
+                  + '<meta charset="utf-8"><title>' + esc(files[0].name) + '</title></head>'
+                  + '<body style="font-family:Calibri,sans-serif;font-size:11pt">'
+                  + body + '</body></html>';
+        offer(files[0].name.replace(/\.pdf$/i, '') + '.doc',
+              new TextEncoder().encode(out), 'application/msword');
+        notice('Extracted ' + paras.filter((p) => p).length + ' line(s). Layout, tables and '
+             + 'images are not included - this is the wording, not the document.', 'warn');
       },
 
       async compress() {

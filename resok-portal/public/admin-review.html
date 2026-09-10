@@ -866,9 +866,20 @@
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
       try {
         const result = await window.ResokPortal.api(`/api/members/${selectedMember.id}/welcome-packet`, { method: "POST" });
+        // Deliberately an alert rather than only the notice: this is the one action whose
+        // outcome is being actively diagnosed, and an alert cannot be scrolled past, styled
+        // away, or missed. The notice is kept for the page's own record of what happened.
+        const ok = `Welcome packet SENT to ${result.sentTo}.
+
+The mail server accepted it. If it does not arrive, the problem is after the handoff - check cPanel > Track Delivery.`;
         showNote(`Welcome packet sent to ${result.sentTo}. Letter and card attached.`);
+        alert(ok);
       } catch (error) {
-        showNote(`The welcome packet did NOT send: ${error.message || "the server gave no reason"}`, "error");
+        const why = error.message || "the server gave no reason";
+        showNote(`The welcome packet did NOT send: ${why}`, "error");
+        alert(`Welcome packet FAILED.
+
+${why}`);
       } finally {
         btn.disabled = false;
         btn.innerHTML = label;

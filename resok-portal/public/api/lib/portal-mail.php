@@ -274,23 +274,16 @@ function sendWelcomePacketEmail(array $config, array $member, ?string &$error = 
     $greeting = portalGreetingName($member);
     $text = "Dear {$greeting},\n\nWelcome to the Respiratory Society of Kenya (ReSoK)!\n\nWe are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter and Membership Card for your records.\n\nWe are delighted to have you join the ReSoK membership community and look forward to your engagement in advancing lung health in Kenya and beyond.\n\nWelcome to ReSoK!\n\nBest regards,\nReSoK Secretariat\nRespiratory Society of Kenya (ReSoK)";
 
-    $html = brandedEmailHtml(
-        'Welcome to ReSoK – Membership Confirmation',
-        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Dear ' . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to the Respiratory Society of Kenya (ReSoK)!</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">We are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter and Membership Card for your records.</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">We are delighted to have you join the ReSoK membership community and look forward to your engagement in advancing lung health in Kenya and beyond.</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to ReSoK!</p>'
-        . '<p style="margin:0;font-size:15px;line-height:1.65;">Best regards,<br />ReSoK Secretariat<br />Respiratory Society of Kenya (ReSoK)</p>'
-    );
-
     $attachments = [
         ['filename' => 'ReSoK-Welcome-Letter.pdf', 'content' => buildWelcomeLetterPdf($member), 'mime' => 'application/pdf'],
         ['filename' => 'ReSoK-Membership-Card.pdf', 'content' => buildMembershipCardPdf($member), 'mime' => 'application/pdf']
     ];
 
     $mailer = new SimpleMailer($config);
-    $sent = $mailer->send($email, 'Welcome to ReSoK – Membership Confirmation', $text, $attachments, $html);
+    // No HTML part. A plain-text message is what a letter of transmittal looks like in an
+    // inbox, and it puts the two attachments immediately below the words rather than
+    // below a branded banner, heading and footer.
+    $sent = $mailer->send($email, 'Welcome to ReSoK – Membership Confirmation', $text, $attachments);
     if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';
     return $sent;
 }

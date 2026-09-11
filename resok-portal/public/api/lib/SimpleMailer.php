@@ -53,20 +53,31 @@ class SimpleMailer
             $headers[] = 'Reply-To: ' . $replyTo;
         }
 
+        // Every body part is base64 with hard-wrapped lines, because SMTP limits how long a
+        // single line may be and the branded HTML is generated as one unbroken string. The
+        // host rejected the welcome packet with "message has lines too long for transport
+        // (received 2162, limit 2048)" while the shorter verification email passed - which is
+        // why one delivered and the other never did. Encoding makes the line length a property
+        // of the transfer rather than of whatever the template happens to contain, so no later
+        // edit to the copy can bring this back.
+        $encodePart = static function (string $content): string {
+            return chunk_split(base64_encode($content));
+        };
+
         if ($htmlBody !== null) {
             $altBoundary = 'resok-alt-' . bin2hex(random_bytes(12));
-            $bodyContent = "--{$altBoundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$textBody}\r\n";
-            $bodyContent .= "--{$altBoundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$htmlBody}\r\n";
+            $bodyContent = "--{$altBoundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . $encodePart($textBody);
+            $bodyContent .= "--{$altBoundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . $encodePart($htmlBody);
             $bodyContent .= "--{$altBoundary}--\r\n";
             $bodyContentType = 'multipart/alternative; boundary="' . $altBoundary . '"';
         } else {
-            $bodyContent = $textBody . "\r\n";
+            $bodyContent = $encodePart($textBody);
             $bodyContentType = 'text/plain; charset=UTF-8';
         }
 
         if (!$attachments) {
             $headers[] = 'Content-Type: ' . $bodyContentType;
-            if ($htmlBody === null) $headers[] = 'Content-Transfer-Encoding: 8bit';
+            if ($htmlBody === null) $headers[] = 'Content-Transfer-Encoding: base64';
             return implode("\r\n", $headers) . "\r\n\r\n" . $bodyContent;
         }
 
@@ -74,7 +85,7 @@ class SimpleMailer
         $headers[] = 'Content-Type: multipart/mixed; boundary="' . $boundary . '"';
 
         $body = "--{$boundary}\r\nContent-Type: {$bodyContentType}\r\n";
-        if ($htmlBody === null) $body .= "Content-Transfer-Encoding: 8bit\r\n";
+        if ($htmlBody === null) $body .= "Content-Transfer-Encoding: base64\r\n";
         $body .= "\r\n{$bodyContent}\r\n";
 
         foreach ($attachments as $attachment) {

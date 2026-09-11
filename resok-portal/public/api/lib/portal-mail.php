@@ -4,6 +4,26 @@ declare(strict_types=1);
 require_once __DIR__ . '/SimplePdf.php';
 require_once __DIR__ . '/SimpleMailer.php';
 
+/**
+ * The name as a letter addresses it: given name and surname, no title.
+ *
+ * Capitalisation is repaired only for words stored entirely in lower case, which covers the
+ * "moses alembi" left by hurried data entry while leaving McDonald, O'Brien and van der Berg
+ * exactly as their owner wrote them. Blanket ucwords() would corrupt all three.
+ */
+function portalGreetingName(array $member): string
+{
+    $parts = array_filter([$member['firstName'] ?? null, $member['surname'] ?? null]);
+    $name = trim(preg_replace('/\s+/', ' ', implode(' ', $parts)));
+    if ($name === '') {
+        return 'ReSoK Member';
+    }
+    $words = array_map(static function (string $word): string {
+        return $word === mb_strtolower($word, 'UTF-8') ? mb_convert_case($word, MB_CASE_TITLE, 'UTF-8') : $word;
+    }, explode(' ', $name));
+    return implode(' ', $words);
+}
+
 function portalMemberName(array $member): string
 {
     $parts = array_filter([$member['title'] ?? null, $member['firstName'] ?? null, $member['middleName'] ?? null, $member['surname'] ?? null]);
@@ -251,20 +271,17 @@ function sendWelcomePacketEmail(array $config, array $member, ?string &$error = 
         return false;
     }
 
-    $name = portalMemberName($member);
-    $membershipId = (string)($member['membershipId'] ?? 'Pending');
-    $portal = rtrim((string)($config['portal_base_url'] ?? ''), '/') ?: 'https://www.resok.org/resok-portal/public';
-    $text = "Dear {$name},\n\nPlease find attached your official ReSoK welcome letter and your membership card.\n\nYour membership has been approved and is now active. Your membership number is {$membershipId}.\n\nYou can manage your membership at any time at {$portal}.\n\nBest regards,\nRespiratory Society of Kenya";
+    $greeting = portalGreetingName($member);
+    $text = "Dear {$greeting},\n\nWelcome to the Respiratory Society of Kenya (ReSoK)!\n\nWe are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter and Membership Card for your records.\n\nWe are delighted to have you join the ReSoK membership community and look forward to your engagement in advancing lung health in Kenya and beyond.\n\nWelcome to ReSoK!\n\nBest regards,\nReSoK Secretariat\nRespiratory Society of Kenya (ReSoK)";
 
     $html = brandedEmailHtml(
         'Welcome to ReSoK Membership',
-        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Dear ' . htmlspecialchars($name, ENT_QUOTES) . ',</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Please find attached your official ReSoK welcome letter and your membership card.</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Your membership has been approved and is now active. Your membership number is <strong style="color:#00932e;">'
-        . htmlspecialchars($membershipId, ENT_QUOTES) . '</strong>.</p>'
-        . '<p style="margin:0;font-size:15px;line-height:1.65;">Best regards,<br />Respiratory Society of Kenya</p>',
-        'Go to My Portal',
-        $portal
+        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Dear ' . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to the Respiratory Society of Kenya (ReSoK)!</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">We are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter and Membership Card for your records.</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">We are delighted to have you join the ReSoK membership community and look forward to your engagement in advancing lung health in Kenya and beyond.</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to ReSoK!</p>'
+        . '<p style="margin:0;font-size:15px;line-height:1.65;">Best regards,<br />ReSoK Secretariat<br />Respiratory Society of Kenya (ReSoK)</p>'
     );
 
     $attachments = [

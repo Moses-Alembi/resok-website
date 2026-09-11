@@ -96,6 +96,62 @@ function buildPlainWelcomeLetterPdf(array $member): string
 
 function buildMembershipCardPdf(array $member): string
 {
+    // The member already has a card in the portal: artwork with their details placed over it.
+    // Generating a different-looking one for the email gave people two cards that disagreed,
+    // so this draws the same background and the same fields, at half the artwork's scale.
+    $template = __DIR__ . '/../../../../private/membership-card-bg.jpg';
+    $scale = 0.5;
+    $width = 1012 * $scale;
+    $height = 645 * $scale;
+    $pdf = new SimplePdf($width, $height);
+
+    if (!is_file($template) || !method_exists($pdf, 'image') || !$pdf->image($template, 0, 0, $width, $height)) {
+        error_log(sprintf(
+            'Membership card artwork unused (%s at %s) - sending the plain card instead.',
+            is_file($template) ? 'present but rejected by SimplePdf::image()' : 'file not found',
+            $template
+        ));
+        return buildPlainMembershipCardPdf($member);
+    }
+
+    // Names and categories vary in length and must shrink rather than run off the artwork,
+    // as the portal's card does. 0.58 is SimplePdf's own average glyph width for bold text.
+    $fit = static function (string $text, float $size, float $maxWidth): float {
+        while ($size > 7 && strlen($text) * $size * 0.58 > $maxWidth) {
+            $size -= 0.5;
+        }
+        return $size;
+    };
+
+    $name = strtoupper(portalMemberName($member));
+    $membershipId = (string)($member['membershipId'] ?? 'PENDING');
+    $category = strtoupper((string)($member['category'] ?? 'MEMBER'));
+
+    $renewalDue = (string)($member['renewalDue'] ?? '');
+    $validThru = 'ANNUAL';
+    if ($renewalDue !== '' && stripos($renewalDue, 'pending') === false) {
+        $timestamp = strtotime($renewalDue);
+        if ($timestamp !== false) {
+            $validThru = date('m/y', $timestamp);
+        }
+    }
+
+    $pdf->setTextColor(255, 255, 255);
+    // These are the portal SVG's own coordinates multiplied by the scale, kept in that form
+    // so that a change to either card can be mirrored in the other by inspection.
+    $pdf->text(506 * $scale, 327 * $scale, $category, $fit($category, 56 * $scale, 930 * $scale), true, 'C');
+    $pdf->text(56 * $scale, 441 * $scale, $membershipId, $fit($membershipId, 52 * $scale, 400 * $scale), true);
+    $pdf->text(736 * $scale, 409 * $scale, 'VALID', 26 * $scale, true, 'R');
+    $pdf->text(736 * $scale, 441 * $scale, 'THRU', 26 * $scale, true, 'R');
+    $pdf->text(768 * $scale, 426 * $scale, $validThru, 42 * $scale, true);
+    $pdf->text(506 * $scale, 600 * $scale, $name, $fit($name, 46 * $scale, 700 * $scale), true, 'C');
+
+    return $pdf->output();
+}
+
+/** The original generated card, kept as the fallback when the artwork is unavailable. */
+function buildPlainMembershipCardPdf(array $member): string
+{
     $pdf = new SimplePdf(340, 214); // landscape, CR80-ish proportions in points
     $pdf->setFillColor(11, 95, 47);
     $pdf->rect(0, 0, 340, 214, 'F');
@@ -198,14 +254,15 @@ function sendWelcomePacketEmail(array $config, array $member, ?string &$error = 
     $name = portalMemberName($member);
     $membershipId = (string)($member['membershipId'] ?? 'Pending');
     $portal = rtrim((string)($config['portal_base_url'] ?? ''), '/') ?: 'https://www.resok.org/resok-portal/public';
-    $text = "Welcome to ReSoK, {$name}.\n\nYour membership (ID: {$membershipId}) is now active. Your welcome letter and digital membership card are attached to this email.\n\nManage your membership anytime at {$portal}.\n\nRespiratory Society of Kenya";
+    $text = "Dear {$name},\n\nPlease find attached your official ReSoK welcome letter and your membership card.\n\nYour membership has been approved and is now active. Your membership number is {$membershipId}.\n\nYou can manage your membership at any time at {$portal}.\n\nBest regards,\nRespiratory Society of Kenya";
 
     $html = brandedEmailHtml(
         'Welcome to ReSoK Membership',
         '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Dear ' . htmlspecialchars($name, ENT_QUOTES) . ',</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">On behalf of the Respiratory Society of Kenya, congratulations &mdash; your membership is now <strong style="color:#00932e;">active</strong>.</p>'
-        . '<div style="background:#f7faf8;border:1px solid rgba(0,147,46,.18);border-radius:8px;padding:16px 18px;margin:18px 0;"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#667085;margin-bottom:4px;">Membership ID</div><div style="font-size:20px;font-weight:800;color:#00932e;">' . htmlspecialchars($membershipId, ENT_QUOTES) . '</div></div>'
-        . '<p style="margin:0;font-size:15px;line-height:1.65;">Your welcome letter and digital membership card are attached to this email as PDFs.</p>',
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Please find attached your official ReSoK welcome letter and your membership card.</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Your membership has been approved and is now active. Your membership number is <strong style="color:#00932e;">'
+        . htmlspecialchars($membershipId, ENT_QUOTES) . '</strong>.</p>'
+        . '<p style="margin:0;font-size:15px;line-height:1.65;">Best regards,<br />Respiratory Society of Kenya</p>',
         'Go to My Portal',
         $portal
     );

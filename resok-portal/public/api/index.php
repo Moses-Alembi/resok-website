@@ -937,6 +937,153 @@ try {
         respond(200, ['email' => $invite['email'], 'name' => $invite['name']]);
     }
 
+    // Society analytics, for super administrators only. Aggregates exclusively: no row here
+    // identifies a person. Each block is isolated because the schema ships in pieces and a
+    // server may be missing one - a single absent table should cost one card, not the page.
+    if ($route === 'admin/analytics' && $method === 'GET') {
+        $user = auth($config);
+        requireSuperAdmin($user, $config);
+
+        $out = ['generatedAt' => date('c'), 'unavailable' => []];
+        $section = function (string $name, callable $work) use ($pdo, &$out): void {
+            try {
+                $out[$name] = $work($pdo);
+            } catch (Throwable $sectionError) {
+                $out[$name] = null;
+                $out['unavailable'][] = $name;
+                error_log('Analytics section "' . $name . '" failed: ' . $sectionError->getMessage());
+            }
+        };
+
+        $section('members', function (PDO $pdo): array {
+            $byStatus = [];
+            foreach ($pdo->query('SELECT membership_status AS s, COUNT(*) AS c FROM member_profiles GROUP BY membership_status') as $row) {
+                $byStatus[(string)$row['s']] = (int)$row['c'];
+            }
+            $months = $pdo->query(
+                'SELECT DATE_FORMAT(created_at, "%Y-%m") AS m, COUNT(*) AS c
+                   FROM member_profiles
+                  WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+                  GROUP BY m ORDER BY m'
+            )->fetchAll();
+            // Renewals ahead, so the Secretariat can see the workload before it arrives rather
+            // than after the reminders have gone out.
+            $due = $pdo->query(
+                'SELECT
+                    SUM(renewal_due BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)) AS d30,
+                    SUM(renewal_due BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 60 DAY)) AS d60,
+                    SUM(renewal_due BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY)) AS d90,
+                    SUM(renewal_due < CURDATE()) AS overdue
+                   FROM member_profiles WHERE membership_status = "active"'
+            )->fetch();
+            return [
+                'total' => array_sum($byStatus),
+                'byStatus' => $byStatus,
+                'newByMonth' => array_map(fn($r) => ['month' => $r['m'], 'count' => (int)$r['c']], $months),
+                'renewalsDue' => [
+                    'in30' => (int)($due['d30'] ?? 0),
+                    'in60' => (int)($due['d60'] ?? 0),
+                    'in90' => (int)($due['d90'] ?? 0),
+                    'overdue' => (int)($due['overdue'] ?? 0),
+                ],
+            ];
+        });
+
+        $section('payments', function (PDO $pdo): array {
+            $rows = $pdo->query(
+                'SELECT year, COUNT(*) AS members, COALESCE(SUM(amount), 0) AS total
+                   FROM member_payment_years GROUP BY year ORDER BY year'
+            )->fetchAll();
+            return array_map(fn($r) => [
+                'year' => (int)$r['year'],
+                'members' => (int)$r['members'],
+                'total' => (float)$r['total'],
+            ], $rows);
+        });
+
+        $section('readership', function (PDO $pdo): array {
+            // dimension = 'total' is the undifferentiated daily row; the others break the same
+            // reads down by country, source and so on, and would double-count if summed here.
+            $daily = $pdo->query(
+                'SELECT stat_date AS d, SUM(`reads`) AS r, SUM(unique_readers) AS u, SUM(completions) AS c
+                   FROM blog_daily_stats
+                  WHERE dimension = "total" AND stat_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                  GROUP BY stat_date ORDER BY stat_date'
+            )->fetchAll();
+            $top = $pdo->query(
+                'SELECT a.title AS t, SUM(s.`reads`) AS r
+                   FROM blog_daily_stats s JOIN blog_articles a ON a.id = s.article_id
+                  WHERE s.dimension = "total" AND s.stat_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                  GROUP BY a.id, a.title ORDER BY r DESC LIMIT 5'
+            )->fetchAll();
+            return [
+                'daily' => array_map(fn($r) => [
+                    'date' => $r['d'], 'reads' => (int)$r['r'],
+                    'readers' => (int)$r['u'], 'completions' => (int)$r['c'],
+                ], $daily),
+                'totals' => [
+                    'reads' => array_sum(array_map(fn($r) => (int)$r['r'], $daily)),
+                    'readers' => array_sum(array_map(fn($r) => (int)$r['u'], $daily)),
+                    'completions' => array_sum(array_map(fn($r) => (int)$r['c'], $daily)),
+                ],
+                'topArticles' => array_map(fn($r) => ['title' => $r['t'], 'reads' => (int)$r['r']], $top),
+            ];
+        });
+
+        $section('academy', function (PDO $pdo): array {
+            $row = $pdo->query(
+                'SELECT COUNT(*) AS enrolments,
+                        SUM(completed_at IS NOT NULL) AS completions,
+                        SUM(last_active_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS activeLearners,
+                        COUNT(DISTINCT user_id) AS learners
+                   FROM academy_enrolments'
+            )->fetch();
+            return [
+                'enrolments' => (int)($row['enrolments'] ?? 0),
+                'completions' => (int)($row['completions'] ?? 0),
+                'activeLearners' => (int)($row['activeLearners'] ?? 0),
+                'learners' => (int)($row['learners'] ?? 0),
+            ];
+        });
+
+        $section('elections', function (PDO $pdo): array {
+            $rows = $pdo->query(
+                'SELECT e.id, e.title, e.status,
+                        (SELECT COUNT(*) FROM election_roll r WHERE r.election_id = e.id) AS roll,
+                        (SELECT COUNT(DISTINCT b.roll_id) FROM election_ballots b WHERE b.election_id = e.id) AS voted
+                   FROM elections e ORDER BY e.id DESC LIMIT 5'
+            )->fetchAll();
+            return array_map(function ($r) {
+                $roll = (int)$r['roll'];
+                $voted = (int)$r['voted'];
+                return [
+                    'title' => $r['title'],
+                    'status' => $r['status'],
+                    'roll' => $roll,
+                    'voted' => $voted,
+                    // Turnout is derived here rather than stored, like everywhere else.
+                    'turnout' => $roll > 0 ? round($voted / $roll * 100, 1) : null,
+                ];
+            }, $rows);
+        });
+
+        $section('events', function (PDO $pdo): array {
+            $row = $pdo->query(
+                'SELECT COUNT(*) AS registrations,
+                        COUNT(DISTINCT member_profile_id) AS members,
+                        COALESCE(SUM(cpd_points), 0) AS cpdPoints
+                   FROM event_registrations'
+            )->fetch();
+            return [
+                'registrations' => (int)($row['registrations'] ?? 0),
+                'members' => (int)($row['members'] ?? 0),
+                'cpdPoints' => (int)($row['cpdPoints'] ?? 0),
+            ];
+        });
+
+        respond(200, $out);
+    }
+
     if ($route === 'admin/whoami' && $method === 'GET') {
         $user = auth($config);
         requireAdmin($user);

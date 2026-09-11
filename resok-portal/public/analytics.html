@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analytics - ReSoK Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--ink:#253141;--muted:#667085;
+      --bg:#f5f7fa;--line:#e5e7eb;--radius:10px;--shadow:0 2px 12px rgba(15,23,42,.07);
+      --warn:#b54708;--fail:#b42318;--pass:#0f7a38;--info:#175cd3}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    .page{width:min(1220px,94vw);margin:0 auto;padding:22px 0 60px}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+    .top h1{font-size:22px;letter-spacing:-.2px}
+    .top p{color:var(--muted);font-size:13.5px;margin-top:3px}
+    .back{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600}
+    .back:hover{color:var(--brand-primary)}
+    .note{border-radius:8px;padding:12px 15px;font-size:13.5px;margin-bottom:14px}
+    .note.bad{background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}
+    .note.warn{background:#fffaeb;color:var(--warn);border:1px solid #fde5b1}
+    .note.info{background:#eff6ff;color:var(--info);border:1px solid #cfe0fd}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:18px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow)}
+    .kpi b{display:block;font-size:27px;line-height:1.1;font-variant-numeric:tabular-nums}
+    .kpi span{display:block;margin-top:5px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+    .kpi small{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;box-shadow:var(--shadow)}
+    .card h2{font-size:14.5px;margin-bottom:3px}
+    .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:12px}
+    .card.wide{grid-column:1/-1}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+       font-weight:700;padding:0 8px 6px 0;border-bottom:1.5px solid var(--line)}
+    td{padding:7px 8px 7px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+    td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+    tr:last-child td{border-bottom:0}
+    .bar{height:8px;border-radius:99px;background:var(--brand-primary);min-width:2px}
+    .bar.alt{background:#8fd3a8}
+    .track{background:#eef2f0;border-radius:99px;overflow:hidden;width:100%}
+    .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;
+      background:#eef2f0;color:var(--muted)}
+    .pill.on{background:#e8f6ed;color:var(--pass)}
+    .pill.off{background:#fff1f2;color:var(--fail)}
+    .empty{color:var(--muted);font-size:13px;padding:10px 0}
+    svg.chart{width:100%;height:auto;display:block;overflow:visible}
+    .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:9px}
+    .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+    .foot{margin-top:22px;font-size:12px;color:var(--muted)}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="top">
+      <div>
+        <h1>Analytics</h1>
+        <p>How the Society&rsquo;s membership, learning and publishing are actually being used.</p>
+      </div>
+      <a class="back" href="dashboard.html"><i class="fas fa-arrow-left"></i> Back to dashboard</a>
+    </div>
+
+    <div id="gateNotice"></div>
+    <div id="loading" class="note info"><i class="fas fa-spinner fa-spin"></i> Loading figures&hellip;</div>
+    <main id="main" hidden></main>
+
+    <p class="foot" id="foot" hidden></p>
+  </div>
+
+  <script src="js/portal-state.js?v=20260911-analytics"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var el = function (id) { return document.getElementById(id); };
+      var num = function (n) { return (n === null || n === undefined) ? "—" : Number(n).toLocaleString(); };
+
+      function make(tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+
+      function card(title, sub, wide) {
+        var c = make("div", wide ? "card wide" : "card");
+        c.appendChild(make("h2", null, title));
+        if (sub) c.appendChild(make("div", "sub", sub));
+        return c;
+      }
+
+      // A tiny bar chart, drawn rather than pulled from a library: the portal ships no chart
+      // dependency and this needs no interaction, only to be read.
+      function barChart(rows, valueKey, labelKey) {
+        var max = rows.reduce(function (m, r) { return Math.max(m, r[valueKey]); }, 0) || 1;
+        var w = 640, h = 150, pad = 22, gap = 4;
+        var bw = (w - pad * 2) / rows.length;
+        var svg = ['<svg class="chart" viewBox="0 0 ' + w + ' ' + (h + 26) + '" role="img">'];
+        rows.forEach(function (r, i) {
+          var bh = Math.round((r[valueKey] / max) * (h - pad));
+          var x = pad + i * bw;
+          svg.push('<rect x="' + (x + gap / 2).toFixed(1) + '" y="' + (h - bh) + '" width="' + (bw - gap).toFixed(1)
+            + '" height="' + bh + '" rx="2" fill="#00932e"></rect>');
+          if (r[valueKey] > 0) {
+            svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (h - bh - 5) + '" text-anchor="middle" '
+              + 'font-size="10" fill="#667085">' + r[valueKey] + '</text>');
+          }
+          // Only every other label on a crowded axis, or they collide.
+          if (rows.length <= 14 || i % 2 === 0) {
+            svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (h + 15) + '" text-anchor="middle" '
+              + 'font-size="9.5" fill="#98a2b3">' + String(r[labelKey]) + '</text>');
+          }
+        });
+        svg.push('</svg>');
+        return svg.join("");
+      }
+
+      function lineChart(rows) {
+        var w = 640, h = 140, pad = 20;
+        var max = rows.reduce(function (m, r) { return Math.max(m, r.reads); }, 0) || 1;
+        var step = rows.length > 1 ? (w - pad * 2) / (rows.length - 1) : 0;
+        var pts = rows.map(function (r, i) {
+          return [(pad + i * step), (h - pad - (r.reads / max) * (h - pad * 2))];
+        });
+        var line = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+        var area = line + " L " + pts[pts.length - 1][0].toFixed(1) + " " + (h - pad) + " L " + pad + " " + (h - pad) + " Z";
+        return '<svg class="chart" viewBox="0 0 ' + w + ' ' + h + '" role="img">'
+          + '<path d="' + area + '" fill="#00932e" opacity=".10"></path>'
+          + '<path d="' + line + '" fill="none" stroke="#00932e" stroke-width="2"></path>'
+          + '<circle cx="' + pts[pts.length - 1][0].toFixed(1) + '" cy="' + pts[pts.length - 1][1].toFixed(1)
+          + '" r="3.5" fill="#00932e"></circle>'
+          + '<text x="' + pad + '" y="' + (h - 4) + '" font-size="9.5" fill="#98a2b3">' + rows[0].date + '</text>'
+          + '<text x="' + (w - pad) + '" y="' + (h - 4) + '" font-size="9.5" fill="#98a2b3" text-anchor="end">'
+          + rows[rows.length - 1].date + '</text>'
+          + '</svg>';
+      }
+
+      function table(headers, rows) {
+        var t = make("table");
+        var thead = make("thead"), tr = make("tr");
+        headers.forEach(function (head) {
+          var th = make("th", head.num ? "num" : null, head.label);
+          tr.appendChild(th);
+        });
+        thead.appendChild(tr);
+        t.appendChild(thead);
+        var tbody = make("tbody");
+        rows.forEach(function (cells) {
+          var row = make("tr");
+          cells.forEach(function (cell) {
+            var td = make("td", cell.num ? "num" : null);
+            if (cell.html) { td.innerHTML = cell.html; } else { td.textContent = cell.text; }
+            row.appendChild(td);
+          });
+          tbody.appendChild(row);
+        });
+        t.appendChild(tbody);
+        return t;
+      }
+
+      var STATUS_LABELS = {
+        active: "Active", under_review: "Under review", payment_required: "Payment required",
+        expired: "Expired", rejected: "Rejected"
+      };
+
+      function render(data) {
+        var main = el("main");
+        main.innerHTML = "";
+
+        // ---- headline figures -------------------------------------------------------
+        var m = data.members, a = data.academy, r = data.readership;
+        var kpis = make("div", "kpis");
+        function kpi(value, label, note) {
+          var k = make("div", "kpi");
+          k.appendChild(make("b", null, num(value)));
+          k.appendChild(make("span", null, label));
+          if (note) k.appendChild(make("small", null, note));
+          kpis.appendChild(k);
+        }
+        if (m) {
+          kpi(m.total, "Members on record");
+          kpi(m.byStatus.active || 0, "Active", (m.renewalsDue.overdue || 0) + " past their renewal date");
+          kpi(m.renewalsDue.in30, "Renewals due in 30 days", m.renewalsDue.in90 + " within 90 days");
+        }
+        if (a) kpi(a.learners, "Academy learners", a.completions + " course completions");
+        if (r) kpi(r.totals.reads, "Article reads", "last 30 days");
+        main.appendChild(kpis);
+
+        var grid = make("div", "grid");
+
+        // ---- membership -------------------------------------------------------------
+        if (m) {
+          var c1 = card("Membership by standing", "Every member record, grouped by where it stands today.");
+          var total = m.total || 1;
+          var order = ["active", "under_review", "payment_required", "expired", "rejected"];
+          var rows = order.filter(function (k) { return m.byStatus[k]; }).map(function (k) {
+            var v = m.byStatus[k];
+            var pct = Math.round(v / total * 100);
+            return [
+              { text: STATUS_LABELS[k] || k },
+              { html: '<div class="track"><div class="bar' + (k === "active" ? "" : " alt") + '" style="width:'
+                      + Math.max(pct, 2) + '%"></div></div>' },
+              { text: num(v) + "  (" + pct + "%)", num: true }
+            ];
+          });
+          if (rows.length) {
+            c1.appendChild(table([{ label: "Standing" }, { label: "Share" }, { label: "Members", num: true }], rows));
+          } else {
+            c1.appendChild(make("p", "empty", "No member records yet."));
+          }
+          grid.appendChild(c1);
+
+          var c2 = card("New members", "Applications recorded per month, last twelve months.");
+          if (m.newByMonth.length) {
+            c2.insertAdjacentHTML("beforeend", barChart(
+              m.newByMonth.map(function (x) { return { label: x.month.slice(5), count: x.count }; }),
+              "count", "label"));
+          } else {
+            c2.appendChild(make("p", "empty", "No applications in the last twelve months."));
+          }
+          grid.appendChild(c2);
+        }
+
+        // ---- payments ---------------------------------------------------------------
+        if (data.payments && data.payments.length) {
+          var c3 = card("Subscriptions by year", "How many members have paid for each membership year.");
+          c3.appendChild(table(
+            [{ label: "Year" }, { label: "Members paid", num: true }, { label: "Recorded total (KES)", num: true }],
+            data.payments.map(function (p) {
+              return [{ text: String(p.year) }, { text: num(p.members), num: true },
+                      { text: p.total ? num(p.total) : "—", num: true }];
+            })));
+          grid.appendChild(c3);
+        }
+
+        // ---- readership -------------------------------------------------------------
+        if (r) {
+          var c4 = card("Article readership", "Reads per day across the blog, last 30 days.", true);
+          if (r.daily.length) {
+            c4.insertAdjacentHTML("beforeend", lineChart(r.daily));
+            var legend = make("div", "legend");
+            legend.innerHTML = '<span><i style="background:#00932e"></i>' + num(r.totals.reads) + ' reads</span>'
+              + '<span><i style="background:#8fd3a8"></i>' + num(r.totals.readers) + ' unique readers</span>'
+              + '<span><i style="background:#cfe0fd"></i>' + num(r.totals.completions) + ' read to the end</span>';
+            c4.appendChild(legend);
+          } else {
+            c4.appendChild(make("p", "empty", "No reading activity recorded in the last 30 days."));
+          }
+          if (r.topArticles.length) {
+            c4.appendChild(make("div", "sub", "Most read"));
+            c4.appendChild(table([{ label: "Article" }, { label: "Reads", num: true }],
+              r.topArticles.map(function (x) {
+                return [{ text: x.title }, { text: num(x.reads), num: true }];
+              })));
+          }
+          grid.appendChild(c4);
+        }
+
+        // ---- academy ----------------------------------------------------------------
+        if (a) {
+          var c5 = card("Virtual Academy", "Enrolment and completion across all courses.");
+          c5.appendChild(table([{ label: "Measure" }, { label: "Count", num: true }], [
+            [{ text: "Enrolments" }, { text: num(a.enrolments), num: true }],
+            [{ text: "Distinct learners" }, { text: num(a.learners), num: true }],
+            [{ text: "Active in last 30 days" }, { text: num(a.activeLearners), num: true }],
+            [{ text: "Courses completed" }, { text: num(a.completions), num: true }]
+          ]));
+          grid.appendChild(c5);
+        }
+
+        // ---- elections --------------------------------------------------------------
+        if (data.elections && data.elections.length) {
+          var c6 = card("Elections", "Turnout is voters who returned a ballot, against the frozen roll.");
+          c6.appendChild(table(
+            [{ label: "Election" }, { label: "Status" }, { label: "Roll", num: true }, { label: "Turnout", num: true }],
+            data.elections.map(function (e) {
+              return [
+                { text: e.title },
+                { html: '<span class="pill">' + e.status + '</span>' },
+                { text: num(e.roll), num: true },
+                { text: e.turnout === null ? "—" : (e.turnout + "%  (" + num(e.voted) + ")"), num: true }
+              ];
+            })));
+          grid.appendChild(c6);
+        }
+
+        // ---- events -----------------------------------------------------------------
+        if (data.events) {
+          var c7 = card("Events and CPD", "Registrations recorded through the portal.");
+          c7.appendChild(table([{ label: "Measure" }, { label: "Count", num: true }], [
+            [{ text: "Registrations" }, { text: num(data.events.registrations), num: true }],
+            [{ text: "Members who registered" }, { text: num(data.events.members), num: true }],
+            [{ text: "CPD points awarded" }, { text: num(data.events.cpdPoints), num: true }]
+          ]));
+          grid.appendChild(c7);
+        }
+
+        main.appendChild(grid);
+
+        // A section that could not be read is said so plainly, rather than being shown as a zero.
+        if (data.unavailable && data.unavailable.length) {
+          var warn = make("div", "note warn");
+          warn.textContent = "Could not read: " + data.unavailable.join(", ")
+            + ". These figures are missing rather than zero - the tables may not be installed on this server.";
+          main.insertBefore(warn, main.firstChild);
+        }
+
+        var foot = el("foot");
+        foot.textContent = "Figures generated " + new Date(data.generatedAt).toLocaleString()
+          + ". Aggregates only - this page never shows individual member records.";
+        foot.hidden = false;
+      }
+
+      async function start() {
+        try {
+          // The flag in the answer is what matters, not that the call succeeded: plenty of
+          // endpoints accept any administrator.
+          var me = await window.ResokPortal.api("/api/admin/whoami");
+          if (!me.isSuperAdmin) {
+            el("loading").hidden = true;
+            el("gateNotice").appendChild(make("div", "note bad",
+              "Analytics is restricted to super administrators. You are signed in as "
+              + (me.email || "an administrator") + "."));
+            return;
+          }
+          if (!me.superAdminsConfigured) {
+            el("gateNotice").appendChild(make("div", "note warn",
+              "No super administrator list is configured, so every administrator can reach this page. "
+              + "Set super_admins in config.local.php to restrict it."));
+          }
+
+          var data = await window.ResokPortal.api("/api/admin/analytics");
+          el("loading").hidden = true;
+          el("main").hidden = false;
+          render(data);
+        } catch (error) {
+          el("loading").hidden = true;
+          var message = error && error.status === 401
+            ? "Your session has expired. Sign in again to view analytics."
+            : (error && error.message) || "Could not load analytics.";
+          el("gateNotice").appendChild(make("div", "note bad", message));
+        }
+      }
+
+      start();
+    })();
+  </script>
+</body>
+</html>

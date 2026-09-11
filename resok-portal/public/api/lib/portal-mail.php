@@ -275,7 +275,7 @@ function sendWelcomePacketEmail(array $config, array $member, ?string &$error = 
     $text = "Dear {$greeting},\n\nWelcome to the Respiratory Society of Kenya (ReSoK)!\n\nWe are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter and Membership Card for your records.\n\nWe are delighted to have you join the ReSoK membership community and look forward to your engagement in advancing lung health in Kenya and beyond.\n\nWelcome to ReSoK!\n\nBest regards,\nReSoK Secretariat\nRespiratory Society of Kenya (ReSoK)";
 
     $html = brandedEmailHtml(
-        'Welcome to ReSoK Membership',
+        'Welcome to ReSoK – Membership Confirmation',
         '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Dear ' . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
         . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to the Respiratory Society of Kenya (ReSoK)!</p>'
         . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">We are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter and Membership Card for your records.</p>'
@@ -290,7 +290,7 @@ function sendWelcomePacketEmail(array $config, array $member, ?string &$error = 
     ];
 
     $mailer = new SimpleMailer($config);
-    $sent = $mailer->send($email, 'Welcome to ReSoK Membership', $text, $attachments, $html);
+    $sent = $mailer->send($email, 'Welcome to ReSoK – Membership Confirmation', $text, $attachments, $html);
     if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';
     return $sent;
 }

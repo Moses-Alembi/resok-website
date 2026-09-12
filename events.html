@@ -274,6 +274,7 @@
     .ev-past{display:grid;gap:11px}
     .ev-past-row{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:15px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
     .ev-past-row .d{font-weight:800;color:var(--muted);font-size:.8rem;min-width:104px;text-transform:uppercase;letter-spacing:.06em}
+    .ev-pending{font-size:.78rem;color:var(--muted);font-style:italic;white-space:nowrap}
     .ev-past-row .t{font-weight:700;color:var(--ink);flex:1;min-width:200px}
     @media(max-width:640px){.ev-foot{flex-direction:column;align-items:stretch}.ev-foot .btn{width:100%;justify-content:center}}
   </style>
@@ -446,7 +447,7 @@
           rowEl.appendChild(el('span', 'ev-badge', event.type));
 
           // Only where KMPDC actually approved points - there is nothing to collect otherwise.
-          if (event.points && event.approvalRef) {
+          if (event.points && event.approvalRef && event.tokensReady) {
             // A solid green button: btn-outline is styled for the dark hero (white text on a
             // transparent background), which is invisible here on the white event card.
             const collect = el('button', 'btn');
@@ -456,6 +457,11 @@
             collect.textContent = 'Collect CPD token';
             collect.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title));
             rowEl.appendChild(collect);
+          } else if (event.points && event.approvalRef) {
+            // Accredited, but the admin has not loaded the attendee list and tokens yet, so
+            // collection stays locked. Say so rather than offering a button that can do nothing.
+            const pending = el('span', 'ev-pending', 'CPD tokens not yet released');
+            rowEl.appendChild(pending);
           }
           list.appendChild(rowEl);
         });

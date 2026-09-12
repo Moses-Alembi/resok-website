@@ -165,7 +165,26 @@ function eventsPast(PDO $pdo, int $limit = 12): array
                             ORDER BY starts_at DESC
                             LIMIT " . max(1, min($limit, 100)));
     $stmt->execute();
-    return array_map('eventPublicShape', $stmt->fetchAll());
+    $rows = $stmt->fetchAll();
+
+    // Collection stays locked until the admin has loaded that event's attendees and assigned
+    // their tokens. "Ready" therefore means at least one token on this event is tied to an
+    // attendee - before that, nobody can collect, so the page should not offer to. The token
+    // table may not exist on a fresh install, in which case nothing is ready.
+    $ready = [];
+    try {
+        foreach ($pdo->query('SELECT DISTINCT event_id FROM cpd_tokens WHERE attendee_id IS NOT NULL') as $r) {
+            $ready[(int)$r['event_id']] = true;
+        }
+    } catch (Throwable $tokenTableAbsent) {
+        // Leave $ready empty - every event reads as not-yet-ready.
+    }
+
+    return array_map(function (array $row) use ($ready): array {
+        $shape = eventPublicShape($row);
+        $shape['tokensReady'] = isset($ready[(int)$row['id']]);
+        return $shape;
+    }, $rows);
 }
 
 /** Every event including drafts, for admins. */

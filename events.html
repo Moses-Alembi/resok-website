@@ -442,20 +442,17 @@
           rowEl.appendChild(el('span', 'ev-badge', event.type));
 
           // Only where KMPDC actually approved points - there is nothing to collect otherwise.
-          // The button shows on every accredited past event; whether it can actually do
-          // anything is decided on click, from tokensReady, so the row looks the same before
-          // and after the admin loads that event's tokens.
-          if (event.points && event.approvalRef) {
-            const collect = el('button', 'btn');
-            collect.type = 'button';
-            // btn-outline is white-on-transparent (for the dark hero) and invisible on the
-            // white card, so this button is styled solid green explicitly.
-            collect.style.cssText = 'font-size:13px;min-height:40px;padding:0 16px;'
-              + 'background:var(--brand-primary);color:#fff;border-color:var(--brand-primary)';
-            collect.textContent = 'Collect CPD token';
-            collect.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title, event.tokensReady));
-            rowEl.appendChild(collect);
-          }
+          // The button shows on every past event; whether it can actually do anything is
+          // decided on click, from tokensReady - a locked event just says the points are coming.
+          const collect = el('button', 'btn');
+          collect.type = 'button';
+          // btn-outline is white-on-transparent (for the dark hero) and invisible on the
+          // white card, so this button is styled solid green explicitly.
+          collect.style.cssText = 'font-size:13px;min-height:40px;padding:0 16px;'
+            + 'background:var(--brand-primary);color:#fff;border-color:var(--brand-primary)';
+          collect.textContent = 'Collect CPD token';
+          collect.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title, event.tokensReady));
+          rowEl.appendChild(collect);
           list.appendChild(rowEl);
         });
         document.getElementById('pastEvents').hidden = false;

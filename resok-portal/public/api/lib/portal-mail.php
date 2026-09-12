@@ -375,6 +375,43 @@ Respiratory Society of Kenya";
  * shared inbox, or read on a borrowed laptop is worth nothing afterwards. The token stays on
  * the server until someone proves they can open this mailbox.
  */
+/**
+ * Sends the CPD token itself, straight to the address that attended the event.
+ *
+ * This replaces the older two-step "email a code, reveal the token on screen" flow. Sending the
+ * token to the registered address is itself the proof of ownership: typing someone else's email
+ * only mails the token to their inbox, never to the person at the keyboard. Nothing is shown on
+ * the page, so no separate code step is needed.
+ *
+ * @param float|null $points     KMPDC-approved points, or null if none were approved.
+ */
+function sendEventTokenEmail(array $config, string $email, string $name, string $eventTitle, string $token, ?float $points = null, ?string $approvalRef = null, ?string $regulator = null): bool
+{
+    if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) return false;
+    $name = $name !== '' ? $name : 'Colleague';
+    $reg = $regulator !== null && $regulator !== '' ? $regulator : 'KMPDC';
+
+    $lines = ["Dear {$name},", '', "Thank you for attending {$eventTitle}.", '',
+              "Your {$reg} CPD token is:", '', "    {$token}", ''];
+    if ($points !== null) {
+        $lines[] = 'This session carries ' . rtrim(rtrim(number_format($points, 2), '0'), '.') . ' CPD point(s)'
+                 . ($approvalRef !== null && $approvalRef !== '' ? " under approval reference {$approvalRef}" : '') . '.';
+        $lines[] = '';
+    }
+    $lines[] = 'Keep this token for your CPD records. If you attended more than one ReSoK event, request each one separately from its own event.';
+    $lines[] = '';
+    $lines[] = 'Best regards,';
+    $lines[] = 'ReSoK Secretariat';
+    $lines[] = 'Respiratory Society of Kenya (ReSoK)';
+    $text = implode("
+", $lines);
+
+    // Plain text only, like the welcome packet: this is a record a member keeps and forwards to
+    // the regulator, and it reads better as a plain note than inside a branded banner.
+    $mailer = new SimpleMailer($config);
+    return $mailer->send($email, 'Your CPD token for ' . $eventTitle, $text, []);
+}
+
 function sendTokenAccessCodeEmail(array $config, string $email, string $name, string $eventTitle, string $code): bool
 {
     $text = "Hello {$name},\n\n"

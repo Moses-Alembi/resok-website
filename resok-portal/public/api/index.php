@@ -3043,6 +3043,7 @@ Respiratory Society of Kenya");
      */
     if (preg_match('#^events/([a-z0-9-]+)/token/request$#', $route, $m) && $method === 'POST') {
         requireModule('attendeeFor', 'lib/attendance.php');
+        requireModule('tokenRelease', 'lib/attendance.php');
         $data = input();
         $email = strtolower(trim((string)($data['email'] ?? '')));
 
@@ -3056,7 +3057,10 @@ Respiratory Society of Kenya");
         $event = eventFind($pdo, $m[1]);
         if (!$event) respond(404, ['error' => 'That event could not be found.']);
 
-        $sameEither = ['message' => 'If that address attended this event, a six-digit code is on its way. It expires in 15 minutes.'];
+        // Answered the same way in every branch below - attended or not, token assigned or
+        // not - so the page cannot be used to learn who attended or who still has a token
+        // waiting. The delegate list is exactly what somebody misusing this would already hold.
+        $sameEither = ['message' => 'If that address attended this event, your CPD token is on its way to your email.'];
 
         $attendee = attendeeFor($pdo, (int)$event['id'], $email);
         if (!$attendee || !(int)$attendee['attended']) {
@@ -3064,21 +3068,29 @@ Respiratory Society of Kenya");
             respond(200, $sameEither);
         }
 
-        // No token assigned yet - the admin has not loaded the batch, or it ran short. Still
-        // answered the same way; the office follows up rather than the page explaining.
-        $hasToken = $pdo->prepare('SELECT id FROM cpd_tokens WHERE attendee_id = ? LIMIT 1');
-        $hasToken->execute([(int)$attendee['id']]);
-        if (!$hasToken->fetch()) {
+        // The token goes straight to the registered address rather than being shown on screen,
+        // so the address itself is the proof of ownership and no separate code step is needed.
+        // tokenRelease is idempotent: a member who loses the email can ask again and receive the
+        // same token.
+        $released = tokenRelease($pdo, $config, (int)$attendee['id']);
+        if (!$released) {
+            // No token assigned yet - the admin has not loaded the batch, or it ran short. Still
+            // answered the same way; the office follows up rather than the page explaining.
             error_log('Token requested by attendee ' . $attendee['id'] . ' but none is assigned.');
             respond(200, $sameEither);
         }
 
-        $code = tokenCodeIssue($pdo, (int)$attendee['id']);
-        if (function_exists('sendTokenAccessCodeEmail')) {
-            sendTokenAccessCodeEmail($config, $email, (string)$attendee['full_name'], (string)$event['title'], $code);
+        if (function_exists('sendEventTokenEmail')) {
+            sendEventTokenEmail(
+                $config, $email, (string)$attendee['full_name'], (string)$event['title'],
+                (string)$released['token'],
+                $event['approved_points'] === null ? null : (float)$event['approved_points'],
+                $event['approval_ref'] ?? null,
+                $event['regulator'] ?? null
+            );
         }
         throttleSuccess($pdo, $config, 'token-request', $email);
-        securityLog($pdo, $config, 'token_code_sent', 'info', 'token-request', 'Event ' . $event['slug']);
+        securityLog($pdo, $config, 'token_emailed', 'info', 'token-request', 'Event ' . $event['slug']);
         respond(200, $sameEither);
     }
 

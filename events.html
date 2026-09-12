@@ -447,9 +447,12 @@
 
           // Only where KMPDC actually approved points - there is nothing to collect otherwise.
           if (event.points && event.approvalRef) {
-            const collect = el('button', 'btn btn-outline');
+            // A solid green button: btn-outline is styled for the dark hero (white text on a
+            // transparent background), which is invisible here on the white event card.
+            const collect = el('button', 'btn');
             collect.type = 'button';
-            collect.style.fontSize = '13px';
+            collect.style.cssText = 'font-size:13px;min-height:40px;padding:0 16px;'
+              + 'background:var(--brand-primary);color:#fff;border-color:var(--brand-primary)';
             collect.textContent = 'Collect CPD token';
             collect.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title));
             rowEl.appendChild(collect);

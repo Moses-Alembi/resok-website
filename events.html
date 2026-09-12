@@ -274,7 +274,6 @@
     .ev-past{display:grid;gap:11px}
     .ev-past-row{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:15px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
     .ev-past-row .d{font-weight:800;color:var(--muted);font-size:.8rem;min-width:104px;text-transform:uppercase;letter-spacing:.06em}
-    .ev-pending{font-size:.78rem;color:var(--muted);font-style:italic;white-space:nowrap}
     .ev-past-row .t{font-weight:700;color:var(--ink);flex:1;min-width:200px}
     @media(max-width:640px){.ev-foot{flex-direction:column;align-items:stretch}.ev-foot .btn{width:100%;justify-content:center}}
   </style>
@@ -447,21 +446,19 @@
           rowEl.appendChild(el('span', 'ev-badge', event.type));
 
           // Only where KMPDC actually approved points - there is nothing to collect otherwise.
-          if (event.points && event.approvalRef && event.tokensReady) {
-            // A solid green button: btn-outline is styled for the dark hero (white text on a
-            // transparent background), which is invisible here on the white event card.
+          // The button shows on every accredited past event; whether it can actually do
+          // anything is decided on click, from tokensReady, so the row looks the same before
+          // and after the admin loads that event's tokens.
+          if (event.points && event.approvalRef) {
             const collect = el('button', 'btn');
             collect.type = 'button';
+            // btn-outline is white-on-transparent (for the dark hero) and invisible on the
+            // white card, so this button is styled solid green explicitly.
             collect.style.cssText = 'font-size:13px;min-height:40px;padding:0 16px;'
               + 'background:var(--brand-primary);color:#fff;border-color:var(--brand-primary)';
             collect.textContent = 'Collect CPD token';
-            collect.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title));
+            collect.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title, event.tokensReady));
             rowEl.appendChild(collect);
-          } else if (event.points && event.approvalRef) {
-            // Accredited, but the admin has not loaded the attendee list and tokens yet, so
-            // collection stays locked. Say so rather than offering a button that can do nothing.
-            const pending = el('span', 'ev-pending', 'CPD tokens not yet released');
-            rowEl.appendChild(pending);
           }
           list.appendChild(rowEl);
         });
@@ -653,11 +650,29 @@
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
       // Opened from the "Collect CPD token" button rendered on each past event.
-      window.ResokCollectToken = (eventSlug, eventTitle) => {
+      window.ResokCollectToken = (eventSlug, eventTitle, tokensReady) => {
         slug = eventSlug;
         title = eventTitle;
+        // The button is always shown, but it does nothing useful until the admin has
+        // loaded this event's attendees and tokens. Until then, clicking explains that
+        // rather than opening a form that could only ever say 'on its way' and send nothing.
+        if (tokensReady === false) { notReleased(); return; }
         askEmail();
       };
+
+      function notReleased() {
+        const modal = shell('Not available yet');
+        modal.appendChild(make('p', null,
+          'CPD tokens for this event have not been released yet. They become available here once '
+          + 'attendance has been reconciled after the event. Please check back later.'));
+        const actions = make('div', 'tk-actions');
+        const done = make('button', 'btn btn-primary');
+        done.type = 'button';
+        done.textContent = 'Close';
+        done.addEventListener('click', close);
+        actions.appendChild(done);
+        modal.appendChild(actions);
+      }
 
       /**
        * events?collect=<slug> opens the dialog straight away, so the email announcing that
@@ -670,7 +685,7 @@
         const match = (events || []).find((e) => e.slug === wanted);
         // Silent when the slug matches nothing - a stale or mistyped link should leave the
         // page perfectly usable rather than opening an error box over it.
-        if (match) window.ResokCollectToken(match.slug, match.title);
+        if (match) window.ResokCollectToken(match.slug, match.title, match.tokensReady);
       };
     })();
   </script>

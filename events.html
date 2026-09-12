@@ -661,10 +661,9 @@
       };
 
       function notReleased() {
-        const modal = shell('Not available yet');
+        const modal = shell('Coming soon');
         modal.appendChild(make('p', null,
-          'CPD tokens for this event have not been released yet. They become available here once '
-          + 'attendance has been reconciled after the event. Please check back later.'));
+          'CPD points for this event will be out soon. Please check back later.'));
         const actions = make('div', 'tk-actions');
         const done = make('button', 'btn btn-primary');
         done.type = 'button';

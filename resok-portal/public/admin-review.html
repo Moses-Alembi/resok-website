@@ -112,6 +112,19 @@
         </table>
       </div>
     </section>
+  <section class="panel" id="claimsPanel">
+    <h2 style="font-size:18px;margin-bottom:6px">Imported Members: Claim Emails</h2>
+    <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
+      Members imported from the membership register already have an account with their
+      membership number and paid years, but cannot sign in until they choose a password. This
+      emails each of them a link to do that. The link lasts 30 days. Emails go out 20 at a
+      time so the mail server is not asked for too much at once.
+    </p>
+    <div id="claimsNotice" class="notice"></div>
+    <p id="claimsSummary" style="font-size:14px;margin-bottom:12px">Loading&hellip;</p>
+    <button class="btn btn-primary" id="sendClaimsBtn" type="button" disabled><i class="fas fa-paper-plane"></i> Send next 20</button>
+    <div id="claimsResult" hidden style="margin-top:16px;font-size:14px"></div>
+  </section>
   <section class="panel" id="invitesPanel">
     <h2 style="font-size:18px;margin-bottom:6px">Invite Members</h2>
     <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
@@ -738,11 +751,13 @@
           <div class="fact"><span>Paying As</span><strong>${esc(selectedMember.payerType || "Individual")}</strong></div>
           <div class="fact"><span>Membership Category</span><strong>${esc(selectedMember.category || "Not set")}</strong></div>
           <div class="fact"><span>Renewal Due</span><strong>${esc(selectedMember.renewalDue || "Pending")}</strong></div>
+          <div class="fact"><span>Portal Account</span><strong>${selectedMember.emailVerified === false ? "Not claimed yet" : "Claimed"}</strong></div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
           <button class="btn btn-primary" id="approveBtn"><i class="fas fa-check"></i> Approve / Issue ID</button>
           <button class="btn btn-danger" id="rejectBtn"><i class="fas fa-xmark"></i> Reject</button>
           <button class="btn" id="welcomePacketBtn"><i class="fas fa-envelope"></i> Send welcome packet</button>
+          ${selectedMember.emailVerified === false ? '<button class="btn" id="claimLinkBtn"><i class="fas fa-key"></i> Send claim link</button>' : ""}
         </div>
         <h3 style="font-size:16px;margin:14px 0 8px">Payments</h3>
         <div class="payments" id="memberPayments"><p class="detail-empty">Loading payments...</p></div>
@@ -758,6 +773,8 @@
       document.getElementById("approveBtn").addEventListener("click", approveSelectedMember);
       document.getElementById("rejectBtn").addEventListener("click", rejectSelectedMember);
       document.getElementById("welcomePacketBtn").addEventListener("click", sendWelcomePacket);
+      const claimLinkBtn = document.getElementById("claimLinkBtn");
+      if (claimLinkBtn) claimLinkBtn.addEventListener("click", sendClaimLink);
       document.getElementById("cpdForm").addEventListener("submit", addCpdPoints);
       await loadPayments(selectedMember.id);
     }
@@ -887,6 +904,32 @@ ${why}`);
       }
     }
 
+    // Emails one imported member a fresh claim link - a resend after a bounce, a corrected
+    // address, or a link that expired. Only offered while the account is unclaimed.
+    async function sendClaimLink() {
+      if (!selectedMember) return;
+      if (useLocalPreviewData()) {
+        showNote("Local preview: no email is sent.", "error");
+        return;
+      }
+      const to = selectedMember.email || "this member";
+      if (!confirm(`Email ${to} a link to claim their portal account? Any earlier link stops working.`)) return;
+      const btn = document.getElementById("claimLinkBtn");
+      const label = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+      try {
+        const result = await window.ResokPortal.api(`/api/members/${selectedMember.id}/claim-link`, { method: "POST" });
+        showNote(`Claim link sent to ${result.sentTo}. If it does not arrive, check cPanel > Track Delivery.`);
+        loadClaimSummary();
+      } catch (error) {
+        showNote(`The claim link did NOT send: ${error.message || "the server gave no reason"}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = label;
+      }
+    }
+
     async function rejectSelectedMember() {
       if (!selectedMember) return;
       const reason = prompt("Reason for rejection", selectedMember.reviewReason || "Payment proof could not be verified.");
@@ -970,6 +1013,7 @@ ${why}`);
       // real 401/"missing token" response from the server.
       try {
         await loadMembers();
+        loadClaimSummary();
       } catch (error) {
         // Keyed on the status rather than on the wording of the message, and no longer
         // exempting localhost. The exemption existed to keep the offline preview usable,
@@ -986,6 +1030,77 @@ ${why}`);
           return;
         }
         showNote(error.message || "Admin access required. Please log in as an admin.", "error");
+      }
+    });
+
+    /* ---------------- claim emails for imported members ---------------- */
+    function claimsNotice(message, type = "success") {
+      const box = document.getElementById("claimsNotice");
+      box.textContent = message;
+      box.className = `notice ${type}`;
+    }
+
+    function renderClaimSummary(summary) {
+      const line = document.getElementById("claimsSummary");
+      const btn = document.getElementById("sendClaimsBtn");
+      if (!summary.unclaimed) {
+        line.textContent = "Every imported member has claimed their account.";
+        btn.disabled = true;
+        return;
+      }
+      line.textContent = `${summary.unclaimed} member account(s) cannot sign in yet: `
+        + `${summary.notSent} not emailed, ${summary.sent} emailed and waiting, ${summary.failed} failed.`;
+      const next = Math.min(summary.batchSize || 20, summary.notSent);
+      btn.disabled = next === 0;
+      btn.innerHTML = `<i class="fas fa-paper-plane"></i> Send next ${next || summary.batchSize || 20}`;
+    }
+
+    async function loadClaimSummary() {
+      if (useLocalPreviewData()) {
+        document.getElementById("claimsSummary").textContent = "Local preview: claim emails are not available.";
+        return;
+      }
+      try {
+        renderClaimSummary(await window.ResokPortal.api("/api/members/claims"));
+      } catch (error) {
+        document.getElementById("claimsSummary").textContent = "";
+        claimsNotice(error.message || "Could not load claim email status.", "error");
+      }
+    }
+
+    document.getElementById("sendClaimsBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("sendClaimsBtn");
+      if (!confirm("Email the next batch of imported members a link to claim their account?")) return;
+      const label = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+      try {
+        const result = await window.ResokPortal.api("/api/members/claims/send", { method: "POST", body: JSON.stringify({ limit: 20 }) });
+        const box = document.getElementById("claimsResult");
+        box.hidden = false;
+        box.textContent = "";
+        const summaryLine = document.createElement("p");
+        summaryLine.textContent = `${result.sent.length} sent, ${result.failed.length} failed.`;
+        box.appendChild(summaryLine);
+        if (result.failed.length) {
+          const list = document.createElement("ul");
+          list.style.margin = "8px 0 0 18px";
+          result.failed.forEach((failure) => {
+            const item = document.createElement("li");
+            item.textContent = `${failure.email}: ${failure.reason}`;
+            list.appendChild(item);
+          });
+          box.appendChild(list);
+        }
+        claimsNotice(result.failed.length
+          ? `Batch finished with ${result.failed.length} failure(s), listed below. Fix the address, then resend from the member's record.`
+          : `Sent to ${result.sent.length} member(s). If any do not arrive, check cPanel > Track Delivery.`,
+          result.failed.length ? "error" : "success");
+        renderClaimSummary(result.summary);
+      } catch (error) {
+        claimsNotice(error.message || "The batch did not send.", "error");
+        btn.innerHTML = label;
+        btn.disabled = false;
       }
     });
 

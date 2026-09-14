@@ -65,6 +65,7 @@ function migrateOrder(): array
         'schema-ict-licenses.sql',             // software, licences and seats
         'schema-ict-tickets.sql',              // helpdesk tickets and comments
         'schema-member-years.sql',             // which years each member has paid for
+        'migration-imported-members-renewal.sql', // imported members active to 30 Nov 2026; needs the years above
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-elections.sql',                // board elections: posts, candidates, roll
         'schema-elections-ballot.sql',         // the ballot; depends on the roll above

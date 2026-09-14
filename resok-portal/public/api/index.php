@@ -433,14 +433,14 @@ function authOptional(array $config): ?array {
 }
 
 function memberRow(PDO $pdo, int $userId): ?array {
-    $stmt = $pdo->prepare('SELECT mp.*, u.email FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.user_id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT mp.*, u.email, u.email_verified FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.user_id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     return $row ?: null;
 }
 
 function memberRowByProfileId(PDO $pdo, int $profileId): ?array {
-    $stmt = $pdo->prepare('SELECT mp.*, u.email FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT mp.*, u.email, u.email_verified FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.id = ? LIMIT 1');
     $stmt->execute([$profileId]);
     $row = $stmt->fetch();
     return $row ?: null;
@@ -453,6 +453,9 @@ function mapMember(?array $row): ?array {
         'id' => (int)$row['id'],
         'userId' => (int)$row['user_id'],
         'email' => $row['email'] ?? '',
+        // False for an account nobody has claimed yet - imported from the register and never
+        // signed in. Null when the query behind this row did not select the column.
+        'emailVerified' => array_key_exists('email_verified', $row) ? (bool)(int)$row['email_verified'] : null,
         'title' => $row['title'],
         'firstName' => $row['first_name'],
         'middleName' => $row['middle_name'],
@@ -3686,18 +3689,63 @@ Respiratory Society of Kenya");
         respond(200, array_map(fn($row) => array_merge(mapMember($row), ['email' => $row['email']]), $rows));
     }
 
+    // Claim emails for members imported from the register. See lib/invites.php for why this is
+    // a long-lived reset link rather than an invitation.
+    if ($route === 'members/claims' && $method === 'GET') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('claimsSummary', 'lib/invites.php');
+        if (!claimsEnsureTable($pdo)) respond(503, ['error' => 'Claim emails are not available on this server: the database user cannot create the table they need.']);
+        respond(200, claimsSummary($pdo));
+    }
+
+    if ($route === 'members/claims/send' && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('claimsSendBatch', 'lib/invites.php');
+        if (!claimsEnsureTable($pdo)) respond(503, ['error' => 'Claim emails are not available on this server: the database user cannot create the table they need.']);
+        // A small batch per request: each message is its own conversation with the mail
+        // server, and a request that runs past PHP's time limit stops partway through with no
+        // report of who was reached.
+        $limit = max(1, min(25, (int)(input()['limit'] ?? 20)));
+        if (function_exists('set_time_limit')) @set_time_limit(180);
+        $result = claimsSendBatch($pdo, $config, $limit);
+        logAdminAction($pdo, (int)$user['userId'], 'claim_emails_sent', null, count($result['sent']) . ' sent, ' . count($result['failed']) . ' failed');
+        respond(200, $result + ['summary' => claimsSummary($pdo)]);
+    }
+
+    if (preg_match('#^members/(\d+)/claim-link$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        requireModule('claimSend', 'lib/invites.php');
+        if (!claimsEnsureTable($pdo)) respond(503, ['error' => 'Claim emails are not available on this server: the database user cannot create the table they need.']);
+        $row = memberRowByProfileId($pdo, (int)$m[1]);
+        if (!$row) respond(404, ['error' => 'No such member.']);
+        if ((int)($row['email_verified'] ?? 1) === 1) {
+            respond(409, ['error' => 'This member has already claimed their account. If they cannot sign in, they can use "Forgot password".']);
+        }
+        $reason = null;
+        $sent = claimSend($pdo, $config, $row, $reason);
+        logAdminAction($pdo, (int)$user['userId'], $sent ? 'claim_email_sent' : 'claim_email_failed', (int)$m[1], $reason);
+        respond($sent ? 200 : 502, [
+            'sent' => $sent,
+            'sentTo' => (string)$row['email'],
+            'error' => $sent ? null : ($reason ?? 'The mail server did not accept the message.'),
+        ]);
+    }
+
     if ($route === 'members' && $method === 'GET') {
         $user = auth($config);
         requireAdmin($user);
         $rows = $pdo->query(
-            'SELECT mp.*, u.email,
+            'SELECT mp.*, u.email, u.email_verified,
                     COUNT(p.id) AS payment_count,
                     COALESCE(SUM(CASE WHEN p.status = "paid" THEN p.amount ELSE 0 END), 0) AS paid_total,
                     MAX(p.created_at) AS latest_payment_at
              FROM member_profiles mp
              JOIN users u ON u.id = mp.user_id
              LEFT JOIN payments p ON p.member_profile_id = mp.id
-             GROUP BY mp.id, u.email
+             GROUP BY mp.id, u.email, u.email_verified
              ORDER BY mp.created_at DESC
              LIMIT 500'
         )->fetchAll();

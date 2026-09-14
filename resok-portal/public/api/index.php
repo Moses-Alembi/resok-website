@@ -1318,12 +1318,11 @@ Respiratory Society of Kenya");
             // reference need not match. Adding a mode back means adapting that form first.
             'paymentModes' => ['M-PESA Paybill'],
             'categories' => $config['membership_categories'] ?? [],
-            // Lets the portal decide what to offer. Two conditions, deliberately: the keys
-            // have to be present AND mpesa_enabled has to be switched on. Credentials alone
-            // are not consent - they can be sandbox keys, or leftovers from testing, and
-            // neither should put a "Pay Now" button in front of members. Set mpesa_enabled
-            // to true in config.local.php once a real STK payment has been tested end to end.
-            'stkEnabled' => mpesaEnabled($config) && mpesaConfigured($config),
+            // STK push is withdrawn (14 Sep 2026): the paybill with proof upload is the only
+            // payment path, whatever mpesa_enabled says. To bring it back, restore
+            // mpesaEnabled($config) && mpesaConfigured($config) here, the guard on
+            // payments/stk-push, and the form in payment.html.
+            'stkEnabled' => false,
             'comingSoon' => $comingSoon
         ]);
     }
@@ -3417,6 +3416,8 @@ Respiratory Society of Kenya");
     }
 
     if ($route === 'payments/stk-push' && $method === 'POST') {
+        // Withdrawn: refuse before creating a payment row or contacting Safaricom.
+        respond(410, ['error' => 'Instant M-Pesa payment is not available. Pay through the paybill and upload your confirmation on the Payment page.']);
         $user = auth($config);
         ensurePaymentProofColumns($pdo);
         $data = input();

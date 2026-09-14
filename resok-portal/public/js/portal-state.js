@@ -804,6 +804,16 @@
     downloadReceipt
   };
 
+  // Member features that are built but not launched yet. Their dashboard links are shown
+  // greyed out, and opening one of these pages directly sends the visitor back to the
+  // dashboard. To launch a feature, delete its name here and restore its link in
+  // dashboard.html. Admins manage events and elections from admin-review and
+  // election-admin, which are not affected.
+  const LOCKED_FEATURES = ["events", "academy", "elections"];
+  if (LOCKED_FEATURES.includes(pageName())) {
+    window.location.replace("dashboard");
+  }
+
   // Start the watch on any portal page that already believes it has a session. Protected
   // pages also call startIdleWatch() from requireAuthForProtectedPage() once the server has
   // confirmed the session; this covers the rest (admin-review, certificates) without each

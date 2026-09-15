@@ -249,7 +249,7 @@
     </section>
   </main>
 
-  <script src="js/portal-state.js?v=20260914-launch-lock"></script>
+  <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     const form = document.getElementById("loginForm");
     const emailInput = document.getElementById("loginEmail");
@@ -353,12 +353,14 @@
 
         window.ResokPortal.login(email, data.user, data.token);
         const isAdmin = data.user?.role === "admin";
+        // An Academy learner has no membership record, so the member dashboard has nothing for them.
+        const isLearner = data.user?.isLearner === true;
         const next = safeNextPath();
-        const destination = isAdmin ? "admin-review" : next || "dashboard";
+        const destination = isAdmin ? "admin-review" : next || (isLearner ? "academy" : "dashboard");
         showAlert(
           next && !isAdmin
             ? "Login successful. Taking you back..."
-            : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : "dashboard"}...`,
+            : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : (isLearner ? "courses" : "dashboard")}...`,
           "success"
         );
         setTimeout(() => {
@@ -390,7 +392,7 @@
           ? "Signed in with a recovery code. That code is now used up."
           : "Verified. Signing you in...", "success");
         setTimeout(() => {
-          window.location.href = isAdmin ? "admin-review" : (next || "dashboard");
+          window.location.href = isAdmin ? "admin-review" : (next || (result.user?.isLearner === true ? "academy" : "dashboard"));
         }, result.usedRecoveryCode ? 1600 : 650);
       } catch (error) {
         showAlert(error.message || "That code was not correct.");

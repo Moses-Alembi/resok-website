@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academy Certificates - ReSoK Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--ink:#253141;--muted:#667085;
+      --bg:#f5f7fa;--line:#e5e7eb;--radius:10px;--shadow:0 2px 12px rgba(15,23,42,.07);
+      --fail:#b42318;--pass:#0f7a38}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink)}
+    a{color:inherit;text-decoration:none}
+    [hidden]{display:none!important}
+    .topbar{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+    .topbar-inner{max-width:1180px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .topbar img{height:42px;display:block}
+    .back{color:var(--muted);font-size:14px;font-weight:600}
+    .back:hover{color:var(--brand-primary)}
+    .wrap{max-width:1180px;margin:0 auto;padding:24px 20px;display:grid;gap:20px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
+    h1{font-size:22px;letter-spacing:-.01em}
+    .lede{color:var(--muted);font-size:14px;margin-top:7px;line-height:1.65;max-width:80ch}
+
+    .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
+    .toolbar label{flex:1;min-width:220px}
+    .toolbar label span{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+    .in{border:1px solid var(--line);border-radius:7px;padding:10px 12px;font:inherit;font-size:14px;width:100%;background:#fff;color:var(--ink)}
+    .in:focus{outline:3px solid rgba(0,147,46,.14);border-color:var(--brand-primary)}
+    .btn{border:0;border-radius:7px;padding:10px 15px;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+    .btn-primary{background:var(--brand-primary);color:#fff}
+    .btn-primary:hover{background:#007a26}
+    .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn-danger{background:#fff;color:var(--fail);border:1px solid #fecdca}
+    .btn-danger:hover{background:#fef3f2}
+    .btn-danger.solid{background:var(--fail);color:#fff;border-color:var(--fail)}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .btn:focus-visible,.in:focus-visible{outline:3px solid rgba(0,147,46,.3);outline-offset:2px}
+
+    .summary{font-size:13.5px;color:var(--muted);margin-bottom:12px}
+    .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
+    table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:860px}
+    th{text-align:left;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:11px 14px;background:#fafbfc;border-bottom:1px solid var(--line)}
+    td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+    tr:last-child td{border-bottom:0}
+    .code{font-family:ui-monospace,Consolas,monospace;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+    .sub{display:block;color:var(--muted);font-size:12.5px;margin-top:2px;word-break:break-all}
+    .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+    .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+    .pill.valid{background:#ecfdf3;color:var(--pass)}
+    .pill.revoked{background:#fef3f2;color:var(--fail)}
+    .reason{display:block;color:var(--muted);font-size:12.5px;margin-top:4px;max-width:28ch}
+    .revoke-row td{background:#fffbfa}
+    .revoke-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .revoke-form .in{flex:1;min-width:240px}
+
+    .note{border-radius:7px;padding:12px 14px;font-size:13.5px;margin-top:14px;line-height:1.6}
+    .note.bad{background:#fef3f2;color:#b42318;border:1px solid #fecdca}
+    .note.ok{background:#ecfdf3;color:#05603a;border:1px solid #a6f4c5}
+    .empty{color:var(--muted);font-size:14px;padding:26px 14px;text-align:center}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a href="admin-review"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <a class="back" href="admin-review"><i class="fas fa-arrow-left"></i> Admin dashboard</a>
+    </div>
+  </nav>
+
+  <main class="wrap">
+    <section class="panel">
+      <h1>Academy certificates</h1>
+      <p class="lede">Every certificate the Virtual Academy has issued. Anyone can check a code at resok.org/verify.
+        Revoking a certificate makes that check say it is no longer valid and stops the learner downloading it.
+        The reason stays private to administrators.</p>
+      <div id="notice"></div>
+    </section>
+
+    <section class="panel" id="listPanel" hidden>
+      <form class="toolbar" id="searchForm">
+        <label for="search"><span>Search</span>
+          <input class="in" id="search" type="search" placeholder="Code, learner name, email or course" autocomplete="off" />
+        </label>
+        <button class="btn btn-primary" type="submit"><i class="fas fa-magnifying-glass"></i> Search</button>
+        <button class="btn btn-ghost" type="button" id="clearBtn">Clear</button>
+      </form>
+      <p class="summary" id="summary"></p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th scope="col">Code</th><th scope="col">Learner</th><th scope="col">Course</th><th scope="col">Score</th><th scope="col">Issued</th><th scope="col">Status</th><th scope="col"><span class="sr">Actions</span></th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20260915-learners"></script>
+  <script>
+    (() => {
+      const el = (id) => document.getElementById(id);
+      const make = (tag, cls, text) => {
+        const node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+      };
+      const api = (path, options) => window.ResokPortal.api(path, options);
+      const longDate = (value) => {
+        const date = new Date(String(value || '').replace(' ', 'T'));
+        return isNaN(date) ? String(value || '') : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      };
+      const notice = (message, kind) => {
+        const box = el('notice');
+        box.textContent = '';
+        if (message) box.appendChild(make('div', 'note ' + (kind || 'ok'), message));
+      };
+
+      let certificates = [];
+      let openRevoke = null;
+
+      async function load(query) {
+        try {
+          const data = await api('/api/academy/admin/certificates' + (query ? '&q=' + encodeURIComponent(query) : ''));
+          certificates = data.certificates || [];
+          el('listPanel').hidden = false;
+          render(query);
+        } catch (error) {
+          if (error.status === 401) { window.location.href = 'login'; return; }
+          el('listPanel').hidden = true;
+          notice(error.status === 403
+            ? 'Managing certificates is restricted to editors, content managers and administrators.'
+            : (error.message || 'Could not load the certificates.'), 'bad');
+        }
+      }
+
+      function render(query) {
+        const body = el('rows');
+        body.textContent = '';
+        const revoked = certificates.filter((c) => c.revoked).length;
+        el('summary').textContent = certificates.length
+          ? certificates.length + ' certificate' + (certificates.length === 1 ? '' : 's') + (query ? ' matching "' + query + '"' : '')
+            + (revoked ? ', ' + revoked + ' revoked' : '') + '.'
+          : '';
+        if (!certificates.length) {
+          const row = make('tr');
+          const cell = make('td', 'empty', query ? 'No certificate matches "' + query + '".' : 'No certificates have been issued yet.');
+          cell.colSpan = 7;
+          row.appendChild(cell);
+          body.appendChild(row);
+          return;
+        }
+
+        certificates.forEach((c) => {
+          const row = make('tr');
+          const code = make('td');
+          const link = make('a', 'code', c.code);
+          link.href = c.verifyUrl;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.title = 'Open the public check';
+          code.appendChild(link);
+          row.appendChild(code);
+
+          const learner = make('td', null, c.learnerName);
+          learner.appendChild(make('span', 'sub', c.email || ''));
+          row.appendChild(learner);
+          row.appendChild(make('td', null, c.courseTitle));
+          row.appendChild(make('td', 'num', c.scorePercent === null ? '—' : c.scorePercent + '%'));
+          row.appendChild(make('td', 'num', longDate(c.issuedAt)));
+
+          const status = make('td');
+          status.appendChild(make('span', 'pill ' + (c.revoked ? 'revoked' : 'valid'), c.revoked ? 'Revoked' : 'Valid'));
+          if (c.revoked) status.appendChild(make('span', 'reason', longDate(c.revokedAt) + ': ' + (c.revokedReason || '')));
+          row.appendChild(status);
+
+          const actions = make('td');
+          if (!c.revoked) {
+            const button = make('button', 'btn btn-danger');
+            button.type = 'button';
+            button.appendChild(make('i', 'fas fa-ban'));
+            button.appendChild(document.createTextNode(' Revoke'));
+            button.setAttribute('aria-label', 'Revoke certificate ' + c.code);
+            button.addEventListener('click', () => toggleRevoke(c, row));
+            actions.appendChild(button);
+          }
+          row.appendChild(actions);
+          body.appendChild(row);
+        });
+      }
+
+      function toggleRevoke(certificate, row) {
+        if (openRevoke) {
+          const wasSame = openRevoke.dataset.code === certificate.code;
+          openRevoke.remove();
+          openRevoke = null;
+          if (wasSame) return;
+        }
+        const formRow = make('tr', 'revoke-row');
+        formRow.dataset.code = certificate.code;
+        const cell = make('td');
+        cell.colSpan = 7;
+        const form = make('form', 'revoke-form');
+        const label = make('label', 'sr', 'Reason for revoking ' + certificate.code);
+        label.htmlFor = 'revokeReason';
+        const input = make('input', 'in');
+        input.id = 'revokeReason';
+        input.maxLength = 200;
+        input.placeholder = 'Reason for revoking ' + certificate.code + ' (kept private)';
+        input.required = true;
+        const confirmBtn = make('button', 'btn btn-danger solid');
+        confirmBtn.type = 'submit';
+        confirmBtn.textContent = 'Revoke certificate';
+        const cancel = make('button', 'btn btn-ghost', 'Cancel');
+        cancel.type = 'button';
+        cancel.addEventListener('click', () => { formRow.remove(); openRevoke = null; });
+        form.append(label, input, confirmBtn, cancel);
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const reason = input.value.trim();
+          if (reason.length < 3) { input.focus(); notice('Give a reason for revoking the certificate.', 'bad'); return; }
+          confirmBtn.disabled = true;
+          try {
+            await api('/api/academy/admin/certificates/' + certificate.id + '/revoke', { method: 'POST', body: JSON.stringify({ reason }) });
+            notice('Certificate ' + certificate.code + ' has been revoked. The public check now shows it as no longer valid.', 'ok');
+            openRevoke = null;
+            load(el('search').value.trim());
+          } catch (error) {
+            notice(error.message || 'The certificate could not be revoked.', 'bad');
+            confirmBtn.disabled = false;
+          }
+        });
+        cell.appendChild(form);
+        formRow.appendChild(cell);
+        row.after(formRow);
+        openRevoke = formRow;
+        input.focus();
+      }
+
+      el('searchForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        notice('');
+        load(el('search').value.trim());
+      });
+      el('clearBtn').addEventListener('click', () => {
+        el('search').value = '';
+        notice('');
+        load('');
+      });
+
+      document.addEventListener('DOMContentLoaded', () => load(''));
+    })();
+  </script>
+  <style>.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}</style>
+</body>
+</html>

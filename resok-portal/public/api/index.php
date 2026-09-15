@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'membership', 'elections', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -1494,6 +1494,90 @@ Respiratory Society of Kenya");
         respond(201, $payload);
     }
 
+    /**
+     * An Academy account for someone who is not applying for membership.
+     *
+     * Same users table, so the same login, password reset, two-factor and rate limiting as
+     * everyone else - but no member_profiles row. That is deliberate: a learner is not an
+     * applicant, so they must not appear in the membership list, on renewal reminders or on an
+     * electoral roll, and must not be asked for the fifteen fields a membership application
+     * needs. Being a learner is read from that absence rather than stored as a role: the role
+     * enum is declared in three schema files that must agree, and when they once did not, it
+     * silently wiped every role that was missing from one of them.
+     */
+    if ($route === 'auth/register-learner' && $method === 'POST') {
+        $data = input();
+        requireFields($data, ['email', 'password', 'firstName', 'surname', 'country']);
+        $email = strtolower(trim((string)$data['email']));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) respond(400, ['error' => 'Please enter a valid email address']);
+        botScreenOrFakeSuccess($pdo, $config, $data, 'register', [
+            'message' => 'Account created. Please check your email to confirm your address.',
+            'requiresVerification' => true,
+        ]);
+        validateInput($data, [
+            'firstName'  => ['First name', 'name'],
+            'surname'    => ['Surname', 'name'],
+            'country'    => ['Country', 'text', true, ['max' => 60]],
+            'profession' => ['Profession', 'text', false, ['max' => 100]],
+        ]);
+        if (!preg_match('/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,64}$/', (string)$data['password'])) {
+            respond(400, ['error' => 'Password must be 8-64 characters and include uppercase, lowercase, and a number']);
+        }
+
+        throttleCheck($pdo, $config, 'register', $email);
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1');
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) {
+            throttleFailure($pdo, $config, 'register', $email);
+            respond(400, ['error' => 'An account with this email already exists. Sign in instead, or use "Forgot password" if you cannot remember it.']);
+        }
+
+        $firstName = trim((string)preg_replace('/\s+/u', ' ', (string)$data['firstName']));
+        $surname = trim((string)preg_replace('/\s+/u', ' ', (string)$data['surname']));
+        $fullName = $firstName . ' ' . $surname;
+        $profession = trim((string)($data['profession'] ?? ''));
+        $verified = empty($config['require_email_verification']) ? 1 : 0;
+        $verificationToken = $verified ? null : bin2hex(random_bytes(32));
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('INSERT INTO users (email, password_hash, email_verified, role, verification_token) VALUES (?, ?, ?, "member", ?)')
+                ->execute([$email, password_hash((string)$data['password'], PASSWORD_DEFAULT), $verified, $verificationToken]);
+            $userId = (int)$pdo->lastInsertId();
+            // The certificate name starts as the name they signed up with; they confirm it
+            // before a certificate is issued.
+            $pdo->prepare('INSERT INTO academy_learners (user_id, display_name, certificate_name, country, profession) VALUES (?, ?, ?, ?, ?)')
+                ->execute([$userId, $fullName, $fullName, trim((string)$data['country']), $profession !== '' ? $profession : null]);
+            $pdo->commit();
+        } catch (Throwable $registerError) {
+            $pdo->rollBack();
+            throw $registerError;
+        }
+
+        if ($verificationToken) {
+            try {
+                if (!sendLearnerVerificationEmail($config, $email, $verificationToken, $firstName)) {
+                    error_log('Learner verification email to ' . $email . ' returned false - see the SMTP log lines above.');
+                }
+            } catch (Throwable $mailError) {
+                error_log('Learner verification email threw: ' . $mailError->getMessage());
+            }
+        }
+        securityLog($pdo, $config, 'learner_registered', 'info', 'register', null, $userId);
+
+        $payload = [
+            'message' => $verified ? 'Your account is ready.' : 'Account created. Please check your email to confirm your address.',
+            'requiresVerification' => !$verified,
+        ];
+        if ($verified) {
+            $learnerToken = token(['userId' => $userId, 'email' => $email, 'role' => 'member'], $config['jwt_secret']);
+            issueAuthCookie($learnerToken);
+            $payload['user'] = ['id' => $userId, 'email' => $email, 'role' => 'member', 'isLearner' => true,
+                                'membershipStatus' => null, 'membershipId' => null, 'cpdPoints' => 0];
+        }
+        respond(201, $payload);
+    }
+
     if ($route === 'auth/logout' && $method === 'POST') {
         clearAuthCookie();
         respond(200, ['message' => 'Logged out']);
@@ -1501,13 +1585,18 @@ Respiratory Society of Kenya");
 
     if (preg_match('#^auth/verify/([A-Za-z0-9]+)$#', $route, $m) && $method === 'GET') {
         $loginUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/') . '/login';
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE verification_token = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT u.id, (SELECT COUNT(*) FROM member_profiles mp WHERE mp.user_id = u.id) AS has_profile
+                               FROM users u WHERE u.verification_token = ? LIMIT 1');
         $stmt->execute([$m[1]]);
         $user = $stmt->fetch();
         if (!$user) {
             respondHtmlPage(400, 'Invalid or Expired Link', 'This verification link is invalid or has already been used. If you still need to verify your account, try registering again or contact support.', true, 'Go to Login', $loginUrl);
         }
         $pdo->prepare('UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?')->execute([(int)$user['id']]);
+        if ((int)$user['has_profile'] === 0) {
+            // An Academy learner has no membership application to continue.
+            respondHtmlPage(200, 'Email Verified', 'Your ReSoK Virtual Academy account is ready. Sign in to start learning.', false, 'Sign In', $loginUrl . '?next=' . rawurlencode('/resok-portal/public/academy'));
+        }
         respondHtmlPage(200, 'Email Verified', 'Your ReSoK account is now active. You can log in and continue your membership application.', false, 'Log In Now', $loginUrl);
     }
 
@@ -1574,6 +1663,8 @@ Respiratory Society of Kenya");
             'token' => $loginToken,
             'user' => [
                 'id' => (int)$user['id'],
+                // A member account with no membership record is an Academy learner.
+                'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
                 'email' => $user['email'],
                 'role' => $user['role'],
                 'membershipStatus' => $user['membership_status'],
@@ -1622,6 +1713,7 @@ Respiratory Society of Kenya");
             'usedRecoveryCode' => $usedRecovery,
             'user' => [
                 'id' => (int)$user['id'],
+                'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
                 'email' => $user['email'],
                 'role' => $user['role'],
                 'membershipStatus' => $user['membership_status'],
@@ -2536,6 +2628,103 @@ Respiratory Society of Kenya");
         [$enrolment, $error] = academyRecordProgress($pdo, (int)$user['userId'], (int)$m[1], input());
         if ($error) respond(403, ['error' => $error]);
         respond(200, ['enrolment' => $enrolment]);
+    }
+
+    // ----- ReSoK Virtual Academy: final assessments ---------------------------------------
+
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)/assessment$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyAssessmentStatus', 'lib/academy-assessments.php');
+        $status = academyAssessmentStatus($pdo, (int)$user['userId'], $m[1]);
+        if ($status === null) respond(404, ['error' => 'That course is not in the catalogue.']);
+        respond(200, $status);
+    }
+
+    /** Opens an attempt, or the one already open. Questions and options only - never which is right. */
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)/assessment/start$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyAssessmentStart', 'lib/academy-assessments.php');
+        [$paper, $error] = academyAssessmentStart($pdo, (int)$user['userId'], $m[1]);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['paper' => $paper]);
+    }
+
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)/assessment/submit$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyAssessmentSubmit', 'lib/academy-assessments.php');
+        $data = input();
+        [$result, $error] = academyAssessmentSubmit($pdo, (int)$user['userId'], $m[1],
+                                                    (int)($data['attemptId'] ?? 0), $data['answers'] ?? []);
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['result' => $result]);
+    }
+
+    // ----- ReSoK Virtual Academy: certificates --------------------------------------------
+
+    /** The learner's certificate for a course: the one issued, or what is still needed. */
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)/certificate$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyCertificateStatus', 'lib/academy-certificates.php');
+        respond(200, academyCertificateStatus($pdo, (int)$user['userId'], $m[1]));
+    }
+
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)/certificate$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyCertificateIssue', 'lib/academy-certificates.php');
+        [$certificate, $error] = academyCertificateIssue($pdo, (int)$user['userId'], $m[1], (string)(input()['name'] ?? ''));
+        if ($error) respond(400, ['error' => $error]);
+        respond(200, ['certificate' => $certificate]);
+    }
+
+    /** The PDF, for its owner only. Anyone else checks a certificate through its code. */
+    if (preg_match('#^academy/courses/([A-Za-z0-9-]+)/certificate/pdf$#', $route, $m) && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyCertificatePdf', 'lib/academy-certificates.php');
+        [, $enrolment, ] = academyCertificateContext($pdo, (int)$user['userId'], $m[1]);
+        $certificate = $enrolment ? academyCertificateForEnrolment($pdo, (int)$enrolment['id']) : null;
+        if (!$certificate) respond(404, ['error' => 'No certificate has been issued for this course yet.']);
+        if ($certificate['revoked']) respond(410, ['error' => 'This certificate has been revoked, so it can no longer be downloaded.']);
+
+        $document = academyCertificatePdf($certificate);
+        http_response_code(200);
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="ReSoK-certificate-' . $certificate['code'] . '.pdf"');
+        header('Content-Length: ' . strlen($document));
+        header('Cache-Control: private, no-store');
+        header('X-Content-Type-Options: nosniff');
+        echo $document;
+        exit;
+    }
+
+    /**
+     * Public verification. No auth() on purpose: the person checking is an employer or a
+     * regulator, not the learner. Only a code that matches nothing counts against the rate
+     * limit, so checking a pile of genuine certificates is never refused; working through
+     * guesses is.
+     */
+    if (preg_match('#^certificates/verify/([A-Za-z0-9-]{1,40})$#', $route, $m) && $method === 'GET') {
+        requireModule('academyCertificateVerify', 'lib/academy-certificates.php');
+        throttleCheck($pdo, $config, 'certificate-verify', 'verify');
+        $result = academyCertificateVerify($pdo, $m[1]);
+        if ($result['status'] === 'not_found') throttleFailure($pdo, $config, 'certificate-verify', 'verify');
+        respond(200, $result);
+    }
+
+    if ($route === 'academy/admin/certificates' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('academyCertificateList', 'lib/academy-certificates.php');
+        if (!academyCanPublish($user)) respond(403, ['error' => 'You do not have permission to manage certificates.']);
+        respond(200, ['certificates' => academyCertificateList($pdo, (string)($_GET['q'] ?? ''))]);
+    }
+
+    if (preg_match('#^academy/admin/certificates/(\d+)/revoke$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('academyCertificateRevoke', 'lib/academy-certificates.php');
+        if (!academyCanPublish($user)) respond(403, ['error' => 'You do not have permission to manage certificates.']);
+        [$certificate, $error] = academyCertificateRevoke($pdo, (int)$m[1], (string)(input()['reason'] ?? ''));
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'certificate_revoked', null, $certificate['code'] . ': ' . $certificate['revokedReason']);
+        respond(200, ['certificate' => $certificate]);
     }
 
     // ----- ReSoK Virtual Academy: authoring ------------------------------------------------

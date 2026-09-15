@@ -242,6 +242,27 @@ function brandedEmailHtml(string $title, string $bodyHtml, ?string $ctaText = nu
         . '</div></div></body></html>';
 }
 
+/** The confirmation email for an Academy learner: Academy wording, not the membership application's. */
+function sendLearnerVerificationEmail(array $config, string $email, string $token, string $firstName = ''): bool
+{
+    $baseUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/');
+    $url = $baseUrl !== '' ? $baseUrl . '/api/index.php?route=' . rawurlencode('auth/verify/' . $token) : '';
+    $greeting = trim($firstName) !== '' ? 'Dear ' . trim($firstName) : 'Hello';
+    $text = "{$greeting},\n\nWelcome to the ReSoK Virtual Academy. Please confirm your email address to activate your account:\n{$url}\n\n"
+        . "Once it is confirmed, sign in to start learning. Your progress and certificates are kept in your account.\n\n"
+        . "If you did not create this account, you can ignore this email.\n\nRespiratory Society of Kenya";
+    $html = brandedEmailHtml(
+        'Confirm your email to start learning',
+        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">' . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
+        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to the ReSoK Virtual Academy. Confirm your email address to activate your account, then sign in to start learning. Your progress and certificates are kept in your account.</p>'
+        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">If you did not create this account, you can safely ignore this email.</p>',
+        'Confirm My Email',
+        $url
+    );
+    $mailer = new SimpleMailer($config);
+    return $mailer->send($email, 'Confirm your ReSoK Virtual Academy account', $text, [], $html);
+}
+
 function sendVerificationEmail(array $config, string $email, string $token): bool
 {
     $baseUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/');

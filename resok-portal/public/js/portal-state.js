@@ -368,7 +368,15 @@
       return true;
     }
     try {
-      await api("/api/members/me");
+      const me = await api("/api/members/me");
+      // An Academy learner has an account but no membership record, so the member pages have
+      // nothing to show them - they are sent to the Academy. Not while the Academy is still
+      // locked, though: the lock sends visitors back to the dashboard, and the two redirects
+      // would pass the learner between each other forever.
+      if (!(me && me.id) && !LOCKED_FEATURES.includes("academy")) {
+        window.location.replace("academy");
+        return false;
+      }
       startIdleWatch();
       return true;
     } catch {

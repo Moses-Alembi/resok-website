@@ -188,6 +188,43 @@
   }}
   
   
+    /* KISLHC 2026 uses the same panel as the 2024 conference, with its own photograph. */
+    .recent-media.kislhc-media{background-image:linear-gradient(rgba(5,15,21,.08),rgba(5,15,21,.42)),url('assets/img/pages/conferences/KISHLC%202024%20Photos/DSC_7066.jpg');background-position:center}
+    /* Conference hero: the KISLHC 2026 loop behind the text, with its first frame as the still.
+       The earlier background pointed at a photo path that does not exist, so the hero showed grey. */
+    .conference-hero{position:relative;overflow:hidden;background:#06301a url("assets/img/kislhc-2026-hero.jpg") center/cover no-repeat}
+    .conference-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+    .conference-hero::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(rgba(5,15,21,.30),rgba(5,15,21,.74))}
+    .conference-hero-inner{position:relative;z-index:2}
+    @media (prefers-reduced-motion: reduce){.conference-hero-video{display:none}}
+    /* TB & Lung Health Symposium: lead photograph, expandable full story, and photo gallery. */
+    .recent-media.symposium-media{background-image:linear-gradient(rgba(5,15,21,.06),rgba(5,15,21,.36)),url('assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-plenary-stage.jpg');background-position:center}
+    .symposium-story{margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
+    .symposium-story summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 26px;font-family:var(--heading);font-weight:900;font-size:1rem;color:#050b12;text-transform:uppercase;letter-spacing:.04em}
+    .symposium-story summary::-webkit-details-marker{display:none}
+    .symposium-story summary i{color:var(--brand-secondary);transition:transform .2s ease}
+    .symposium-story[open] summary i{transform:rotate(180deg)}
+    .symposium-story summary:focus-visible{outline:3px solid rgba(0,147,46,.35);outline-offset:-3px;border-radius:8px}
+    .symposium-story[open] summary{border-bottom:1px solid var(--line)}
+    .story-body{padding:6px 26px 30px;max-width:820px}
+    .story-title{font-family:var(--heading);font-size:clamp(1.3rem,2vw,1.75rem);line-height:1.2;color:#050b12;margin:22px 0 14px}
+    .story-body h4{font-family:var(--heading);font-size:1.12rem;color:#050b12;margin:28px 0 8px}
+    .story-body p{color:#344054;font-size:.97rem;line-height:1.75;margin-bottom:12px}
+    .story-figure{margin:24px 0}
+    .story-figure img{width:100%;height:auto;display:block;border-radius:8px}
+    .symposium-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:22px}
+    .symposium-gallery img{width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;display:block;border-radius:8px}
+    @media (max-width:768px){.symposium-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.story-body,.symposium-story summary{padding-left:18px;padding-right:18px}}
+    @media (prefers-reduced-motion: reduce){.symposium-story summary i{transition:none}}
+    /* Same wave separator as the homepage video hero (index.html .hero-wave-divider). */
+    .conference-hero .hero-wave-divider{position:absolute;left:0;bottom:-1px;width:100%;height:112px;line-height:0;z-index:3;pointer-events:none}
+    .conference-hero .hero-wave-divider svg{display:block;width:100%;height:100%}
+    .conference-hero .hero-wave-divider path{fill:var(--bg)}
+    .conference-hero-inner{padding-bottom:140px}
+    @media (max-width:768px){
+      .conference-hero .hero-wave-divider{height:84px}
+      .conference-hero-inner{padding-bottom:110px}
+    }
   </style>
 </head>
 <body>
@@ -207,7 +244,6 @@
           <li><a href="events.html" class="nav-link"><i class="fas fa-calendar-day" aria-hidden="true"></i>Events</a></li>
           <li><a href="projects.html" class="nav-link"><i class="fas fa-folder-open" aria-hidden="true"></i>Projects</a></li>
           <li><a href="workshops-and-training.html" class="nav-link"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
-          <li><a href="sponsors.html" class="nav-link"><i class="fas fa-handshake" aria-hidden="true"></i>Partners</a></li>
           <li><a href="learning.html" class="nav-link"><i class="fas fa-book-open" aria-hidden="true"></i>Learning<span class="nav-badge">Members</span></a></li>
           <li><a href="blog.html" class="nav-link"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
           <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
@@ -229,82 +265,78 @@
   </nav>
 
   <header class="conference-hero">
+    <!-- A short silent loop cut from the 7th KISLHC 2026 film, played the way the homepage plays its hero. -->
+    <video class="conference-hero-video" autoplay muted playsinline webkit-playsinline loop preload="metadata" poster="assets/img/kislhc-2026-hero.jpg" aria-hidden="true">
+      <source src="assets/img/kislhc-2026-hero.mp4" type="video/mp4">
+    </video>
     <div class="conference-hero-inner">
       <span class="eyebrow"><i class="fas fa-microphone-lines"></i> Conferences</span>
       <h1>Scientific gatherings that move lung health forward.</h1>
       <p>ReSoK conferences convene experts, healthcare professionals, researchers, and stakeholders to collaborate on pioneering initiatives that address respiratory health challenges in Kenya, Africa, and beyond.</p>
       <div class="hero-actions">
-        <a href="#conference-library" class="btn btn-primary"><i class="fas fa-table-cells-large"></i> View Conferences</a>
+        <a href="#recent-conference" class="btn btn-primary"><i class="fas fa-table-cells-large"></i> View Conferences</a>
         <a href="#downloads" class="btn btn-light"><i class="fas fa-file-arrow-down"></i> 2026 Programs</a>
         <a href="https://www.resok.org/kislhc/index" class="btn btn-outline" target="_blank" rel="noopener"><i class="fas fa-calendar-check"></i> KISLHC 2026</a>
       </div>
     </div>
+    <!-- The homepage hero's wave, curve for curve, filled with this page's background. -->
+    <div class="hero-wave-divider" aria-hidden="true">
+      <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+        <path d="M0,52 C210,94 405,96 610,68 C785,44 930,46 1095,72 C1245,96 1360,58 1440,36 L1440,160 L0,160 Z"></path>
+      </svg>
+    </div>
   </header>
+  <script>
+    // Same approach as the homepage hero: stay muted and inline so browsers allow autoplay,
+    // and if one still refuses, start on the visitor's first tap or click.
+    (() => {
+      const video = document.querySelector('.conference-hero-video');
+      if (!video) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        video.pause();
+        return;
+      }
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      const tryPlay = () => {
+        const attempt = video.play();
+        if (attempt && typeof attempt.catch === 'function') {
+          attempt.catch(() => {
+            document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
+            document.addEventListener('click', tryPlay, { once: true });
+          });
+        }
+      };
+      tryPlay();
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) tryPlay(); });
+    })();
+  </script>
 
   <main>
-    <section class="section">
-      <div class="section-inner">
-        <div class="intro-panel">
-          <div>
-            <div class="section-kicker">Knowledge exchange</div>
-            <h2>Annual forums for respiratory science, clinical practice, research, and implementation.</h2>
-            <p>Through ReSoK's strategic plan, conferences advance organizational sustainability, research, education, advocacy, partnerships, and policy advisory while strengthening respiratory care and knowledge dissemination.</p>
-          </div>
-          <div class="conference-stats">
-            <div class="conference-stat"><strong>1</strong><span>Upcoming conference</span></div>
-            <div class="conference-stat"><strong>CPD</strong><span>Professional learning</span></div>
-            <div class="conference-stat"><strong>2024</strong><span>Recent conference</span></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section featured-band" id="downloads">
+    <section class="section" id="downloads">
       <div class="section-inner">
         <div class="section-head">
           <div>
-            <div class="section-kicker">Upcoming conference</div>
+            <div class="section-kicker">Latest conference</div>
             <h2 class="section-title">7th KISLHC 2026</h2>
           </div>
-          <p class="section-copy">The next Kenya International Scientific Lung Health Conference will take place from 5th to 8th August 2026 at Diani Reef Beach Hotel, Kwale County, Kenya.</p>
+          <p class="section-copy">The 7th Kenya International Scientific Lung Health Conference took place from 5 to 8 August 2026 at Diani Reef Beach Hotel, Kwale County, Kenya.</p>
         </div>
-        <div class="featured-grid">
-          <div class="featured-card">
-            <h3>From Detection to Recovery: Integrated Pathways & Patient-Centered Innovations in Lung Health</h3>
-            <p>KISLHC 2026 convenes clinicians, researchers, public health leaders, civil society, academia, private sector partners, and communities to accelerate progress toward ending TB by 2030 and improving lung health across Kenya and beyond.</p>
-            <div class="kislhc-facts">
-              <div class="kislhc-fact"><strong>Dates</strong><span>5-8 Aug 2026</span></div>
-              <div class="kislhc-fact"><strong>Venue</strong><span>Diani Reef Beach Hotel</span></div>
-              <div class="kislhc-fact"><strong>Location</strong><span>Kwale, Kenya</span></div>
-            </div>
-            <ul class="objective-list">
-              <li><i class="fas fa-check-circle"></i><span>Review achievements and identify gaps in chronic lung disease management.</span></li>
-              <li><i class="fas fa-check-circle"></i><span>Promote implementation and scale-up of new WHO-recommended tools in lung health.</span></li>
-              <li><i class="fas fa-check-circle"></i><span>Mobilize political and financial commitment for lung health research, innovation, and care.</span></li>
-              <li><i class="fas fa-check-circle"></i><span>Address health inequities, human rights, stigma, and public health pathways toward universal health coverage.</span></li>
+        <div class="recent-panel">
+          <div class="recent-media kislhc-media" role="img" aria-label="Delegates at the Kenya International Scientific Lung Health Conference"></div>
+          <div class="recent-content">
+            <h3>From Detection to Recovery.</h3>
+            <p>Integrated Pathways &amp; Patient-Centered Innovations in Lung Health. KISLHC 2026 brought together clinicians, researchers, public health leaders, civil society, academia, private sector partners and communities to accelerate progress toward ending TB by 2030.</p>
+            <ul class="recent-list">
+              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Reviewing achievements and gaps in chronic lung disease management.</span></li>
+              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Scaling up new WHO-recommended tools in lung health.</span></li>
+              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Pre-conference workshops, plenaries, symposia, oral and e-poster sessions over four days.</span></li>
             </ul>
-          </div>
-          <div class="download-card">
-            <p>The programme includes pre-conference workshops, plenaries, symposia, tracks, and e-poster sessions across four days.</p>
-            <div class="program-tags">
-              <span>Scientific Writing</span>
-              <span>Spirometry</span>
-              <span>Pleural</span>
-              <span>Thoracic Ultrasound</span>
-              <span>Pulmonary Rehabilitation</span>
-              <span>Sleep</span>
-              <span>Tuberculosis</span>
-              <span>Laboratory Capacity</span>
+            <div class="recent-actions">
+              <a href="https://www.resok.org/kislhc/index" class="btn btn-primary" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Visit KISLHC 2026 Site</a>
+              <a href="assets/img/kislhc_2026_programme.pdf" class="btn btn-outline" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> 2026 Programme</a>
             </div>
-            <div class="download-list">
-              <a class="download-link" href="https://www.resok.org/kislhc/index" target="_blank" rel="noopener"><span>Open KISLHC Main Site</span><i class="fas fa-arrow-up-right-from-square"></i></a>
-              <a class="download-link" href="assets/img/kislhc_2026_programme.pdf" target="_blank" rel="noopener"><span>Download Full Programme (PDF)</span><i class="fas fa-file-pdf"></i></a>
-            </div>
-            <blockquote style="margin:18px 0 0;padding:14px 16px;border-left:4px solid var(--brand-secondary);background:rgba(255,255,255,.06);font-size:.92rem;line-height:1.6;color:rgba(255,255,255,.9)">
-              &ldquo;Every person who struggles to breathe deserves care throughout their journey, from the first cough, through their recovery and beyond.&rdquo;
-              <footer style="margin-top:8px;font-weight:800;color:#9be7b2;font-style:normal">&mdash; Dr. Nkirote Mugambi-Nyaboga, Chair, Scientific Committee</footer>
-            </blockquote>
-            <p class="abstract-note">Runs over four days &mdash; pre-conference workshops and opening ceremony on Day 1, followed by three days of plenaries, symposia, oral and e-poster sessions.</p>
           </div>
         </div>
       </div>
@@ -328,97 +360,127 @@
       </div>
     </section>
 
-    <section class="section" id="lung-health-symposium">
-      <div class="section-inner">
-        <div class="section-head">
-          <div>
-            <div class="section-kicker">Featured symposium</div>
-            <h2 class="section-title">Lung Health Symposium</h2>
-          </div>
-          <p class="section-copy">Content for this symposium is being finalised and will be published here shortly.</p>
-        </div>
-        <div class="intro-panel" style="grid-template-columns:1fr;text-align:center;padding:40px 26px">
-          <div>
-            <h2 style="font-size:1.4rem;margin-bottom:8px">Details coming soon</h2>
-            <p>Full programme details for the Lung Health Symposium will be added here soon.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="section" id="recent-conference">
       <div class="section-inner">
         <div class="section-head">
           <div>
-            <div class="section-kicker">Recent conference</div>
-            <h2 class="section-title">2024 Lung Health Conference</h2>
+            <div class="section-kicker">Featured symposium</div>
+            <h2 class="section-title">TB &amp; Lung Health Symposium</h2>
           </div>
-          <p class="section-copy">The most recent featured ReSoK conference brought together multidisciplinary respiratory health professionals for scientific exchange, CPD learning, and implementation-focused discussion.</p>
+          <p class="section-copy">Held on 29&ndash;30 September 2025 at The Nairobi Hospital, bringing together researchers, clinicians, policymakers, programme implementers, partners and survivors.</p>
         </div>
         <div class="recent-panel">
-          <div class="recent-media" role="img" aria-label="Participants at a recent ReSoK lung health conference"></div>
+          <div class="recent-media symposium-media" role="img" aria-label="A speaker on stage beneath the TB and Lung Health Symposium banner at The Nairobi Hospital"></div>
           <div class="recent-content">
-            <h3>Redefining Lung Health in Kenya.</h3>
-            <p>The 2024 Lung Health Conference focused on advancing respiratory health knowledge and practice across pulmonology, rheumatology, radiology, public health, and related disciplines.</p>
+            <h3>Advancing a more integrated, patient-centred response to respiratory health.</h3>
+            <p>The symposium examined the evolving landscape of tuberculosis and respiratory health in Kenya and beyond, highlighting emerging evidence, innovations, clinical advances and opportunities to strengthen prevention, diagnosis, treatment and long-term care.</p>
             <ul class="recent-list">
-              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Continuing professional development for respiratory health professionals.</span></li>
-              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Multidisciplinary sessions connecting clinical practice, research, policy, and implementation.</span></li>
-              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Networking and knowledge exchange for specialists, trainees, partners, and stakeholders.</span></li>
+              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Prevention, early diagnosis and better access to TB care.</span></li>
+              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Post-TB Lung Disease, pulmonary rehabilitation and chronic lung health.</span></li>
+              <li><i class="fas fa-check-circle" aria-hidden="true"></i><span>Interventional pulmonology, AI and data-driven approaches to care.</span></li>
             </ul>
             <div class="recent-actions">
-              <a href="#conference-library" class="btn btn-primary"><i class="fas fa-table-cells-large"></i> View More Conferences</a>
-              <a href="https://www.resok.org/KENYA%20LUNG%20HEALTH%20CONFERENCE%202024%20BOOKLET%20(1).pdf" class="btn btn-outline" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> 2024 Booklet</a>
+              <a href="#symposium-story" class="btn btn-primary" data-open-story><i class="fas fa-book-open"></i> Read the Full Story</a>
+              <a href="https://youtu.be/T7kO6j8FYeM" class="btn btn-outline" target="_blank" rel="noopener"><i class="fab fa-youtube"></i> Watch the Symposium</a>
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <section class="section" id="conference-library">
-      <div class="section-inner">
-        <div class="section-head">
-          <div>
-            <div class="section-kicker">Conference library</div>
-            <h2 class="section-title">Past and Featured Conferences</h2>
-          </div>
-          <p class="section-copy">A focused listing adapted from the current ReSoK conferences page, covering recent lung health congresses and CPD events.</p>
-        </div>
-        <div class="conference-grid">
-          <article class="conference-card">
-            <div class="conference-image" style="background-image:url('assets/img/Gallery/B8.jpg')"><span class="conference-badge">2024</span></div>
-            <div class="conference-body">
-              <h3>2024 Lung Health Conference</h3>
-              <p>A premier continuing professional development event designed to enhance knowledge and skills across pulmonology, rheumatology, and radiology.</p>
-              <div class="conference-meta"><span><i class="fas fa-certificate"></i> CPD</span><span><i class="fas fa-users"></i> Multidisciplinary</span></div>
-            </div>
+        <details class="symposium-story" id="symposium-story">
+          <summary><span>Read the full story</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+          <article class="story-body">
+            <h3 class="story-title">The TB &amp; Lung Health Symposium: Advancing a More Integrated, Patient-Centred Response to Respiratory Health</h3>
+            <p>The TB &amp; Lung Health Symposium brought together researchers, clinicians, policymakers, programme implementers, partners, survivors, and other stakeholders for meaningful conversations on the evolving landscape of tuberculosis and respiratory health in Kenya and beyond.</p>
+            <p>The symposium provided a platform to examine the challenges that continue to shape TB and lung health, while highlighting emerging evidence, innovations, clinical advances, and opportunities to strengthen the systems through which prevention, diagnosis, treatment, and long-term care are delivered.</p>
+            <p>At its core, the symposium recognised that the future of lung health cannot be defined by individual diseases or isolated interventions. Tuberculosis, Post-TB Lung Disease (PTLD), asthma, COPD, lung cancer, pleural disease, and other respiratory conditions exist within interconnected health and social systems. Addressing them therefore requires approaches that bring together clinical expertise, public health, research, technology, policy, financing, and &mdash; importantly &mdash; the voices of people whose lives are affected by these conditions.</p>
+
+            <h4>Looking Beyond the Numbers</h4>
+            <p>Conversations around TB began with a reflection on the continuing burden of the disease and the factors that influence who becomes vulnerable, who accesses care, and who is able to recover fully.</p>
+            <p>The findings of the 2024 Nairobi County TB Prevalence Survey provided an opportunity to consider Kenya's progress since the 2016 survey, while also drawing attention to the work that remains. Beyond epidemiological figures, discussions examined the wider determinants that continue to influence TB, including poverty, stigma, inadequate nutrition, and mental health challenges.</p>
+            <p>These realities reinforce an important principle: TB cannot be addressed through medical interventions alone. Effective responses must recognise the circumstances in which people live and the barriers that influence their ability to seek, access, and complete care.</p>
+            <p>The symposium also considered the changing global health financing environment and what it means for the sustainability of TB and lung health programmes. With donor priorities evolving, the discussions explored the need for locally responsive financing models, stronger integration of TB services within primary health care, and approaches that can support progress towards universal health coverage.</p>
+
+            <figure class="story-figure">
+              <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-audience.jpg" alt="Delegates seated in the auditorium during the TB and Lung Health Symposium" loading="lazy" width="2048" height="1152">
+            </figure>
+
+            <h4>Prevention, Early Diagnosis and Better Access to Care</h4>
+            <p>Prevention and early diagnosis emerged as critical pillars in the effort to reduce the burden of TB.</p>
+            <p>Participants examined preventive therapy for children, adult contacts, and people living with HIV, alongside the potential contribution of emerging TB vaccines such as M72/AS01E. Nutrition was also recognised as an important component of prevention, particularly given the relationship between nutritional vulnerability and susceptibility to TB.</p>
+            <p>On the diagnostic front, the symposium showcased approaches aimed at finding TB earlier and more efficiently. Experiences from Kenya's childhood TB algorithm, the use of AI-supported digital chest X-rays in Siaya County, and emerging near point-of-care tests using non-sputum samples demonstrated how innovation can help address longstanding diagnostic challenges.</p>
+            <p>The emphasis was not simply on developing new technologies, but on ensuring that useful innovations can be incorporated into real-world health systems and reach the people who need them.</p>
+
+            <h4>Putting Patients at the Centre of TB Care</h4>
+            <p>Improving outcomes also requires looking closely at the experience of people moving through the TB care cascade.</p>
+            <p>Discussions around shorter treatment regimens for children and the challenges affecting adolescents and young adults highlighted the importance of designing services around the needs of patients rather than expecting patients to navigate systems that were not designed with their realities in mind.</p>
+            <p>The call for TB and lung health services to be person-centred, rights-based, and gender-responsive reflected a broader shift in thinking about healthcare &mdash; one in which successful treatment is measured not only by clinical outcomes, but also by dignity, accessibility, equity, and quality of life.</p>
+            <p>This patient-centred perspective was brought to life through the participation of TB and PTLD survivors.</p>
+            <p>Their testimonies offered a powerful reminder that the impact of TB extends beyond diagnosis and treatment. Survivors spoke to the realities of living through illness and recovery, including the physical, emotional, and social dimensions of their experiences.</p>
+            <p>A creative skit on TB awareness further demonstrated the role that storytelling, art, and lived experience can play in challenging stigma and communicating health messages. Together, these moments reinforced the value of placing patient voices alongside scientific evidence.</p>
+
+            <h4>Addressing the Long-Term Consequences of TB</h4>
+            <p>One of the important areas of discussion was Post-TB Lung Disease, reflecting the growing recognition that completing TB treatment does not necessarily mark the end of a patient's respiratory health journey.</p>
+            <p>PTLD can leave survivors with persistent respiratory symptoms and impaired lung function, creating a need for continued assessment, management, and rehabilitation.</p>
+            <p>The symposium brought attention to PTLD among both children and adults, while also exploring broader challenges in chronic respiratory care, including COPD and bronchitis in low-resource settings.</p>
+            <p>Pulmonary rehabilitation emerged as an important component of this continuum of care. By supporting physical recovery, functional capacity, and quality of life, rehabilitation can help bridge the gap between successfully completing treatment and genuinely recovering from the effects of disease.</p>
+            <p>This broader approach reflects the need to move from a model focused primarily on treating acute disease towards one that supports patients before, during, and after treatment.</p>
+
+            <h4>Strengthening the Wider Lung Health Response</h4>
+            <p>While TB remained a central focus, the symposium also highlighted the need for stronger and more integrated responses to chronic and non-communicable respiratory diseases.</p>
+            <p>Asthma care in Kenya was among the areas examined, with discussions addressing diagnosis, access to appropriate treatment, and patient self-management. Participants also considered how implementation research can help translate evidence into practical interventions that work within local health systems.</p>
+            <p>Integrated approaches to the diagnosis of chronic lung diseases and stronger drug-resistance surveillance further demonstrated the importance of building health systems capable of responding to multiple respiratory challenges simultaneously.</p>
+            <p>Such integration is particularly important in resource-constrained settings, where fragmented disease-specific programmes can place additional pressure on already stretched systems.</p>
+
+            <figure class="story-figure">
+              <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-delegate-question-2.jpg" alt="A delegate raises a question from the audience during a symposium session" loading="lazy" width="2048" height="1365">
+            </figure>
+
+            <h4>Interventional Pulmonology and the Changing Landscape of Respiratory Care</h4>
+            <p>Advances in interventional pulmonology provided another important dimension of the symposium.</p>
+            <p>Experts explored developments in the management of lung nodules, lung cancer, pleural disease, and chronic airway conditions, demonstrating how minimally invasive procedures and advanced diagnostic technologies are creating new possibilities for patients with complex respiratory conditions.</p>
+            <p>These developments are changing how clinicians approach diagnosis and treatment, while opening opportunities for earlier detection and more targeted interventions.</p>
+            <p>However, the discussions also underscored the importance of making such advances accessible and sustainable. Innovation has limited value if it remains concentrated in a small number of facilities or inaccessible to the populations that need it most.</p>
+            <p>Expanding specialist expertise, strengthening infrastructure, supporting multidisciplinary teams, and developing appropriate referral pathways will therefore remain essential to translating advances in interventional pulmonology into broader improvements in respiratory care.</p>
+
+            <h4>Harnessing Technology, Data and Research</h4>
+            <p>Technology and research featured prominently throughout the symposium, reflecting the increasingly important role they play in shaping the future of TB and lung health.</p>
+            <p>Artificial intelligence applications in TB elimination demonstrated how digital tools can support screening and identification of people who may require further evaluation. Work by Wadhwani AI provided an example of how AI can be applied to public health challenges, while EPCON's TB modelling work illustrated the value of data-driven approaches in understanding disease trends and informing strategic decisions.</p>
+            <p>Discussions on advanced HIV disease further reinforced the importance of using evidence to understand interconnected health challenges and improve patient outcomes.</p>
+            <p>Together, these innovations highlighted an important lesson: technology should not replace clinical expertise or human connection. Rather, it should strengthen the ability of health workers, researchers, policymakers, and communities to make better decisions and deliver more responsive care.</p>
+
+            <h4>From Collaboration to Action</h4>
+            <p>Perhaps the most important contribution of the TB &amp; Lung Health Symposium was the space it created for different perspectives to meet.</p>
+            <p>Researchers brought evidence. Clinicians brought experience from practice. Policymakers and programme teams brought system-level perspectives. Innovators presented emerging technologies. Partners contributed resources and expertise. And survivors brought the lived realities behind the statistics.</p>
+            <p>These perspectives are most powerful when they are connected.</p>
+            <p>The symposium demonstrated that meaningful progress in TB and lung health requires collaboration across disciplines and sectors. It requires investment in prevention and diagnosis alongside treatment. It requires attention to both infectious and chronic respiratory diseases. It requires innovation that is grounded in local needs. And it requires health systems that continue to place people at the centre of care.</p>
+            <p>Most importantly, it requires recognising that recovery does not always end when treatment ends.</p>
+
+            <h4>Building the Future of TB and Lung Health</h4>
+            <p>The TB &amp; Lung Health Symposium was ultimately a reflection of how far the field has come &mdash; and how much more remains to be done.</p>
+            <p>The advances discussed throughout the symposium offer reasons for optimism: better diagnostic technologies, emerging vaccines, artificial intelligence, improved treatment approaches, advances in interventional pulmonology, stronger approaches to chronic respiratory care, and a growing recognition of the importance of rehabilitation and long-term recovery.</p>
+            <p>Yet progress will depend on how effectively these opportunities are translated into accessible, equitable, and sustainable services.</p>
+            <p>The symposium therefore leaves behind more than presentations and discussions. It strengthens connections between evidence and practice, research and policy, innovation and implementation, and &mdash; most importantly &mdash; science and the people it is intended to serve.</p>
+            <p>As Kenya continues to confront the burden of TB and the broader challenges of lung health, the path forward will require sustained collaboration, continued investment, bold innovation, and a commitment to ensuring that every person affected by respiratory disease has the opportunity not only to receive treatment, but to achieve meaningful recovery and a better quality of life.</p>
           </article>
-          <article class="conference-card">
-            <div class="conference-image" style="background-image:url('assets/img/Gallery/B6.jpg')"><span class="conference-badge">2023</span></div>
-            <div class="conference-body">
-              <h3>PATS Congress 2023</h3>
-              <p>A regional scientific gathering supporting respiratory care learning, specialist exchange, and collaborative approaches to lung health.</p>
-              <div class="conference-meta"><span><i class="fas fa-earth-africa"></i> Regional</span><span><i class="fas fa-microphone"></i> Congress</span></div>
-            </div>
-          </article>
-          <article class="conference-card">
-            <div class="conference-image" style="background-image:url('assets/img/Gallery/B5.jpg')"><span class="conference-badge">2023</span></div>
-            <div class="conference-body">
-              <h3>ReSoK 2023 Congress</h3>
-              <p>A ReSoK congress focused on clinical respiratory updates, scientific exchange, professional learning, and implementation priorities.</p>
-              <div class="conference-meta"><span><i class="fas fa-lungs"></i> Lung health</span><span><i class="fas fa-book-medical"></i> Clinical updates</span></div>
-            </div>
-          </article>
-          <article class="conference-card">
-            <div class="conference-image" style="background-image:url('assets/img/Gallery/B6.jpg')"><span class="conference-badge">2022</span></div>
-            <div class="conference-body">
-              <h3>Kenya Scientific Lung Health Conference 2022</h3>
-              <p>A scientific conference supporting CPD, evidence sharing, and stronger respiratory care practice across the health workforce.</p>
-              <div class="conference-meta"><span><i class="fas fa-flask"></i> Science</span><span><i class="fas fa-user-doctor"></i> Practice</span></div>
-            </div>
-          </article>
+        </details>
+
+        <div class="symposium-gallery" aria-label="Photographs from the TB and Lung Health Symposium">
+          <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-group-on-stage.jpg" alt="Speakers and guests waving on stage beneath the symposium banner" loading="lazy" width="2048" height="1152">
+          <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-stage-introductions.jpg" alt="A speaker introduces guests standing on stage" loading="lazy" width="2048" height="1367">
+          <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-audience-applause.jpg" alt="The audience applauding during the symposium" loading="lazy" width="2048" height="1365">
+          <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-delegates-arriving.jpg" alt="Delegates arriving and taking their seats in the auditorium" loading="lazy" width="2048" height="1365">
+          <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-delegate-question-1.jpg" alt="A delegate asks a question using a microphone" loading="lazy" width="2048" height="1365">
+          <img src="assets/img/pages/conferences/tb-lung-health-symposium-2025/symposium-delegate-question-3.jpg" alt="A delegate speaks from the audience" loading="lazy" width="2048" height="1365">
         </div>
       </div>
     </section>
+    <script>
+      // "Read the Full Story" opens the story panel before jumping to it.
+      document.querySelectorAll('[data-open-story]').forEach((link) => link.addEventListener('click', () => {
+        const story = document.getElementById('symposium-story');
+        if (story) story.open = true;
+      }));
+    </script>
 
     <section class="section" style="padding-top:0">
       <div class="section-inner">

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" /><!-- COMING SOON: this page is held back from the public. The content below is intact; delete this one line to publish it again. --><meta http-equiv="refresh" content="0; url=coming-soon.html">
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Workshops & Training | Respiratory Society of Kenya</title>
   <meta name="description" content="Explore ReSoK workshops and training programs for respiratory health professionals, including bronchoscopy, spirometry, thoracic ultrasound, TB learning, and asthma education." />
@@ -209,12 +209,30 @@
    pictures among three paragraphs crowds the prose rather than punctuating it. */
 .wphoto{margin:16px 0;break-inside:avoid}
 .wphoto img{width:100%;height:auto;display:block;border-radius:8px;border:1px solid var(--line);background:#edf1f5}
-.wphoto-wide{column-span:all;margin:24px 0}
-.wphoto-wide img{height:auto}
+.wphoto-wide{column-span:all;margin:24px 0}.wphoto-wide img{height:auto}
 .wband{column-span:all;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0}
 .wband .wphoto{margin:0}
-.wband img{height:auto}
+.wband img{height:auto;aspect-ratio:3/2;object-fit:cover}
 
+    /* Training hero: a loop from the workshop highlight film behind the text, its first frame as the still,
+       and the homepage's wave as the separator. */
+    .training-hero{position:relative;overflow:hidden;background:#06301a url("assets/img/workshops-hero.jpg") center/cover no-repeat}
+    .training-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+    .training-hero::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(rgba(5,15,21,.30),rgba(5,15,21,.74))}
+    .training-hero-inner{position:relative;z-index:2;padding-bottom:140px}
+    .training-hero .hero-wave-divider{position:absolute;left:0;bottom:-1px;width:100%;height:112px;line-height:0;z-index:3;pointer-events:none}
+    .training-hero .hero-wave-divider svg{display:block;width:100%;height:100%}
+    .training-hero .hero-wave-divider path{fill:var(--bg)}
+    @media (max-width:768px){
+      .training-hero .hero-wave-divider{height:84px}
+      .training-hero-inner{padding-bottom:110px}
+    }
+    @media (prefers-reduced-motion: reduce){.training-hero-video{display:none}}
+  </style>
+  <style>
+    /* Hero heading matched to the conferences page: same face, weight, size, case and spacing. */
+    .training-hero h1{font-family:'Mulish','Poppins',sans-serif;font-size:clamp(2.4rem,5.2vw,5.6rem);line-height:.96;font-weight:900;text-transform:uppercase;letter-spacing:0;margin:18px 0 16px;max-width:none;text-wrap:balance}
+    .training-hero p{font-size:1.04rem}
   </style>
 </head>
 <body>
@@ -234,7 +252,6 @@
           <li><a href="events.html" class="nav-link"><i class="fas fa-calendar-day" aria-hidden="true"></i>Events</a></li>
           <li><a href="projects.html" class="nav-link"><i class="fas fa-folder-open" aria-hidden="true"></i>Projects</a></li>
           <li><a href="workshops-and-training.html" class="nav-link is-active"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
-          <li><a href="sponsors.html" class="nav-link"><i class="fas fa-handshake" aria-hidden="true"></i>Partners</a></li>
           <li><a href="learning.html" class="nav-link"><i class="fas fa-book-open" aria-hidden="true"></i>Learning<span class="nav-badge">Members</span></a></li>
           <li><a href="blog.html" class="nav-link"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
           <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
@@ -256,6 +273,10 @@
   </nav>
 
   <header class="training-hero">
+    <!-- A short silent loop from the ReSoK workshop highlight film, played the way the homepage plays its hero. -->
+    <video class="training-hero-video" autoplay muted playsinline webkit-playsinline loop preload="metadata" poster="assets/img/workshops-hero.jpg" aria-hidden="true">
+      <source src="assets/img/workshops-hero.mp4" type="video/mp4">
+    </video>
     <div class="training-hero-inner">
       <span class="eyebrow"><i class="fas fa-user-doctor"></i> Workshops & Training</span>
       <h1>Hands-on respiratory training for better clinical practice.</h1>
@@ -266,38 +287,41 @@
         <a href="learning.html" class="btn btn-outline"><i class="fas fa-graduation-cap"></i> Learning Hub</a>
       </div>
     </div>
+    <!-- The homepage hero's wave, curve for curve, filled with this page's background. -->
+    <div class="hero-wave-divider" aria-hidden="true">
+      <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+        <path d="M0,52 C210,94 405,96 610,68 C785,44 930,46 1095,72 C1245,96 1360,58 1440,36 L1440,160 L0,160 Z"></path>
+      </svg>
+    </div>
   </header>
+  <script>
+    // Same approach as the homepage hero: stay muted and inline so browsers allow autoplay,
+    // and if one still refuses, start on the visitor's first tap or click.
+    (() => {
+      const video = document.querySelector('.training-hero-video');
+      if (!video) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        video.pause();
+        return;
+      }
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      const tryPlay = () => {
+        const attempt = video.play();
+        if (attempt && typeof attempt.catch === 'function') {
+          attempt.catch(() => {
+            document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
+            document.addEventListener('click', tryPlay, { once: true });
+          });
+        }
+      };
+      tryPlay();
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) tryPlay(); });
+    })();
+  </script>
 
   <main>
-    <!-- Director of Trainings message.
-         The name, role, portrait and text below are PLACEHOLDERS and must be replaced with
-         the Director's own words before this page is published. Nothing here should go out
-         under a named officer that they have not written. -->
-    <section class="section" id="director-message" style="padding-bottom:0">
-      <div class="section-inner">
-        <div class="director-panel">
-          <div class="director-aside">
-            <div class="director-photo">
-              <!-- Replace with:
-                   <img src="assets/img/pages/workshops-and-training/director-of-trainings.jpg"
-                        alt="Director of Trainings">  -->
-              <i class="fas fa-user-tie" aria-hidden="true"></i>
-            </div>
-            <div class="director-name">[Director's name]</div>
-            <div class="director-role">Director of Trainings, ReSoK</div>
-          </div>
-          <div class="director-copy">
-            <div class="section-kicker">A message from the Director of Trainings</div>
-            <h2>[Headline for the Director's message]</h2>
-            <p>[Replace this paragraph with the Director's own words. It is a placeholder and
-              must not be published as written.]</p>
-            <p>[A second paragraph, if the message runs longer.]</p>
-            <div class="director-sign">[Director's name] &middot; Director of Trainings</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="section">
       <div class="section-inner">
         <div class="intro-panel">
@@ -322,7 +346,74 @@
             <div class="section-kicker">Recent workshops</div>
             <h2 class="section-title">Clinical Skills Workshops and Camps</h2>
           </div>
-          <p class="section-copy">Recent ReSoK practical workshops and camps strengthening early diagnosis, procedural access, clinical collaboration, and hands-on respiratory care across Kenyan health facilities.</p>
+          <p class="section-copy">Recent ReSoK practical workshops and camps strengthening early diagnosis, procedural access, clinical collaboration, and hands-on respiratory care across Kenyan health facilities, delivered with the support of <strong>AstraZeneca</strong>.</p>
+        </div>
+        <div class="recent-workshop" id="interventional-pulmonology-workshop">
+          <article class="recent-copy">
+            <div class="section-kicker">Latest workshop &middot; Interventional pulmonology and advanced bronchoscopy</div>
+            <h3>Advancing Respiratory Care Through the Interventional Pulmonology &amp; Advanced Bronchoscopy Workshop</h3>
+            <p>At Coast General Teaching and Referral Hospital in Mombasa, the <strong>Interventional Pulmonology &amp; Advanced Bronchoscopy Workshop</strong> brought together respiratory physicians, pulmonologists, trainees, and multidisciplinary healthcare professionals for an intensive programme focused on strengthening practical skills in advanced respiratory care.</p>
+            <p>Organised by the Respiratory Society of Kenya (ReSoK), the workshop combined evidence-based learning, hands-on procedural training, simulation, case-based discussions, and international expertise. With support from <strong>AstraZeneca</strong>, the initiative provided an important platform for strengthening local capacity in interventional pulmonology and expanding opportunities for advanced respiratory care in Kenya and the wider region.</p>
+            <h4>Building Strong Foundations in Pleural Procedures</h4>
+            <p>The workshop followed a progressive learning pathway, beginning with the fundamentals of pleural disease and thoracic procedures. Participants explored the evidence-based management of parapneumonic effusions and empyema, fibrinolytic therapy, pneumothorax, and persistent air leaks.</p>
+            <p>The practical component introduced participants to <strong>thoracic ultrasound, ultrasound-guided pleural biopsy, the Seldinger technique for chest drain insertion, and indwelling pleural catheter placement and care</strong>.</p>
+            <figure class="wphoto wphoto-wide"><img class="featured-photo" src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-02.jpg" alt="Participants in caps and aprons practising a pleural procedure during a hands-on session" loading="lazy" width="1600" height="1066"></figure>
+            <p>These hands-on sessions were complemented by case discussions examining complications of chest drainage and approaches to troubleshooting challenging procedural situations. The combination of theoretical knowledge and practical application allowed participants to connect clinical principles with the technical skills required in everyday practice.</p>
+            <h4>Advancing the Management of Pleural and Malignant Disease</h4>
+            <p>The programme then progressed to more advanced pleural interventions, with particular attention to malignant pleural effusions.</p>
+            <p>Participants examined the role of indwelling pleural catheters and pleurodesis, including the use of chemical agents such as talc. Discussions also explored surgical approaches including <strong>Video-Assisted Thoracoscopic Surgery (VATS), decortication, and pleurectomy</strong>, emphasising the importance of appropriate patient selection and multidisciplinary decision-making.</p>
+            <p>Complex case discussions provided an opportunity to consider how different treatment options can be evaluated according to individual patient circumstances, disease characteristics, and available resources.</p>
+            <h4>Expanding Access to Medical Thoracoscopy</h4>
+            <p>Medical thoracoscopy formed a major practical component of the workshop. Participants were introduced to both <strong>semiflexible and rigid thoracoscopy techniques</strong>, alongside approaches to chemical pleurodesis.</p>
+            <p>The practical sessions were designed to strengthen familiarity with equipment, procedural technique, and clinical decision-making while creating an environment where participants could engage directly with advanced pleural interventions.</p>
+            <p>Such training is particularly important in settings where access to specialised respiratory procedures remains limited. Strengthening local expertise can contribute to earlier diagnosis, improved management, and more efficient referral pathways for patients with complex pleural and thoracic conditions.</p>
+            <div class="wband">
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-03.jpg" alt="A facilitator talks participants through imaging on screen during a case discussion" loading="lazy" width="1600" height="1068"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-13.jpg" alt="Faculty perform an ultrasound-guided pleural procedure during a live session" loading="lazy" width="1600" height="1066"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-14.jpg" alt="Faculty and participants gather around the ultrasound screen during a live procedure" loading="lazy" width="1600" height="1066"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-04.jpg" alt="A trainer guides a group of participants through a practical station" loading="lazy" width="1600" height="1066"></figure>
+            </div>
+            <h4>Addressing the Evidence Gap in LMICs</h4>
+            <p>Beyond procedural skills, the workshop created space for discussion around the role of research in advancing respiratory care.</p>
+            <p>A dedicated research session examined the underrepresentation of patients from low- and middle-income countries in global pleural and bronchoscopy trials. The discussion highlighted the importance of generating evidence that reflects the populations, health systems, and clinical realities of the settings in which respiratory care is delivered.</p>
+            <p>Strengthening research participation and collaboration across LMICs is essential to ensuring that future clinical evidence is more representative and can better inform locally relevant practice.</p>
+            <h4>Advancing Bronchoscopy, EBUS and Airway Interventions</h4>
+            <p>The final stage of the workshop focused on advanced bronchoscopy and airway interventions.</p>
+            <p>Participants explored flexible bronchoscopy, including airway anatomy, indications, contraindications, and pre-procedure assessment. The programme progressed to <strong>Endobronchial Ultrasound (EBUS)</strong>, with sessions covering nodal staging, transbronchial needle aspiration, needle targeting, and diagnostic yield.</p>
+            <p>Therapeutic airway interventions were also addressed, including <strong>balloon dilation, rigid bronchoscopy, and the deployment of silicone and metallic airway stents</strong>.</p>
+            <p>The practical programme brought these concepts together through dedicated learning tracks covering EBUS-TBNA, airway dilation, and flexible bronchoscopy simulation. Participants were able to engage with procedural techniques involving navigation, bronchoalveolar lavage, biopsy, nodal imaging, and airway intervention.</p>
+            <h4>Connecting Local Capacity with Global Expertise</h4>
+            <p>The workshop also demonstrated the value of connecting local clinical training with international expertise.</p>
+            <p>High-quality pre-recorded theoretical sessions provided a structured foundation before practical application, while interactive virtual engagement created opportunities for participants to discuss complex cases and exchange perspectives with international faculty.</p>
+            <p>This blended model allowed the workshop to combine the benefits of face-to-face procedural training with access to a wider pool of specialised expertise.</p>
+            <div class="wband">
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-06.jpg" alt="A speaker presents a bronchial anatomy lecture" loading="lazy" width="1600" height="1068"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-12.jpg" alt="International faculty joining the workshop by video link" loading="lazy" width="1600" height="1066"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-09.jpg" alt="A remote presentation on pleural infection shown to participants" loading="lazy" width="1600" height="1066"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-07.jpg" alt="A participant asks a question during an interactive session" loading="lazy" width="1600" height="1066"></figure>
+            </div>
+            <h4>Investing in the Future of Respiratory Care</h4>
+            <p>The Interventional Pulmonology &amp; Advanced Bronchoscopy Workshop represented an important investment in strengthening specialised respiratory care in Kenya and the wider region.</p>
+            <p>By combining foundational pleural procedures with advanced thoracoscopy, bronchoscopy, EBUS, airway interventions, simulation, research discussions, and multidisciplinary case-based learning, the workshop provided participants with a broad and progressive learning experience.</p>
+            <p>The initiative also demonstrated the value of partnerships in advancing healthcare capacity. ReSoK's collaboration with <strong>AstraZeneca</strong>, alongside the participation of local and international respiratory experts and the support of Coast General Teaching and Referral Hospital, created a platform for knowledge exchange, skills transfer, and professional collaboration.</p>
+            <p>As the burden of complex respiratory disease continues to evolve, strengthening the availability of specialised diagnostic and therapeutic services will be increasingly important. Building a skilled workforce capable of delivering advanced procedures safely and effectively is an essential part of that response.</p>
+            <figure class="wphoto wphoto-wide"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-08.jpg" alt="Group photo of participants and faculty in theatre attire at the workshop" loading="lazy" width="1600" height="1066"></figure>
+            <p>Held at Coast General Teaching and Referral Hospital in Mombasa, the workshop was therefore more than a clinical training programme. It was an investment in people, knowledge, technology, and systems &mdash; and a step towards ensuring that patients across Kenya and the wider region can benefit from increasingly advanced, timely, and patient-centred respiratory care.</p>
+            <p>Through continued collaboration, practical training, research, and innovation, <strong>interventional pulmonology can become an increasingly important part of the region's response to complex lung and pleural disease.</strong></p>
+            <div class="wband">
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-10.jpg" alt="Delegates following a session at the workshop" loading="lazy" width="1600" height="1066"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-11.jpg" alt="Delegates recording a presentation on their phones" loading="lazy" width="1600" height="1066"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-15.jpg" alt="Workshop facilitators at Coast General Teaching and Referral Hospital" loading="lazy" width="1600" height="1066"></figure>
+              <figure class="wphoto"><img src="assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-05.jpg" alt="A participant contributes to the discussion from the floor" loading="lazy" width="1600" height="1066"></figure>
+            </div>
+            <div class="recent-meta">
+              <span><i class="fas fa-calendar-day"></i> 3&ndash;5 August 2026</span>
+              <span><i class="fas fa-location-dot"></i> CGTRH, Mombasa</span>
+              <span><i class="fas fa-lungs"></i> Pleural procedures</span>
+              <span><i class="fas fa-stethoscope"></i> Thoracoscopy &amp; EBUS</span>
+              <span><i class="fas fa-handshake-angle"></i> Supported by AstraZeneca</span>
+            </div>
+          </article>
         </div>
         <div class="recent-workshop">
           <article class="recent-copy">
@@ -390,6 +481,7 @@
               <span><i class="fas fa-lungs"></i> EBUS</span>
               <span><i class="fas fa-stethoscope"></i> Bronchoscopy</span>
               <span><i class="fas fa-chalkboard-user"></i> Simulation training</span>
+              <span><i class="fas fa-handshake-angle"></i> Supported by AstraZeneca</span>
             </div>
           </article>
         </div>
@@ -461,6 +553,7 @@
               <span><i class="fas fa-microscope"></i> Lung biopsy</span>
               <span><i class="fas fa-lungs"></i> Bronchoscopy</span>
               <span><i class="fas fa-people-arrows"></i> MDT care</span>
+              <span><i class="fas fa-handshake-angle"></i> Supported by AstraZeneca</span>
             </div>
           </article>
         </div>
@@ -533,6 +626,7 @@
               <span><i class="fas fa-lungs"></i> Bronchoscopy</span>
               <span><i class="fas fa-microscope"></i> Early diagnosis</span>
               <span><i class="fas fa-people-group"></i> Multidisciplinary care</span>
+              <span><i class="fas fa-handshake-angle"></i> Supported by AstraZeneca</span>
             </div>
           </article>
         </div>
@@ -622,6 +716,7 @@
               <span><i class="fas fa-lungs"></i> Bronchoscopy</span>
               <span><i class="fas fa-video"></i> VATS</span>
               <span><i class="fas fa-hand-holding-medical"></i> Free camp</span>
+              <span><i class="fas fa-handshake-angle"></i> Supported by AstraZeneca</span>
             </div>
           </article>
         </div>
@@ -701,6 +796,7 @@
               <span><i class="fas fa-lungs"></i> Pleural disease</span>
               <span><i class="fas fa-user-doctor"></i> Clinical teams</span>
               <span><i class="fas fa-hospital"></i> Patient care</span>
+              <span><i class="fas fa-handshake-angle"></i> Supported by AstraZeneca</span>
             </div>
           </article>
         </div>

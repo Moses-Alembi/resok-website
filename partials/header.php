@@ -13,7 +13,6 @@ $navItems = [
     'conferences' => ['conferences.html', 'fa-calendar-check', 'Conferences'],
     'projects' => ['projects.html', 'fa-folder-open', 'Projects'],
     'workshops' => ['workshops-and-training.html', 'fa-chalkboard-user', 'Workshops'],
-    'partners' => ['sponsors.html', 'fa-handshake', 'Partners'],
     'knowledge' => ['knowledge.html', 'fa-book-medical', 'Knowledge'],
     'learning' => ['learning.html', 'fa-book-open', 'Learning', 'Members'],
     'blog' => ['blog.html', 'fa-newspaper', 'Blog'],

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify a Certificate | ReSoK Virtual Academy</title>
+  <meta name="description" content="Check that a ReSoK Virtual Academy certificate is genuine by entering the code printed on it.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="icon" href="favicon.jpg" type="image/jpeg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{
+      --green:#00932e; --green-dk:#00701f; --green-lt:#e8f4ec; --forest:#06301a; --red:#bc0b22;
+      --amber:#9a5b00; --ink:#132019; --body:#3d4f45; --muted:#6d7f74; --line:#e2e9e4; --line-dk:#cfdad3;
+      --ground:#f6f8f6;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Poppins','Segoe UI',Arial,sans-serif;background:var(--ground);color:var(--body);line-height:1.6;min-height:100vh;display:flex;flex-direction:column}
+    header{background:var(--forest);padding:14px 20px}
+    .bar{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    .bar img{height:44px;width:auto;display:block;background:#fff;border-radius:6px;padding:8px 12px}
+    @media(max-width:480px){.bar img{height:36px;padding:6px 9px}}
+    .bar a.home{color:#cfe9d8;font-size:13px;text-decoration:none}
+    .bar a.home:hover{color:#fff;text-decoration:underline}
+    main{flex:1;padding:48px 20px 40px}
+    .wrap{max-width:760px;margin:0 auto}
+    .eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green-dk)}
+    h1{font-family:'Mulish','Poppins',sans-serif;font-weight:900;color:var(--ink);font-size:clamp(1.7rem,4.2vw,2.35rem);line-height:1.12;margin-top:6px;text-wrap:balance}
+    .lede{margin-top:10px;max-width:60ch}
+    form{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap}
+    .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+    input{flex:1 1 260px;min-width:0;border:1px solid var(--line-dk);border-radius:10px;padding:13px 14px;background:#fff;color:var(--ink);
+      font-family:ui-monospace,Consolas,monospace;font-size:17px;letter-spacing:.06em;text-transform:uppercase}
+    input::placeholder{color:#a8b6ae;letter-spacing:.04em}
+    input:focus{outline:3px solid rgba(0,147,46,.18);border-color:var(--green)}
+    button{border:0;border-radius:10px;padding:13px 22px;background:var(--green);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+    button:hover{background:var(--green-dk)}
+    button:focus-visible{outline:3px solid var(--forest);outline-offset:2px}
+    button:disabled{opacity:.6;cursor:wait}
+    .hint{font-size:13px;color:var(--muted);margin-top:8px}
+    .result{margin-top:28px;background:#fff;border:1px solid var(--line);border-left:6px solid var(--line-dk);border-radius:12px;padding:22px 24px}
+    .result.valid{border-left-color:var(--green)}
+    .result.revoked{border-left-color:var(--red)}
+    .result.missing{border-left-color:var(--amber)}
+    .status{display:flex;align-items:center;gap:10px;font-family:'Mulish','Poppins',sans-serif;font-weight:900;font-size:1.25rem;color:var(--ink)}
+    .valid .status i{color:var(--green)}
+    .revoked .status i{color:var(--red)}
+    .missing .status i{color:var(--amber)}
+    dl{display:grid;grid-template-columns:max-content 1fr;gap:8px 20px;margin-top:16px;font-size:14.5px}
+    dt{color:var(--muted)}
+    dd{color:var(--ink);font-weight:600;word-break:break-word}
+    dd.code{font-family:ui-monospace,Consolas,monospace;letter-spacing:.04em}
+    .result .note{margin-top:14px;font-size:14px}
+    .about{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted);max-width:64ch}
+    footer{padding:22px 20px;text-align:center;font-size:12.5px;color:var(--muted)}
+    @media(max-width:480px){
+      dl{grid-template-columns:1fr;gap:0}
+      dd{margin-bottom:10px}
+      button{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <a href="/" aria-label="ReSoK Virtual Academy"><img src="assets/img/virtual-academy-logo.svg" alt="ReSoK Virtual Academy" width="448" height="66"></a>
+      <a class="home" href="/">Back to resok.org</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div class="eyebrow">ReSoK Virtual Academy</div>
+      <h1>Verify a certificate</h1>
+      <p class="lede">Enter the code printed on a ReSoK Virtual Academy certificate to check that it is genuine.</p>
+
+      <form id="verifyForm" novalidate>
+        <label class="sr" for="certCode">Certificate code</label>
+        <input id="certCode" name="code" type="text" placeholder="RSK-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40">
+        <button id="verifyBtn" type="submit">Verify</button>
+      </form>
+      <p class="hint">The code is at the bottom left of the certificate.</p>
+
+      <div id="result" aria-live="polite"></div>
+
+      <p class="about">A valid result means the Respiratory Society of Kenya issued this certificate to the person named, for the course shown. It confirms that they completed that course. It is not a licence or a professional qualification.</p>
+    </div>
+  </main>
+
+  <footer>&copy; 2026 Respiratory Society of Kenya</footer>
+
+  <script>
+    (() => {
+      const form = document.getElementById('verifyForm');
+      const input = document.getElementById('certCode');
+      const button = document.getElementById('verifyBtn');
+      const result = document.getElementById('result');
+
+      const make = (tag, cls, text) => {
+        const node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text !== undefined && text !== null) node.textContent = text;
+        return node;
+      };
+      const longDate = (value) => {
+        const date = new Date(String(value || '') + 'T00:00:00');
+        return isNaN(date) ? String(value || '')
+          : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      };
+
+      function show(kind, icon, title, rows, note) {
+        result.textContent = '';
+        const box = make('div', 'result ' + kind);
+        const head = make('p', 'status');
+        const mark = make('i', 'fas ' + icon);
+        mark.setAttribute('aria-hidden', 'true');
+        head.appendChild(mark);
+        head.appendChild(document.createTextNode(title));
+        box.appendChild(head);
+        if (rows.length) {
+          const list = make('dl');
+          rows.forEach(([term, value, cls]) => {
+            list.appendChild(make('dt', null, term));
+            list.appendChild(make('dd', cls || null, value));
+          });
+          box.appendChild(list);
+        }
+        if (note) box.appendChild(make('p', 'note', note));
+        result.appendChild(box);
+      }
+
+      async function verify(raw) {
+        const code = String(raw || '').replace(/\s+/g, '');
+        if (!code) {
+          show('missing', 'fa-circle-exclamation', 'Enter a certificate code', [], 'The code looks like RSK-XXXX-XXXX-XXXX.');
+          input.focus();
+          return;
+        }
+        button.disabled = true;
+        try {
+          const response = await fetch('resok-portal/public/api/index.php?route=certificates/verify/' + encodeURIComponent(code),
+                                       { headers: { Accept: 'application/json' } });
+          const data = await response.json().catch(() => ({}));
+          if (response.status === 429) {
+            show('missing', 'fa-hourglass-half', 'Too many checks', [], data.error || 'Please wait a few minutes and try again.');
+            return;
+          }
+          if (!response.ok) throw new Error(data.error || 'The check could not be completed.');
+
+          const codeRow = ['Certificate code', data.code || code.toUpperCase(), 'code'];
+          if (data.status === 'valid') {
+            const rows = [['Issued to', data.learnerName], ['Course', data.courseTitle], ['Issued on', longDate(data.issuedAt)]];
+            if (data.scorePercent !== null && data.scorePercent !== undefined) rows.push(['Score', data.scorePercent + '%']);
+            rows.push(codeRow);
+            show('valid', 'fa-circle-check', 'Valid certificate', rows);
+          } else if (data.status === 'revoked') {
+            show('revoked', 'fa-circle-xmark', 'This certificate has been revoked',
+              [['Issued to', data.learnerName], ['Course', data.courseTitle], ['Revoked on', longDate(data.revokedAt)], codeRow],
+              'It is no longer valid. For details, contact ReSoK at info@resok.org.');
+          } else {
+            show('missing', 'fa-circle-question', 'No certificate found', [codeRow],
+              'Check the code was typed exactly as printed. If it still is not found, this certificate was not issued by the ReSoK Virtual Academy.');
+          }
+          history.replaceState(null, '', '?code=' + encodeURIComponent(data.code || code));
+        } catch (error) {
+          show('missing', 'fa-triangle-exclamation', 'The certificate could not be checked', [],
+            (error.message || 'Something went wrong.') + ' Please try again in a moment.');
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        verify(input.value);
+      });
+
+      const fromLink = new URLSearchParams(location.search).get('code');
+      if (fromLink) {
+        input.value = fromLink;
+        verify(fromLink);
+      }
+    })();
+  </script>
+  <script src="assets/js/consent.js" defer></script>
+</body>
+</html>

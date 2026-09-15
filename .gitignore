@@ -1,7 +1,7 @@
-# Archival recordings/videos - not served by any page, too large for GitHub (some >4GB,
-# GitHub hard-rejects any file over 100MB). Untouched on the live server; not managed here.
-assets/img/Zoom Recordings/
-assets/img/recordings/
+# Recordings and videos, gathered in one folder on 14 Sep 2026 - too large for GitHub (some
+# over 4GB, and GitHub hard-rejects any file over 100MB). None are on the live server yet: they
+# have to be uploaded separately, never through git.
+assets/videos/
 
 # Raw slide source files - only the JPG previews in assets/img/slides/previews/ are
 # actually used on the site; the .pptx originals are large working files.

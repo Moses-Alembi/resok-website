@@ -42,6 +42,9 @@ const THROTTLE_RULES = [
     // Generous: a bad morning genuinely produces three tickets, and a helpdesk that refuses
     // the third is a helpdesk people stop using.
     'ticket'         => [20, 60, 3600, 900],
+    // Certificate checks are public. Only a code that matches nothing is counted, so an
+    // employer checking a stack of genuine certificates is never refused.
+    'certificate-verify' => [30, 30, 900, 900],
 ];
 const THROTTLE_DEFAULT = [15, 40, 900, 900];
 

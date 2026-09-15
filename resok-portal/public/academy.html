@@ -42,11 +42,9 @@
     .top{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:60}
     .top-in{max-width:1220px;margin:0 auto;padding:0 22px;height:72px;display:flex;align-items:center;gap:16px}
     .brand{display:flex;align-items:center;gap:11px;flex:0 0 auto}
-    .brand img{height:38px}
-    .brand-txt{line-height:1.15}
-    .brand-txt b{display:block;font-size:14.5px;color:var(--ink);letter-spacing:-.01em}
-    .brand-txt span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.15em;
-      text-transform:uppercase;color:var(--green)}
+    /* The platform's own logo: the ReSoK mark with "Virtual Academy" set beside it. */
+    .brand img{height:34px;width:auto;display:block}
+    @media(max-width:560px){.brand img{height:24px}}
 
     .explore{position:relative;flex:0 0 auto}
     .explore>button{background:transparent;border:0;color:var(--ink);font-weight:600;font-size:14px;
@@ -203,6 +201,58 @@
     .note.info{background:var(--green-lt);color:#12532c;border:1px solid #c2e2ce}
     .note.warn{background:#fff8e6;color:#7a4b06;border:1px solid #f3dda6}
     .note.bad{background:#fdeff1;color:#8c1024;border:1px solid #f5ccd2}
+    .cert-box{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+    .cert-box h3{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);margin-bottom:8px}
+    .cert-box h3 i{color:var(--green)}
+    .cert-box p{font-size:13px;color:var(--muted);line-height:1.55}
+    .cert-box label{display:block;font-size:12.5px;font-weight:700;color:var(--ink);margin:12px 0 6px}
+    .cert-box input{width:100%;border:1px solid var(--line-dk);border-radius:8px;padding:10px 12px;font:inherit;font-size:14px;color:var(--ink)}
+    .cert-box input:focus{outline:3px solid rgba(0,147,46,.16);border-color:var(--green)}
+    .cert-code{font-family:ui-monospace,Consolas,monospace;font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--ink);margin:8px 0 4px;word-break:break-all}
+    .cert-actions{display:grid;gap:8px;margin-top:12px}
+    .cert-actions .btn{justify-content:center;text-decoration:none}
+    .quiz-state{font-weight:600;margin-top:6px}
+    .cert-box p.quiz-state.ok{color:#12532c}
+    .cert-box p.quiz-state.bad{color:#8c1024}
+    .quiz-wrap{max-width:780px}
+    .quiz-q{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-top:14px;min-width:0}
+    .quiz-q legend,.quiz-prompt{float:left;width:100%;padding:0;margin-bottom:10px;font-weight:700;color:var(--ink);font-size:15px;line-height:1.45}
+    .quiz-q legend + *,.quiz-prompt + *{clear:both}
+    .quiz-hint{font-size:13px;color:var(--muted);margin:2px 0 8px}
+    .quiz-opt{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:14.5px;color:var(--body)}
+    .quiz-opt:hover{background:var(--green-lt)}
+    .quiz-opt input{margin-top:5px;accent-color:var(--green);flex:none}
+    .quiz-q.right{border-color:#bfe3cb}
+    .quiz-q.wrong{border-color:#f2c5cc}
+    .quiz-line{display:flex;gap:10px;align-items:flex-start;padding:5px 4px;font-size:14px;color:var(--body)}
+    .quiz-line i{margin-top:4px;color:var(--faint);flex:none}
+    .quiz-line.is-correct{color:#12532c;font-weight:600}
+    .quiz-line.is-correct i,.quiz-q.right .quiz-line.is-picked i{color:var(--green)}
+    .quiz-q.wrong .quiz-line.is-picked:not(.is-correct) i{color:var(--red)}
+    .quiz-mark{font-size:12.5px;font-weight:700;margin-top:8px}
+    .quiz-mark.right{color:#12532c}
+    .quiz-mark.wrong{color:#8c1024}
+    .quiz-expl{font-size:13.5px;color:var(--body);background:var(--ground);border-radius:8px;padding:10px 12px;margin-top:8px;line-height:1.55}
+    .quiz-score{display:flex;align-items:center;gap:16px;border-radius:var(--r);padding:16px 20px;margin-top:18px}
+    .quiz-score b{font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+    .quiz-score.ok{background:var(--green-lt);color:#12532c;border:1px solid #c2e2ce}
+    .quiz-score.bad{background:#fdeff1;color:#8c1024;border:1px solid #f5ccd2}
+    .quiz-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+    .join-wrap{max-width:640px;margin:0 auto;padding:30px}
+    .join-form{display:grid;gap:15px;margin-top:22px}
+    .join-row{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+    .join-form .field{display:grid;gap:6px;min-width:0}
+    .join-form label{font-size:13px;font-weight:700;color:var(--ink)}
+    .join-form label span{font-weight:400;color:var(--muted)}
+    .join-form input[type=text],.join-form input[type=email],.join-form input[type=password]{width:100%;border:1px solid var(--line-dk);border-radius:8px;padding:11px 12px;font:inherit;font-size:14.5px;color:var(--ink);background:#fff}
+    .join-form input:focus{outline:3px solid rgba(0,147,46,.16);border-color:var(--green)}
+    .join-form small{font-size:12px;color:var(--muted)}
+    .join-form .join-consent{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:13px;color:var(--body);cursor:pointer}
+    .join-consent input{margin-top:3px;accent-color:var(--green);flex:none}
+    .join-alt{font-size:13px;color:var(--muted);text-align:center}
+    .join-alt a{color:var(--green-dk);font-weight:700}
+    .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+    @media(max-width:560px){.join-row{grid-template-columns:1fr}.join-wrap{padding:20px}}
     .empty{color:var(--muted);text-align:center;padding:50px 14px;font-size:14px;
       background:var(--paper);border:1px dashed var(--line-dk);border-radius:var(--r)}
     .empty b{display:block;color:var(--ink);font-size:15.5px;margin-bottom:5px}
@@ -216,9 +266,23 @@
     }
     @media(max-width:720px){
       .top-search{display:none}
+      .top-in{gap:10px;padding:0 14px}
+      .top-right{margin-left:auto;display:flex;gap:8px}
       .hero{padding:44px 0 48px}
       section.band{padding:38px 0}
       .stats{gap:26px}
+    }
+    /* A phone has room for the logo and two buttons. The catalogue's own subject filters
+       stand in for Explore, and the join form carries its own sign-in link. */
+    @media(max-width:520px){
+      .explore,#portalLink{display:none!important}
+      .top-right .btn-sm{padding:7px 10px;font-size:12px}
+    }
+    @media(max-width:360px){
+      .brand img{height:20px}
+      .top-in{gap:8px;padding:0 10px}
+      .top-right{gap:6px}
+      .top-right .btn-sm{padding:6px 8px}
     }
 
     /* ---------- site footer, lifted from index.html so it stays uniform ---------- */
@@ -607,9 +671,8 @@
 
 <header class="top">
   <div class="top-in">
-    <a class="brand" href="#">
-      <img src="assets/img/logo.png" alt="ReSoK" />
-      <span class="brand-txt"><b>ReSoK</b><span>Virtual Academy</span></span>
+    <a class="brand" href="#" aria-label="ReSoK Virtual Academy home">
+      <img src="assets/img/virtual-academy-logo.svg" alt="ReSoK Virtual Academy" width="448" height="66" />
     </a>
 
     <div class="explore">
@@ -629,7 +692,8 @@
         <i class="fas fa-graduation-cap"></i> My learning
       </button>
       <a class="btn btn-ghost btn-sm" href="dashboard" id="portalLink" hidden>Members' portal</a>
-      <a class="btn btn-primary btn-sm" href="login" id="signInLink">Sign in</a>
+      <a class="btn btn-ghost btn-sm" href="login?next=/resok-portal/public/academy" id="signInLink">Sign in</a>
+      <a class="btn btn-primary btn-sm" href="#join" id="joinLink">Join free</a>
     </div>
   </div>
 </header>
@@ -753,7 +817,87 @@
           </div>
           <button class="btn btn-primary" id="cEnrolBtn" type="button" style="width:100%;margin-top:18px"></button>
           <div id="cNotice"></div>
+          <div class="cert-box" id="cAssessment" hidden></div>
+          <div class="cert-box" id="cCertificate" hidden></div>
         </aside>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ Create an account ============ -->
+<div id="viewJoin" hidden>
+  <section class="band">
+    <div class="shell">
+      <button class="crumb" id="joinBack" type="button"><i class="fas fa-arrow-left"></i> All courses</button>
+      <div class="panel join-wrap">
+        <div class="eyebrow">Free for everyone</div>
+        <h2 class="t" style="font-size:27px">Create your Academy account</h2>
+        <p class="lede">Learn at your own pace, keep your progress and earn certificates. You do not need to be a ReSoK member.</p>
+        <div id="jNotice"></div>
+        <form class="join-form" id="joinForm" novalidate>
+          <div class="hp" aria-hidden="true">
+            <label for="jWebsite">Leave this field empty</label>
+            <input id="jWebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+          <div class="join-row">
+            <div class="field">
+              <label for="jFirst">First name</label>
+              <input id="jFirst" name="firstName" type="text" autocomplete="given-name" maxlength="80" required />
+            </div>
+            <div class="field">
+              <label for="jSurname">Surname</label>
+              <input id="jSurname" name="surname" type="text" autocomplete="family-name" maxlength="80" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="jEmail">Email</label>
+            <input id="jEmail" name="email" type="email" autocomplete="email" maxlength="190" required />
+          </div>
+          <div class="field">
+            <label for="jPassword">Password</label>
+            <input id="jPassword" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="64" required />
+            <small>8 or more characters, with an uppercase letter, a lowercase letter and a number.</small>
+          </div>
+          <div class="join-row">
+            <div class="field">
+              <label for="jCountry">Country</label>
+              <input id="jCountry" name="country" type="text" autocomplete="country-name" value="Kenya" maxlength="60" required />
+            </div>
+            <div class="field">
+              <label for="jProfession">Profession <span>(optional)</span></label>
+              <input id="jProfession" name="profession" type="text" list="jProfessions" maxlength="100" />
+              <datalist id="jProfessions">
+                <option value="Doctor"></option><option value="Clinical officer"></option><option value="Nurse"></option>
+                <option value="Pharmacist"></option><option value="Physiotherapist"></option><option value="Laboratory scientist"></option>
+                <option value="Community health worker"></option><option value="Student"></option><option value="Patient or carer"></option>
+              </datalist>
+            </div>
+          </div>
+          <label class="join-consent" for="jConsent">
+            <input id="jConsent" type="checkbox" required />
+            <span>I agree to ReSoK keeping these details to run my Academy account and issue my certificates.</span>
+          </label>
+          <button class="btn btn-primary" id="joinBtn" type="submit" style="width:100%;justify-content:center"><i class="fas fa-user-plus"></i> Create my account</button>
+          <p class="join-alt">Already have an account? <a href="login?next=/resok-portal/public/academy">Sign in</a>. ReSoK members can sign in with their portal account.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ Final assessment ============ -->
+<div id="viewQuiz" hidden>
+  <section class="band">
+    <div class="shell">
+      <button class="crumb" id="quizBack" type="button"><i class="fas fa-arrow-left"></i> Back to the course</button>
+      <div class="quiz-wrap">
+        <div class="eyebrow" id="qCourse"></div>
+        <h2 class="t" id="qTitle" style="font-size:27px"></h2>
+        <p class="lede" id="qIntro"></p>
+        <div id="qNotice"></div>
+        <form id="qForm" novalidate></form>
+        <div id="qResult"></div>
       </div>
     </div>
   </section>
@@ -874,7 +1018,7 @@
   </div>
 </footer>
 
-<script src="js/portal-state.js?v=20260914-launch-lock"></script>
+<script src="js/portal-state.js?v=20260915-learners"></script>
 <script>
 /**
  * The academy front end: catalogue, one course, and the lesson player.
@@ -928,7 +1072,7 @@
 
   /* ---------------- views ---------------- */
   function show(view) {
-    ['Catalogue', 'Mine', 'Course', 'Lesson'].forEach((name) => {
+    ['Catalogue', 'Mine', 'Course', 'Lesson', 'Quiz', 'Join'].forEach((name) => {
       el('view' + name).hidden = name !== view;
     });
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -938,6 +1082,8 @@
     closeExplore();
     const hash = location.hash.slice(1);
     if (hash.startsWith('lesson/')) return openLesson(Number(hash.slice(7)));
+    if (hash.startsWith('quiz/')) return openQuiz(hash.slice(5));
+    if (hash === 'join') return openJoin();
     if (hash.startsWith('course/')) return openCourse(hash.slice(7));
     if (hash === 'mine') return openMine();
     show('Catalogue');
@@ -1138,7 +1284,7 @@
 
   /* ---------------- my learning ---------------- */
   async function openMine() {
-    if (!signedIn) { location.href = 'login'; return; }
+    if (!signedIn) { go('join'); return; }
     show('Mine');
     document.title = 'My learning - ReSoK Virtual Academy';
     const grid = el('mineGrid');
@@ -1216,7 +1362,7 @@
     button.textContent = '';
     if (!signedIn) {
       button.appendChild(make('i', 'fas fa-right-to-bracket'));
-      button.appendChild(document.createTextNode(' Sign in to enrol'));
+      button.appendChild(document.createTextNode(' Join free to enrol'));
     } else if (enrolled) {
       button.appendChild(make('i', 'fas fa-play'));
       button.appendChild(document.createTextNode(
@@ -1226,6 +1372,8 @@
       button.appendChild(document.createTextNode(' Enrol — free'));
     }
     renderOutline();
+    loadAssessment();
+    loadCertificate();
   }
 
   function renderOutline() {
@@ -1259,7 +1407,7 @@
   }
 
   el('cEnrolBtn').addEventListener('click', async () => {
-    if (!signedIn) { location.href = 'login'; return; }
+    if (!signedIn) { go('join'); return; }
     if (currentEnrolment) {
       const next = firstUnfinishedLesson();
       if (next) go('lesson/' + next);
@@ -1297,6 +1445,346 @@
     box.textContent = '';
     if (!message) return;
     box.appendChild(make('div', 'note ' + (kind || 'info'), message));
+  }
+
+  /* ---------------- create an account ---------------- */
+  function openJoin() {
+    if (signedIn) { go(''); return; }
+    show('Join');
+    document.title = 'Create your account - ReSoK Virtual Academy';
+    notice('jNotice', '');
+    el('joinForm').hidden = false;
+  }
+
+  el('joinBack').addEventListener('click', () => go(''));
+
+  el('joinForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const value = (id) => el(id).value.trim();
+    const password = el('jPassword').value;
+    if (!value('jFirst') || !value('jSurname') || !value('jEmail') || !value('jCountry')) {
+      notice('jNotice', 'Fill in your name, email and country.', 'bad');
+      return;
+    }
+    if (!/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,64}$/.test(password)) {
+      notice('jNotice', 'Your password needs 8 or more characters, with an uppercase letter, a lowercase letter and a number.', 'bad');
+      el('jPassword').focus();
+      return;
+    }
+    if (!el('jConsent').checked) {
+      notice('jNotice', 'Tick the box to agree to ReSoK keeping these details.', 'bad');
+      return;
+    }
+
+    const button = el('joinBtn');
+    button.disabled = true;
+    try {
+      const data = await api('/api/auth/register-learner', {
+        method: 'POST',
+        body: JSON.stringify(Object.assign({
+          firstName: value('jFirst'),
+          surname: value('jSurname'),
+          email: value('jEmail'),
+          password,
+          country: value('jCountry'),
+          profession: value('jProfession')
+        }, window.ResokPortal.screeningFields(el('joinForm'))))
+      });
+      if (data.requiresVerification) {
+        el('joinForm').hidden = true;
+        notice('jNotice', 'Nearly there. We have sent a link to ' + value('jEmail')
+          + '. Open it to confirm your email, then sign in to start learning.', 'info');
+      } else {
+        window.ResokPortal.login(value('jEmail'), data.user);
+        notice('jNotice', 'Your account is ready. Taking you to the courses…', 'info');
+        setTimeout(() => { location.hash = ''; location.reload(); }, 900);
+      }
+    } catch (error) {
+      notice('jNotice', error.message || 'Your account could not be created.', 'bad');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  /* ---------------- final assessment ---------------- */
+  let quizPaper = null;
+  let quizSlug = '';
+
+  async function loadAssessment() {
+    const box = el('cAssessment');
+    box.hidden = true;
+    box.textContent = '';
+    if (!signedIn || !currentCourse || !currentEnrolment) return;
+    try {
+      const data = await api('/api/academy/courses/' + encodeURIComponent(currentCourse.slug) + '/assessment');
+      if (data.assessment) renderAssessmentPanel(data);
+    } catch (error) {
+      // The course page is complete without this panel, so a failure here is not shown.
+    }
+  }
+
+  function renderAssessmentPanel(data) {
+    const box = el('cAssessment');
+    box.textContent = '';
+    const a = data.assessment;
+    const heading = make('h3');
+    heading.appendChild(make('i', 'fas fa-clipboard-check'));
+    heading.appendChild(document.createTextNode(' ' + (a.title || 'Final assessment')));
+    box.appendChild(heading);
+    box.appendChild(make('p', null, a.questionCount + ' questions · pass mark ' + a.passMark + '%'
+      + (a.maxAttempts ? ' · ' + a.maxAttempts + ' attempt' + (a.maxAttempts === 1 ? '' : 's') + ' allowed' : '')));
+
+    if (data.passed) {
+      box.appendChild(make('p', 'quiz-state ok', 'Passed' + (data.bestScore !== null ? ' with ' + data.bestScore + '%' : '') + '.'));
+    } else if (data.lastScore !== null) {
+      box.appendChild(make('p', 'quiz-state bad', 'Last attempt: ' + data.lastScore + '%. You need ' + a.passMark + '% to pass.'
+        + (data.attemptsLeft !== null ? ' Attempts left: ' + data.attemptsLeft + '.' : '')));
+    }
+
+    if (data.openAttemptId || data.canStart) {
+      const button = make('button', 'btn btn-primary');
+      button.type = 'button';
+      button.style.width = '100%';
+      button.style.marginTop = '12px';
+      button.appendChild(make('i', 'fas fa-pen-to-square'));
+      button.appendChild(document.createTextNode(data.openAttemptId ? ' Continue the assessment'
+        : (data.lastScore !== null ? ' Try again' : ' Start the assessment')));
+      button.addEventListener('click', () => go('quiz/' + currentCourse.slug));
+      box.appendChild(button);
+    } else if (!data.passed && data.reason) {
+      box.appendChild(make('p', null, data.reason));
+    }
+    box.hidden = false;
+  }
+
+  async function openQuiz(slug) {
+    show('Quiz');
+    quizSlug = slug;
+    quizPaper = null;
+    el('qCourse').textContent = '';
+    el('qTitle').textContent = 'Loading…';
+    el('qIntro').textContent = '';
+    el('qForm').textContent = '';
+    el('qResult').textContent = '';
+    notice('qNotice', '');
+    if (!signedIn) { go('join'); return; }
+    try {
+      const data = await api('/api/academy/courses/' + encodeURIComponent(slug) + '/assessment/start',
+                             { method: 'POST', body: '{}' });
+      quizPaper = data.paper;
+      renderQuiz();
+    } catch (error) {
+      el('qTitle').textContent = 'Final assessment';
+      notice('qNotice', error.message || 'The assessment could not be opened.', 'bad');
+    }
+  }
+
+  function renderQuiz() {
+    const paper = quizPaper;
+    document.title = paper.title + ' - ' + paper.courseTitle + ' - ReSoK Virtual Academy';
+    el('qCourse').textContent = paper.courseTitle;
+    el('qTitle').textContent = paper.title;
+    el('qIntro').textContent = paper.questions.length + ' questions. You need ' + paper.passMark
+      + '% to pass. Answer every question, then submit.';
+
+    const form = el('qForm');
+    form.textContent = '';
+    paper.questions.forEach((question, index) => {
+      const set = make('fieldset', 'quiz-q');
+      set.appendChild(make('legend', null, (index + 1) + '. ' + question.prompt));
+      if (question.kind === 'multiple') set.appendChild(make('p', 'quiz-hint', 'Choose every answer that applies.'));
+      question.options.forEach((option) => {
+        const label = make('label', 'quiz-opt');
+        const input = make('input');
+        input.type = question.kind === 'multiple' ? 'checkbox' : 'radio';
+        input.name = 'q' + question.id;
+        input.value = option.id;
+        label.appendChild(input);
+        label.appendChild(make('span', null, option.label));
+        set.appendChild(label);
+      });
+      form.appendChild(set);
+    });
+    const submit = make('button', 'btn btn-primary');
+    submit.type = 'submit';
+    submit.id = 'qSubmit';
+    submit.style.marginTop = '20px';
+    submit.appendChild(make('i', 'fas fa-paper-plane'));
+    submit.appendChild(document.createTextNode(' Submit answers'));
+    form.appendChild(submit);
+  }
+
+  el('qForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!quizPaper) return;
+    const answers = {};
+    let unanswered = 0;
+    quizPaper.questions.forEach((question) => {
+      const chosen = Array.from(el('qForm').querySelectorAll('input[name="q' + question.id + '"]:checked'))
+        .map((input) => Number(input.value));
+      if (!chosen.length) unanswered++;
+      answers[question.id] = chosen;
+    });
+    if (unanswered && !confirm(unanswered + (unanswered === 1 ? ' question is' : ' questions are')
+        + ' unanswered and will be marked wrong. Submit anyway?')) return;
+
+    const button = el('qSubmit');
+    button.disabled = true;
+    try {
+      const data = await api('/api/academy/courses/' + encodeURIComponent(quizSlug) + '/assessment/submit',
+                             { method: 'POST', body: JSON.stringify({ attemptId: quizPaper.attemptId, answers }) });
+      renderQuizResult(data.result);
+    } catch (error) {
+      notice('qNotice', error.message || 'Your answers could not be submitted.', 'bad');
+      button.disabled = false;
+    }
+  });
+
+  function renderQuizResult(result) {
+    el('qForm').textContent = '';
+    notice('qNotice', '');
+    const mount = el('qResult');
+    mount.textContent = '';
+
+    const score = make('div', 'quiz-score ' + (result.passed ? 'ok' : 'bad'));
+    score.appendChild(make('b', null, result.scorePercent + '%'));
+    score.appendChild(make('span', null, result.passed
+      ? 'Passed. You answered ' + result.correctCount + ' of ' + result.total + ' correctly.'
+      : 'Not passed yet. You answered ' + result.correctCount + ' of ' + result.total + ' correctly, and '
+        + result.passMark + '% is needed.'));
+    mount.appendChild(score);
+    if (!result.revealed) {
+      mount.appendChild(make('p', 'quiz-hint', 'The correct answers are shown once you pass, so your next attempt is still a fair test.'));
+    }
+
+    result.review.forEach((question, index) => {
+      const box = make('div', 'quiz-q ' + (question.correct ? 'right' : 'wrong'));
+      box.appendChild(make('p', 'quiz-prompt', (index + 1) + '. ' + question.prompt));
+      question.options.forEach((option) => {
+        const picked = question.chosen.includes(option.id);
+        const line = make('div', 'quiz-line' + (option.correct ? ' is-correct' : '') + (picked ? ' is-picked' : ''));
+        line.appendChild(make('i', 'fas ' + (picked ? (question.correct ? 'fa-circle-check' : 'fa-circle-xmark')
+                                                    : (option.correct ? 'fa-check' : 'fa-circle'))));
+        line.appendChild(make('span', null, option.label));
+        box.appendChild(line);
+      });
+      box.appendChild(make('p', 'quiz-mark ' + (question.correct ? 'right' : 'wrong'),
+        question.correct ? 'Correct' : (question.chosen.length ? 'Not correct' : 'Not answered')));
+      if (question.explanation) box.appendChild(make('p', 'quiz-expl', question.explanation));
+      mount.appendChild(box);
+    });
+
+    const actions = make('div', 'quiz-actions');
+    const back = make('button', 'btn btn-primary');
+    back.type = 'button';
+    back.appendChild(make('i', 'fas fa-arrow-left'));
+    back.appendChild(document.createTextNode(result.passed ? ' Back to the course for your certificate' : ' Back to the course'));
+    back.addEventListener('click', () => go('course/' + quizSlug));
+    actions.appendChild(back);
+    if (!result.passed && result.status && result.status.canStart) {
+      const retry = make('button', 'btn btn-ghost');
+      retry.type = 'button';
+      retry.appendChild(make('i', 'fas fa-rotate-right'));
+      retry.appendChild(document.createTextNode(' Try again'));
+      retry.addEventListener('click', () => openQuiz(quizSlug));
+      actions.appendChild(retry);
+    }
+    mount.appendChild(actions);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  el('quizBack').addEventListener('click', () => go('course/' + quizSlug));
+
+  /* ---------------- certificate ---------------- */
+  const longDate = (value) => {
+    const date = new Date(String(value || '').replace(' ', 'T'));
+    return isNaN(date) ? String(value || '').slice(0, 10)
+      : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  async function loadCertificate() {
+    const box = el('cCertificate');
+    box.hidden = true;
+    box.textContent = '';
+    if (!signedIn || !currentCourse || !currentCourse.certificateEnabled || !currentEnrolment) return;
+    try {
+      renderCertificate(await api('/api/academy/courses/' + encodeURIComponent(currentCourse.slug) + '/certificate'));
+    } catch (error) {
+      // The course page is complete without this panel, so a failure here is not shown.
+    }
+  }
+
+  function renderCertificate(data) {
+    const box = el('cCertificate');
+    box.textContent = '';
+    const heading = make('h3');
+    heading.appendChild(make('i', 'fas fa-award'));
+    heading.appendChild(document.createTextNode(' Certificate'));
+    box.appendChild(heading);
+
+    const certificate = data.certificate;
+    if (certificate && certificate.revoked) {
+      box.appendChild(make('p', null, 'The certificate for this course has been revoked. Contact ReSoK at info@resok.org if you think this is a mistake.'));
+    } else if (certificate) {
+      box.appendChild(make('p', null, 'Issued to ' + certificate.learnerName + ' on ' + longDate(certificate.issuedAt) + '.'));
+      box.appendChild(make('div', 'cert-code', certificate.code));
+      box.appendChild(make('p', null, 'Anyone can check it is genuine at resok.org/verify with this code.'));
+      const actions = make('div', 'cert-actions');
+      const download = make('a', 'btn btn-primary');
+      download.href = 'api/index.php?route=academy/courses/' + encodeURIComponent(currentCourse.slug) + '/certificate/pdf';
+      download.appendChild(make('i', 'fas fa-download'));
+      download.appendChild(document.createTextNode(' Download certificate (PDF)'));
+      const verify = make('a', 'btn btn-ghost');
+      verify.href = certificate.verifyUrl;
+      verify.target = '_blank';
+      verify.rel = 'noopener';
+      verify.appendChild(make('i', 'fas fa-shield-halved'));
+      verify.appendChild(document.createTextNode(' Check it is genuine'));
+      actions.appendChild(download);
+      actions.appendChild(verify);
+      box.appendChild(actions);
+    } else if (!data.eligible) {
+      box.appendChild(make('p', null, data.reason || 'Finish every lesson in the course to earn its certificate.'));
+    } else {
+      box.appendChild(make('p', null, 'You have finished the course. Confirm how your name should appear. It cannot be changed once the certificate is issued.'));
+      const label = make('label', null, 'Name on the certificate');
+      label.htmlFor = 'certName';
+      const input = make('input');
+      input.id = 'certName';
+      input.type = 'text';
+      input.maxLength = 120;
+      input.autocomplete = 'name';
+      input.value = data.suggestedName || '';
+      const button = make('button', 'btn btn-primary');
+      button.type = 'button';
+      button.style.width = '100%';
+      button.style.marginTop = '12px';
+      button.appendChild(make('i', 'fas fa-award'));
+      button.appendChild(document.createTextNode(' Issue my certificate'));
+      button.addEventListener('click', async () => {
+        const name = input.value.trim().replace(/\s+/g, ' ');
+        if (name.length < 3) {
+          notice('cNotice', 'Enter the name to print on your certificate.', 'bad');
+          input.focus();
+          return;
+        }
+        if (!confirm('Issue the certificate to "' + name + '"? The name cannot be changed afterwards.')) return;
+        button.disabled = true;
+        try {
+          const result = await api('/api/academy/courses/' + encodeURIComponent(currentCourse.slug) + '/certificate',
+                                   { method: 'POST', body: JSON.stringify({ name }) });
+          notice('cNotice', 'Your certificate has been issued.', 'info');
+          renderCertificate({ certificate: result.certificate, eligible: true });
+        } catch (error) {
+          notice('cNotice', error.message || 'Could not issue the certificate.', 'bad');
+          button.disabled = false;
+        }
+      });
+      box.appendChild(label);
+      box.appendChild(input);
+      box.appendChild(button);
+    }
+    box.hidden = false;
   }
 
   /* ---------------- lesson player ---------------- */
@@ -1423,7 +1911,9 @@
       currentLesson.completed = true;
       renderLesson();
       if (currentEnrolment.completedAt) {
-        notice('lNotice', 'That was the last lesson — the course is complete.', 'info');
+        notice('lNotice', currentCourse && currentCourse.certificateEnabled
+          ? 'That was the last lesson — the course is complete. Your certificate is waiting on the course page.'
+          : 'That was the last lesson — the course is complete.', 'info');
       }
     } catch (error) {
       notice('lNotice', error.message || 'Could not record that.', 'bad');
@@ -1542,6 +2032,7 @@
     el('myLearningBtn').hidden = !signedIn;
     el('portalLink').hidden = !signedIn;
     el('signInLink').hidden = signedIn;
+    el('joinLink').hidden = signedIn;
     await loadCatalogue();
     route();
   }

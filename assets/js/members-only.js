@@ -18,10 +18,7 @@
   const GATED_PAGES = {
     "learning": "Learning & CME",
     "media-learning": "the Media & Learning Channel",
-    "assemblies": "Assemblies & Working Groups",
-    "research": "Research & Publications",
-    "publication": "the publications library",
-    "workshops-and-training": "Courses and Training"
+    "assemblies": "Assemblies & Working Groups"
   };
 
   const SESSION_URL = "/resok-portal/public/api/index.php?route=members/me";

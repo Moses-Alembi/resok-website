@@ -1,9 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// /research is members-only. The page lives in private/research.html, which Apache
-// refuses to serve directly (see private/.htaccess), so this script is the only way to
-// read it - and only for a logged-in member whose membership is active.
-require_once __DIR__ . '/member-gate.php';
+// /research is open to the public. The page still lives in private/research.html, which
+// Apache refuses to serve directly (see private/.htaccess), so this script is how it is read.
+require_once __DIR__ . '/public-page.php';
 
-resok_gate_serve(__DIR__ . '/private/research.html', 'Research & Publications');
+resok_serve_public_page(__DIR__ . '/private/research.html');

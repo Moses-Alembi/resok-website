@@ -207,7 +207,9 @@
     /* Hero heading matched to the conferences page: same face, weight, size, case and spacing. */
     .about-hero h1{font-family:'Mulish','Poppins',sans-serif;font-size:clamp(2.4rem,5.2vw,5.6rem);line-height:.96;font-weight:900;text-transform:uppercase;letter-spacing:0;margin:18px 0 16px}
     .about-hero p{font-size:1.04rem}
-  </style>
+      /* Phones: smaller hero heading with balanced lines instead of one or two words per line. */
+    @media (max-width:620px){.about-hero h1{font-size:clamp(1.8rem,8.4vw,2.3rem);line-height:1.02;text-wrap:balance}}
+</style>
 </head>
 <body>
     <nav class="navbar">

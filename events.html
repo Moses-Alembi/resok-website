@@ -507,7 +507,9 @@
     .tk-token b{font-size:1.42rem;font-family:monospace;font-weight:800;letter-spacing:.05em}
     .tk-link{background:none;border:none;color:var(--brand-primary);font-weight:700;cursor:pointer;font-size:.87rem;text-decoration:underline;padding:0;font-family:inherit}
     .tk-x{background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;line-height:1;padding:0}
-  </style>
+      /* Phones: smaller hero heading with balanced lines instead of one or two words per line. */
+    @media (max-width:620px){.ev-hero h1{font-size:clamp(1.8rem,8.4vw,2.3rem);line-height:1.02;text-wrap:balance}}
+</style>
 
   <script>
     /**

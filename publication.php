@@ -1,9 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// /publication is members-only, like the /research library that links to it - gating the
-// listing but not the detail pages would leave every publication readable by URL. The page
-// lives in private/publication.html and is emitted only by this script.
-require_once __DIR__ . '/member-gate.php';
+// /publication is open to the public, like the /research library that links to it. The page
+// lives in private/publication.html and is emitted by this script.
+require_once __DIR__ . '/public-page.php';
 
-resok_gate_serve(__DIR__ . '/private/publication.html', 'the publications library');
+resok_serve_public_page(__DIR__ . '/private/publication.html');

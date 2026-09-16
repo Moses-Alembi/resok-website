@@ -275,6 +275,10 @@ function tokensLoad(PDO $pdo, array $config, int $eventId, string $raw): array
     $insert = $pdo->prepare('INSERT INTO cpd_tokens (event_id, token_value, token_hint) VALUES (?, ?, ?)');
     $added = $duplicates = 0;
     foreach (array_keys($candidates) as $token) {
+        // A purely numeric token (KMPDC's codes are all digits) becomes an integer array key -
+        // PHP does this silently for any string key that looks like a decimal integer. Cast
+        // back before it reaches cryptoEncrypt()/mb_substr(), which require a real string.
+        $token = (string)$token;
         if (isset($existing[$token])) { $duplicates++; continue; }
         $insert->execute([$eventId, cryptoEncrypt($config, $token), mb_substr($token, -4)]);
         $existing[$token] = true;

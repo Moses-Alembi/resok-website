@@ -16,6 +16,15 @@ resok-portal/uploads/
 resok-portal/public/api/config.local.php
 resok-portal/server/.env
 
+# One-off admin scripts with real member data baked in (names, emails, unredeemed KMPDC
+# tokens) - uploaded to the server by hand and deleted after running, never through git.
+# Narrower than seed-past-events.sql's own pattern would suggest: that file carries no PII
+# and stays tracked, so this lists the real-data ones by name rather than a broad seed-*.
+resok-portal/public/api/cron/seed-*.php
+resok-portal/public/api/cron/debug-config.php
+resok-portal/server/seed-*.php
+resok-portal/server/seed-pleural-workshop.sql
+
 # Node dependencies (the Node backend is unused in production, but just in case)
 resok-portal/node_modules/
 

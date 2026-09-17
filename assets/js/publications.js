@@ -119,5 +119,43 @@ window.RESOK_PUBLICATIONS = [
       "TB stigma can be reduced and TB appropriate health seeking behavior enhanced using men-centric approaches.",
       "Ending TB requires engaging all service providers, addressing social issues, and multisectoral engagement."
     ]
+  },
+  {
+    id: "tb-ppm-case-detection-2026",
+    title: "Enhancing TB case detection: a case study of Kenya's Global Fund–supported public–private mix",
+    type: "Original Article",
+    journal: "Public Health Action",
+    year: "2026",
+    doi: "10.5588/pha.26.0002",
+    openAccess: true,
+    authors: [
+      "R. Pola", "L.N. Mugambi-Nyaboga", "N. Mwirigi", "A. Otieno", "I. Kathure", "N. Mukiri",
+      "S. Kipkelwon", "A. Maina", "P. Warugongo", "C. Okoth", "C. Mwamsidu", "T. Kiptai",
+      "A. Munene", "J. Mungai", "J. Chakaya", "E. Wandwalo", "M.A Yassin", "B. Ulo"
+    ],
+    // Led from ReSoK's own Public Health and Research Unit, not just contributed to.
+    kenyaNote: "Led by the Public Health and Research Unit, Respiratory Society of Kenya, which oversaw implementation of the PPM intervention across the nine study counties.",
+    file: "assets/publications/tb-ppm-case-detection-2026.pdf",
+    fileSize: "1.1 MB",
+    cover: "assets/img/publications/tb-ppm-case-detection-2026-cover.jpg",
+    topics: ["Tuberculosis", "Public-private mix", "Case finding", "Private sector", "Kenya"],
+    // Verbatim, the paper's own structured abstract (Background/Objective/Design/Results/Conclusion).
+    overview:
+      "BACKGROUND: Kenya, a high-TB-burden country, is among eight WHO-priority countries for " +
+      "public–private mix (PPM) initiatives to engage all health care providers in TB prevention " +
+      "and care. OBJECTIVE: To describe Kenya's experience implementing a Global Fund–supported " +
+      "PPM intervention and its contribution to TB case finding. DESIGN: A descriptive case study " +
+      "using programmatic data from a Global Fund–supported PPM project implemented in nine " +
+      "counties in Kenya. RESULTS: Of 2,027 mapped facilities, 1,405 signed Memoranda of " +
+      "Understanding and 1,269 reported TB services. Of 4.3 million people screened, 260,922 (6%) " +
+      "were identified as presumptive TB, of whom 108,723 (42%) were investigated. Overall, 14,026 " +
+      "individuals were diagnosed with TB (64% bacteriologically confirmed), and 99% initiated on " +
+      "treatment. Level II facilities contributed 45% of notifications (7 per facility), while " +
+      "Level V facilities (only 4) reported the highest average yield (130 per facility). All " +
+      "counties recorded increased TB notifications during implementation, followed by a decline " +
+      "in Quarter 3, 2024. CONCLUSION: Engaging private sector providers significantly enhanced TB " +
+      "case detection. Kenya's PPM experience highlights the engagement choices that need to be " +
+      "made among levels of the health care system for scaling and sustaining PPM models in " +
+      "resource-constrained settings."
   }
 ];

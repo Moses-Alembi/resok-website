@@ -62,5 +62,62 @@ window.RESOK_PUBLICATIONS = [
       "Rates of lung cancer diagnosis increase after CAP, even among individuals who have never smoked. Excluding patients diagnosed within a latency exclusion period to account for underlying malignancy does not eliminate this increased risk.",
       "Burden of CAP is higher in low-income and middle-income countries than in high-income countries, with increased rates of pulmonary tuberculosis. Individuals misdiagnosed with non-tuberculous pneumonia might be at increased risk of complications."
     ]
+  },
+  {
+    id: "light-tb-evidence-brief-2026",
+    title: "Leaving No-One Behind: Transforming Gendered Pathways to Health for TB (LIGHT) - Summary of Key Research Findings for Dissemination",
+    type: "Evidence Brief",
+    journal: "The LIGHT Consortium / National Tuberculosis, Leprosy and Lung Disease Program",
+    year: "2026",
+    authors: [
+      "National Tuberculosis, Leprosy and Lung Disease Program (NTLD-P)",
+      "African Institute for Development Policy (AFIDEP)",
+      "Respiratory Society of Kenya (ReSoK)"
+    ],
+    file: "assets/publications/light-tb-evidence-brief-2026.pdf",
+    fileSize: "11.6 MB",
+    cover: "assets/img/publications/light-tb-evidence-brief-2026-cover.jpg",
+    topics: ["Tuberculosis", "Stigma", "Gender", "Adolescents and young adults", "Rights-based care"],
+    // Verbatim from the brief's own "Overview" section.
+    overview:
+      "A series of recent studies undertaken through collaborative efforts involving the " +
+      "National Tuberculosis, Leprosy and Lung Disease Program, research partners, and " +
+      "implementing agencies has generated important evidence to strengthen tuberculosis " +
+      "prevention, diagnosis, treatment, and care in Kenya. Together, these studies provide " +
+      "complementary insights on service delivery gaps, stigma, rights and gender barriers, " +
+      "and public understanding of TB."
+  },
+  {
+    id: "light-tb-impact-brief-2026",
+    title: "Advancing Age and Gender Responsive Tuberculosis Prevention and Care in Kenya: LIGHT Consortium Impact",
+    type: "Impact Brief",
+    journal: "The LIGHT Consortium",
+    year: "2026",
+    authors: [
+      "Liverpool School of Tropical Medicine (LSTM)",
+      "African Institute for Development Policy (AFIDEP)",
+      "Respiratory Society of Kenya (ReSoK)"
+    ],
+    file: "assets/publications/light-tb-impact-brief-2026.pdf",
+    fileSize: "1.5 MB",
+    cover: "assets/img/publications/light-tb-impact-brief-2026-cover.jpg",
+    topics: ["Tuberculosis", "Gender", "Adolescents and young adults", "Men's health", "Policy"],
+    // Verbatim from the brief's opening "Tuberculosis in Kenya" section - it has no separate
+    // abstract, so this is the closest passage to one.
+    overview:
+      "Kenya is among the World Health Organization 30 high burden tuberculosis (TB) countries. " +
+      "While significant progress has been achieved with a reduction of 45% and 58% in incidence " +
+      "and mortality respectively in 2024 compared to the 2015 baseline, this is still below the " +
+      "END TB strategy targets. In 2024, Kenya notified a total of 97,246 persons with TB " +
+      "achieving a TB treatment coverage of 81% (WHO Global TB report, 2025).",
+    // The brief's own pull-quote boxes, not a synthesis of the whole document.
+    keyMessages: [
+      "It is critical to disaggregate TB data by age and sex - helps to unearth population groups that are being left behind.",
+      "It is important to understand what is driving gaps in the TB care cascade (the role of qualitative studies).",
+      "Adolescents and Young Adults are a critical population group that must be empowered to own their health and advocate for youth responsive care.",
+      "Tuberculosis services at facility level can be differentiated, patient-centred, age-and-gender responsive with a huge impact on TB notification.",
+      "TB stigma can be reduced and TB appropriate health seeking behavior enhanced using men-centric approaches.",
+      "Ending TB requires engaging all service providers, addressing social issues, and multisectoral engagement."
+    ]
   }
 ];

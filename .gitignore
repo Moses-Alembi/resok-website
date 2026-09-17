@@ -21,6 +21,7 @@ resok-portal/server/.env
 # Narrower than seed-past-events.sql's own pattern would suggest: that file carries no PII
 # and stays tracked, so this lists the real-data ones by name rather than a broad seed-*.
 resok-portal/public/api/cron/seed-*.php
+resok-portal/public/api/cron/add-*.php
 resok-portal/public/api/cron/debug-config.php
 resok-portal/server/seed-*.php
 resok-portal/server/seed-pleural-workshop.sql

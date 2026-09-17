@@ -69,6 +69,10 @@ window.RESOK_PUBLICATIONS = [
     type: "Evidence Brief",
     journal: "The LIGHT Consortium / National Tuberculosis, Leprosy and Lung Disease Program",
     year: "2026",
+    // Shown in the sidebar like every other entry's DOI, for consistency - but this is the
+    // DOI of Study 1 specifically, not of the brief as a whole. relatedStudy below spells
+    // that out on the page itself so the sidebar link isn't the only thing a reader sees.
+    doi: "10.21203/rs.3.rs-8257118/v1",
     authors: [
       "National Tuberculosis, Leprosy and Lung Disease Program (NTLD-P)",
       "African Institute for Development Policy (AFIDEP)",

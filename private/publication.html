@@ -142,6 +142,7 @@ body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65
             <h2>Overview</h2>
             <p class="pub-abstract" id="pubOverview"></p>
             <div class="pub-topics" id="pubTopics"></div>
+            <p class="pub-kenya" id="pubRelated" hidden></p>
           </section>
 
           <section id="keySection">
@@ -312,6 +313,15 @@ body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65
         tag.textContent = topic;
         topics.appendChild(tag);
       });
+
+      // A dissemination brief summarising several studies has no single DOI of its own;
+      // this links to the peer-reviewed record for the one it names, without implying that
+      // record covers the whole brief.
+      if (pub.relatedStudy) {
+        const related = document.getElementById("pubRelated");
+        related.textContent = `Published separately as: "${pub.relatedStudy.title}" - DOI: ${pub.relatedStudy.doi}`;
+        related.hidden = false;
+      }
 
       const key = document.getElementById("pubKey");
       if (pub.keyMessages && pub.keyMessages.length) {

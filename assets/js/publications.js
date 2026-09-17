@@ -85,7 +85,14 @@ window.RESOK_PUBLICATIONS = [
       "implementing agencies has generated important evidence to strengthen tuberculosis " +
       "prevention, diagnosis, treatment, and care in Kenya. Together, these studies provide " +
       "complementary insights on service delivery gaps, stigma, rights and gender barriers, " +
-      "and public understanding of TB."
+      "and public understanding of TB.",
+    // This brief summarises four studies; it is not itself the peer-reviewed record, so it
+    // carries no doi of its own. Study 1 (the TB care cascade among AYAs) is published
+    // separately - linked here rather than mislabelled as the brief's own DOI.
+    relatedStudy: {
+      title: "Navigating the Tuberculosis Care Journey: Experiences of Diagnosis, Treatment Discontinuation, and Re-Engagement among Adolescents and Young Adults in Nairobi, Kenya – A Qualitative Study",
+      doi: "10.21203/rs.3.rs-8257118/v1"
+    }
   },
   {
     id: "light-tb-impact-brief-2026",
@@ -93,6 +100,10 @@ window.RESOK_PUBLICATIONS = [
     type: "Impact Brief",
     journal: "The LIGHT Consortium",
     year: "2026",
+    // Given, but unverified: the DOI resolver returns nothing for this identifier as of
+    // 17 Sep 2026. Kept because it was explicitly supplied - if it starts resolving, or a
+    // corrected string arrives, update here.
+    doi: "10.64898/2026.07.02.2635718",
     authors: [
       "Liverpool School of Tropical Medicine (LSTM)",
       "African Institute for Development Policy (AFIDEP)",

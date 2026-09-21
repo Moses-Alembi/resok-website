@@ -566,7 +566,7 @@
           }
 
           var firstName = (window.ResokAdminShell.displayName(me) || "").split(/\s+/)[0];
-          if (firstName) el("heroTitle").textContent = "Welcome back, " + firstName;
+          if (firstName) el("heroTitle").textContent = "Howdy, " + firstName;
 
           if (!me.superAdminsConfigured) {
             el("gateNotice").appendChild(make("div", "note warn",

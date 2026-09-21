@@ -40,6 +40,26 @@
       if (link.dataset.page === page) link.classList.add("active");
     });
 
+    // Light/dark toggle. The theme itself is applied by a tiny blocking script in each page's
+    // <head> (so there's no flash on load) - this just handles the click, and shares one
+    // localStorage key with admin-home.html so the choice is the same across every page.
+    var THEME_KEY = "resok-admin-theme";
+    var themeToggle = document.getElementById("adminThemeToggle");
+    if (themeToggle) {
+      themeToggle.addEventListener("click", function () {
+        var next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+      });
+    }
+
+    var backToTop = document.getElementById("adminBackToTop");
+    if (backToTop) {
+      backToTop.addEventListener("click", function () {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+
     var logoutBtn = document.getElementById("adminLogoutLink");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function (event) {

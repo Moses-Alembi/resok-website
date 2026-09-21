@@ -10,18 +10,43 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem("resok-admin-theme");
+      document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
+    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+  })();
+</script>
 <style>
   /* Deliberately the same tokens as admin-review.html, so this reads as part of the same
      admin area rather than a second system bolted on beside it. */
   :root{
-    --brand-primary:#00932e; --brand-secondary:#bc0b22;
+    --brand-primary:#00932e; --brand-secondary:#bc0b22; --sidebar-w:236px;
+    --text-dark:#e9edf5; --muted:#8b96ac; --bg:#0a0f1c; --card:#111a2c; --line:rgba(255,255,255,.08);
+    --shadow:0 12px 30px rgba(0,0,0,.35);
+    --ok:#3ddc84; --ok-bg:rgba(0,147,46,.18);
+    --warn:#f0b429; --warn-bg:rgba(240,180,41,.18);
+    --crit:#ff6b6f; --crit-bg:rgba(188,11,34,.2);
+    --info:#4f8dfd; --info-bg:rgba(79,141,253,.18);
+    --input-bg:#0d1526; --input-line:rgba(255,255,255,.16);
+    --muted-2:#5c6883; --btn-secondary-bg:rgba(255,255,255,.08);
+    --unknown-bg:rgba(255,255,255,.08); --unknown-fg:#b7c0d3;
+    --tile-crit-line:rgba(188,11,34,.4); --tile-warn-line:rgba(240,180,41,.45);
+    --empty-icon:#3a4356;
+  }
+  :root[data-theme="light"]{
     --text-dark:#253141; --muted:#667085; --bg:#f5f7fa; --card:#fff; --line:#e5e7eb;
     --shadow:0 2px 12px rgba(15,23,42,.07);
     --ok:#12703a; --ok-bg:#e7f6ec;
     --warn:#8a5a12; --warn-bg:#fdf2e6;
     --crit:#a01427; --crit-bg:#fdeef0;
     --info:#1c4f9c; --info-bg:#eef3fb;
-    --sidebar-w:236px;
+    --input-bg:#fff; --input-line:#d0d5dd;
+    --muted-2:#98a2b3; --btn-secondary-bg:#eef1f5;
+    --unknown-bg:#f1f3f6; --unknown-fg:#5a6572;
+    --tile-crit-line:#f4c9cf; --tile-warn-line:#f0dcb4;
+    --empty-icon:#c6d0dc;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Poppins,'Segoe UI',sans-serif;background:var(--bg);color:var(--text-dark);line-height:1.55}
@@ -32,6 +57,12 @@
   .topbar .where{font-weight:700;font-size:15px;white-space:nowrap}
   .topbar .who{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .topbar-right{display:flex;align-items:center;gap:9px}
+  .brand-mark{border-radius:8px;background:#fff;border:1px solid var(--line);display:inline-flex;
+    align-items:center;padding:4px 8px}
+  .brand-mark img{height:26px;display:block}
+  .theme-toggle .fa-moon{display:none}
+  :root[data-theme="light"] .theme-toggle .fa-sun{display:none}
+  :root[data-theme="light"] .theme-toggle .fa-moon{display:inline}
   .burger{display:none;background:none;border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer;font-size:15px;color:var(--text-dark)}
 
   .shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;align-items:start;min-height:calc(100vh - 60px)}
@@ -40,11 +71,11 @@
   .side-link{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;font:inherit;font-size:13.5px;color:var(--text-dark);padding:9px 12px;border-radius:7px;cursor:pointer}
   .side-link i{width:16px;text-align:center;color:var(--muted);font-size:13px}
   .side-link:hover{background:var(--bg)}
-  .side-link.active{background:#eaf6ee;color:var(--brand-primary);font-weight:600}
+  .side-link.active{background:rgba(0,147,46,.16);color:var(--brand-primary);font-weight:600}
   .side-link.active i{color:var(--brand-primary)}
   .side-link:focus-visible{outline:2px solid var(--brand-primary);outline-offset:-2px}
   .side-link .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;flex:0 0 auto}
-  .side-soon{padding:9px 12px;font-size:12.5px;color:#98a2b3;display:flex;align-items:center;gap:11px;cursor:default}
+  .side-soon{padding:9px 12px;font-size:12.5px;color:var(--muted-2);display:flex;align-items:center;gap:11px;cursor:default}
   .side-soon i{width:16px;text-align:center;font-size:12px}
   /* Same look as .side-link, but a distinct class: these are real navigations to other
      pages, not view-switch buttons, and must not be caught by the .side-link click wiring
@@ -67,8 +98,8 @@
   .tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 17px;box-shadow:var(--shadow)}
   .tile .n{font-size:26px;font-weight:800;line-height:1.1}
   .tile .l{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:2px}
-  .tile.is-crit{border-color:#f4c9cf;background:var(--crit-bg)} .tile.is-crit .n{color:var(--crit)}
-  .tile.is-warn{border-color:#f0dcb4;background:var(--warn-bg)} .tile.is-warn .n{color:var(--warn)}
+  .tile.is-crit{border-color:var(--tile-crit-line);background:var(--crit-bg)} .tile.is-crit .n{color:var(--crit)}
+  .tile.is-warn{border-color:var(--tile-warn-line);background:var(--warn-bg)} .tile.is-warn .n{color:var(--warn)}
   .tile.is-ok .n{color:var(--ok)}
 
   .status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:99px;white-space:nowrap}
@@ -76,7 +107,7 @@
   .s-warning{background:var(--warn-bg);color:var(--warn)}
   .s-notice{background:var(--info-bg);color:var(--info)}
   .s-ok{background:var(--ok-bg);color:var(--ok)}
-  .s-unknown,.s-cancelled{background:#f1f3f6;color:#5a6572}
+  .s-unknown,.s-cancelled{background:var(--unknown-bg);color:var(--unknown-fg)}
 
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th{text-align:left;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding:0 14px 8px 0;white-space:nowrap}
@@ -86,13 +117,13 @@
 
   .btn{border:none;border-radius:7px;padding:9px 15px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
   .btn-primary{background:var(--brand-primary);color:#fff}
-  .btn-secondary{background:#eef1f5;color:var(--text-dark)}
+  .btn-secondary{background:var(--btn-secondary-bg);color:var(--text-dark)}
   .btn-ghost{background:none;border:1px solid var(--line);color:var(--text-dark)}
   .btn:disabled{opacity:.55;cursor:not-allowed}
   .btn:focus-visible{outline:2px solid var(--brand-primary);outline-offset:2px}
 
   .lbl{display:block;font-weight:600;font-size:12.5px;margin:12px 0 5px}
-  .in{width:100%;border:1px solid #d0d5dd;border-radius:7px;padding:9px 11px;font:inherit;font-size:13.5px;background:#fff;color:var(--text-dark)}
+  .in{width:100%;border:1px solid var(--input-line);border-radius:7px;padding:9px 11px;font:inherit;font-size:13.5px;background:var(--input-bg);color:var(--text-dark)}
   .in:focus{outline:2px solid var(--brand-primary);outline-offset:-1px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
@@ -103,12 +134,27 @@
   .notice.error{background:var(--crit-bg);color:var(--crit)}
 
   .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13.5px}
-  .empty i{font-size:26px;color:#c6d0dc;display:block;margin-bottom:10px}
+  .empty i{font-size:26px;color:var(--empty-icon);display:block;margin-bottom:10px}
   .timeline{display:grid;gap:0}
   .tl{display:flex;gap:13px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
   .tl:last-child{border-bottom:none}
   .tl .t{color:var(--muted);font-size:12px;min-width:112px;white-space:nowrap}
   .muted{color:var(--muted);font-size:12.5px}
+
+  .ict-footer{margin-top:14px;padding-top:22px;border-top:1px solid var(--line);
+    display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .ict-footer-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text-dark)}
+  .ict-footer-brand-text strong{display:block;font-size:13px}
+  .ict-footer-brand-text small{display:block;color:var(--muted);font-size:11px}
+  .ict-footer-links{display:flex;gap:18px;flex-wrap:wrap;margin:0 auto}
+  .ict-footer-links a{color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:none}
+  .ict-footer-links a:hover{color:var(--brand-primary)}
+  .ict-footer-meta{text-align:right;color:var(--muted);font-size:11.5px;line-height:1.6}
+  .ict-footer-top{border:0;border-radius:50%;width:36px;height:36px;background:var(--brand-primary);
+    color:#fff;display:grid;place-items:center;cursor:pointer;flex:none;font-size:14px}
+  .ict-footer-top:hover{background:#017d29}
+  @media(max-width:700px){.ict-footer{flex-direction:column;align-items:flex-start;text-align:left}
+    .ict-footer-links{margin:0}.ict-footer-meta{text-align:left}}
 
   @media(max-width:900px){
     .shell{grid-template-columns:1fr}
@@ -126,13 +172,16 @@
 <nav class="topbar">
   <div class="topbar-left">
     <button class="burger" id="burger" type="button" aria-label="Menu"><i class="fas fa-bars"></i></button>
-    <a href="dashboard"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+    <a href="dashboard" class="brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></a>
     <div style="min-width:0">
       <div class="where">ICT Operations</div>
       <div class="who" id="whoami">&nbsp;</div>
     </div>
   </div>
   <div class="topbar-right">
+    <button class="btn btn-ghost theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+      <i class="fas fa-sun"></i><i class="fas fa-moon"></i>
+    </button>
     <a class="btn btn-ghost" href="admin-review"><i class="fas fa-users"></i> Members</a>
     <a class="btn btn-secondary" href="dashboard"><i class="fas fa-arrow-left"></i> Back</a>
   </div>
@@ -748,6 +797,23 @@
       <div id="staffNotice" class="notice"></div>
       <div class="panel"><div id="staffList"></div></div>
     </section>
+
+    <footer class="ict-footer">
+      <a href="admin-home" class="ict-footer-brand">
+        <span class="brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+        <span class="ict-footer-brand-text"><strong>ReSoK</strong><small>Admin Suite</small></span>
+      </a>
+      <nav class="ict-footer-links">
+        <a href="dashboard">Member Portal</a>
+        <a href="analytics">Analytics</a>
+        <a href="admin-review">Administrators</a>
+      </nav>
+      <div class="ict-footer-meta">
+        <span>&copy; 2026 Respiratory Society of Kenya. All rights reserved.</span><br>
+        <span>Built by ReSoK ICT</span>
+      </div>
+      <button class="ict-footer-top" id="adminBackToTop" title="Back to top"><i class="fas fa-arrow-up"></i></button>
+    </footer>
   </main>
 </div>
 
@@ -808,6 +874,14 @@
   }
   document.querySelectorAll('.side-link').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
   el('burger').addEventListener('click', () => el('sidebar').classList.toggle('open'));
+
+  el('themeToggle').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('resok-admin-theme', next); } catch (e) {}
+  });
+  const backToTop = document.getElementById('adminBackToTop');
+  if (backToTop) backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
   /* ---------------- overview ---------------- */
   function tile(value, label, tone) {

@@ -196,6 +196,21 @@
     }
     @media(min-width:981px){.crumb,.searchbar{display:block}.searchbar{display:flex;align-items:center}}
     @media(max-width:560px){.topbar{padding:0 12px}.main{padding:18px 16px 48px}.quick-grid{grid-template-columns:1fr}}
+
+    .home-footer{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);
+      display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+    .home-footer-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+    .home-footer-brand-text strong{display:block;font-size:13px}
+    .home-footer-brand-text small{display:block;color:var(--muted);font-size:11px}
+    .home-footer-links{display:flex;gap:18px;flex-wrap:wrap;margin:0 auto}
+    .home-footer-links a{color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:none}
+    .home-footer-links a:hover{color:var(--g)}
+    .home-footer-meta{text-align:right;color:var(--muted);font-size:11.5px;line-height:1.6}
+    .home-footer-top{border:0;border-radius:50%;width:36px;height:36px;background:var(--g);
+      color:#fff;display:grid;place-items:center;cursor:pointer;flex:none;font-size:14px}
+    .home-footer-top:hover{background:#017d29}
+    @media(max-width:700px){.home-footer{flex-direction:column;align-items:flex-start;text-align:left}
+      .home-footer-links{margin:0}.home-footer-meta{text-align:left}}
   </style>
 </head>
 <body>
@@ -307,6 +322,23 @@
           </section>
         </div>
       </div>
+
+      <footer class="home-footer">
+        <a href="admin-home" class="home-footer-brand">
+          <span class="brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+          <span class="home-footer-brand-text"><strong>ReSoK</strong><small>Admin Suite</small></span>
+        </a>
+        <nav class="home-footer-links">
+          <a href="dashboard">Member Portal</a>
+          <a href="security">Security</a>
+          <a href="ict">ICT Support</a>
+        </nav>
+        <div class="home-footer-meta">
+          <span>&copy; 2026 Respiratory Society of Kenya. All rights reserved.</span><br>
+          <span>Built by ReSoK ICT</span>
+        </div>
+        <button class="home-footer-top" id="footerBackToTop" title="Back to top"><i class="fas fa-arrow-up"></i></button>
+      </footer>
     </main>
   </div>
 
@@ -336,6 +368,13 @@
         if (document.fullscreenElement) document.exitFullscreen();
         else document.documentElement.requestFullscreen().catch(function () {});
       });
+
+      var footerTop = el("footerBackToTop");
+      if (footerTop) {
+        footerTop.addEventListener("click", function () {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }
 
       var THEME_KEY = "resok-admin-theme";
       el("themeToggle").addEventListener("click", function () {

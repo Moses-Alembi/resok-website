@@ -7,17 +7,51 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/admin-shell.css" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("resok-admin-theme");
+        document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
+      } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+    })();
+  </script>
   <style>
-    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text:#253141;--muted:#667085;--bg:#f5f7fa;--card:#fff;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);--radius:8px}
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--radius:8px;
+      --text:#e9edf5;--muted:#8b96ac;--bg:#0a0f1c;--card:#111a2c;--line:rgba(255,255,255,.08);
+      --shadow:0 12px 30px rgba(0,0,0,.35);
+      --input-bg:#0d1526;--input-line:rgba(255,255,255,.16);
+      --th-bg:rgba(255,255,255,.04);--th-fg:#b7c0d3;
+      --row-hover:rgba(255,255,255,.04);--row-selected:rgba(0,147,46,.14);
+      --btn-secondary-bg:rgba(255,255,255,.08);--btn-secondary-fg:#e9edf5;--btn-disabled-bg:rgba(255,255,255,.15);
+      --status-active-bg:rgba(0,147,46,.18);--status-active-fg:#6fe39a;
+      --status-payreq-bg:rgba(240,180,41,.18);--status-payreq-fg:#f7cc6a;
+      --status-review-bg:rgba(79,141,253,.18);--status-review-fg:#9dc0ff;
+      --status-rejected-bg:rgba(188,11,34,.18);--status-rejected-fg:#ff9fa2;
+      --status-expired-bg:rgba(255,255,255,.08);--status-expired-fg:#b7c0d3;
+      --note-error-bg:rgba(188,11,34,.2);--note-error-fg:#ff9fa2;--note-error-line:rgba(188,11,34,.45);
+      --note-success-bg:rgba(0,147,46,.2);--note-success-fg:#6fe39a;--note-success-line:rgba(0,147,46,.45)}
+    :root[data-theme="light"]{
+      --text:#253141;--muted:#667085;--bg:#f5f7fa;--card:#fff;--line:#e5e7eb;
+      --shadow:0 2px 12px rgba(15,23,42,.07);
+      --input-bg:#fff;--input-line:#d0d5dd;
+      --th-bg:#f8fafc;--th-fg:#475467;
+      --row-hover:#f8fafc;--row-selected:#edf9f0;
+      --btn-secondary-bg:#eef2f7;--btn-secondary-fg:#344054;--btn-disabled-bg:#98a2b3;
+      --status-active-bg:#eaf7ee;--status-active-fg:#166534;
+      --status-payreq-bg:#fff7ed;--status-payreq-fg:#c2410c;
+      --status-review-bg:#eff6ff;--status-review-fg:#1d4ed8;
+      --status-rejected-bg:#fff1f2;--status-rejected-fg:#a10d23;
+      --status-expired-bg:#f2f4f7;--status-expired-fg:#475467;
+      --note-error-bg:#fff1f2;--note-error-fg:#a10d23;--note-error-line:#fecdd3;
+      --note-success-bg:#eaf7ee;--note-success-fg:#166534;--note-success-line:#bbebc8}
     *{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text)}a{text-decoration:none;color:inherit}
-    .page{max-width:1280px;display:grid;gap:18px}.hero{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.hero h1{font-size:25px;margin-bottom:6px}.hero p{color:var(--muted)}.btn{border:0;border-radius:6px;padding:10px 13px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.btn-primary{background:var(--brand-primary);color:#fff}.btn-secondary{background:#eef2f7;color:#344054}.btn-danger{background:var(--brand-secondary);color:#fff}.btn:disabled{background:#98a2b3;cursor:not-allowed}
-    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}.stat span{display:block;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:6px}.stat strong{font-size:24px}
-    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start}.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.toolbar input,.toolbar select{border:1px solid #d0d5dd;border-radius:6px;padding:10px 12px;font-size:14px}.toolbar input{flex:1;min-width:220px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius)}table{width:100%;border-collapse:collapse;background:#fff}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}th{background:#f8fafc;color:#475467;font-size:12px;text-transform:uppercase;letter-spacing:.02em}tr{cursor:pointer}tr:hover{background:#f8fafc}tr.selected{background:#edf9f0}.status{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;text-transform:capitalize}.status.active{background:#eaf7ee;color:#166534}.status.payment_required{background:#fff7ed;color:#c2410c}.status.under_review{background:#eff6ff;color:#1d4ed8}.status.rejected{background:#fff1f2;color:#a10d23}.status.expired{background:#f2f4f7;color:#475467}
-    .detail-empty{color:var(--muted);line-height:1.55}.detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.detail-head h2{font-size:19px;margin-bottom:4px}.detail-head p{color:var(--muted);font-size:14px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.fact{border:1px solid var(--line);border-radius:var(--radius);padding:11px}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:900;margin-bottom:5px}.fact strong{font-size:14px;word-break:break-word}.payments{display:grid;gap:10px;margin-top:12px}.payment{border:1px solid var(--line);border-radius:var(--radius);padding:11px;display:flex;justify-content:space-between;gap:10px}.payment span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.note{display:none;position:fixed;top:16px;right:16px;z-index:9999;max-width:min(440px,calc(100vw - 32px));border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.5;cursor:pointer;box-shadow:0 8px 24px rgba(16,24,40,.18)}.note.show{display:block}.note.error{background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}.note.success{background:#eaf7ee;color:#166534;border:1px solid #bbebc8}
-    .site-footer{margin-top:22px}
+    .page{max-width:1280px;display:grid;gap:18px}.hero{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.hero h1{font-size:25px;margin-bottom:6px}.hero p{color:var(--muted)}.btn{border:0;border-radius:6px;padding:10px 13px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.btn-primary{background:var(--brand-primary);color:#fff}.btn-secondary{background:var(--btn-secondary-bg);color:var(--btn-secondary-fg)}.btn-danger{background:var(--brand-secondary);color:#fff}.btn:disabled{background:var(--btn-disabled-bg);cursor:not-allowed}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}.stat span{display:block;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:6px}.stat strong{font-size:24px}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start}.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.toolbar input,.toolbar select{border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:10px 12px;font-size:14px}.toolbar input{flex:1;min-width:220px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius)}table{width:100%;border-collapse:collapse;background:var(--card)}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}th{background:var(--th-bg);color:var(--th-fg);font-size:12px;text-transform:uppercase;letter-spacing:.02em}tr{cursor:pointer}tr:hover{background:var(--row-hover)}tr.selected{background:var(--row-selected)}.status{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;text-transform:capitalize}.status.active{background:var(--status-active-bg);color:var(--status-active-fg)}.status.payment_required{background:var(--status-payreq-bg);color:var(--status-payreq-fg)}.status.under_review{background:var(--status-review-bg);color:var(--status-review-fg)}.status.rejected{background:var(--status-rejected-bg);color:var(--status-rejected-fg)}.status.expired{background:var(--status-expired-bg);color:var(--status-expired-fg)}
+    .detail-empty{color:var(--muted);line-height:1.55}.detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.detail-head h2{font-size:19px;margin-bottom:4px}.detail-head p{color:var(--muted);font-size:14px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.fact{border:1px solid var(--line);border-radius:var(--radius);padding:11px}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:900;margin-bottom:5px}.fact strong{font-size:14px;word-break:break-word}.payments{display:grid;gap:10px;margin-top:12px}.payment{border:1px solid var(--line);border-radius:var(--radius);padding:11px;display:flex;justify-content:space-between;gap:10px}.payment span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.note{display:none;position:fixed;top:16px;right:16px;z-index:9999;max-width:min(440px,calc(100vw - 32px));border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.5;cursor:pointer;box-shadow:0 8px 24px rgba(16,24,40,.18)}.note.show{display:block}.note.error{background:var(--note-error-bg);color:var(--note-error-fg);border:1px solid var(--note-error-line)}.note.success{background:var(--note-success-bg);color:var(--note-success-fg);border:1px solid var(--note-success-line)}
     @media(max-width:980px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{flex-direction:column}}@media(max-width:560px){.brand span,.admin-name{display:none}.page{padding:16px 14px}.stats{grid-template-columns:1fr}.facts{grid-template-columns:1fr}.toolbar input,.toolbar select{width:100%;min-width:0}.hero,.panel{padding:16px}}
     .ev-lbl{display:block;font-weight:700;font-size:13px;margin:12px 0 5px}
-  .ev-in{width:100%;border:1px solid #d0d5dd;border-radius:6px;padding:10px 12px;font-family:inherit;font-size:14px;background:#fff}
+  .ev-in{width:100%;border:1px solid var(--input-line);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:14px;background:var(--input-bg);color:var(--text)}
   .ev-in:focus{outline:2px solid var(--brand-primary);outline-offset:-1px}
   @media(max-width:720px){#atCols{grid-template-columns:1fr !important}#eventsPanel [style*="grid-template-columns"]{grid-template-columns:1fr !important}}
 </style>
@@ -25,8 +59,11 @@
 <body>
   <header class="admin-topbar">
     <button class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
-    <a href="dashboard" class="admin-brand"><img src="assets/img/logo.png" alt="ReSoK" /><span>Admin Suite</span></a>
+    <a href="dashboard" class="admin-brand"><span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span><span>Admin Suite</span></a>
     <div class="admin-topbar-right">
+      <button class="admin-logout-btn admin-theme-toggle" id="adminThemeToggle" title="Toggle light/dark theme">
+        <i class="fas fa-sun"></i><i class="fas fa-moon"></i>
+      </button>
       <!-- The way into ICT operations. Placed here because this is where an administrator
            already is; a new area nobody can find is a new area nobody uses. Hidden unless
            the signed-in account actually has ICT access. -->
@@ -400,90 +437,21 @@
 
   </div>
 
-  <footer class="site-footer">
-    <div class="site-footer-inner">
-      <div class="site-footer-top">
-        <div class="site-footer-brand-row">
-          <img src="assets/img/logo.png" alt="ReSoK logo">
-        </div>
-
-        <div class="site-footer-top-social" aria-label="Social links">
-          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
-          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
-          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
-          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
-          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
-          <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
-        </div>
-
-        <div class="site-footer-donate">
-          <a href="./">Membership</a>
-        </div>
-      </div>
-
-      <div class="site-footer-mid">
-        <div>
-          <h3 class="site-footer-head">Sign Up For A Newsletter</h3>
-          <p class="site-footer-text">
-            Get membership updates, projects, and announcements directly in your inbox.
-          </p>
-          <form class="site-footer-subscribe" action="#" method="post">
-            <input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address">
-            <button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button>
-          </form>
-        </div>
-
-        <div class="site-footer-col">
-          <h4>Society</h4>
-          <div class="site-footer-divider"></div>
-          <ul class="site-footer-list">
-            <li><a href="./">Home</a></li>
-            <li><a href="../../about">About</a></li>
-            <li><a href="./">Membership</a></li>
-            <li><a href="https://www.resok.org/faqs" target="_blank" rel="noopener">FAQs</a></li>
-          </ul>
-        </div>
-
-        <div class="site-footer-col">
-          <h4>Get In Touch</h4>
-          <div class="site-footer-divider"></div>
-          <ul class="site-footer-list">
-            <li><a href="../../contact">Contact Us</a></li>
-            <li><a href="../../blog">Blog</a></li>
-            <li><a href="../../contact">Location</a></li>
-          </ul>
-        </div>
-
-        <div class="site-footer-col">
-          <h4>Resources</h4>
-          <div class="site-footer-divider"></div>
-          <ul class="site-footer-list">
-            <li><a href="../../projects">Projects</a></li>
-            <li><a href="../../learning">Learning</a></li>
-            <li><a href="https://youtube.com/@respiratorysocietykenya" target="_blank" rel="noopener">YouTube</a></li>
-          </ul>
-        </div>
-
-        <div class="site-footer-col">
-          <h4>Our Gallery</h4>
-          <div class="site-footer-divider"></div>
-          <div class="site-footer-gallery-grid">
-            <img src="assets/img/footer/F1.jpg" alt="Gallery 1" loading="lazy">
-            <img src="assets/img/footer/F2.jpg" alt="Gallery 2" loading="lazy">
-            <img src="assets/img/footer/F3.jpg" alt="Gallery 3" loading="lazy">
-            <img src="assets/img/footer/F4.jpeg" alt="Gallery 4" loading="lazy">
-            <img src="assets/img/footer/F5.png" alt="Gallery 5" loading="lazy">
-            <img src="assets/img/footer/F6.png" alt="Gallery 6" loading="lazy">
-            <img src="assets/img/footer/F7.jpg" alt="Gallery 7" loading="lazy">
-            <img src="assets/img/footer/F8.jpg" alt="Gallery 8" loading="lazy">
-</div>
-        </div>
-      </div>
-
-      <div class="site-footer-bottom">
-        &copy; 2026 Respiratory Society of Kenya. Developed and Designed by ReSoK ICT
-      </div>
+  <footer class="admin-footer">
+    <a href="admin-home" class="admin-footer-brand">
+      <span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+      <span class="admin-footer-brand-text"><strong>ReSoK</strong><small>Admin Suite</small></span>
+    </a>
+    <nav class="admin-footer-links">
+      <a href="dashboard">Member Portal</a>
+      <a href="analytics">Analytics</a>
+      <a href="ict">ICT Support</a>
+    </nav>
+    <div class="admin-footer-meta">
+      <span>&copy; 2026 Respiratory Society of Kenya. All rights reserved.</span><br>
+      <span>Built by <a href="ict">ReSoK ICT</a></span>
     </div>
+    <button class="admin-footer-top" id="adminBackToTop" title="Back to top"><i class="fas fa-arrow-up"></i></button>
   </footer>
     </div>
   </div>

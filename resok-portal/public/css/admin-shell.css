@@ -5,20 +5,27 @@
  * and hand-rolled CSS rather than a framework, to match how the rest of the site is built.
  *
  * Each page keeps its own content and logic; this file only supplies the chrome around it.
- * Pages provide the tokens (--brand-primary etc.) - this file reads them, it does not set them,
- * so it stays a drop-in for any page already using ReSoK's admin color variables.
+ * Pages provide the tokens (--brand-primary, --surface, --line, --muted, --ink/--text-dark) -
+ * this file reads them, it does not set them, so it stays a drop-in for any page already using
+ * ReSoK's admin color variables, light or dark.
  */
 *{box-sizing:border-box}
 
-.admin-topbar{position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+.admin-topbar{position:fixed;top:0;left:0;right:0;height:64px;background:var(--surface,#fff);
   border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(15,23,42,.04);
   display:flex;align-items:center;gap:14px;padding:0 18px;z-index:40}
 .admin-sidebar-toggle{display:none;border:0;background:none;font-size:18px;color:var(--muted);
   cursor:pointer;padding:6px}
 .admin-brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--ink,var(--text-dark));
   white-space:nowrap}
+.admin-brand-mark{border-radius:8px;background:#fff;border:1px solid var(--line);
+  display:inline-flex;align-items:center;padding:5px 9px;flex:none}
+.admin-brand-mark img{height:28px;display:block}
 .admin-brand img{height:34px;display:block}
 .admin-brand span{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.02em}
+.admin-theme-toggle .fa-moon{display:none}
+:root[data-theme="light"] .admin-theme-toggle .fa-sun{display:none}
+:root[data-theme="light"] .admin-theme-toggle .fa-moon{display:inline}
 .admin-topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
 .admin-topbar-link{display:flex;align-items:center;gap:7px;color:var(--muted);font-weight:700;
   font-size:13px;text-decoration:none}
@@ -33,16 +40,16 @@
 
 .admin-body{display:flex;padding-top:64px;min-height:100vh;background:var(--bg)}
 
-.admin-sidebar{position:fixed;top:64px;bottom:0;left:0;width:246px;background:#fff;
+.admin-sidebar{position:fixed;top:64px;bottom:0;left:0;width:246px;background:var(--surface,#fff);
   border-right:1px solid var(--line);overflow-y:auto;z-index:35;transition:transform .2s ease}
 .admin-nav{padding:16px 12px 28px}
-.admin-nav-section{padding:16px 10px 8px;color:#98a2b3;font-size:11px;font-weight:900;
+.admin-nav-section{padding:16px 10px 8px;color:var(--muted);font-size:11px;font-weight:900;
   text-transform:uppercase;letter-spacing:.07em}
 .admin-nav-section:first-child{padding-top:6px}
 .admin-nav-link{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:8px;
-  color:#475467;font-weight:700;font-size:14px;text-decoration:none;margin-bottom:2px;
+  color:var(--ink,var(--text-dark));font-weight:700;font-size:14px;text-decoration:none;margin-bottom:2px;
   border-left:3px solid transparent}
-.admin-nav-link i{width:18px;text-align:center;font-size:15px;color:#98a2b3;flex:none}
+.admin-nav-link i{width:18px;text-align:center;font-size:15px;color:var(--muted);flex:none}
 .admin-nav-link:hover{background:rgba(0,147,46,.07);color:var(--brand-primary)}
 .admin-nav-link:hover i{color:var(--brand-primary)}
 .admin-nav-link.active{background:rgba(0,147,46,.1);color:var(--brand-primary);
@@ -61,6 +68,29 @@
   font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
 .admin-page-header h1{font-size:24px;letter-spacing:-.2px;margin:0 0 4px}
 .admin-page-header p{color:var(--muted);font-size:13.5px;max-width:640px}
+
+/* Footer: sits at the bottom of the scrollable content column (not full-bleed under the
+   fixed sidebar, which stays pinned regardless of scroll position). */
+.admin-footer{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.admin-footer-brand{display:flex;align-items:center;gap:10px;text-decoration:none;
+  color:var(--ink,var(--text-dark))}
+.admin-footer-brand-text strong{display:block;font-size:13px}
+.admin-footer-brand-text small{display:block;color:var(--muted);font-size:11px}
+.admin-footer-links{display:flex;gap:18px;flex-wrap:wrap;margin:0 auto}
+.admin-footer-links a{color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:none}
+.admin-footer-links a:hover{color:var(--brand-primary)}
+.admin-footer-meta{text-align:right;color:var(--muted);font-size:11.5px;line-height:1.6}
+.admin-footer-meta a{color:var(--brand-primary);font-weight:700;text-decoration:none}
+.admin-footer-top{border:0;border-radius:50%;width:36px;height:36px;background:var(--brand-primary);
+  color:#fff;display:grid;place-items:center;cursor:pointer;flex:none;font-size:14px}
+.admin-footer-top:hover{background:#017d29}
+
+@media(max-width:700px){
+  .admin-footer{flex-direction:column;align-items:flex-start;text-align:left}
+  .admin-footer-links{margin:0}
+  .admin-footer-meta{text-align:left}
+}
 
 @media(max-width:980px){
   .admin-sidebar-toggle{display:inline-flex;align-items:center}

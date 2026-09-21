@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analytics - ReSoK Admin</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell" />
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell2" />
   <script>
     (function () {
       try {
@@ -44,7 +45,12 @@
     .kpi b{display:block;font-size:27px;line-height:1.1;font-variant-numeric:tabular-nums}
     .kpi span{display:block;margin-top:5px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
     .kpi small{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+    /* Fixed three across rather than auto-fit. The full-width readership card breaks every
+       row at three, so an auto-fit grid that worked out a fourth column left that fourth
+       track empty on every row - the gap down the right-hand side. */
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    @media(max-width:1280px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
     .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;box-shadow:var(--shadow)}
     .card h2{font-size:14.5px;margin-bottom:3px;display:flex;align-items:center;gap:8px}
     .card h2 i{color:var(--brand-primary);font-size:13px}
@@ -147,7 +153,7 @@
     </div>
   </div>
 
-  <script src="js/admin-shell.js?v=20260921-shell"></script>
+  <script src="js/admin-shell.js?v=20260921-shell2"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     (function () {

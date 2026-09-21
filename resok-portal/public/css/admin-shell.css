@@ -106,6 +106,20 @@
 .admin-page-header h1{font-size:24px;letter-spacing:-.2px;margin:0 0 4px}
 .admin-page-header p{color:var(--muted);font-size:13.5px;max-width:640px}
 
+/* A long list folded behind its own heading. The count rides on the header so the number is
+   readable without opening anything. Any .list-toggle with aria-controls is wired by
+   js/admin-shell.js - no per-page handler needed. */
+.list-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:none;border:0;padding:6px 2px;font:inherit;font-size:16px;font-weight:800;
+  color:var(--ink,var(--text-dark));cursor:pointer;border-radius:6px;text-align:left}
+.list-toggle:hover{color:var(--brand-primary)}
+.list-toggle-label{display:flex;align-items:center;gap:10px}
+.list-toggle-label i{color:var(--brand-primary);font-size:14px}
+.list-count{font-size:12px;font-weight:700;color:var(--muted);
+  background:var(--hover,rgba(127,127,127,.12));border-radius:999px;padding:3px 10px}
+.list-chevron{font-size:13px;color:var(--muted);transition:transform .18s ease}
+.list-toggle[aria-expanded="true"] .list-chevron{transform:rotate(180deg)}
+
 /* Footer: sits at the bottom of the scrollable content column (not full-bleed under the
    fixed sidebar, which stays pinned regardless of scroll position). */
 .admin-footer{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);

@@ -167,6 +167,19 @@
       });
     }
 
+    // Any .list-toggle that names the block it controls folds that block. Markup-only, so a
+    // page adds a collapsible section without adding a handler for it.
+    document.querySelectorAll(".list-toggle[aria-controls]").forEach(function (button) {
+      var body = document.getElementById(button.getAttribute("aria-controls"));
+      if (!body) return;
+      button.setAttribute("aria-expanded", String(!body.hidden));
+      button.addEventListener("click", function () {
+        var open = body.hidden;
+        body.hidden = !open;
+        button.setAttribute("aria-expanded", String(open));
+      });
+    });
+
     var fullscreenToggle = document.getElementById("adminFullscreenToggle");
     if (fullscreenToggle) {
       fullscreenToggle.addEventListener("click", function () {

@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Threat Assessment - ReSoK Members' Portal</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell" />
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell2" />
   <script>
     (function () {
       try {
@@ -268,38 +269,56 @@
     </section>
 
     <section class="panel" id="schemaPanel" hidden>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-        <div>
-          <h2 style="font-size:18px">Database schema</h2>
-          <p class="sub" style="margin:4px 0 0">
+      <!-- One row per schema file, so the list runs long on a mature database. Folded away,
+           with the pending count on the header - which is the part worth seeing at a glance. -->
+      <button class="list-toggle" id="schemaToggle" type="button" aria-expanded="false" aria-controls="schemaBody">
+        <span class="list-toggle-label">
+          <i class="fas fa-database"></i> Database schema
+          <span class="list-count" id="schemaCount"></span>
+        </span>
+        <i class="fas fa-chevron-down list-chevron"></i>
+      </button>
+      <div id="schemaBody" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:12px">
+          <p class="sub" style="margin:0;max-width:75ch">
             Which schema files have been applied to this database. Applying them here replaces
             importing each one by hand in phpMyAdmin &mdash; the step most likely to be skipped,
             and the one whose absence nothing on the site announces.
           </p>
+          <button class="btn btn-secondary" id="refreshSchemaBtn" type="button" style="font-size:12px">
+            <i class="fas fa-rotate"></i> Refresh
+          </button>
         </div>
-        <button class="btn btn-secondary" id="refreshSchemaBtn" type="button" style="font-size:12px">
-          <i class="fas fa-rotate"></i> Refresh
+        <div id="schemaNotice" class="notice" style="margin-top:14px"></div>
+        <div id="schemaList" style="margin-top:8px"></div>
+        <button class="btn btn-primary" id="applyAllBtn" type="button" style="margin-top:16px">
+          <i class="fas fa-database"></i> Apply pending files
         </button>
+        <p class="sub" style="margin-top:10px;font-size:12.5px">
+          Safe to run more than once &mdash; changes already in place are skipped, not repeated.
+          Sample-data files are listed but never included in &ldquo;apply pending&rdquo;, since
+          re-running one can overwrite records edited by hand.
+        </p>
       </div>
-      <div id="schemaNotice" class="notice" style="margin-top:14px"></div>
-      <div id="schemaList" style="margin-top:8px"></div>
-      <button class="btn btn-primary" id="applyAllBtn" type="button" style="margin-top:16px">
-        <i class="fas fa-database"></i> Apply pending files
-      </button>
-      <p class="sub" style="margin-top:10px;font-size:12.5px">
-        Safe to run more than once &mdash; changes already in place are skipped, not repeated.
-        Sample-data files are listed but never included in &ldquo;apply pending&rdquo;, since
-        re-running one can overwrite records edited by hand.
-      </p>
     </section>
 
     <section class="panel" id="activityPanel" hidden>
       <h2 style="font-size:18px">Activity</h2>
       <p class="sub">What has actually been attempted against the site, from the security log.</p>
+      <!-- The tallies stay out; the event-by-event log folds, since it is the long part. -->
       <div class="stats" id="stats"></div>
-      <h3 style="font-size:15px;margin-top:24px">Recent events</h3>
-      <div id="eventsMount"></div>
-      <button class="btn" id="refresh" style="margin-top:18px"><i class="fas fa-rotate"></i> Refresh</button>
+      <button class="list-toggle" id="eventsToggle" type="button" aria-expanded="false" aria-controls="eventsBody"
+              style="margin-top:22px">
+        <span class="list-toggle-label">
+          <i class="fas fa-list-timeline"></i> Recent events
+          <span class="list-count" id="eventsCount"></span>
+        </span>
+        <i class="fas fa-chevron-down list-chevron"></i>
+      </button>
+      <div id="eventsBody" hidden>
+        <div id="eventsMount" style="margin-top:12px"></div>
+        <button class="btn" id="refresh" style="margin-top:18px"><i class="fas fa-rotate"></i> Refresh</button>
+      </div>
     </section>
 
     <footer class="admin-footer">
@@ -322,7 +341,7 @@
     </div>
   </div>
 
-  <script src="js/admin-shell.js?v=20260921-shell"></script>
+  <script src="js/admin-shell.js?v=20260921-shell2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
@@ -598,6 +617,7 @@
       const mount = el("eventsMount");
       mount.textContent = "";
       const events = activity.recent || [];
+      el("eventsCount").textContent = String(events.length);
       if (!events.length) {
         const p = document.createElement("p");
         p.className = "empty";
@@ -754,6 +774,11 @@
       button.textContent = pending === 0
         ? 'Everything is applied'
         : `Apply ${pending} pending file${pending === 1 ? '' : 's'}`;
+
+      // On the folded header: the pending count is the part worth seeing without opening it.
+      el('schemaCount').textContent = pending === 0
+        ? `${migrations.length} applied`
+        : `${pending} pending`;
     }
 
     async function applySchema(file, button) {

@@ -379,13 +379,23 @@
     </form>
 
     <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--line)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <h3 style="font-size:15px">All events</h3>
-        <button class="btn btn-secondary" id="refreshEventsBtn" type="button" style="font-size:12px">
-          <i class="fas fa-rotate"></i> Refresh
-        </button>
+      <!-- Folded by default for the same reason as the member register: the whole back
+           catalogue of events is rarely what somebody came to this page for. -->
+      <button class="list-toggle" id="eventsListToggle" type="button" aria-expanded="false" aria-controls="eventsListBody">
+        <span class="list-toggle-label">
+          <i class="fas fa-calendar-days"></i> All events
+          <span class="list-count" id="eventsListCount"></span>
+        </span>
+        <i class="fas fa-chevron-down list-chevron"></i>
+      </button>
+      <div id="eventsListBody" hidden>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-secondary" id="refreshEventsBtn" type="button" style="font-size:12px">
+            <i class="fas fa-rotate"></i> Refresh
+          </button>
+        </div>
+        <div id="eventsList" style="margin-top:12px"></div>
       </div>
-      <div id="eventsList" style="margin-top:12px"></div>
     </div>
   </section>
 
@@ -1597,10 +1607,13 @@ ${why}`);
 
     async function evLoad() {
       const mount = evEl('eventsList');
+      const count = evEl('eventsListCount');
       try {
         const data = await window.ResokPortal.api('/api/admin/events');
         mount.textContent = '';
         const events = data.events || [];
+        // On the folded header, so the number is readable without opening the list.
+        if (count) count.textContent = String(events.length);
         if (!events.length) {
           const none = document.createElement('p');
           none.style.cssText = 'color:var(--muted);font-size:13.5px';
@@ -1625,6 +1638,15 @@ ${why}`);
       if (id) evSetStatus(id, 'published');
     });
     evEl('refreshEventsBtn').addEventListener('click', evLoad);
+
+    const eventsListToggle = evEl('eventsListToggle');
+    eventsListToggle.addEventListener('click', () => {
+      const body = evEl('eventsListBody');
+      const open = body.hidden;
+      body.hidden = !open;
+      eventsListToggle.setAttribute('aria-expanded', String(open));
+    });
+
     evLoad();
 
 

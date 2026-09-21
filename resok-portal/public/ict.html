@@ -103,7 +103,10 @@
   .cross-link i{width:16px;text-align:center;color:var(--muted);font-size:13px}
   .cross-link:hover{background:var(--hover)}
 
-  main{padding:24px 26px 60px;min-width:0}
+  /* Flex column so .ict-footer can hold the bottom of short pages (align-self overrides
+     the grid align-items:start that keeps the sticky sidebar in place). */
+  main{padding:24px 26px 60px;min-width:0;align-self:stretch;display:flex;flex-direction:column;
+    min-height:calc(100vh - 60px)}
   .view{display:none}
   .view.active{display:block}
   h1{font-size:21px;font-weight:700;margin-bottom:4px}
@@ -158,7 +161,7 @@
   .tl .t{color:var(--muted);font-size:12px;min-width:112px;white-space:nowrap}
   .muted{color:var(--muted);font-size:12.5px}
 
-  .ict-footer{margin-top:14px;padding-top:22px;border-top:1px solid var(--line);
+  .ict-footer{margin-top:auto;padding-top:26px;border-top:1px solid var(--line);
     display:flex;align-items:center;gap:22px;flex-wrap:wrap}
   .ict-footer-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text-dark)}
   .ict-footer-brand-text strong{display:block;font-size:13px}
@@ -229,13 +232,13 @@
     <button class="side-link" data-view="credentials" data-cap="credentials.view" type="button">
       <i class="fas fa-key"></i> Credentials
     </button>
-    <button class="side-link" data-view="activity" data-cap="reports.view" type="button"><i class="fas fa-list-timeline"></i> Activity</button>
+    <button class="side-link" data-view="activity" data-cap="reports.view" type="button"><i class="fas fa-timeline"></i> Activity</button>
 
     <div class="side-group">Administration</div>
     <button class="side-link" data-view="staff" data-super="1" type="button"><i class="fas fa-user-shield"></i> Staff &amp; access</button>
 
     <div class="side-group">Other admin areas</div>
-    <a class="cross-link" href="admin-home"><i class="fas fa-grid-2"></i> Dashboard</a>
+    <a class="cross-link" href="admin-home"><i class="fas fa-table-cells-large"></i> Dashboard</a>
     <a class="cross-link" href="analytics"><i class="fas fa-chart-line"></i> Analytics</a>
     <a class="cross-link" href="admin-review"><i class="fas fa-user-shield"></i> Administrators</a>
     <a class="cross-link" href="security"><i class="fas fa-shield-halved"></i> Threat Assessment</a>

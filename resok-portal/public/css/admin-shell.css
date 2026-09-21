@@ -98,7 +98,11 @@
 
 .admin-sidebar-backdrop{display:none}
 
-.admin-main{margin-left:250px;flex:1;min-width:0;padding:26px 28px 60px}
+/* A flex column so the footer can be held at the bottom on short pages. The column already
+   fills the viewport: .admin-body is a row flex container with min-height:100vh, so this
+   stretches to it. */
+.admin-main{margin-left:250px;flex:1;min-width:0;padding:26px 28px 60px;
+  display:flex;flex-direction:column}
 
 .admin-page-header{margin-bottom:22px}
 .admin-page-header .eyebrow{display:block;color:var(--brand-primary);font-weight:900;
@@ -120,10 +124,12 @@
 .list-chevron{font-size:13px;color:var(--muted);transition:transform .18s ease}
 .list-toggle[aria-expanded="true"] .list-chevron{transform:rotate(180deg)}
 
-/* Footer: sits at the bottom of the scrollable content column (not full-bleed under the
-   fixed sidebar, which stays pinned regardless of scroll position). */
-.admin-footer{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);
-  display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+/* Footer: sits at the bottom of the content column (not full-bleed under the fixed sidebar,
+   which stays pinned regardless of scroll position). margin-top:auto holds it against the
+   bottom of the viewport when a page is short, and lets it fall below the fold when long -
+   so it is never floating mid-screen with dead space under it. */
+.admin-footer{margin-top:auto;padding-top:26px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:22px;flex-wrap:wrap;width:100%;max-width:1560px}
 .admin-footer-brand{display:flex;align-items:center;gap:10px;text-decoration:none;
   color:var(--ink,var(--text-dark))}
 .admin-footer-brand-text strong{display:block;font-size:13px}

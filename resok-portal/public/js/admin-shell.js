@@ -23,7 +23,7 @@
    * whose title does not contain them ("2fa", "tickets", "roll").
    */
   var AREAS = [
-    { label: "Dashboard", href: "admin-home", icon: "fa-grid-2",
+    { label: "Dashboard", href: "admin-home", icon: "fa-table-cells-large",
       hint: "Overview, figures and recent activity", keywords: "home overview kpi" },
     { label: "Analytics", href: "analytics", icon: "fa-chart-line",
       hint: "Membership, learning and readership figures", keywords: "stats figures reports charts" },

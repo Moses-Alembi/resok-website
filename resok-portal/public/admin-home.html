@@ -19,7 +19,7 @@
   <title>Admin Suite - ReSoK</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell2" />
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell3" />
   <style>
     /*
      * A dark "command center" home for the super-admin suite, matching the layout the
@@ -141,7 +141,7 @@
     @media(max-width:980px){.workbench{grid-template-columns:1fr}}
     @media(max-width:560px){.quick-grid{grid-template-columns:1fr}}
 
-    .home-footer{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);
+    .home-footer{margin-top:auto;padding-top:26px;border-top:1px solid var(--line);
       display:flex;align-items:center;gap:22px;flex-wrap:wrap}
     .home-footer-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
     .home-footer-brand-text strong{display:block;font-size:13px}
@@ -190,7 +190,7 @@
     <aside class="admin-sidebar" id="adminSidebar">
       <nav class="admin-nav">
         <div class="admin-nav-section">Super Admin</div>
-        <a href="admin-home" class="admin-nav-link" data-page="admin-home"><i class="fas fa-grid-2"></i> Dashboard</a>
+        <a href="admin-home" class="admin-nav-link" data-page="admin-home"><i class="fas fa-table-cells-large"></i> Dashboard</a>
         <a href="analytics" class="admin-nav-link" data-page="analytics"><i class="fas fa-chart-line"></i> Analytics</a>
         <a href="admin-review" class="admin-nav-link" data-page="admin-review"><i class="fas fa-user-shield"></i> Administrators</a>
         <a href="security" class="admin-nav-link" data-page="security"><i class="fas fa-shield-halved"></i> Threat Assessment</a>
@@ -268,7 +268,7 @@
 
       <footer class="home-footer">
         <a href="admin-home" class="home-footer-brand">
-          <span class="brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+          <span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
           <span class="home-footer-brand-text"><strong>ReSoK</strong><small>Admin Suite</small></span>
         </a>
         <nav class="home-footer-links">
@@ -285,7 +285,7 @@
     </main>
   </div>
 
-  <script src="js/admin-shell.js?v=20260921-shell2"></script>
+  <script src="js/admin-shell.js?v=20260921-shell3"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     (function () {

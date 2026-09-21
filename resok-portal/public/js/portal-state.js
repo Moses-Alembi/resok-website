@@ -817,7 +817,8 @@
   // dashboard. To launch a feature, delete its name here and restore its link in
   // dashboard.html. Admins manage events and elections from admin-review and
   // election-admin, which are not affected.
-  const LOCKED_FEATURES = ["events", "academy", "elections"];
+  // On localhost nothing is locked, so every feature can be reviewed before launch.
+  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "academy", "elections"];
   if (LOCKED_FEATURES.includes(pageName())) {
     window.location.replace("dashboard");
   }

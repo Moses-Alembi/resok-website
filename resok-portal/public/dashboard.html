@@ -31,9 +31,21 @@
       <div class="nav-section">Participate</div>
       <!-- Launching one at a time. To open a feature: turn its span back into
            <a href="..."> and remove its name from LOCKED_FEATURES in js/portal-state.js. -->
-      <span class="nav-locked" aria-disabled="true" title="Coming soon"><i class="fas fa-calendar-alt"></i> Events &amp; CMEs <span class="soon">Soon</span></span>
-      <span class="nav-locked" aria-disabled="true" title="Coming soon"><i class="fas fa-graduation-cap"></i> Virtual Academy <span class="soon">Soon</span></span>
-      <span class="nav-locked" aria-disabled="true" title="Coming soon"><i class="fas fa-check-to-slot"></i> Elections <span class="soon">Soon</span></span>
+      <span class="nav-locked" data-local-href="events" aria-disabled="true" title="Coming soon"><i class="fas fa-calendar-alt"></i> Events &amp; CMEs <span class="soon">Soon</span></span>
+      <span class="nav-locked" data-local-href="academy" aria-disabled="true" title="Coming soon"><i class="fas fa-graduation-cap"></i> Virtual Academy <span class="soon">Soon</span></span>
+      <span class="nav-locked" data-local-href="elections" aria-disabled="true" title="Coming soon"><i class="fas fa-check-to-slot"></i> Elections <span class="soon">Soon</span></span>
+      <script>
+        // On localhost the locked features open (see LOCKED_FEATURES in js/portal-state.js).
+        if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+          document.querySelectorAll(".nav-locked[data-local-href]").forEach((item) => {
+            const link = document.createElement("a");
+            link.href = item.dataset.localHref;
+            link.innerHTML = item.innerHTML;
+            link.querySelector(".soon")?.remove();
+            item.replaceWith(link);
+          });
+        }
+      </script>
       <div class="nav-section">Financials</div>
       <a href="financials"><i class="fas fa-file-invoice-dollar"></i> Fee Statement</a>
       <a href="financials#receipts"><i class="fas fa-receipt"></i> Receipts</a>

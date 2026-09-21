@@ -34,8 +34,8 @@ a{color:inherit;text-decoration:none}
 .stats .ic-comment{color:#3b82f6}
 .stats .ic-time{color:var(--g)}
 
-.hero-media{margin:0;background:#dde3ea}
-.hero-media img{display:block;width:100%;max-height:520px;object-fit:cover}
+.hero-media{margin:0 auto 8px;background:#dde3ea;border-radius:12px;overflow:hidden}
+.hero-media img{display:block;width:100%;max-height:420px;object-fit:cover}
 .hero-media figcaption{color:var(--muted);font-size:.8rem;padding:10px 0}
 
 .art-body{padding:38px 0 10px;font-size:1.05rem;line-height:1.8}
@@ -61,14 +61,15 @@ a{color:inherit;text-decoration:none}
 
 .section{padding:46px 0}
 .section h2{font-family:var(--h);text-transform:uppercase;font-size:1.3rem;margin-bottom:20px}
-.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:16px}
 .rel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;
   flex-direction:column;box-shadow:0 10px 24px rgba(15,23,42,.06);transition:transform .2s ease,box-shadow .2s ease}
 .rel:hover{transform:translateY(-3px);box-shadow:0 16px 32px rgba(15,23,42,.11)}
 .rel img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#dde3ea}
-.rel div{padding:16px 16px 18px}
-.rel h3{font-family:var(--h);font-size:1rem;line-height:1.3;margin-bottom:6px}
-.rel span{color:var(--muted);font-size:.78rem}
+.rel div{padding:16px 16px 18px;display:flex;flex-direction:column;flex:1}
+.rel h3{font-family:var(--h);font-size:1rem;line-height:1.3;margin-bottom:6px;min-height:2.6em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rel span{color:var(--muted);font-size:.78rem;margin-top:auto;padding-top:8px}
 
 .cta{background:var(--deep);color:#fff;border-radius:12px;padding:34px;display:grid;
   grid-template-columns:1.3fr 1fr;gap:26px;align-items:center}
@@ -157,7 +158,7 @@ a{color:inherit;text-decoration:none}
       </div>
     </header>
 
-    <figure class="hero-media" id="artFigure" hidden>
+    <figure class="hero-media narrow" id="artFigure" hidden>
       <img id="artImage" src="" alt="">
     </figure>
 
@@ -176,14 +177,14 @@ a{color:inherit;text-decoration:none}
     </div>
 
     <section class="section" id="relatedSection" hidden>
-      <div class="wrap">
+      <div class="narrow">
         <h2>You may also like</h2>
         <div class="rel-grid" id="relatedMount"></div>
       </div>
     </section>
 
     <section class="section" style="padding-top:0">
-      <div class="wrap">
+      <div class="narrow">
         <div class="cta">
           <div>
             <h2>Stay informed about lung health</h2>

@@ -11,6 +11,9 @@
  *   body        - paragraphs, in order; plain text, escaped when rendered
  *   source      - where it was first published, shown as attribution under the article
  *   author      - optional; shown in the byline when present
+ *   link        - optional; when set, the card's "read more" points straight there (e.g. a
+ *                 workshop's own write-up page) instead of building an internal article at
+ *                 post.html. Used for minimal entries that don't carry a `body`.
  *
  * `date` is ISO and drives ordering; `displayDate` is what readers see.
  *
@@ -42,9 +45,7 @@ window.RESOK_BLOG_POSTS = [
     "displayDate": "APR, 2026",
     "image": "assets/img/pages/blog/B6.jpg",
     "excerpt": "Over the two days, our dedicated team performed multiple bronchoscopic and thoracoscopic procedures...",
-    "body": [
-      "Over the two days, our dedicated team performed multiple bronchoscopic and thoracoscopic procedures..."
-    ]
+    "link": "workshop.php?w=bronchoscopy-vats-camp-meru"
   },
   {
     "id": "ebus-bronchoscopy-workshop",
@@ -54,9 +55,7 @@ window.RESOK_BLOG_POSTS = [
     "displayDate": "APR, 2026",
     "image": "assets/img/pages/blog/B7.jpg",
     "excerpt": "...participants have immersed themselves in hands-on training, expert-led lectures, and live demonstrations — all aimed at improving early diagnosis and safe management of lung diseases such as cancer, TB, and sarcoidosis...",
-    "body": [
-      "...participants have immersed themselves in hands-on training, expert-led lectures, and live demonstrations — all aimed at improving early diagnosis and safe management of lung diseases such as cancer, TB, and sarcoidosis..."
-    ]
+    "link": "workshop.php?w=ebus-basic-bronchoscopy-knh"
   },
   {
     "id": "world-lung-cancer-day",
@@ -148,7 +147,7 @@ window.RESOK_BLOG_POSTS = [
     "category": "Events",
     "date": "2026-01-20",
     "displayDate": "Jan 2026",
-    "image": "assets/img/Gallery/B1.jpg",
+    "image": "assets/img/kislhc-2026-hero.jpg",
     "excerpt": "Call for Abstracts | Kenya International Scientific Lung Health Conference 2026.",
     "body": [
       "Call for Abstracts | Kenya International Scientific Lung Health Conference 2026.",
@@ -189,7 +188,7 @@ window.RESOK_BLOG_POSTS = [
     "category": "Training",
     "date": "2025-11-01",
     "displayDate": "2025",
-    "image": "assets/img/Gallery/B3.jpg",
+    "image": "assets/img/pages/blog/B7.jpg",
     "excerpt": "Online theory, supervised hands-on training, interventional ultrasound, and certification.",
     "body": [
       "Join a comprehensive training program led by a certified expert in thoracic ultrasound. The workshop is designed to help clinicians gain hands-on experience in diagnostic and interventional techniques that elevate clinical practice.",
@@ -210,19 +209,39 @@ window.RESOK_BLOG_POSTS = [
     "category": "Training",
     "date": "2025-10-01",
     "displayDate": "2025",
-    "image": "assets/img/Gallery/B5.jpg",
+    "image": "assets/img/pages/workshops-and-training/pleuroscopy-camp/pleuroscopy-camp-01.jpg",
     "excerpt": "A successful camp supporting better diagnosis and care for patients with pleural disease.",
-    "body": [
-      "The good physician treats the disease; the great physician treats the patient who has the disease. - William Osler",
-      "ReSoK is proud to share highlights from a successful Two-Day Pleuroscopy Camp, an important step forward in the mission to advance lung health and respiratory care.",
-      "The camp brought together a team of skilled specialists dedicated to providing life-changing interventions for patients with pleural diseases. Through minimally invasive pleuroscopy procedures, the team improved diagnostic accuracy and provided timely treatment for conditions such as unexplained pleural effusions and malignancies.",
-      "Over the two days, expert teams worked with dedication to ensure each patient received personalized, high-quality care. Beyond the procedures themselves, the camp represented a broader commitment to early detection, better patient outcomes, and stronger healthcare capacity in the fight against respiratory diseases.",
-      "ReSoK extends deep gratitude to the dedicated medical professionals, support teams, and patients who entrusted the team with their care.",
-      "AstraZeneca, Kenyatta National Hospital, Respiratory Society of Kenya, Johns Hopkins Hospital, Jacqueline Wanjiku Kagima MD, PhD, Christine Argento, Victoria Gonzalez, Andrew Owuor, Joan Kagema, Kevin Kiptoo, Joseph Mutie, and other collaborators helped make this initiative a success.",
-      "Together, we are building a healthier future, one breath at a time."
-    ],
-    "subtitle": "A successful camp supporting better diagnosis and care for patients with pleural disease.",
-    "author": "ReSoK Programs"
+    "link": "workshop.php?w=pleuroscopy-camp"
+  },
+  {
+    "id": "interventional-pulmonology-cgtrh",
+    "title": "Advancing Respiratory Care Through the Interventional Pulmonology & Advanced Bronchoscopy Workshop",
+    "category": "Training",
+    "date": "2026-08-05",
+    "displayDate": "Aug 2026",
+    "image": "assets/img/pages/workshops-and-training/interventional-pulmonology-cgtrh/interventional-pulmonology-cgtrh-02.jpg",
+    "excerpt": "An intensive programme in pleural procedures, thoracoscopy, EBUS and airway interventions at Coast General Teaching and Referral Hospital.",
+    "link": "workshop.php?w=interventional-pulmonology-cgtrh"
+  },
+  {
+    "id": "lung-biopsy-workshop-mombasa",
+    "title": "Expanding the Possibilities of Lung Diagnosis: The Lung Biopsy Workshop",
+    "category": "Training",
+    "date": "2025-06-01",
+    "displayDate": "2025",
+    "image": "assets/img/pages/workshops-and-training/lung-biopsy-workshop-mombasa/lung-biopsy-workshop-mombasa-01.jpg",
+    "excerpt": "Three days of hands-on training in bronchoscopy, pleuroscopy and VATS at Coast General Teaching and Referral Hospital.",
+    "link": "workshop.php?w=lung-biopsy-workshop-mombasa"
+  },
+  {
+    "id": "bronchoscopy-camp-kakamega",
+    "title": "Bringing Bronchoscopy Closer to Patients: The Kakamega Bronchoscopy Camp",
+    "category": "Training",
+    "date": "2025-05-01",
+    "displayDate": "2025",
+    "image": "assets/img/pages/workshops-and-training/bronchoscopy-camp-kakamega/10.jpg",
+    "excerpt": "A two-day camp at Kakamega County General Teaching and Referral Hospital bringing specialized respiratory expertise closer to patients.",
+    "link": "workshop.php?w=bronchoscopy-camp-kakamega"
   },
   {
     "id": "light-writing-workshop",
@@ -230,7 +249,7 @@ window.RESOK_BLOG_POSTS = [
     "category": "Research",
     "date": "2025-07-01",
     "displayDate": "Jul 2025",
-    "image": "assets/img/Gallery/B6.jpg",
+    "image": "assets/img/projects/light/light-1.jpeg",
     "excerpt": "ReSoK and AFIDEP facilitated a scientific manuscript writing workshop in Naivasha.",
     "body": [
       "One of the core outputs of the LIGHT consortium is capacity strengthening for individuals, institutions, and multi-stakeholder networks to produce, adapt, translate, and use evidence, and to manage research.",

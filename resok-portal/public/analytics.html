@@ -6,18 +6,14 @@
   <title>Analytics - ReSoK Admin</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="css/admin-shell.css" />
   <style>
     :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--ink:#253141;--muted:#667085;
       --bg:#f5f7fa;--line:#e5e7eb;--radius:10px;--shadow:0 2px 12px rgba(15,23,42,.07);
       --warn:#b54708;--fail:#b42318;--pass:#0f7a38;--info:#175cd3}
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
-    .page{width:min(1220px,94vw);margin:0 auto;padding:22px 0 60px}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
-    .top h1{font-size:22px;letter-spacing:-.2px}
-    .top p{color:var(--muted);font-size:13.5px;margin-top:3px}
-    .back{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600}
-    .back:hover{color:var(--brand-primary)}
+    .page{max-width:1180px}
     .note{border-radius:8px;padding:12px 15px;font-size:13.5px;margin-bottom:14px}
     .note.bad{background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}
     .note.warn{background:#fffaeb;color:var(--warn);border:1px solid #fde5b1}
@@ -54,22 +50,51 @@
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="top">
-      <div>
-        <h1>Analytics</h1>
-        <p>How the Society&rsquo;s membership, learning and publishing are actually being used.</p>
+  <header class="admin-topbar">
+    <button class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+    <a href="dashboard" class="admin-brand"><img src="assets/img/logo.png" alt="ReSoK" /><span>Admin Suite</span></a>
+    <div class="admin-topbar-right">
+      <a href="dashboard" class="admin-topbar-link"><i class="fas fa-arrow-left"></i> <span>Member portal</span></a>
+      <div class="admin-user-chip">
+        <div class="admin-user-avatar" id="adminUserAvatar">A</div>
+        <span class="admin-user-name" id="adminUserName">Administrator</span>
       </div>
-      <a class="back" href="dashboard.html"><i class="fas fa-arrow-left"></i> Back to dashboard</a>
+      <button class="admin-logout-btn" id="adminLogoutLink" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
     </div>
+  </header>
 
-    <div id="gateNotice"></div>
-    <div id="loading" class="note info"><i class="fas fa-spinner fa-spin"></i> Loading figures&hellip;</div>
-    <main id="main" hidden></main>
+  <div class="admin-body">
+    <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop"></div>
+    <aside class="admin-sidebar" id="adminSidebar">
+      <nav class="admin-nav">
+        <div class="admin-nav-section">Super Admin</div>
+        <a href="admin-home" class="admin-nav-link" data-page="admin-home"><i class="fas fa-grid-2"></i> Dashboard</a>
+        <a href="analytics" class="admin-nav-link" data-page="analytics"><i class="fas fa-chart-line"></i> Analytics</a>
+        <a href="admin-review" class="admin-nav-link" data-page="admin-review"><i class="fas fa-user-shield"></i> Administrators</a>
+        <a href="security" class="admin-nav-link" data-page="security"><i class="fas fa-shield-halved"></i> Threat Assessment</a>
+        <a href="election-admin" class="admin-nav-link" data-page="election-admin"><i class="fas fa-check-to-slot"></i> Elections</a>
+        <a href="ict" class="admin-nav-link" data-page="ict"><i class="fas fa-server"></i> ICT Operations</a>
+      </nav>
+    </aside>
 
-    <p class="foot" id="foot" hidden></p>
+    <div class="admin-main">
+      <div class="page">
+        <div class="admin-page-header">
+          <span class="eyebrow">Super admin</span>
+          <h1>Analytics</h1>
+          <p>How the Society&rsquo;s membership, learning and publishing are actually being used.</p>
+        </div>
+
+        <div id="gateNotice"></div>
+        <div id="loading" class="note info"><i class="fas fa-spinner fa-spin"></i> Loading figures&hellip;</div>
+        <main id="main" hidden></main>
+
+        <p class="foot" id="foot" hidden></p>
+      </div>
+    </div>
   </div>
 
+  <script src="js/admin-shell.js"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     (function () {
@@ -319,6 +344,7 @@
           // The flag in the answer is what matters, not that the call succeeded: plenty of
           // endpoints accept any administrator.
           var me = await window.ResokPortal.api("/api/admin/whoami");
+          if (window.ResokAdminShell) window.ResokAdminShell.setUser(me);
           if (!me.isSuperAdmin) {
             el("loading").hidden = true;
             el("gateNotice").appendChild(make("div", "note bad",

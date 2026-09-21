@@ -15,6 +15,9 @@
 (function () {
   "use strict";
 
+  // On localhost the gated pages open without logging in (see member-gate.php), so no prompt.
+  if (["localhost", "127.0.0.1"].includes(window.location.hostname)) return;
+
   const GATED_PAGES = {
     "learning": "Learning & CME",
     "media-learning": "the Media & Learning Channel",

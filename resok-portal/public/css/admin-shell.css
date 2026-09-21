@@ -1,0 +1,81 @@
+/*
+ * Shared shell for the super-admin pages (Analytics, Administrators, Threat Assessment,
+ * Elections, ICT Operations) - a fixed topbar + sidebar, modelled on a standard admin-suite
+ * layout (sidebar navigation, page header, KPI/panel cards) but built in ReSoK's own palette
+ * and hand-rolled CSS rather than a framework, to match how the rest of the site is built.
+ *
+ * Each page keeps its own content and logic; this file only supplies the chrome around it.
+ * Pages provide the tokens (--brand-primary etc.) - this file reads them, it does not set them,
+ * so it stays a drop-in for any page already using ReSoK's admin color variables.
+ */
+*{box-sizing:border-box}
+
+.admin-topbar{position:fixed;top:0;left:0;right:0;height:64px;background:#fff;
+  border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(15,23,42,.04);
+  display:flex;align-items:center;gap:14px;padding:0 18px;z-index:40}
+.admin-sidebar-toggle{display:none;border:0;background:none;font-size:18px;color:var(--muted);
+  cursor:pointer;padding:6px}
+.admin-brand{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--ink,var(--text-dark));
+  white-space:nowrap}
+.admin-brand img{height:34px;display:block}
+.admin-brand span{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.02em}
+.admin-topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.admin-topbar-link{display:flex;align-items:center;gap:7px;color:var(--muted);font-weight:700;
+  font-size:13px;text-decoration:none}
+.admin-topbar-link:hover{color:var(--brand-primary)}
+.admin-user-chip{display:flex;align-items:center;gap:9px}
+.admin-user-avatar{width:34px;height:34px;border-radius:50%;background:var(--brand-primary);
+  color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.admin-user-name{font-size:13.5px;font-weight:700;color:var(--ink,var(--text-dark));white-space:nowrap}
+.admin-user-name small{display:block;font-weight:600;color:var(--muted);font-size:11px}
+.admin-logout-btn{border:0;background:none;color:var(--muted);font-size:16px;cursor:pointer;padding:6px}
+.admin-logout-btn:hover{color:var(--brand-secondary)}
+
+.admin-body{display:flex;padding-top:64px;min-height:100vh;background:var(--bg)}
+
+.admin-sidebar{position:fixed;top:64px;bottom:0;left:0;width:246px;background:#fff;
+  border-right:1px solid var(--line);overflow-y:auto;z-index:35;transition:transform .2s ease}
+.admin-nav{padding:16px 12px 28px}
+.admin-nav-section{padding:16px 10px 8px;color:#98a2b3;font-size:11px;font-weight:900;
+  text-transform:uppercase;letter-spacing:.07em}
+.admin-nav-section:first-child{padding-top:6px}
+.admin-nav-link{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:8px;
+  color:#475467;font-weight:700;font-size:14px;text-decoration:none;margin-bottom:2px;
+  border-left:3px solid transparent}
+.admin-nav-link i{width:18px;text-align:center;font-size:15px;color:#98a2b3;flex:none}
+.admin-nav-link:hover{background:rgba(0,147,46,.07);color:var(--brand-primary)}
+.admin-nav-link:hover i{color:var(--brand-primary)}
+.admin-nav-link.active{background:rgba(0,147,46,.1);color:var(--brand-primary);
+  border-left-color:var(--brand-primary)}
+.admin-nav-link.active i{color:var(--brand-primary)}
+.admin-nav-link.admin-nav-logout{color:var(--brand-secondary)}
+.admin-nav-link.admin-nav-logout i{color:var(--brand-secondary)}
+.admin-nav-link.admin-nav-logout:hover{background:rgba(188,11,34,.08)}
+
+.admin-sidebar-backdrop{display:none}
+
+.admin-main{margin-left:246px;flex:1;min-width:0;padding:26px 28px 60px}
+
+.admin-page-header{margin-bottom:22px}
+.admin-page-header .eyebrow{display:block;color:var(--brand-primary);font-weight:900;
+  font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.admin-page-header h1{font-size:24px;letter-spacing:-.2px;margin:0 0 4px}
+.admin-page-header p{color:var(--muted);font-size:13.5px;max-width:640px}
+
+@media(max-width:980px){
+  .admin-sidebar-toggle{display:inline-flex;align-items:center}
+  .admin-brand span{display:none}
+  .admin-sidebar{transform:translateX(-100%)}
+  .admin-sidebar.open{transform:translateX(0);box-shadow:0 20px 40px rgba(15,23,42,.18)}
+  .admin-main{margin-left:0}
+  .admin-user-name{display:none}
+  .admin-topbar-link span{display:none}
+  .admin-sidebar-backdrop{display:none;position:fixed;inset:64px 0 0 0;background:rgba(15,23,42,.35);
+    z-index:34}
+  .admin-sidebar-backdrop.open{display:block}
+}
+
+@media(max-width:520px){
+  .admin-topbar{padding:0 12px}
+  .admin-main{padding:18px 16px 48px}
+}

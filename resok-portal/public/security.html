@@ -6,6 +6,7 @@
   <title>Threat Assessment - ReSoK Members' Portal</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="css/admin-shell.css" />
   <style>
     :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#253141;--muted:#667085;--bg:#f5f7fa;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);--radius:8px;
       --pass:#0f7a38;--warn:#b54708;--fail:#b42318;--info:#175cd3}
@@ -13,11 +14,7 @@
     body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text-dark)}
     a{text-decoration:none;color:inherit}
     [hidden]{display:none!important}
-    .topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line)}
-    .topbar-inner{max-width:1180px;margin:0 auto;height:70px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
-    .brand img{height:42px;display:block}
-    .back{color:var(--muted);font-size:14px;font-weight:600}
-    .wrap{max-width:1180px;margin:0 auto;padding:24px 20px;display:grid;gap:20px}
+    .wrap{max-width:1180px;display:grid;gap:20px}
     .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
     h1{font-size:24px;margin-bottom:6px}
     .sub{color:var(--muted);font-size:14px;line-height:1.55}
@@ -81,16 +78,40 @@
   </style>
 </head>
 <body>
-  <nav class="topbar">
-    <div class="topbar-inner">
-      <a href="admin-review" class="brand"><img src="assets/img/logo.png" alt="ReSoK" /></a>
-      <a href="admin-review" class="back"><i class="fas fa-arrow-left"></i> Back to admin</a>
+  <header class="admin-topbar">
+    <button class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+    <a href="dashboard" class="admin-brand"><img src="assets/img/logo.png" alt="ReSoK" /><span>Admin Suite</span></a>
+    <div class="admin-topbar-right">
+      <a href="dashboard" class="admin-topbar-link"><i class="fas fa-arrow-left"></i> <span>Member portal</span></a>
+      <div class="admin-user-chip">
+        <div class="admin-user-avatar" id="adminUserAvatar">A</div>
+        <span class="admin-user-name" id="adminUserName">Administrator</span>
+      </div>
+      <button class="admin-logout-btn" id="adminLogoutLink" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
     </div>
-  </nav>
+  </header>
 
+  <div class="admin-body">
+    <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop"></div>
+    <aside class="admin-sidebar" id="adminSidebar">
+      <nav class="admin-nav">
+        <div class="admin-nav-section">Super Admin</div>
+        <a href="admin-home" class="admin-nav-link" data-page="admin-home"><i class="fas fa-grid-2"></i> Dashboard</a>
+        <a href="analytics" class="admin-nav-link" data-page="analytics"><i class="fas fa-chart-line"></i> Analytics</a>
+        <a href="admin-review" class="admin-nav-link" data-page="admin-review"><i class="fas fa-user-shield"></i> Administrators</a>
+        <a href="security" class="admin-nav-link" data-page="security"><i class="fas fa-shield-halved"></i> Threat Assessment</a>
+        <a href="election-admin" class="admin-nav-link" data-page="election-admin"><i class="fas fa-check-to-slot"></i> Elections</a>
+        <a href="ict" class="admin-nav-link" data-page="ict"><i class="fas fa-server"></i> ICT Operations</a>
+      </nav>
+    </aside>
+
+    <div class="admin-main">
   <div class="wrap">
     <section class="panel">
-      <h1>Threat Assessment</h1>
+      <div class="admin-page-header" style="margin-bottom:0">
+        <span class="eyebrow">Super admin</span>
+        <h1>Threat Assessment</h1>
+      </div>
       <p class="sub">Live checks against the running site &mdash; the actual request, the actual configuration, the actual database. Nothing here is a stored answer.</p>
       <div id="loadError" class="notice" hidden></div>
       <div class="posture" id="posture" hidden>
@@ -228,7 +249,10 @@
       <button class="btn" id="refresh" style="margin-top:18px"><i class="fas fa-rotate"></i> Refresh</button>
     </section>
   </div>
+    </div>
+  </div>
 
+  <script src="js/admin-shell.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>

@@ -281,7 +281,7 @@ a:hover .more i,.card:hover .more i{transform:translateX(4px)}
       const categories = ["All", ...Array.from(new Set(ALL.map((p) => p.category))).sort()];
 
       function hrefFor(post) {
-        return `post.html?id=${encodeURIComponent(post.id)}`;
+        return post.link || `post.html?id=${encodeURIComponent(post.id)}`;
       }
 
       function meta(post, withRead) {
@@ -313,7 +313,7 @@ a:hover .more i,.card:hover .more i{transform:translateX(4px)}
       function readMore(post) {
         const span = document.createElement("span");
         span.className = "more";
-        span.textContent = "Read article";
+        span.textContent = post.link ? "View workshop" : "Read article";
         const arrow = document.createElement("i");
         arrow.className = "fas fa-arrow-right";
         span.appendChild(arrow);

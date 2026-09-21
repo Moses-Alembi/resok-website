@@ -40,6 +40,15 @@ function resok_gate_check(): array
     $timedout = ['state' => 'timedout', 'userId' => 0, 'email' => '', 'role' => '', 'status' => ''];
     $unavailable = ['state' => 'unavailable', 'userId' => 0, 'email' => '', 'role' => '', 'status' => ''];
 
+    // Developer machine: members-only pages open without logging in. RESOK_LOCAL is set by the
+    // local vhost (never by a request) and the request must come from this computer, so the
+    // live server can never take this path.
+    $localFlag = (string)($_SERVER['RESOK_LOCAL'] ?? $_SERVER['REDIRECT_RESOK_LOCAL'] ?? getenv('RESOK_LOCAL') ?: '');
+    $localIsCurl = stripos((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 'curl/') === 0; // test suites keep the real gate
+    if ($localFlag === '1' && !$localIsCurl && in_array((string)($_SERVER['REMOTE_ADDR'] ?? ''), ['127.0.0.1', '::1'], true)) {
+        return ['state' => 'active', 'userId' => 0, 'email' => '', 'role' => 'admin', 'status' => 'active'];
+    }
+
     $configPath = __DIR__ . '/resok-portal/public/api/config.php';
     if (!is_file($configPath)) {
         error_log('member-gate: portal config missing at ' . $configPath);

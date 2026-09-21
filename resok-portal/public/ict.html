@@ -46,6 +46,14 @@
   .side-link .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;flex:0 0 auto}
   .side-soon{padding:9px 12px;font-size:12.5px;color:#98a2b3;display:flex;align-items:center;gap:11px;cursor:default}
   .side-soon i{width:16px;text-align:center;font-size:12px}
+  /* Same look as .side-link, but a distinct class: these are real navigations to other
+     pages, not view-switch buttons, and must not be caught by the .side-link click wiring
+     that calls show() (which would blank the current view via a bad #undefined hash). */
+  .cross-link{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;
+    border:none;font:inherit;font-size:13.5px;color:var(--text-dark);padding:9px 12px;
+    border-radius:7px;text-decoration:none}
+  .cross-link i{width:16px;text-align:center;color:var(--muted);font-size:13px}
+  .cross-link:hover{background:var(--bg)}
 
   main{padding:24px 26px 60px;min-width:0}
   .view{display:none}
@@ -153,6 +161,13 @@
 
     <div class="side-group">Administration</div>
     <button class="side-link" data-view="staff" data-super="1" type="button"><i class="fas fa-user-shield"></i> Staff &amp; access</button>
+
+    <div class="side-group">Other admin areas</div>
+    <a class="cross-link" href="admin-home"><i class="fas fa-grid-2"></i> Dashboard</a>
+    <a class="cross-link" href="analytics"><i class="fas fa-chart-line"></i> Analytics</a>
+    <a class="cross-link" href="admin-review"><i class="fas fa-user-shield"></i> Administrators</a>
+    <a class="cross-link" href="security"><i class="fas fa-shield-halved"></i> Threat Assessment</a>
+    <a class="cross-link" href="election-admin"><i class="fas fa-check-to-slot"></i> Elections</a>
 
     <div class="side-group">Later phases</div>
     <div class="side-soon"><i class="fas fa-list-check"></i> Tasks</div>

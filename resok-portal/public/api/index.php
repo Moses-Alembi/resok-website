@@ -343,7 +343,51 @@ function clearAuthCookie(): void {
     ]);
 }
 
+/**
+ * True only on the developer machine: the request came through the local vhost, which sets
+ * RESOK_LOCAL itself (a request cannot), and from this computer. Both are required, so the
+ * live server - which never sets RESOK_LOCAL - can never take this path.
+ */
+function isLocalDevRequest(): bool {
+    $flag = (string)($_SERVER['RESOK_LOCAL'] ?? $_SERVER['REDIRECT_RESOK_LOCAL'] ?? getenv('RESOK_LOCAL') ?: '');
+    $addr = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    // The tools/dev test suites call the API with curl and expect signed-out requests to be
+    // refused, so they keep the normal behaviour. Skipping only ever removes access.
+    $isCurl = stripos((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 'curl/') === 0;
+    return $flag === '1' && !$isCurl && in_array($addr, ['127.0.0.1', '::1'], true);
+}
+
+/**
+ * On localhost, a session for the first admin account, so every portal page can be reviewed
+ * without logging in. Null anywhere else, or when the local database has no admin yet.
+ */
+function localDevPayload(array $config): ?array {
+    static $resolved = false, $payload = null;
+    if ($resolved) return $payload;
+    $resolved = true;
+    if (!isLocalDevRequest()) return null;
+    try {
+        $row = db($config)->query("SELECT id, email, role FROM users WHERE role = 'admin' ORDER BY id LIMIT 1")->fetch();
+    } catch (Throwable $error) {
+        return null;
+    }
+    if (!$row) return null;
+    $payload = [
+        'userId' => (int)$row['id'],
+        'email' => (string)$row['email'],
+        'role' => (string)$row['role'],
+        'exp' => time() + 3600,
+        'seen' => time(),
+        'localDev' => true,
+    ];
+    return $payload;
+}
+
 function auth(array $config): array {
+    // Localhost: a real login still wins; otherwise act as the local admin instead of a 401.
+    $localDev = localDevPayload($config);
+    if ($localDev !== null) return authOptionalToken($config) ?? $localDev;
+
     $fromCookie = true;
     $token = $_COOKIE['resok_token'] ?? '';
     if (!$token) {
@@ -408,6 +452,11 @@ function auth(array $config): array {
  * a background poll keep a session alive forever without anybody using the portal.
  */
 function authOptional(array $config): ?array {
+    return authOptionalToken($config) ?? localDevPayload($config);
+}
+
+/** The signed-in session's payload, or null - authOptional() without the localhost fallback. */
+function authOptionalToken(array $config): ?array {
     $token = $_COOKIE['resok_token'] ?? '';
     if (!$token) {
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';

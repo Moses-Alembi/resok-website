@@ -29,6 +29,7 @@
     --warn:#f0b429; --warn-bg:rgba(240,180,41,.18);
     --crit:#ff6b6f; --crit-bg:rgba(188,11,34,.2);
     --info:#4f8dfd; --info-bg:rgba(79,141,253,.18);
+    --chrome:#0d1526; --hover:rgba(255,255,255,.06);
     --input-bg:#0d1526; --input-line:rgba(255,255,255,.16);
     --muted-2:#5c6883; --btn-secondary-bg:rgba(255,255,255,.08);
     --unknown-bg:rgba(255,255,255,.08); --unknown-fg:#b7c0d3;
@@ -42,6 +43,7 @@
     --warn:#8a5a12; --warn-bg:#fdf2e6;
     --crit:#a01427; --crit-bg:#fdeef0;
     --info:#1c4f9c; --info-bg:#eef3fb;
+    --chrome:#fff; --hover:rgba(15,23,42,.05);
     --input-bg:#fff; --input-line:#d0d5dd;
     --muted-2:#98a2b3; --btn-secondary-bg:#eef1f5;
     --unknown-bg:#f1f3f6; --unknown-fg:#5a6572;
@@ -51,28 +53,43 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Poppins,'Segoe UI',sans-serif;background:var(--bg);color:var(--text-dark);line-height:1.55}
 
-  .topbar{background:var(--card);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;position:sticky;top:0;z-index:40}
-  .topbar-left{display:flex;align-items:center;gap:13px;min-width:0}
-  .topbar img{height:34px}
-  .topbar .where{font-weight:700;font-size:15px;white-space:nowrap}
-  .topbar .who{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .topbar-right{display:flex;align-items:center;gap:9px}
-  .brand-mark{border-radius:8px;background:#fff;border:1px solid var(--line);display:inline-flex;
-    align-items:center;padding:4px 8px}
-  .brand-mark img{height:26px;display:block}
+  /* Same chrome as the rest of the admin suite (see css/admin-shell.css); repeated here
+     because this page's sidebar drives its own views and does not use the shared one. */
+  .topbar{background:var(--chrome);border-bottom:1px solid var(--line);height:64px;padding:0 20px;
+    display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:40}
+  .topbar-left{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:#fff;border:1px solid var(--line);
+    display:grid;place-items:center;flex:none}
+  .brand-mark img{width:24px;height:24px;object-fit:contain;display:block}
+  .brand-text strong{display:block;font-size:14px;font-weight:800}
+  .brand-text small{display:block;color:var(--muted);font-size:10.5px;font-weight:700;
+    letter-spacing:.06em;text-transform:uppercase}
+  .crumb{display:none;padding-left:15px;border-left:1px solid var(--line)}
+  .crumb span{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .crumb strong{font-size:13.5px}
+  .topbar .who{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .icon-btn{border:0;background:none;color:var(--muted);width:36px;height:36px;border-radius:9px;
+    display:grid;place-items:center;font-size:15px;cursor:pointer;text-decoration:none;flex:none}
+  .icon-btn:hover{background:var(--hover);color:var(--text-dark)}
+  .user-chip{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 4px;margin-left:6px}
+  .user-avatar{width:34px;height:34px;border-radius:50%;background:var(--brand-primary);color:#fff;
+    font-weight:800;font-size:13px;display:grid;place-items:center;flex:none}
+  .user-meta strong{display:block;font-size:13px}
   .theme-toggle .fa-moon{display:none}
   :root[data-theme="light"] .theme-toggle .fa-sun{display:none}
   :root[data-theme="light"] .theme-toggle .fa-moon{display:inline}
-  .burger{display:none;background:none;border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer;font-size:15px;color:var(--text-dark)}
+  .burger{display:none;background:none;border:0;padding:6px;cursor:pointer;font-size:17px;color:var(--muted)}
+  @media(min-width:981px){.crumb{display:block}}
 
   .shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;align-items:start;min-height:calc(100vh - 60px)}
-  .sidebar{background:var(--card);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto}
+  .sidebar{background:var(--chrome);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto}
   .side-group{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);padding:14px 12px 6px}
   .side-link{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;font:inherit;font-size:13.5px;color:var(--text-dark);padding:9px 12px;border-radius:7px;cursor:pointer}
   .side-link i{width:16px;text-align:center;color:var(--muted);font-size:13px}
-  .side-link:hover{background:var(--bg)}
-  .side-link.active{background:rgba(0,147,46,.16);color:var(--brand-primary);font-weight:600}
-  .side-link.active i{color:var(--brand-primary)}
+  .side-link:hover{background:var(--hover)}
+  .side-link.active{background:var(--brand-primary);color:#fff;font-weight:600;box-shadow:0 8px 18px rgba(0,147,46,.35)}
+  .side-link.active i{color:#fff}
   .side-link:focus-visible{outline:2px solid var(--brand-primary);outline-offset:-2px}
   .side-link .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;flex:0 0 auto}
   .side-soon{padding:9px 12px;font-size:12.5px;color:var(--muted-2);display:flex;align-items:center;gap:11px;cursor:default}
@@ -84,7 +101,7 @@
     border:none;font:inherit;font-size:13.5px;color:var(--text-dark);padding:9px 12px;
     border-radius:7px;text-decoration:none}
   .cross-link i{width:16px;text-align:center;color:var(--muted);font-size:13px}
-  .cross-link:hover{background:var(--bg)}
+  .cross-link:hover{background:var(--hover)}
 
   main{padding:24px 26px 60px;min-width:0}
   .view{display:none}
@@ -172,18 +189,24 @@
 <nav class="topbar">
   <div class="topbar-left">
     <button class="burger" id="burger" type="button" aria-label="Menu"><i class="fas fa-bars"></i></button>
-    <a href="dashboard" class="brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></a>
-    <div style="min-width:0">
-      <div class="where">ICT Operations</div>
-      <div class="who" id="whoami">&nbsp;</div>
-    </div>
+    <a href="admin-home" class="brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+    <a href="admin-home" class="brand-text" style="text-decoration:none;color:inherit">
+      <strong>ReSoK</strong><small>Admin Suite</small>
+    </a>
   </div>
+  <div class="crumb"><span>Workspace</span><strong>ICT Operations</strong></div>
   <div class="topbar-right">
-    <button class="btn btn-ghost theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+    <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
       <i class="fas fa-sun"></i><i class="fas fa-moon"></i>
     </button>
-    <a class="btn btn-ghost" href="admin-review"><i class="fas fa-users"></i> Members</a>
-    <a class="btn btn-secondary" href="dashboard"><i class="fas fa-arrow-left"></i> Back</a>
+    <button class="icon-btn" id="fullscreenToggle" title="Fullscreen"><i class="fas fa-expand"></i></button>
+    <a class="icon-btn" href="admin-review" title="Members"><i class="fas fa-users"></i></a>
+    <a class="icon-btn" href="dashboard" title="Member portal"><i class="fas fa-arrow-left"></i></a>
+    <div class="user-chip">
+      <div class="user-avatar" id="ictAvatar"><i class="fas fa-user"></i></div>
+      <div class="user-meta"><strong id="ictRole">ICT</strong><small class="who" id="whoami">&nbsp;</small></div>
+    </div>
+    <button class="icon-btn" type="button" title="Logout" id="ictLogout"><i class="fas fa-sign-out-alt"></i></button>
   </div>
 </nav>
 
@@ -879,6 +902,14 @@
     const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('resok-admin-theme', next); } catch (e) {}
+  });
+  el('fullscreenToggle').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  });
+  el('ictLogout').addEventListener('click', () => {
+    if (window.ResokPortal && typeof window.ResokPortal.logout === 'function') window.ResokPortal.logout();
+    else location.href = 'login';
   });
   const backToTop = document.getElementById('adminBackToTop');
   if (backToTop) backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -2617,7 +2648,12 @@
       return;
     }
 
-    el('whoami').textContent = me.isSuperAdmin ? 'Super administrator' : (me.role + ' · ' + me.capabilities.length + ' permission(s)');
+    // /api/ict/me carries the role and capabilities, not an email, so the chip says what it
+    // actually knows rather than inventing a name.
+    el('ictRole').textContent = me.isSuperAdmin ? 'Super admin' : (me.role || 'ICT');
+    el('whoami').textContent = me.isSuperAdmin
+      ? 'Full access'
+      : me.capabilities.length + ' permission(s)';
 
     if (!me.hasAccess) {
       document.querySelector('.sidebar').hidden = true;

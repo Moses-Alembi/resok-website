@@ -17,7 +17,7 @@
   </script>
   <style>
     :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--radius:10px;
-      --ink:#e9edf5;--muted:#8b96ac;--bg:#0a0f1c;--surface:#111a2c;--surface-2:rgba(255,255,255,.06);
+      --ink:#e9edf5;--muted:#8b96ac;--bg:#0a0f1c;--surface:#111a2c;--chrome:#0d1526;--surface-2:rgba(255,255,255,.06);
       --line:rgba(255,255,255,.08);--shadow:0 12px 30px rgba(0,0,0,.35);
       --warn:#f0b429;--fail:#ff6b6f;--pass:#3ddc84;--info:#4f8dfd;
       --note-bad-bg:rgba(188,11,34,.16);--note-bad-fg:#ff9fa2;--note-bad-line:rgba(188,11,34,.4);
@@ -25,7 +25,7 @@
       --note-info-bg:rgba(79,141,253,.16);--note-info-fg:#9dc0ff;--note-info-line:rgba(79,141,253,.4);
       --pill-bg:rgba(255,255,255,.08);--pill-on-bg:rgba(0,147,46,.18);--pill-off-bg:rgba(188,11,34,.18)}
     :root[data-theme="light"]{
-      --ink:#253141;--muted:#667085;--bg:#f5f7fa;--surface:#fff;--surface-2:#eef2f0;
+      --ink:#253141;--muted:#667085;--bg:#f5f7fa;--surface:#fff;--chrome:#fff;--surface-2:#eef2f0;
       --line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07);
       --warn:#b54708;--fail:#b42318;--pass:#0f7a38;--info:#175cd3;
       --note-bad-bg:#fff1f2;--note-bad-fg:#a10d23;--note-bad-line:#fecdd3;
@@ -74,15 +74,26 @@
 <body>
   <header class="admin-topbar">
     <button class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
-    <a href="dashboard" class="admin-brand"><span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span><span>Admin Suite</span></a>
+    <a href="admin-home" class="admin-brand">
+      <span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+      <span class="admin-brand-text"><strong>ReSoK</strong><small>Admin Suite</small></span>
+    </a>
+    <div class="admin-crumb"><span>Workspace</span><strong>Super Admin</strong></div>
+    <div class="admin-search">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <label for="adminSearch" style="position:absolute;left:-9999px">Search admin areas</label>
+      <input id="adminSearch" type="search" placeholder="Search admin areas..." autocomplete="off" />
+      <div class="admin-search-results" id="adminSearchResults" hidden></div>
+    </div>
     <div class="admin-topbar-right">
-      <button class="admin-logout-btn admin-theme-toggle" id="adminThemeToggle" title="Toggle light/dark theme">
+      <button class="admin-icon-btn admin-theme-toggle" id="adminThemeToggle" title="Toggle light/dark theme">
         <i class="fas fa-sun"></i><i class="fas fa-moon"></i>
       </button>
-      <a href="dashboard" class="admin-topbar-link"><i class="fas fa-arrow-left"></i> <span>Member portal</span></a>
+      <button class="admin-icon-btn" id="adminFullscreenToggle" title="Fullscreen"><i class="fas fa-expand"></i></button>
+      <a class="admin-icon-btn" href="dashboard" title="Member portal"><i class="fas fa-arrow-left"></i></a>
       <div class="admin-user-chip">
         <div class="admin-user-avatar" id="adminUserAvatar">A</div>
-        <span class="admin-user-name" id="adminUserName">Administrator</span>
+        <div class="admin-user-meta"><strong id="adminUserName">Administrator</strong><small>Super admin</small></div>
       </div>
       <button class="admin-logout-btn" id="adminLogoutLink" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
     </div>

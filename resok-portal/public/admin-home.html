@@ -18,6 +18,7 @@
   <title>Admin Suite - ReSoK</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="css/admin-shell.css" />
   <style>
     /*
      * A dark "command center" home for the super-admin suite, matching the layout the
@@ -26,8 +27,9 @@
      * secondary) in place of the reference's blue/indigo accent - everything else
      * (spacing, card shapes, the pill-shaped active nav state) follows it closely.
      *
-     * This page only. The other five admin pages keep their light theme for now - ask
-     * before this dark shell spreads to them, since that's a bigger, separate change.
+     * The topbar and sidebar now come from css/admin-shell.css, shared with every other
+     * admin page; what stays here is this page's own content - the KPI row, the chart and
+     * activity panels, the quick-access tiles and the footer.
      */
     :root{
       /* Brand and status accents - fixed, the same in both themes. */
@@ -35,10 +37,13 @@
       --r:#bc0b22; --r-soft:rgba(188,11,34,.18);
       --amber:#f0b429; --amber-soft:rgba(240,180,41,.16);
       --info:#4f8dfd; --info-soft:rgba(79,141,253,.16);
+      /* Names the shared shell reads. */
+      --brand-primary:#00932e; --brand-secondary:#bc0b22;
 
       /* Dark theme (default). A tiny head script sets data-theme before paint, so this
          default is only what a JS-disabled visitor sees. */
       --bg:#0a0f1c; --panel:#111a2c; --panel-2:#0d1526; --line:rgba(255,255,255,.08);
+      --surface:#111a2c; --chrome:#0d1526;
       --line-strong:rgba(255,255,255,.2); --ink:#e9edf5; --muted:#8b96ac;
       --shadow:0 18px 40px rgba(0,0,0,.35);
       --hover:rgba(255,255,255,.06); --hover-soft:rgba(255,255,255,.05);
@@ -47,6 +52,7 @@
     }
     :root[data-theme="light"]{
       --bg:#f5f7fa; --panel:#fff; --panel-2:#fff; --line:#e5e7eb; --line-strong:#cbd2dc;
+      --surface:#fff; --chrome:#fff;
       --ink:#1f2937; --muted:#667085; --shadow:0 2px 14px rgba(15,23,42,.07);
       --hover:rgba(15,23,42,.05); --hover-soft:rgba(15,23,42,.04);
       --note-bad-bg:#fff1f2; --note-bad-fg:#a10d23; --note-bad-line:#fecdd3;
@@ -57,59 +63,6 @@
     a{color:inherit}
     [hidden]{display:none!important}
     button{font-family:inherit}
-
-    /* ---- Topbar ---- */
-    .topbar{position:fixed;top:0;left:0;right:0;height:64px;background:var(--panel-2);
-      border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 20px;z-index:40}
-    .burger{display:none;border:0;background:none;color:var(--muted);font-size:17px;cursor:pointer;padding:6px}
-    .brand{display:flex;align-items:center;gap:11px;text-decoration:none}
-    .brand-mark{width:34px;height:34px;border-radius:9px;background:#fff;border:1px solid var(--line);
-      display:grid;place-items:center;flex:none}
-    .brand-mark img{width:24px;height:24px;object-fit:contain}
-    .brand-text strong{display:block;font-size:14px}
-    .brand-text small{display:block;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-    .crumb{display:none;padding-left:14px;margin-left:2px;border-left:1px solid var(--line)}
-    .crumb span{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-    .crumb strong{font-size:13.5px}
-    .searchbar{flex:1;max-width:420px;margin:0 auto;position:relative;display:none}
-    .searchbar input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;
-      padding:9px 14px 9px 36px;color:var(--ink);font-size:13.5px;font-family:inherit}
-    .searchbar input::placeholder{color:var(--muted)}
-    .searchbar input:focus{outline:2px solid var(--g-line)}
-    .searchbar i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px}
-    .top-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-    .icon-btn{border:0;background:none;color:var(--muted);width:36px;height:36px;border-radius:9px;
-      display:grid;place-items:center;font-size:15px;cursor:pointer}
-    .icon-btn:hover{background:var(--hover);color:var(--ink)}
-    .theme-toggle .fa-moon{display:none}
-    :root[data-theme="light"] .theme-toggle .fa-sun{display:none}
-    :root[data-theme="light"] .theme-toggle .fa-moon{display:inline}
-    .user-chip{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 4px;margin-left:6px}
-    .user-avatar{width:34px;height:34px;border-radius:50%;background:var(--g);color:#fff;font-weight:800;
-      font-size:13px;display:grid;place-items:center;flex:none}
-    .user-meta strong{display:block;font-size:13px}
-    .user-meta small{display:block;color:var(--muted);font-size:11px}
-
-    /* ---- Sidebar ---- */
-    .body{display:flex;padding-top:64px;min-height:100vh}
-    .sidebar{position:fixed;top:64px;bottom:0;left:0;width:250px;background:var(--panel-2);
-      border-right:1px solid var(--line);overflow-y:auto;z-index:35;transition:transform .2s ease}
-    .side-nav{padding:16px 12px 24px}
-    .side-section{padding:14px 12px 8px;color:var(--muted);font-size:10.5px;font-weight:800;
-      text-transform:uppercase;letter-spacing:.08em}
-    .side-section:first-child{padding-top:2px}
-    .side-link{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:10px;
-      color:var(--ink);font-weight:600;font-size:13.5px;text-decoration:none;margin-bottom:3px}
-    .side-link i{width:17px;text-align:center;font-size:14px;color:var(--muted)}
-    .side-link:hover{background:var(--hover-soft);color:var(--ink)}
-    .side-link.active{background:var(--g);color:#fff;box-shadow:0 8px 18px rgba(0,147,46,.35)}
-    .side-link.active i{color:#fff}
-    .side-link.logout{color:var(--r)}
-    .side-link.logout i{color:var(--r)}
-    .sidebar-backdrop{display:none}
-
-    /* ---- Main ---- */
-    .main{margin-left:250px;flex:1;min-width:0;padding:26px 28px 60px}
 
     .hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
     .hero .eyebrow{display:block;color:var(--g);font-weight:800;font-size:11px;text-transform:uppercase;
@@ -183,19 +136,9 @@
     .elec-pill.closed,.elec-pill.published{background:var(--info-soft);color:var(--info)}
     .elec-pill.cancelled{background:var(--r-soft);color:var(--r)}
 
-    @media(max-width:980px){
-      .burger{display:inline-flex;align-items:center}
-      .crumb,.searchbar{display:none!important}
-      .sidebar{transform:translateX(-100%)}
-      .sidebar.open{transform:translateX(0);box-shadow:0 20px 40px rgba(0,0,0,.5)}
-      .main{margin-left:0}
-      .user-meta{display:none}
-      .workbench{grid-template-columns:1fr}
-      .sidebar-backdrop{display:none;position:fixed;inset:64px 0 0 0;background:rgba(0,0,0,.5);z-index:34}
-      .sidebar-backdrop.open{display:block}
-    }
-    @media(min-width:981px){.crumb,.searchbar{display:block}.searchbar{display:flex;align-items:center}}
-    @media(max-width:560px){.topbar{padding:0 12px}.main{padding:18px 16px 48px}.quick-grid{grid-template-columns:1fr}}
+    /* The shell handles the chrome's own breakpoints; these are this page's content. */
+    @media(max-width:980px){.workbench{grid-template-columns:1fr}}
+    @media(max-width:560px){.quick-grid{grid-template-columns:1fr}}
 
     .home-footer{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);
       display:flex;align-items:center;gap:22px;flex-wrap:wrap}
@@ -214,49 +157,48 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <button class="burger" id="sidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
-    <a href="admin-home" class="brand">
-      <span class="brand-mark"><img src="assets/img/logo.png" alt="" /></span>
-      <span class="brand-text"><strong>ReSoK</strong><small>Admin Suite</small></span>
+  <header class="admin-topbar">
+    <button class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+    <a href="admin-home" class="admin-brand">
+      <span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+      <span class="admin-brand-text"><strong>ReSoK</strong><small>Admin Suite</small></span>
     </a>
-    <div class="crumb"><span>Workspace</span><strong>Super Admin</strong></div>
-    <div class="searchbar">
-      <i class="fas fa-search"></i>
-      <input id="quickSearch" type="search" placeholder="Search admin areas..." autocomplete="off" />
+    <div class="admin-crumb"><span>Workspace</span><strong>Super Admin</strong></div>
+    <div class="admin-search">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <label for="adminSearch" style="position:absolute;left:-9999px">Search admin areas</label>
+      <input id="adminSearch" type="search" placeholder="Search admin areas..." autocomplete="off" />
+      <div class="admin-search-results" id="adminSearchResults" hidden></div>
     </div>
-    <div class="top-right">
-      <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle light/dark theme">
-        <i class="fas fa-sun"></i>
-        <i class="fas fa-moon"></i>
+    <div class="admin-topbar-right">
+      <button class="admin-icon-btn admin-theme-toggle" id="adminThemeToggle" title="Toggle light/dark theme">
+        <i class="fas fa-sun"></i><i class="fas fa-moon"></i>
       </button>
-      <button class="icon-btn" id="fullscreenToggle" title="Fullscreen"><i class="fas fa-expand"></i></button>
-      <a class="icon-btn" href="dashboard" title="Member portal"><i class="fas fa-arrow-left"></i></a>
-      <div class="user-chip">
-        <div class="user-avatar" id="adminUserAvatar">A</div>
-        <div class="user-meta"><strong id="adminUserName">Administrator</strong><small>Super admin</small></div>
+      <button class="admin-icon-btn" id="adminFullscreenToggle" title="Fullscreen"><i class="fas fa-expand"></i></button>
+      <a class="admin-icon-btn" href="dashboard" title="Member portal"><i class="fas fa-arrow-left"></i></a>
+      <div class="admin-user-chip">
+        <div class="admin-user-avatar" id="adminUserAvatar">A</div>
+        <div class="admin-user-meta"><strong id="adminUserName">Administrator</strong><small>Super admin</small></div>
       </div>
-      <button class="icon-btn" id="adminLogoutLink" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
+      <button class="admin-logout-btn" id="adminLogoutLink" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
     </div>
   </header>
 
-  <div class="body">
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-    <aside class="sidebar" id="sidebar">
-      <nav class="side-nav">
-        <div class="side-section">Super Admin</div>
-        <a href="admin-home" class="side-link active"><i class="fas fa-grid-2"></i> Dashboard</a>
-        <a href="analytics" class="side-link"><i class="fas fa-chart-line"></i> Analytics</a>
-        <a href="admin-review" class="side-link"><i class="fas fa-user-shield"></i> Administrators</a>
-        <a href="security" class="side-link"><i class="fas fa-shield-halved"></i> Threat Assessment</a>
-        <a href="election-admin" class="side-link"><i class="fas fa-check-to-slot"></i> Elections</a>
-        <a href="ict" class="side-link"><i class="fas fa-server"></i> ICT Operations</a>
-        <div class="side-section">Account</div>
-        <a href="#" class="side-link logout" id="sideLogout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  <div class="admin-body">
+    <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop"></div>
+    <aside class="admin-sidebar" id="adminSidebar">
+      <nav class="admin-nav">
+        <div class="admin-nav-section">Super Admin</div>
+        <a href="admin-home" class="admin-nav-link" data-page="admin-home"><i class="fas fa-grid-2"></i> Dashboard</a>
+        <a href="analytics" class="admin-nav-link" data-page="analytics"><i class="fas fa-chart-line"></i> Analytics</a>
+        <a href="admin-review" class="admin-nav-link" data-page="admin-review"><i class="fas fa-user-shield"></i> Administrators</a>
+        <a href="security" class="admin-nav-link" data-page="security"><i class="fas fa-shield-halved"></i> Threat Assessment</a>
+        <a href="election-admin" class="admin-nav-link" data-page="election-admin"><i class="fas fa-check-to-slot"></i> Elections</a>
+        <a href="ict" class="admin-nav-link" data-page="ict"><i class="fas fa-server"></i> ICT Operations</a>
       </nav>
     </aside>
 
-    <main class="main">
+    <main class="admin-main">
       <div class="hero">
         <div>
           <span class="eyebrow">Super admin</span>
@@ -342,6 +284,7 @@
     </main>
   </div>
 
+  <script src="js/admin-shell.js"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     (function () {
@@ -356,47 +299,14 @@
         return node;
       }
 
-      // ---- chrome: sidebar toggle, fullscreen, logout ----
-      var sidebar = el("sidebar"), backdrop = el("sidebarBackdrop");
-      function closeSidebar() { sidebar.classList.remove("open"); backdrop.classList.remove("open"); }
-      el("sidebarToggle").addEventListener("click", function () {
-        sidebar.classList.toggle("open"); backdrop.classList.toggle("open");
-      });
-      backdrop.addEventListener("click", closeSidebar);
-
-      el("fullscreenToggle").addEventListener("click", function () {
-        if (document.fullscreenElement) document.exitFullscreen();
-        else document.documentElement.requestFullscreen().catch(function () {});
-      });
-
+      // The topbar and sidebar - sidebar toggle, theme, fullscreen, search and logout - are
+      // wired by js/admin-shell.js, shared with every other admin page.
       var footerTop = el("footerBackToTop");
       if (footerTop) {
         footerTop.addEventListener("click", function () {
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
       }
-
-      var THEME_KEY = "resok-admin-theme";
-      el("themeToggle").addEventListener("click", function () {
-        var next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
-        document.documentElement.setAttribute("data-theme", next);
-        try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
-      });
-
-      function doLogout(event) {
-        event.preventDefault();
-        window.ResokPortal.logout();
-      }
-      el("adminLogoutLink").addEventListener("click", doLogout);
-      el("sideLogout").addEventListener("click", doLogout);
-
-      // ---- quick access search: filters the tiles by label, nothing fabricated ----
-      el("quickSearch").addEventListener("input", function () {
-        var q = this.value.trim().toLowerCase();
-        document.querySelectorAll("#quickGrid .quick-tile").forEach(function (tile) {
-          tile.hidden = q !== "" && tile.dataset.label.indexOf(q) === -1;
-        });
-      });
 
       // ---- a tiny bar chart, drawn rather than pulled from a library ----
       function barChart(rows, valueKey, labelKey) {

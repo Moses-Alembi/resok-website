@@ -1,6 +1,13 @@
 /*
- * Shared shell for the super-admin pages (Analytics, Administrators, Threat Assessment,
- * Elections, ICT Operations) - a fixed topbar + sidebar, modelled on a standard admin-suite
+ * BUMP THE ?v= ON EVERY PAGE THAT LOADS THIS FILE WHEN YOU CHANGE IT.
+ *
+ * The host serves static assets with Cache-Control: max-age=31536000, immutable, so a
+ * browser that has loaded this once will not fetch it again for a year - the HTML updates,
+ * the stylesheet does not, and the new markup renders unstyled. See commit 3ca988d, which
+ * hit the same thing with publications.js. Grep for admin-shell.css?v= to find them all.
+ *
+ * Shared shell for the super-admin pages (Dashboard, Analytics, Administrators, Threat
+ * Assessment, Elections) - a fixed topbar + sidebar, modelled on a standard admin-suite
  * layout (sidebar navigation, page header, KPI/panel cards) but built in ReSoK's own palette
  * and hand-rolled CSS rather than a framework, to match how the rest of the site is built.
  *

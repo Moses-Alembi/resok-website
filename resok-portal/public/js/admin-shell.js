@@ -1,4 +1,8 @@
 /**
+ * BUMP THE ?v= ON EVERY PAGE THAT LOADS THIS FILE WHEN YOU CHANGE IT - the host serves
+ * static assets with a 1-year immutable cache header, so without it the browser keeps
+ * running the old copy against new markup. See css/admin-shell.css for the full note.
+ *
  * Wiring for the shared super-admin shell (topbar + sidebar): mobile open/close, marking the
  * current page's nav link active from the URL rather than a hand-set class per file, filling
  * the user chip once ResokPortal knows who is signed in, and logout. One file so the five

@@ -213,22 +213,40 @@
     // page itself already calls. Pages that call /api/admin/whoami expose it via this hook so
     // the chip doesn't need its own extra network round trip.
     window.ResokAdminShell = {
+      /**
+       * A readable name from whatever the account has. whoami carries an email and no name,
+       * so "moses.alembi@resok.org" became "moses.alembi" on screen - the separators that
+       * stand in for spaces in an address are not part of anybody's name.
+       */
+      displayName: function (info) {
+        info = info || {};
+        if (info.name) return info.name;
+        var local = String(info.email || "").split("@")[0];
+        if (!local) return "Administrator";
+        return local
+          .split(/[._-]+/)
+          .filter(Boolean)
+          .map(function (part) { return part.charAt(0).toUpperCase() + part.slice(1); })
+          .join(" ");
+      },
+
       setUser: function (info) {
         info = info || {};
         var avatar = document.getElementById("adminUserAvatar");
         var name = document.getElementById("adminUserName");
+        var full = window.ResokAdminShell.displayName(info);
         if (avatar) {
-          var source = info.name || info.email || "";
-          var initials = source
-            .split(/[\s.@]+/)
+          avatar.textContent = full
+            .split(/\s+/)
             .filter(Boolean)
             .slice(0, 2)
-            .map(function (part) { return part[0].toUpperCase(); })
+            .map(function (part) { return part.charAt(0).toUpperCase(); })
             .join("") || "A";
-          avatar.textContent = initials;
         }
         if (name) {
-          name.textContent = info.name || info.email || "Administrator";
+          name.textContent = full;
+          // The address still belongs somewhere, so it goes on the hover title.
+          if (info.email) name.title = info.email;
         }
       }
     };

@@ -7,7 +7,7 @@
   <title>Analytics - ReSoK Admin</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell4" />
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" />
   <script>
     (function () {
       try {
@@ -153,7 +153,7 @@
     </div>
   </div>
 
-  <script src="js/admin-shell.js?v=20260921-shell4"></script>
+  <script src="js/admin-shell.js?v=20260921-shell5"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     (function () {
@@ -182,37 +182,70 @@
         if (sub) c.appendChild(make("div", "sub", sub));
         return c;
       }
+      var MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-      // A tiny bar chart, drawn rather than pulled from a library: the portal ships no chart
-      // dependency and this needs no interaction, only to be read.
-      //
-      // Bars are capped at a fixed width and the group centred, rather than always stretched
-      // to fill the box - with only a month or two of data (a new deployment, a quiet period)
-      // one or two bars would otherwise blow up to the full width and height of the card.
-      function barChart(rows, valueKey, labelKey) {
-        var max = rows.reduce(function (m, r) { return Math.max(m, r[valueKey]); }, 0) || 1;
-        var w = 640, h = 150, pad = 22, gap = 10, maxBarWidth = 56;
-        var slot = Math.min((w - pad * 2) / rows.length, maxBarWidth + gap);
-        var bw = Math.max(slot - gap, 6);
-        var groupWidth = slot * rows.length;
-        var offset = pad + Math.max(0, (w - pad * 2 - groupWidth) / 2);
-        var svg = ['<svg class="chart" viewBox="0 0 ' + w + ' ' + (h + 26) + '" role="img">'];
-        rows.forEach(function (r, i) {
-          var bh = Math.round((r[valueKey] / max) * (h - pad));
-          var x = offset + i * slot + (slot - bw) / 2;
-          svg.push('<rect x="' + x.toFixed(1) + '" y="' + (h - bh) + '" width="' + bw.toFixed(1)
-            + '" height="' + bh + '" rx="4" fill="#00932e"></rect>');
-          if (r[valueKey] > 0) {
-            svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (h - bh - 7) + '" text-anchor="middle" '
-              + 'font-size="10" fill="var(--ink)">' + r[valueKey] + '</text>');
+      /**
+       * Twelve months, always. The API returns only the months that have applications, so a
+       * quiet year arrived as a single point and drew a lone bar floating in an empty card.
+       * Filling the empty months in and drawing an area puts the spike on a real timeline.
+       */
+      function growthSeries(newByMonth) {
+        var counts = {};
+        (newByMonth || []).forEach(function (x) { counts[x.month] = x.count; });
+        var series = [], now = new Date();
+        for (var i = 11; i >= 0; i--) {
+          var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          var key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+          series.push({ label: MONTH_NAMES[d.getMonth()], count: counts[key] || 0 });
+        }
+        return series;
+      }
+
+      // Trend over time: an area for a single series, on a hairline baseline. Only the peak
+      // is direct-labelled - a number on every point goes unread.
+      function monthAreaChart(series) {
+        var w = 640, h = 160, padX = 16, padTop = 24, padBottom = 26;
+        var plotH = h - padTop - padBottom;
+        var max = series.reduce(function (m, p) { return Math.max(m, p.count); }, 0) || 1;
+        var step = (w - padX * 2) / (series.length - 1);
+        var pts = series.map(function (p, i) {
+          return [padX + i * step, padTop + plotH - (p.count / max) * plotH];
+        });
+        var line = pts.map(function (p, i) {
+          return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+        }).join(" ");
+        var area = line + " L " + pts[pts.length - 1][0].toFixed(1) + " " + (padTop + plotH)
+                 + " L " + padX + " " + (padTop + plotH) + " Z";
+
+        var svg = ['<svg class="chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" '
+                 + 'aria-label="New members per month, last twelve months">'];
+        svg.push('<line x1="' + padX + '" y1="' + (padTop + plotH) + '" x2="' + (w - padX)
+               + '" y2="' + (padTop + plotH) + '" stroke="var(--line)" stroke-width="1"></line>');
+        svg.push('<path d="' + area + '" fill="var(--brand-primary)" opacity=".14"></path>');
+        svg.push('<path d="' + line + '" fill="none" stroke="var(--brand-primary)" stroke-width="2" '
+               + 'stroke-linejoin="round" stroke-linecap="round"></path>');
+
+        var peak = series.reduce(function (best, p, i) {
+          return p.count > series[best].count ? i : best;
+        }, 0);
+        series.forEach(function (p, i) {
+          var pt = pts[i];
+          if (i === peak && p.count > 0) {
+            svg.push('<circle cx="' + pt[0].toFixed(1) + '" cy="' + pt[1].toFixed(1)
+                   + '" r="4" fill="var(--brand-primary)" stroke="var(--surface)" stroke-width="2"></circle>');
+            svg.push('<text x="' + pt[0].toFixed(1) + '" y="' + (pt[1] - 10).toFixed(1)
+                   + '" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)">'
+                   + p.count + '</text>');
           }
-          // Only every other label on a crowded axis, or they collide.
-          if (rows.length <= 14 || i % 2 === 0) {
-            svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (h + 15) + '" text-anchor="middle" '
-              + 'font-size="9.5" fill="var(--muted)">' + String(r[labelKey]) + '</text>');
+          svg.push('<rect x="' + (pt[0] - step / 2).toFixed(1) + '" y="' + padTop + '" width="'
+                 + Math.max(step, 16).toFixed(1) + '" height="' + plotH + '" fill="transparent"><title>'
+                 + p.label + ": " + p.count + (p.count === 1 ? " member" : " members") + '</title></rect>');
+          if (i % 2 === 0) {
+            svg.push('<text x="' + pt[0].toFixed(1) + '" y="' + (h - 8)
+                   + '" text-anchor="middle" font-size="9.5" fill="var(--muted)">' + p.label + '</text>');
           }
         });
-        svg.push('</svg>');
+        svg.push("</svg>");
         return svg.join("");
       }
 
@@ -312,10 +345,9 @@
           grid.appendChild(c1);
 
           var c2 = card("New members", "Applications recorded per month, last twelve months.", false, "fa-arrow-trend-up");
-          if (m.newByMonth.length) {
-            c2.insertAdjacentHTML("beforeend", barChart(
-              m.newByMonth.map(function (x) { return { label: x.month.slice(5), count: x.count }; }),
-              "count", "label"));
+          var growth = growthSeries(m.newByMonth);
+          if (growth.some(function (p) { return p.count > 0; })) {
+            c2.insertAdjacentHTML("beforeend", monthAreaChart(growth));
           } else {
             c2.appendChild(make("p", "empty", "No applications in the last twelve months."));
           }

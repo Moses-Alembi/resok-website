@@ -19,7 +19,7 @@
   <title>Admin Suite - ReSoK</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell4" />
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" />
   <style>
     /*
      * A dark "command center" home for the super-admin suite, matching the layout the
@@ -105,6 +105,27 @@
     .main-stack,.side-stack{display:grid;gap:18px;align-content:start}
 
     svg.chart{width:100%;height:auto;display:block;overflow:visible}
+
+    /* Part-to-whole: one thin bar, segments separated by a surface-coloured gap rather than
+       a border. min-width keeps a 1% slice visible and big enough to hover. */
+    .stack-bar{display:flex;gap:2px;height:14px;border-radius:999px;overflow:hidden;margin:4px 0 16px}
+    .stack-seg{min-width:6px;border-radius:2px}
+    .stack-seg:first-child{border-radius:999px 2px 2px 999px}
+    .stack-seg:last-child{border-radius:2px 999px 999px 2px}
+    .stack-seg:only-child{border-radius:999px}
+    .stack-legend{list-style:none;display:grid;gap:8px}
+    .stack-legend li{display:flex;align-items:center;gap:10px;font-size:13px}
+    .stack-dot{width:9px;height:9px;border-radius:3px;flex:none}
+    .stack-name{flex:1;min-width:0;color:var(--muted)}
+    .stack-legend b{font-variant-numeric:tabular-nums}
+    .stack-legend small{color:var(--muted);font-size:11.5px;min-width:34px;text-align:right;
+      font-variant-numeric:tabular-nums}
+    /* Status, not categorical: these mean good/bad, and each is labelled in the legend. */
+    .status-active{background:var(--g)}
+    .status-under_review{background:var(--info)}
+    .status-payment_required{background:var(--amber)}
+    .status-expired{background:var(--muted)}
+    .status-rejected{background:var(--r)}
     .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center}
 
     .activity-list{display:grid;gap:2px}
@@ -288,7 +309,7 @@
     </main>
   </div>
 
-  <script src="js/admin-shell.js?v=20260921-shell4"></script>
+  <script src="js/admin-shell.js?v=20260921-shell5"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     (function () {
@@ -312,32 +333,6 @@
         });
       }
 
-      // ---- a tiny bar chart, drawn rather than pulled from a library ----
-      // Bars are capped at a fixed width and the group centred, rather than stretched to fill
-      // the box - with one or two months of data a single bar would otherwise blow up to the
-      // full width and height of the card.
-      function barChart(rows, valueKey, labelKey) {
-        var max = rows.reduce(function (m, r) { return Math.max(m, r[valueKey]); }, 0) || 1;
-        var w = 560, h = 170, pad = 22, gap = 10, maxBarWidth = 56;
-        var slot = Math.min((w - pad * 2) / rows.length, maxBarWidth + gap);
-        var bw = Math.max(slot - gap, 6);
-        var offset = pad + Math.max(0, (w - pad * 2 - slot * rows.length) / 2);
-        var svg = ['<svg class="chart" viewBox="0 0 ' + w + ' ' + (h + 26) + '" role="img">'];
-        rows.forEach(function (r, i) {
-          var bh = Math.round((r[valueKey] / max) * (h - pad));
-          var x = offset + i * slot + (slot - bw) / 2;
-          svg.push('<rect x="' + x.toFixed(1) + '" y="' + (h - bh) + '" width="' + bw.toFixed(1)
-            + '" height="' + bh + '" rx="4" fill="var(--g)"></rect>');
-          if (r[valueKey] > 0) {
-            svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (h - bh - 7) + '" text-anchor="middle" '
-              + 'font-size="11" fill="var(--ink)">' + num(r[valueKey]) + '</text>');
-          }
-          svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (h + 17) + '" text-anchor="middle" '
-            + 'font-size="10.5" fill="var(--muted)">' + String(r[labelKey]) + '</text>');
-        });
-        svg.push('</svg>');
-        return svg.join("");
-      }
 
       var STATUS_LABELS = {
         active: "Active", under_review: "Under review", payment_required: "Payment req.",
@@ -413,24 +408,132 @@
         if (r) card("fa-newspaper", "r", r.totals.reads, "Article reads", "last 30 days");
       }
 
+      /**
+       * Standing is part-to-whole, so it is one stacked bar, not a column per standing -
+       * columns made a 90-vs-1 split read as one tall bar beside an empty slot. Membership
+       * standing genuinely means good/bad, so the segments wear the status colours, and
+       * every one carries its name and count beside it: colour is never the only cue.
+       */
       function renderStatusChart(members) {
         var mount = el("statusChart");
-        if (!members || !members.total) { mount.innerHTML = '<p class="empty">No member records yet.</p>'; return; }
+        mount.textContent = "";
+        if (!members || !members.total) {
+          mount.appendChild(make("p", "empty", "No member records yet."));
+          return;
+        }
         var order = ["active", "under_review", "payment_required", "expired", "rejected"];
         var rows = order.filter(function (k) { return members.byStatus[k]; }).map(function (k) {
-          return { label: STATUS_LABELS[k] || k, count: members.byStatus[k] };
+          return { key: k, label: STATUS_LABELS[k] || k, count: members.byStatus[k] };
         });
-        mount.innerHTML = rows.length ? barChart(rows, "count", "label") : '<p class="empty">No member records yet.</p>';
+        if (!rows.length) { mount.appendChild(make("p", "empty", "No member records yet.")); return; }
+
+        var total = rows.reduce(function (sum, r) { return sum + r.count; }, 0) || 1;
+
+        var bar = make("div", "stack-bar");
+        bar.setAttribute("role", "img");
+        bar.setAttribute("aria-label", rows.map(function (r) {
+          return r.label + ": " + r.count;
+        }).join(", "));
+        rows.forEach(function (r) {
+          var seg = make("span", "stack-seg status-" + r.key);
+          seg.style.flexGrow = String(r.count);
+          seg.title = r.label + " - " + num(r.count) + " (" + Math.round(r.count / total * 100) + "%)";
+          bar.appendChild(seg);
+        });
+
+        var legend = make("ul", "stack-legend");
+        rows.forEach(function (r) {
+          var item = document.createElement("li");
+          item.append(
+            make("span", "stack-dot status-" + r.key),
+            make("span", "stack-name", r.label),
+            make("b", null, num(r.count)),
+            make("small", null, Math.round(r.count / total * 100) + "%")
+          );
+          legend.appendChild(item);
+        });
+
+        mount.append(bar, legend);
+      }
+
+      var MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+      /**
+       * Twelve months, always - the API returns only the months that have applications, so a
+       * quiet year came back as a single point and drew a single bar. Filling the empty
+       * months in and drawing an area puts that spike on a real timeline instead.
+       */
+      function growthSeries(newByMonth) {
+        var counts = {};
+        (newByMonth || []).forEach(function (x) { counts[x.month] = x.count; });
+        var series = [], now = new Date();
+        for (var i = 11; i >= 0; i--) {
+          var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          var key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+          series.push({ key: key, label: MONTH_NAMES[d.getMonth()], count: counts[key] || 0 });
+        }
+        return series;
+      }
+
+      function areaChart(series) {
+        var w = 560, h = 150, padX = 14, padTop = 22, padBottom = 26;
+        var plotH = h - padTop - padBottom;
+        var max = series.reduce(function (m, p) { return Math.max(m, p.count); }, 0) || 1;
+        var step = series.length > 1 ? (w - padX * 2) / (series.length - 1) : 0;
+        var pointAt = function (p, i) {
+          return [padX + i * step, padTop + plotH - (p.count / max) * plotH];
+        };
+        var pts = series.map(pointAt);
+        var line = pts.map(function (p, i) {
+          return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+        }).join(" ");
+        var area = line + " L " + pts[pts.length - 1][0].toFixed(1) + " " + (padTop + plotH)
+                 + " L " + padX + " " + (padTop + plotH) + " Z";
+
+        var svg = ['<svg class="chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="'
+                 + 'New members per month for the last twelve months">'];
+        // Hairline baseline, one shade off the surface - solid, never dashed.
+        svg.push('<line x1="' + padX + '" y1="' + (padTop + plotH) + '" x2="' + (w - padX)
+               + '" y2="' + (padTop + plotH) + '" stroke="var(--line)" stroke-width="1"></line>');
+        svg.push('<path d="' + area + '" fill="var(--g)" opacity=".14"></path>');
+        svg.push('<path d="' + line + '" fill="none" stroke="var(--g)" stroke-width="2" '
+               + 'stroke-linejoin="round" stroke-linecap="round"></path>');
+
+        // Direct-label the peak only. A number on every point is noise; the rest are on hover.
+        var peak = series.reduce(function (best, p, i) {
+          return p.count > series[best].count ? i : best;
+        }, 0);
+        series.forEach(function (p, i) {
+          var pt = pts[i];
+          if (i === peak && p.count > 0) {
+            svg.push('<circle cx="' + pt[0].toFixed(1) + '" cy="' + pt[1].toFixed(1)
+                   + '" r="4" fill="var(--g)" stroke="var(--panel)" stroke-width="2"></circle>');
+            svg.push('<text x="' + pt[0].toFixed(1) + '" y="' + (pt[1] - 10).toFixed(1)
+                   + '" text-anchor="middle" font-size="11" font-weight="700" '
+                   + 'fill="var(--ink)">' + p.count + '</text>');
+          }
+          // A hit target wide enough to land on, carrying the value for hover.
+          svg.push('<rect x="' + (pt[0] - step / 2).toFixed(1) + '" y="' + padTop
+                 + '" width="' + Math.max(step, 16).toFixed(1) + '" height="' + plotH
+                 + '" fill="transparent"><title>' + p.label + ": " + p.count
+                 + (p.count === 1 ? " member" : " members") + '</title></rect>');
+          // Every other month on the axis, so labels never collide.
+          if (i % 2 === 0) {
+            svg.push('<text x="' + pt[0].toFixed(1) + '" y="' + (h - 8)
+                   + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + p.label + '</text>');
+          }
+        });
+        svg.push('</svg>');
+        return svg.join("");
       }
 
       function renderGrowthChart(members) {
         var mount = el("growthChart");
-        if (!members || !members.newByMonth || !members.newByMonth.length) {
-          mount.innerHTML = '<p class="empty">No applications in the last twelve months.</p>';
-          return;
-        }
-        var rows = members.newByMonth.map(function (x) { return { label: x.month.slice(5), count: x.count }; });
-        mount.innerHTML = barChart(rows, "count", "label");
+        var series = growthSeries(members && members.newByMonth);
+        var any = series.some(function (p) { return p.count > 0; });
+        mount.innerHTML = any
+          ? areaChart(series)
+          : '<p class="empty">No applications in the last twelve months.</p>';
       }
 
       function renderElections(elections) {
@@ -453,12 +556,7 @@
       async function start() {
         try {
           var me = await window.ResokPortal.api("/api/admin/whoami");
-          var avatar = el("adminUserAvatar"), name = el("adminUserName");
-          var source = me.name || me.email || "";
-          var initials = source.split(/[\s.@]+/).filter(Boolean).slice(0, 2)
-            .map(function (p) { return p[0].toUpperCase(); }).join("") || "A";
-          avatar.textContent = initials;
-          name.textContent = me.name || me.email || "Administrator";
+          window.ResokAdminShell.setUser(me);
 
           if (!me.isSuperAdmin) {
             el("gateNotice").appendChild(make("div", "note bad",
@@ -467,7 +565,7 @@
             return;
           }
 
-          var firstName = (me.name || me.email || "").split(/[\s@]/)[0];
+          var firstName = (window.ResokAdminShell.displayName(me) || "").split(/\s+/)[0];
           if (firstName) el("heroTitle").textContent = "Welcome back, " + firstName;
 
           if (!me.superAdminsConfigured) {

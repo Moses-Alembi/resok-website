@@ -19,7 +19,7 @@
   <title>Admin Suite - ReSoK</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell3" />
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell4" />
   <style>
     /*
      * A dark "command center" home for the super-admin suite, matching the layout the
@@ -102,7 +102,7 @@
     .panel-head h2{font-size:15.5px}
     .panel-head a{color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:none}
     .panel-head a:hover{color:var(--g)}
-    .side-stack{display:grid;gap:18px}
+    .main-stack,.side-stack{display:grid;gap:18px;align-content:start}
 
     svg.chart{width:100%;height:auto;display:block;overflow:visible}
     .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center}
@@ -217,13 +217,25 @@
       <div id="dashboardBody" hidden>
         <div class="kpi-grid" id="kpiGrid"></div>
 
+        <!-- Two independent columns rather than two grid rows. As rows, the shorter column
+             had to wait for the taller one to finish before the next row could start, which
+             left a tall gap under the first chart. -->
         <div class="workbench">
-          <section class="panel">
-            <div class="panel-head">
-              <div><span class="kicker">Membership</span><h2>Members by standing</h2></div>
-            </div>
-            <div id="statusChart"><p class="empty">Loading&hellip;</p></div>
-          </section>
+          <div class="main-stack">
+            <section class="panel">
+              <div class="panel-head">
+                <div><span class="kicker">Membership</span><h2>Members by standing</h2></div>
+              </div>
+              <div id="statusChart"><p class="empty">Loading&hellip;</p></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div><span class="kicker">Growth</span><h2>New members, last 12 months</h2></div>
+              </div>
+              <div id="growthChart"><p class="empty">Loading&hellip;</p></div>
+            </section>
+          </div>
 
           <div class="side-stack">
             <section class="panel">
@@ -232,6 +244,14 @@
                 <a href="security#events">View all</a>
               </div>
               <div class="activity-list" id="activityList"><p class="empty">Loading&hellip;</p></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div><span class="kicker">Voting</span><h2>Elections</h2></div>
+                <a href="election-admin">Manage</a>
+              </div>
+              <div class="elec-list" id="electionsList"><p class="empty">Loading&hellip;</p></div>
             </section>
 
             <section class="panel">
@@ -246,23 +266,6 @@
               </div>
             </section>
           </div>
-        </div>
-
-        <div class="workbench" style="margin-top:18px">
-          <section class="panel">
-            <div class="panel-head">
-              <div><span class="kicker">Growth</span><h2>New members, last 12 months</h2></div>
-            </div>
-            <div id="growthChart"><p class="empty">Loading&hellip;</p></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div><span class="kicker">Voting</span><h2>Elections</h2></div>
-              <a href="election-admin">Manage</a>
-            </div>
-            <div class="elec-list" id="electionsList"><p class="empty">Loading&hellip;</p></div>
-          </section>
         </div>
       </div>
 
@@ -285,7 +288,7 @@
     </main>
   </div>
 
-  <script src="js/admin-shell.js?v=20260921-shell3"></script>
+  <script src="js/admin-shell.js?v=20260921-shell4"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     (function () {
@@ -310,15 +313,20 @@
       }
 
       // ---- a tiny bar chart, drawn rather than pulled from a library ----
+      // Bars are capped at a fixed width and the group centred, rather than stretched to fill
+      // the box - with one or two months of data a single bar would otherwise blow up to the
+      // full width and height of the card.
       function barChart(rows, valueKey, labelKey) {
         var max = rows.reduce(function (m, r) { return Math.max(m, r[valueKey]); }, 0) || 1;
-        var w = 560, h = 170, pad = 22, gap = 6;
-        var bw = (w - pad * 2) / rows.length;
+        var w = 560, h = 170, pad = 22, gap = 10, maxBarWidth = 56;
+        var slot = Math.min((w - pad * 2) / rows.length, maxBarWidth + gap);
+        var bw = Math.max(slot - gap, 6);
+        var offset = pad + Math.max(0, (w - pad * 2 - slot * rows.length) / 2);
         var svg = ['<svg class="chart" viewBox="0 0 ' + w + ' ' + (h + 26) + '" role="img">'];
         rows.forEach(function (r, i) {
           var bh = Math.round((r[valueKey] / max) * (h - pad));
-          var x = pad + i * bw;
-          svg.push('<rect x="' + (x + gap / 2).toFixed(1) + '" y="' + (h - bh) + '" width="' + (bw - gap).toFixed(1)
+          var x = offset + i * slot + (slot - bw) / 2;
+          svg.push('<rect x="' + x.toFixed(1) + '" y="' + (h - bh) + '" width="' + bw.toFixed(1)
             + '" height="' + bh + '" rx="4" fill="var(--g)"></rect>');
           if (r[valueKey] > 0) {
             svg.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (h - bh - 7) + '" text-anchor="middle" '

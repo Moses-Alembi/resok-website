@@ -100,15 +100,16 @@
       <section class="panel" id="ictReportPanel">
         <h2>Something not working?</h2>
         <p style="color:var(--muted);font-size:13.5px;line-height:1.55;margin:-4px 0 14px">
-          Report an ICT problem &mdash; a laptop, the printer, email, the website. You only
-          need to say what is wrong; ICT will come back to you here.
+          Trouble with the portal or the website &mdash; signing in, a payment that has not
+          shown up, your membership card, CPD tokens, or an email you never received. Just say
+          what went wrong; we will look into it and you can follow its status here.
         </p>
         <div id="ictReportNotice" class="notice"></div>
         <form id="ictReportForm" autocomplete="off">
           <input class="in" id="ictSubject" maxlength="200" required
-                 placeholder="The printer in reception jams on every third page"
+                 placeholder="My payment from last week still shows as pending"
                  style="width:100%;border:1px solid #d0d5dd;border-radius:7px;padding:10px 12px;font:inherit;font-size:14px" />
-          <textarea id="ictDescription" rows="2" placeholder="Anything else worth knowing (optional)"
+          <textarea id="ictDescription" rows="2" placeholder="Anything that helps us find it: dates, M-Pesa code, the page you were on (optional)"
                  style="width:100%;border:1px solid #d0d5dd;border-radius:7px;padding:10px 12px;font:inherit;font-size:14px;margin-top:10px"></textarea>
           <button class="btn btn-primary" type="submit" id="ictReportBtn" style="margin-top:12px">
             <i class="fas fa-paper-plane"></i> Report it
@@ -332,7 +333,7 @@
             description: document.getElementById("ictDescription").value.trim()
           })
         });
-        ictReportNotice("Reported as " + data.ticket.reference + ". ICT will reply here.", "success");
+        ictReportNotice("Reported as " + data.ticket.reference + ". We will look into it; its status shows below.", "success");
         document.getElementById("ictReportForm").reset();
         loadMyTickets();
       } catch (error) {

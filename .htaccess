@@ -91,7 +91,10 @@ DirectoryIndex index.html
 Options -Indexes
 
 # Source, config, and data files must never be served, wherever they end up in the tree.
-<FilesMatch "^\.|\.(sql|py|sh|ps1|yml|yaml|md|ini|log|bak|sample|dist|lock)$">
+# Includes backup copies (config.local.php.bak, file~, .old/.orig/.save), which Apache would
+# otherwise serve as plain text - secrets and all - because they no longer end in .php.
+# Not .json: manifest.json has to stay public.
+<FilesMatch "^\.|~$|\.(sql|py|sh|ps1|yml|yaml|md|ini|log|bak|sample|dist|lock|neon|old|orig|swp|tmp|save|backup)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -110,7 +113,9 @@ Options -Indexes
   ExpiresByType text/css "access plus 1 year"
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType text/javascript "access plus 1 year"
-  ExpiresByType application/json "access plus 1 year"
+  # No application/json here: the portal API answers in JSON, and a year-long Expires on a
+  # member's own data (next to the API's no-store) is one cache setting away from serving it
+  # to someone else. manifest.json does not need a year's caching.
   ExpiresByType image/jpeg "access plus 1 year"
   ExpiresByType image/png "access plus 1 year"
   ExpiresByType image/gif "access plus 1 year"

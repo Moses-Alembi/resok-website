@@ -48,7 +48,8 @@ MEMBER=$(login t-member@local)
 # The developer account's password, which is also the one used to sign in to localhost.
 # Hard-coded here and therefore a standing trap: changing that password silently breaks
 # this suite, and the failure reads as "Missing token" rather than as a wrong password.
-SUPER=$(login "$SUPER_EMAIL" "${RESOK_DEV_PASSWORD:-DevAdmin2026!}")
+source "$(dirname "$0")/lib-session.sh"
+SUPER=$(minted_session "$SUPER_EMAIL")
 if ! grep -q token "$SUPER" 2>/dev/null && [ ! -s "$SUPER" ]; then :; fi
 ICT_ID=$($MYSQL -N -e "SELECT id FROM users WHERE email='t-ict@local';")
 

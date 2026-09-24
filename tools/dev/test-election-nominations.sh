@@ -51,7 +51,8 @@ get()  { curl -s -b "$1" --max-time 20 "${API}$2"; }
 post() { curl -s -b "$1" -X POST --max-time 20 "${API}$2" -H 'Content-Type: application/json' -d "${3:-{\}}"; }
 patch(){ curl -s -b "$1" -X PATCH --max-time 20 "${API}$2" -H 'Content-Type: application/json' -d "$3"; }
 
-OFFICER=$(login dev@resok.local DevAdmin2026!)
+source "$(dirname "$0")/lib-session.sh"
+OFFICER=$(minted_session dev@resok.local)
 MEM_A=$(login nom-a@resok.local TestPass123)
 MEM_B=$(login nom-b@resok.local TestPass123)
 OUTSIDER=$(login nom-outsider@resok.local TestPass123)
@@ -59,8 +60,13 @@ OUTSIDER=$(login nom-outsider@resok.local TestPass123)
 $MYSQL -e "DELETE FROM elections WHERE slug LIKE 'test-nom%';" >/dev/null
 
 echo "Setting up an election with a nomination window:"
+# Relative to today: the window was fixed to 1-20 Sep 2026 and silently expired, after
+# which every nomination step failed with "Nominations have closed".
+NOM_OPEN=$(date -d 'yesterday' '+%Y-%m-%d 08:00')
+NOM_CLOSE=$(date -d '+10 days' '+%Y-%m-%d 17:00')
+VOTE_OPEN=$(date -d '+15 days' '+%Y-%m-%d 08:00')
 NEW=$(post "$OFFICER" 'admin/elections' \
-  '{"title":"Test Nom Election","eligibilityCutoff":"2026-09-01","nominationsOpenAt":"2026-09-01 08:00","nominationsCloseAt":"2026-09-20 17:00","opensAt":"2026-09-25 08:00","closesAt":"2030-01-01 17:00"}')
+  "{\"title\":\"Test Nom Election\",\"eligibilityCutoff\":\"2026-09-01\",\"nominationsOpenAt\":\"$NOM_OPEN\",\"nominationsCloseAt\":\"$NOM_CLOSE\",\"opensAt\":\"$VOTE_OPEN\",\"closesAt\":\"2030-01-01 17:00\"}")
 check "an election with nomination dates is created" '"nominationsOpenAt"' "$NEW"
 EID=$(jsonint "$NEW" id)
 check "nominations closing after voting opens is refused" 'close before voting opens' \

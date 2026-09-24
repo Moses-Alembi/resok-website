@@ -30,7 +30,8 @@ get()  { curl -s -b "$1" --max-time 25 "${API}$2"; }
 post() { curl -s -b "$1" -X POST --max-time 25 "${API}$2" -H 'Content-Type: application/json' -d "${3:-{\}}"; }
 patch(){ curl -s -b "$1" -X PATCH --max-time 25 "${API}$2" -H 'Content-Type: application/json' -d "$3"; }
 
-OFFICER=$(login dev@resok.local DevAdmin2026!)
+source "$(dirname "$0")/lib-session.sh"
+OFFICER=$(minted_session dev@resok.local)
 V1=$(login demo-voter1@resok.local Vote2026!)
 V2=$(login demo-voter2@resok.local Vote2026!)
 V3=$(login demo-voter3@resok.local Vote2026!)

@@ -78,7 +78,7 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js?v=20260924-fees"></script>
+  <script src="js/portal-state.js?v=20260924-receipts"></script>
   <script>
     let statementAmount = 5000;
 
@@ -232,8 +232,8 @@
       }
       const state = window.ResokPortal.getState();
       const index = state.payments.findIndex((payment) => String(paymentKey(payment, 0)) === String(paymentId));
-      const payment = index >= 0 ? state.payments[index] : state.payments[0];
-      if (!payment) throw new Error("No receipt is available yet.");
+      const payment = index >= 0 ? state.payments[index] : null;
+      if (!payment || payment.status !== "Paid") throw new Error("A receipt is available once the payment is confirmed.");
       downloadSvg(fallbackReceiptSvg(payment, state.member, Math.max(index, 0)), paymentNumber(payment, Math.max(index, 0)) + "-receipt.svg");
     }
 
@@ -265,7 +265,9 @@
             <strong>${esc(payment.reference || "Receipt " + (index + 1))}</strong>
             <span>${esc(payment.date || "Pending date")} | ${esc(payment.method || "Payment")} | ${money(payment.amount)}</span>
           </div>
-          <button class="btn btn-primary receipt-download" data-payment-id="${esc(paymentKey(payment, index))}"><i class="fas fa-download"></i> Download</button>
+          ${payment.status === "Paid"
+            ? `<button class="btn btn-primary receipt-download" data-payment-id="${esc(paymentKey(payment, index))}"><i class="fas fa-download"></i> Download</button>`
+            : `<span style="color:${payment.status === "Failed" ? "#b42318" : "#b54708"};font-size:13px;font-weight:700">${payment.status === "Failed" ? "Not completed" : "Awaiting confirmation"}</span>`}
         </div>
       `).join("") : '<div class="empty">No receipts are available yet. Receipts will appear after you submit payment proof.</div>';
 

@@ -494,7 +494,7 @@
   </div>
 
   <script src="js/admin-shell.js?v=20260924-roles3"></script>
-  <script src="js/portal-state.js?v=20260924-fees"></script>
+  <script src="js/portal-state.js?v=20260924-receipts"></script>
   <script>
     let members = [];
     // Which years the register covers, so the table knows what columns to draw. Comes from
@@ -674,7 +674,7 @@
           <td>${esc(member.email || "")}<br><span style="color:var(--muted)">${esc(member.mobile || "")}</span></td>
           <td><span class="status ${statusClass(member.membershipStatus)}">${esc(statusLabel(member.membershipStatus))}</span></td>
           <td>${esc(member.membershipId || "Pending")}</td>
-          <td>${money(member.paidTotal)}</td>
+          <td>${money(member.paidTotal)}${Number(member.pendingTotal) > 0 ? `<br><span style="color:#b54708;font-size:12px">${money(member.pendingTotal)} awaiting</span>` : ""}</td>
           ${yearCells(member)}
         </tr>
       `).join("") : `<tr><td colspan="${span}">No members match this view.</td></tr>`;

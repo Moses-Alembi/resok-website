@@ -638,8 +638,10 @@
   function downloadReceipt(paymentId) {
     const state = getState();
     const index = state.payments.findIndex((payment) => String(payment.id || payment.reference) === String(paymentId));
-    const payment = index >= 0 ? state.payments[index] : state.payments[0];
-    if (!payment) throw new Error("No receipt is available yet.");
+    // A receipt says PAID, so it exists only for a confirmed payment - never for a proof that
+    // is still awaiting review, and never by falling back to whichever payment came first.
+    const payment = index >= 0 ? state.payments[index] : null;
+    if (!payment || payment.status !== "Paid") throw new Error("A receipt is available once the payment is confirmed.");
     downloadSvg(receiptSvg(payment, state.member, Math.max(index, 0)), `${paymentNumber(payment, Math.max(index, 0))}-receipt.svg`);
   }
 

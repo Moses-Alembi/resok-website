@@ -755,13 +755,19 @@ function logAdminAction(PDO $pdo, ?int $adminUserId, string $action, ?int $targe
 }
 
 function approveMemberById(PDO $pdo, array $config, int $memberId, ?int $adminUserId): array {
+    // A proof upload is stored as pending, not paid: until an admin has looked at it, it is a
+    // claim, and treating it as money received let a member download a "PAID" receipt for any
+    // image they uploaded. Approving the member is that look, so it confirms their proof.
     if (empty($config['allow_approve_without_payment'])) {
-        $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM payments WHERE member_profile_id = ? AND status = "paid"');
+        $stmt = $pdo->prepare('SELECT COUNT(*) AS c FROM payments WHERE member_profile_id = ?
+                               AND (status = "paid" OR (status = "pending" AND proof_filename IS NOT NULL))');
         $stmt->execute([$memberId]);
         if (!(int)$stmt->fetch()['c']) {
-            throw new RuntimeException('A confirmed payment is required before approval.');
+            throw new RuntimeException('A payment or payment proof is required before approval.');
         }
     }
+    $pdo->prepare('UPDATE payments SET status = "paid" WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL')
+        ->execute([$memberId]);
     $membershipId = generateMembershipId($pdo);
     $pdo->prepare('UPDATE member_profiles SET membership_status = "active", membership_id = COALESCE(membership_id, ?), renewal_due = DATE_ADD(CURDATE(), INTERVAL 1 YEAR), review_reason = NULL, reviewed_at = NOW() WHERE id = ?')->execute([$membershipId, $memberId]);
     $row = memberRowByProfileId($pdo, $memberId);
@@ -792,6 +798,9 @@ function approveMemberById(PDO $pdo, array $config, int $memberId, ?int $adminUs
 
 function rejectMemberById(PDO $pdo, int $memberId, string $reason, ?int $adminUserId): array {
     $pdo->prepare('UPDATE member_profiles SET membership_status = "rejected", review_reason = ?, reviewed_at = NOW() WHERE id = ?')->execute([$reason, $memberId]);
+    // The proof they sent was not accepted; mark it so, rather than leave it pending forever.
+    $pdo->prepare('UPDATE payments SET status = "failed" WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL')
+        ->execute([$memberId]);
     $row = memberRowByProfileId($pdo, $memberId);
     $member = mapMember($row);
     logAdminAction($pdo, $adminUserId, 'reject', $memberId, $reason);
@@ -3853,7 +3862,7 @@ Respiratory Society of Kenya");
 
         $reference = 'PAY-' . $mpesaCode;
         $pdo->beginTransaction();
-        $stmt = $pdo->prepare('INSERT INTO payments (user_id, member_profile_id, amount, currency, method, payment_type, phone, status, reference, provider_reference, proof_filename, proof_original_name, proof_mime_type, proof_file_size) VALUES (?, ?, ?, "KES", ?, ?, ?, "paid", ?, ?, ?, ?, ?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO payments (user_id, member_profile_id, amount, currency, method, payment_type, phone, status, reference, provider_reference, proof_filename, proof_original_name, proof_mime_type, proof_file_size) VALUES (?, ?, ?, "KES", ?, ?, ?, "pending", ?, ?, ?, ?, ?, ?)');
         $stmt->execute([(int)$user['userId'], (int)$member['id'], (float)$_POST['amount'], $paymentMode, $_POST['type'] ?? 'Membership Application/Renewal', $_POST['phone'] ?? $member['mobile'], $reference, $mpesaCode, $filename, $name, $type, (int)$file['size']]);
         $paymentId = (int)$pdo->lastInsertId();
         $stmt = $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review", review_reason = NULL, reviewed_at = NOW() WHERE id = ?');
@@ -4032,6 +4041,7 @@ Respiratory Society of Kenya");
             'SELECT mp.*, u.email, u.email_verified,
                     COUNT(p.id) AS payment_count,
                     COALESCE(SUM(CASE WHEN p.status = "paid" THEN p.amount ELSE 0 END), 0) AS paid_total,
+                    COALESCE(SUM(CASE WHEN p.status = "pending" THEN p.amount ELSE 0 END), 0) AS pending_total,
                     MAX(p.created_at) AS latest_payment_at
              FROM member_profiles mp
              JOIN users u ON u.id = mp.user_id
@@ -4053,6 +4063,7 @@ Respiratory Society of Kenya");
                     'email' => $row['email'],
                     'paymentCount' => (int)$row['payment_count'],
                     'paidTotal' => (float)$row['paid_total'],
+                    'pendingTotal' => (float)($row['pending_total'] ?? 0),
                     'latestPaymentAt' => $row['latest_payment_at'],
                     'yearsPaid' => $paid,
                     'lastYearPaid' => $paid ? max($paid) : null,

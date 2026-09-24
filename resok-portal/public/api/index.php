@@ -1354,16 +1354,14 @@ Respiratory Society of Kenya");
         // Methods shown to members as planned but not yet accepted. Announcing them is a
         // commitment, so keep this list to things actually being pursued - and move an entry
         // out of here only when its flow genuinely works end to end, never just because the
-        // integration exists. M-Pesa Express lists itself here until mpesa_enabled is on.
+        // integration exists. M-Pesa Express is not listed: the payment page shows its own
+        // STK form, greyed out as "Coming soon" until stkPushLive() is true.
         // Each tile renders, in order of preference: `logo` (a file under assets/img/payments/),
         // then `icon` (a Font Awesome brand glyph tinted with `color`), then `wordmark` (the
         // name set in the brand's colour). Drop an official SVG from a brand's press kit into
         // assets/img/payments/ and add `logo` to switch that tile to the real mark - which is
         // the right way to show a trademark, rather than approximating one in CSS.
         $comingSoon = [];
-        if (!(mpesaEnabled($config) && mpesaConfigured($config))) {
-            $comingSoon[] = ['name' => 'M-Pesa Express', 'note' => 'Instant payment prompt on your phone', 'wordmark' => 'M-PESA', 'color' => '#00A651'];
-        }
         $comingSoon[] = ['name' => 'Visa', 'note' => 'Debit and credit cards', 'icon' => 'fab fa-cc-visa', 'color' => '#1A1F71'];
         $comingSoon[] = ['name' => 'Mastercard', 'note' => 'Debit and credit cards', 'icon' => 'fab fa-cc-mastercard', 'color' => '#EB001B'];
         $comingSoon[] = ['name' => 'Apple Pay', 'note' => 'Pay from iPhone, iPad, or Mac', 'icon' => 'fab fa-cc-apple-pay', 'color' => '#000000'];

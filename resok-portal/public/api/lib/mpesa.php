@@ -60,6 +60,63 @@ function mpesaAccessToken(array $config): string
     return (string)$data['access_token'];
 }
 
+/**
+ * Asks Safaricom directly whether an STK request was paid. The callback URL is public, so
+ * anyone who can POST can claim a payment succeeded; a payment is marked paid only after
+ * this server-to-server query agrees. Returns Daraja's ResultCode as an int (0 = paid).
+ */
+function mpesaStkQuery(array $config, string $checkoutRequestId): int
+{
+    $token = mpesaAccessToken($config);
+    $shortcode = (string)$config['mpesa_shortcode'];
+    $timestamp = date('YmdHis');
+    $ch = curl_init(mpesaBaseUrl($config) . '/mpesa/stkpushquery/v1/query');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token, 'Content-Type: application/json'],
+        CURLOPT_POSTFIELDS => json_encode([
+            'BusinessShortCode' => $shortcode,
+            'Password' => base64_encode($shortcode . $config['mpesa_passkey'] . $timestamp),
+            'Timestamp' => $timestamp,
+            'CheckoutRequestID' => $checkoutRequestId,
+        ]),
+        CURLOPT_TIMEOUT => 20
+    ]);
+    $response = curl_exec($ch);
+    $error = curl_error($ch);
+    curl_close($ch);
+    if ($response === false) throw new RuntimeException('Could not reach M-Pesa (' . $error . ')');
+    $data = json_decode((string)$response, true);
+    if (!is_array($data) || !isset($data['ResultCode'])) {
+        throw new RuntimeException('M-Pesa status query gave no result: ' . substr((string)$response, 0, 200));
+    }
+    return (int)$data['ResultCode'];
+}
+
+/** Amount and receipt number from a successful stkCallback's CallbackMetadata. */
+function mpesaCallbackMetadata(array $callback): array
+{
+    $out = ['amount' => null, 'receipt' => ''];
+    foreach (($callback['CallbackMetadata']['Item'] ?? []) as $item) {
+        if (($item['Name'] ?? '') === 'Amount') $out['amount'] = (float)($item['Value'] ?? 0);
+        if (($item['Name'] ?? '') === 'MpesaReceiptNumber') $out['receipt'] = strtoupper(trim((string)($item['Value'] ?? '')));
+    }
+    return $out;
+}
+
+/** The fee for a membership category by exact name, from config; null if unknown. */
+function mpesaCategoryFee(array $config, string $category): ?float
+{
+    foreach (($config['membership_categories'] ?? []) as $c) {
+        if (strcasecmp(trim((string)($c['name'] ?? '')), trim($category)) === 0) {
+            $amount = (float)($c['amount'] ?? 0);
+            return $amount > 0 ? $amount : null;
+        }
+    }
+    return null;
+}
+
 /** Normalizes a Kenyan phone number to the 2547XXXXXXXX format Daraja expects. */
 function mpesaNormalizePhone(string $phone): string
 {

@@ -3673,15 +3673,18 @@ Respiratory Society of Kenya");
         $user = auth($config);
         ensurePaymentProofColumns($pdo);
         $data = input();
-        $amount = (float)($data['amount'] ?? 0);
+        // The amount is the category's fee from config, never the figure the browser sends -
+        // otherwise editing one field would buy an Ordinary membership for KES 1.
+        $category = trim((string)($data['type'] ?? ''));
+        $amount = mpesaCategoryFee($config, $category);
         $phone = trim((string)($data['phone'] ?? ''));
-        if ($amount <= 0) respond(400, ['error' => 'Valid amount is required']);
+        if ($amount === null) respond(400, ['error' => 'Please choose a valid membership category']);
         if (!preg_match('/^(?:\+?254|0)7\d{8}$|^(?:\+?254|0)1\d{8}$/', $phone)) respond(400, ['error' => 'Enter a valid Safaricom M-Pesa number']);
 
         $member = memberRow($pdo, (int)$user['userId']);
         $reference = 'RESOK-' . strtoupper(base_convert((string)time(), 10, 36)) . strtoupper(bin2hex(random_bytes(2)));
         $stmt = $pdo->prepare('INSERT INTO payments (user_id, member_profile_id, amount, currency, method, payment_type, phone, status, reference) VALUES (?, ?, ?, "KES", "M-Pesa STK Push", ?, ?, "pending", ?)');
-        $stmt->execute([(int)$user['userId'], $member['id'] ?? null, $amount, $data['type'] ?? 'Membership Application/Renewal', $phone, $reference]);
+        $stmt->execute([(int)$user['userId'], $member['id'] ?? null, $amount, $category, $phone, $reference]);
         $paymentId = (int)$pdo->lastInsertId();
 
         try {
@@ -3694,7 +3697,8 @@ Respiratory Society of Kenya");
         }
 
         $pdo->prepare('UPDATE payments SET provider_reference = ? WHERE id = ?')->execute([$stk['checkoutRequestId'], $paymentId]);
-        respond(201, ['id' => $paymentId, 'status' => 'pending', 'reference' => $reference, 'checkoutRequestId' => $stk['checkoutRequestId'], 'message' => 'Enter your M-Pesa PIN on your phone to complete payment.']);
+        // checkoutRequestId stays server-side: it is the key a forged callback would need.
+        respond(201, ['id' => $paymentId, 'status' => 'pending', 'reference' => $reference, 'amount' => $amount, 'message' => 'Enter your M-Pesa PIN on your phone to complete payment.']);
     }
 
     if (preg_match('#^payments/(\d+)/status$#', $route, $m) && $method === 'GET') {
@@ -3706,10 +3710,18 @@ Respiratory Society of Kenya");
         respond(200, ['id' => (int)$payment['id'], 'status' => $payment['status'], 'amount' => (float)$payment['amount'], 'reference' => $payment['reference']]);
     }
 
-    if ($route === 'payments/mpesa/callback' && $method === 'POST') {
+    // Safaricom's STK result. Two paths: payments/stk/callback is the one to register (Daraja
+    // rejects some callback URLs containing "mpesa"); the old one still works.
+    if (($route === 'payments/stk/callback' || $route === 'payments/mpesa/callback') && $method === 'POST') {
+        // Optional shared secret in the URL (&key=...), checked before anything is read.
+        $callbackSecret = (string)($config['mpesa_callback_secret'] ?? '');
+        if ($callbackSecret !== '' && !hash_equals($callbackSecret, (string)($_GET['key'] ?? ''))) {
+            error_log('M-Pesa callback rejected: missing or wrong key');
+            respond(403, ['message' => 'Forbidden']);
+        }
         ensurePaymentProofColumns($pdo);
-        $rawBody = file_get_contents('php://input');
-        error_log('M-Pesa callback received: ' . $rawBody);
+        $rawBody = (string)file_get_contents('php://input');
+        error_log('M-Pesa callback received: ' . substr($rawBody, 0, 2000));
         $raw = json_decode($rawBody, true);
         $callback = $raw['Body']['stkCallback'] ?? null;
         if (!is_array($callback) || empty($callback['CheckoutRequestID'])) {
@@ -3718,25 +3730,55 @@ Respiratory Society of Kenya");
         }
 
         $checkoutRequestId = (string)$callback['CheckoutRequestID'];
-        $stmt = $pdo->prepare('SELECT * FROM payments WHERE provider_reference = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT * FROM payments WHERE provider_reference = ? AND method = "M-Pesa STK Push" LIMIT 1');
         $stmt->execute([$checkoutRequestId]);
         $payment = $stmt->fetch();
-        if (!$payment) {
-            error_log("M-Pesa callback: no payment row found for provider_reference={$checkoutRequestId}");
-            respond(200, ['message' => 'Already processed']);
-        }
-        if ($payment['status'] !== 'pending') {
-            error_log("M-Pesa callback: payment {$payment['id']} already in status {$payment['status']}, ignoring");
+        if (!$payment || $payment['status'] !== 'pending') {
+            error_log('M-Pesa callback: no pending STK payment for provider_reference=' . $checkoutRequestId);
             respond(200, ['message' => 'Already processed']);
         }
 
-        if ((int)($callback['ResultCode'] ?? 1) === 0) {
-            $pdo->prepare('UPDATE payments SET status = "paid" WHERE id = ?')->execute([(int)$payment['id']]);
+        if ((int)($callback['ResultCode'] ?? 1) !== 0) {
+            $pdo->prepare('UPDATE payments SET status = "failed" WHERE id = ?')->execute([(int)$payment['id']]);
+            respond(200, ['message' => 'Processed']);
+        }
+
+        // The callback says paid. Believe Safaricom, not the POST: this URL is public, so
+        // confirm with a server-to-server status query first. If the query fails the
+        // payment stays pending for an admin to check, rather than being marked either way.
+        try {
+            $confirmed = mpesaStkQuery($config, $checkoutRequestId) === 0;
+        } catch (Throwable $queryError) {
+            error_log("M-Pesa callback: status query failed for payment {$payment['id']}: " . $queryError->getMessage());
+            respond(200, ['message' => 'Received']);
+        }
+        if (!$confirmed) {
+            error_log("M-Pesa callback: payment {$payment['id']} claimed paid but the status query disagrees - left pending");
+            respond(200, ['message' => 'Received']);
+        }
+
+        $meta = mpesaCallbackMetadata($callback);
+        if ($meta['amount'] === null || $meta['amount'] + 0.001 < (float)$payment['amount']) {
+            // Money moved but not the full fee: leave it for an admin rather than guess.
+            $pdo->prepare('UPDATE payments SET method = "M-Pesa STK Push - check amount" WHERE id = ?')->execute([(int)$payment['id']]);
+            error_log("M-Pesa callback: payment {$payment['id']} amount " . var_export($meta['amount'], true) . " is below {$payment['amount']} - left pending");
+            respond(200, ['message' => 'Received']);
+        }
+
+        // Keep the M-Pesa receipt number where manual payments keep theirs, so a receipt
+        // cannot also be claimed through the proof form (provider_reference is unique).
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('UPDATE payments SET status = "paid", provider_reference = COALESCE(NULLIF(?, ""), provider_reference) WHERE id = ?')
+                ->execute([$meta['receipt'], (int)$payment['id']]);
             if (!empty($payment['member_profile_id'])) {
                 $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review", review_reason = NULL, reviewed_at = NOW() WHERE id = ?')->execute([(int)$payment['member_profile_id']]);
             }
-        } else {
-            $pdo->prepare('UPDATE payments SET status = "failed" WHERE id = ?')->execute([(int)$payment['id']]);
+            $pdo->commit();
+        } catch (Throwable $saveError) {
+            $pdo->rollBack();
+            error_log("M-Pesa callback: could not record payment {$payment['id']} as paid: " . $saveError->getMessage());
+            respond(200, ['message' => 'Received']);
         }
         respond(200, ['message' => 'Processed']);
     }

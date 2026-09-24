@@ -30,7 +30,10 @@ return [
     'mpesa_consumer_secret' => '',
     'mpesa_shortcode' => '',
     'mpesa_passkey' => '',
-    'mpesa_callback_url' => 'https://www.resok.org/resok-portal/public/api/index.php?route=payments/mpesa/callback',
+    'mpesa_callback_url' => 'https://www.resok.org/resok-portal/public/api/index.php?route=payments/stk/callback',
+    // Register the neutral path ...route=payments/stk/callback with Safaricom (Daraja
+    // rejects some URLs containing "mpesa"), plus &key=<mpesa_callback_secret> if set.
+    'mpesa_callback_secret' => '',
 
     'upload_dir' => __DIR__ . '/../../uploads',
     'max_file_size' => 5242880,

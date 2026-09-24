@@ -45,6 +45,9 @@ return [
     'mpesa_shortcode' => config_value($local, 'mpesa_shortcode', 'RESOK_MPESA_SHORTCODE', ''),
     'mpesa_passkey' => config_value($local, 'mpesa_passkey', 'RESOK_MPESA_PASSKEY', ''),
     'mpesa_callback_url' => config_value($local, 'mpesa_callback_url', 'RESOK_MPESA_CALLBACK_URL', ''),
+    // Optional. When set, the callback must arrive with &key=<this> - append it to
+    // mpesa_callback_url. A second lock on top of the STK status query.
+    'mpesa_callback_secret' => config_value($local, 'mpesa_callback_secret', 'RESOK_MPESA_CALLBACK_SECRET', ''),
 
     'upload_dir' => config_value($local, 'upload_dir', 'RESOK_UPLOAD_DIR', __DIR__ . '/../../uploads'),
     'max_file_size' => (int)config_value($local, 'max_file_size', 'RESOK_MAX_FILE_SIZE', 5242880),

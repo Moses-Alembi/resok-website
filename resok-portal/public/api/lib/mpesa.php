@@ -23,6 +23,19 @@ function mpesaEnabled(array $config): bool
     return filter_var($config['mpesa_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
 }
 
+/**
+ * Whether members can actually use STK push. Three things, all required: stk_push_enabled
+ * (the go-live switch, off by default and absent from older configs), mpesa_enabled, and a
+ * full set of credentials. stk_push_enabled exists so the STK code can be deployed and
+ * sandbox-tested while production stays on paybill-plus-proof, whatever mpesa_enabled was
+ * left at from earlier testing.
+ */
+function stkPushLive(array $config): bool
+{
+    return filter_var($config['stk_push_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)
+        && mpesaEnabled($config) && mpesaConfigured($config);
+}
+
 function mpesaConfigured(array $config): bool
 {
     return !empty($config['mpesa_consumer_key']) && !empty($config['mpesa_consumer_secret'])

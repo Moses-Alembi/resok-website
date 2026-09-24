@@ -1382,11 +1382,9 @@ Respiratory Society of Kenya");
             // reference need not match. Adding a mode back means adapting that form first.
             'paymentModes' => ['M-PESA Paybill'],
             'categories' => $config['membership_categories'] ?? [],
-            // STK push is withdrawn (14 Sep 2026): the paybill with proof upload is the only
-            // payment path, whatever mpesa_enabled says. To bring it back, restore
-            // mpesaEnabled($config) && mpesaConfigured($config) here, the guard on
-            // payments/stk-push, and the form in payment.html.
-            'stkEnabled' => false,
+            // Whether the payment page offers "Pay Now". Off until stk_push_enabled,
+            // mpesa_enabled and the credentials are all set - see stkPushLive().
+            'stkEnabled' => function_exists('stkPushLive') && stkPushLive($config),
             'comingSoon' => $comingSoon
         ]);
     }
@@ -3669,9 +3667,36 @@ Respiratory Society of Kenya");
     }
 
     if ($route === 'payments/stk-push' && $method === 'POST') {
-        // Withdrawn: STK push was never proven end to end, so paybill plus proof upload is the
-        // only payment path. The full handler is in git history (before this commit) if it returns.
-        respond(410, ['error' => 'Instant M-Pesa payment is not available. Pay through the paybill and upload your confirmation on the Payment page.']);
+        // Not live until stk_push_enabled, mpesa_enabled and the credentials are all set.
+        // Refused before a payment row is created or Safaricom is contacted.
+        if (!function_exists('stkPushLive') || !stkPushLive($config)) {
+            respond(410, ['error' => 'Instant M-Pesa payment is not available yet. Pay through the paybill and upload your confirmation on the Payment page.']);
+        }
+        $user = auth($config);
+        ensurePaymentProofColumns($pdo);
+        $data = input();
+        $amount = (float)($data['amount'] ?? 0);
+        $phone = trim((string)($data['phone'] ?? ''));
+        if ($amount <= 0) respond(400, ['error' => 'Valid amount is required']);
+        if (!preg_match('/^(?:\+?254|0)7\d{8}$|^(?:\+?254|0)1\d{8}$/', $phone)) respond(400, ['error' => 'Enter a valid Safaricom M-Pesa number']);
+
+        $member = memberRow($pdo, (int)$user['userId']);
+        $reference = 'RESOK-' . strtoupper(base_convert((string)time(), 10, 36)) . strtoupper(bin2hex(random_bytes(2)));
+        $stmt = $pdo->prepare('INSERT INTO payments (user_id, member_profile_id, amount, currency, method, payment_type, phone, status, reference) VALUES (?, ?, ?, "KES", "M-Pesa STK Push", ?, ?, "pending", ?)');
+        $stmt->execute([(int)$user['userId'], $member['id'] ?? null, $amount, $data['type'] ?? 'Membership Application/Renewal', $phone, $reference]);
+        $paymentId = (int)$pdo->lastInsertId();
+
+        try {
+            $stk = initiateStkPush($config, $amount, $phone, $reference);
+            error_log("STK push initiated OK: paymentId={$paymentId} checkoutRequestId={$stk['checkoutRequestId']} callbackUrl=" . ($config['mpesa_callback_url'] ?? '(not set)'));
+        } catch (Throwable $stkError) {
+            error_log('STK push failed to initiate: ' . $stkError->getMessage());
+            $pdo->prepare('UPDATE payments SET status = "failed" WHERE id = ?')->execute([$paymentId]);
+            respond(502, ['error' => $stkError->getMessage()]);
+        }
+
+        $pdo->prepare('UPDATE payments SET provider_reference = ? WHERE id = ?')->execute([$stk['checkoutRequestId'], $paymentId]);
+        respond(201, ['id' => $paymentId, 'status' => 'pending', 'reference' => $reference, 'checkoutRequestId' => $stk['checkoutRequestId'], 'message' => 'Enter your M-Pesa PIN on your phone to complete payment.']);
     }
 
     if (preg_match('#^payments/(\d+)/status$#', $route, $m) && $method === 'GET') {

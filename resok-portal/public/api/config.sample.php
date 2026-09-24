@@ -22,6 +22,9 @@ return [
     // Set to true only once a real STK payment has gone through end to end. Until then
     // the portal shows the paybill and confirmation flow instead.
     'mpesa_enabled' => false,
+    // STK push go-live switch. Leave false until STK is finished and tested; members then
+    // see only the paybill. Both this and mpesa_enabled must be true to offer "Pay Now".
+    'stk_push_enabled' => false,
     'mpesa_env' => 'sandbox',
     'mpesa_consumer_key' => '',
     'mpesa_consumer_secret' => '',

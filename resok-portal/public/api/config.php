@@ -36,6 +36,9 @@ return [
     // Master switch for offering STK push in the portal. Off until a real payment has
     // been tested end to end - having credentials is not the same as being ready.
     'mpesa_enabled' => config_value($local, 'mpesa_enabled', 'RESOK_MPESA_ENABLED', false),
+    // Go-live switch for STK push ("Pay Now" on the payment page). Off unless set: the STK
+    // code is deployed but members only see the paybill until this AND mpesa_enabled are on.
+    'stk_push_enabled' => config_value($local, 'stk_push_enabled', 'RESOK_STK_PUSH_ENABLED', false),
     'mpesa_env' => config_value($local, 'mpesa_env', 'RESOK_MPESA_ENV', 'sandbox'),
     'mpesa_consumer_key' => config_value($local, 'mpesa_consumer_key', 'RESOK_MPESA_CONSUMER_KEY', ''),
     'mpesa_consumer_secret' => config_value($local, 'mpesa_consumer_secret', 'RESOK_MPESA_CONSUMER_SECRET', ''),

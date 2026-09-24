@@ -43,7 +43,7 @@
 
       <section class="summary-grid">
         <div class="summary-card"><span>Amount Due</span><strong id="amountDue">KES 0</strong></div>
-        <div class="summary-card"><span>Total Paid</span><strong id="totalPaid">KES 0</strong></div>
+        <div class="summary-card"><span>Total Paid</span><strong id="totalPaid">KES 0</strong><small id="pendingNote" hidden style="display:block;margin-top:4px;color:#b54708;font-size:12.5px;font-weight:600"></small></div>
         <div class="summary-card"><span>Balance</span><strong id="balanceDue">KES 0</strong></div>
       </section>
 
@@ -78,7 +78,7 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js?v=20260915-learners"></script>
+  <script src="js/portal-state.js?v=20260924-fees"></script>
   <script>
     let statementAmount = 5000;
 
@@ -100,6 +100,29 @@
     function money(value) {
       return `KES ${Number(value || 0).toLocaleString()}`;
     }
+
+    /**
+     * The fee for this member's own category. It used to be the single default fee (KES 5,000)
+     * for everyone, so an Associate who had paid their KES 2,000 was shown a KES 3,000 balance.
+     * Exact name first (what the sign-up form stores); then the first word, for members imported
+     * from the old register with shorter labels such as "Associate".
+     */
+    function feeForCategory(instructions, category) {
+      const list = Array.isArray(instructions && instructions.categories) ? instructions.categories : [];
+      const want = String(category || "").trim().toLowerCase();
+      const firstWord = (text) => String(text || "").trim().toLowerCase().split(/\s+/)[0];
+      const match = want && (list.find((c) => String(c.name || "").trim().toLowerCase() === want)
+        || list.find((c) => firstWord(c.name) === firstWord(want)));
+      return Number(match && match.amount) || Number(instructions && instructions.amount) || statementAmount;
+    }
+
+    // Only confirmed payments count toward the balance; one awaiting review is shown apart.
+    const paidTotal = (payments) => payments
+      .filter((payment) => payment.status === "Paid")
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    const pendingTotal = (payments) => payments
+      .filter((payment) => payment.status === "Pending")
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
     function paymentKey(payment, index) {
       return payment.id || payment.reference || index;
@@ -168,7 +191,7 @@
     }
 
     function fallbackStatementSvg(state) {
-      const totalPaid = state.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const totalPaid = paidTotal(state.payments);
       const balance = Math.max(statementAmount - totalPaid, 0);
       const rows = (state.payments.length ? state.payments : [{ date: "", reference: "No payment recorded", method: "", amount: 0 }]).slice(0, 8).map((payment, index) => {
         const y = 454 + index * 46;
@@ -226,11 +249,15 @@
 
     function renderFinancials() {
       const state = window.ResokPortal.getState();
-      const totalPaid = state.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      const totalPaid = paidTotal(state.payments);
+      const awaiting = pendingTotal(state.payments);
       const balance = Math.max(statementAmount - totalPaid, 0);
       document.getElementById("amountDue").textContent = money(statementAmount);
       document.getElementById("totalPaid").textContent = money(totalPaid);
       document.getElementById("balanceDue").textContent = money(balance);
+      const note = document.getElementById("pendingNote");
+      note.textContent = awaiting > 0 ? money(awaiting) + " awaiting confirmation" : "";
+      note.hidden = awaiting <= 0;
 
       document.getElementById("receiptRows").innerHTML = state.payments.length ? state.payments.map((payment, index) => `
         <div class="receipt-row">
@@ -266,7 +293,7 @@
       }
       try {
         const instructions = await window.ResokPortal.paymentInstructions();
-        statementAmount = Number(instructions.amount || statementAmount);
+        statementAmount = feeForCategory(instructions, window.ResokPortal.getState().member.category);
       } catch (error) {
         console.warn(error.message || "Could not load fee amount.");
       }

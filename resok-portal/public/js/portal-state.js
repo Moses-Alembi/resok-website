@@ -536,7 +536,9 @@
   function feeStatementSvg(member = getState().member, payments = getState().payments, options = {}) {
     const esc = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[char]));
     const amountDue = Number(options.amountDue || member.membershipFee || 5000);
-    const paidTotal = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    // Confirmed payments only, matching the Financials page - a pending proof is not money received.
+    const paidTotal = payments.filter((payment) => payment.status === "Paid")
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const balance = Math.max(amountDue - paidTotal, 0);
     const name = memberName(member) || "ReSoK Member";
     const rows = (payments.length ? payments : [{ date: "", reference: "No payment recorded", method: "", amount: 0, status: "Pending" }]).slice(0, 8).map((payment, index) => {

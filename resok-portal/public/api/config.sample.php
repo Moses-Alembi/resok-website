@@ -38,9 +38,9 @@ return [
     // it and every encrypted ID number becomes unreadable. Changing it has the same effect,
     // so treat it as permanent once members have registered.
     'data_encryption_key' => '',
-    // Super administrators, by email. These accounts can see the threat assessment and
-    // promote or demote other admins. Leave empty and every admin keeps today's access,
-    // which the assessment page reports as a warning until you set it.
+    // Super administrators, by email. They see everything: analytics, elections, events and
+    // CPD tokens, ICT, security, and the administrators list. Every other admin works on
+    // membership only. Leave this empty and NOBODY is a super admin.
     // Must match the email each super admin signs in with; compared case-insensitively,
     // and more than one may be listed. Wrong or misspelled means that person silently
     // loses super-admin access, so check it against the Administrators panel.

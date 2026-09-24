@@ -33,6 +33,8 @@ const CRYPTO_MARKER = 'enc.v1.';
  * Holds the config for callers too deep to receive it - mapMember() is shaped by the
  * database row alone, and threading config through every call site to decrypt one field
  * would touch far more code than the change is worth.
+ *
+ * @phpstan-impure Called with an argument purely to set the stored config.
  */
 function cryptoConfig(?array $set = null): array
 {

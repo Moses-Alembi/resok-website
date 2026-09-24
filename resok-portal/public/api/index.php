@@ -386,7 +386,7 @@ function localDevPayload(array $config): ?array {
 function auth(array $config): array {
     // Localhost: a real login still wins; otherwise act as the local admin instead of a 401.
     $localDev = localDevPayload($config);
-    if ($localDev !== null) return authOptionalToken($config) ?? $localDev;
+    if ($localDev !== null) return withSuperAdminFlag(authOptionalToken($config) ?? $localDev, $config);
 
     $fromCookie = true;
     $token = $_COOKIE['resok_token'] ?? '';
@@ -434,6 +434,15 @@ function auth(array $config): array {
         issueAuthCookie(token($refreshed, $config['jwt_secret'], (int)$payload['exp']));
     }
 
+    return withSuperAdminFlag($payload, $config);
+}
+
+/**
+ * Stamps the session with whether it is a super admin. Computed on every request from the
+ * server's config, never read from the token, so it cannot be forged or go stale.
+ */
+function withSuperAdminFlag(array $payload, array $config): array {
+    $payload['superAdmin'] = isSuperAdmin($payload, $config);
     return $payload;
 }
 
@@ -452,7 +461,8 @@ function auth(array $config): array {
  * a background poll keep a session alive forever without anybody using the portal.
  */
 function authOptional(array $config): ?array {
-    return authOptionalToken($config) ?? localDevPayload($config);
+    $user = authOptionalToken($config) ?? localDevPayload($config);
+    return $user === null ? null : withSuperAdminFlag($user, $config);
 }
 
 /** The signed-in session's payload, or null - authOptional() without the localhost fallback. */
@@ -550,14 +560,16 @@ function requireAdmin(array $user): void {
  * can only be granted by someone with server access - not by anyone who reaches the admin
  * panel, which is precisely the account an attacker would be sitting in.
  *
- * With no list configured, every admin keeps exactly the access they have today. Silently
- * locking the only admin out of a page they rely on would be a worse failure than the one
- * this prevents, so the threat assessment reports the unset list as a warning instead.
+ * With no list configured, nobody is a super administrator. This used to fall back to "every
+ * admin is a super admin", which quietly handed membership officers the elections console,
+ * analytics, ICT and the security pages. An ordinary admin works on membership only; the
+ * cost of an unset list is now a super admin who must add their email to config.local.php
+ * ('super_admins'), not every admin holding the highest privilege without anyone deciding so.
  */
 function isSuperAdmin(array $user, array $config): bool {
     if (($user['role'] ?? '') !== 'admin') return false;
     $list = $config['super_admins'] ?? [];
-    if (!$list) return true;
+    if (!$list) return false;
     $email = strtolower(trim((string)($user['email'] ?? '')));
     foreach ($list as $candidate) {
         if ($email !== '' && $email === strtolower(trim((string)$candidate))) return true;
@@ -1147,8 +1159,8 @@ try {
         ]);
     }
 
-    // Administrator management. Listing is open to any admin - knowing who else holds the
-    // keys is not a secret from the people who hold them - but changing a role is not.
+    // Administrator management - super administrators only, listing included. An ordinary
+    // admin works on membership; who holds which role is not part of that job.
     // Find an account by email so it can be promoted. Super administrator only, and it
     // answers with an id or nothing - never with a list, so it cannot be walked to enumerate
     // who holds an account here.
@@ -1252,7 +1264,7 @@ Respiratory Society of Kenya");
 
     if ($route === 'admins' && $method === 'GET') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         $rows = $pdo->query("SELECT u.id, u.email, u.role, u.created_at,
                                     TRIM(CONCAT(COALESCE(mp.first_name,''), ' ', COALESCE(mp.surname,''))) AS name
                                FROM users u
@@ -1334,7 +1346,7 @@ Respiratory Society of Kenya");
     if ($route === 'security/assessment' && $method === 'GET') {
         requireModule('securityAssessment', 'lib/security-assessment.php');
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         respond(200, securityAssessment($pdo, $config));
     }
 
@@ -3405,7 +3417,7 @@ Respiratory Society of Kenya");
 
     if (preg_match('#^admin/events/(\d+)/attendees$#', $route, $m) && $method === 'GET') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('attendanceList', 'lib/attendance.php');
         respond(200, [
             'attendees' => attendanceList($pdo, (int)$m[1]),
@@ -3416,7 +3428,7 @@ Respiratory Society of Kenya");
     /** Paste a register, a Zoom participant export, or a typed list. */
     if (preg_match('#^admin/events/(\d+)/attendees$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('attendanceParseList', 'lib/attendance.php');
         if (!attendanceEnsureTables($pdo)) {
             respond(503, ['error' => 'The attendance tables are not available. Import schema-tokens.sql.']);
@@ -3444,7 +3456,7 @@ Respiratory Society of Kenya");
     /** Load the batch of tokens generated on the KMPDC portal. */
     if (preg_match('#^admin/events/(\d+)/tokens$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('tokensLoad', 'lib/attendance.php');
         if (!attendanceEnsureTables($pdo)) {
             respond(503, ['error' => 'The attendance tables are not available. Import schema-tokens.sql.']);
@@ -3464,7 +3476,7 @@ Respiratory Society of Kenya");
     /** Hand one token to each attendee marked present who does not have one. */
     if (preg_match('#^admin/events/(\d+)/tokens/assign$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('tokensAssign', 'lib/attendance.php');
         try {
             $result = tokensAssign($pdo, (int)$m[1]);
@@ -3484,7 +3496,7 @@ Respiratory Society of Kenya");
      */
     if (preg_match('#^admin/attendees/(\d+)/token$#', $route, $m) && $method === 'GET') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('tokenRelease', 'lib/attendance.php');
 
         $released = tokenRelease($pdo, $config, (int)$m[1]);
@@ -3500,14 +3512,14 @@ Respiratory Society of Kenya");
 
     if ($route === 'admin/events' && $method === 'GET') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('eventsAll', 'lib/events.php');
         respond(200, ['events' => eventsAll($pdo)]);
     }
 
     if ($route === 'admin/events' && $method === 'POST') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('eventCreate', 'lib/events.php');
 
         [$event, $errors] = eventCreate($pdo, input(), (int)$user['userId']);
@@ -3520,7 +3532,7 @@ Respiratory Society of Kenya");
 
     if (preg_match('#^admin/events/(\d+)$#', $route, $m) && in_array($method, ['PATCH', 'PUT'], true)) {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         requireModule('eventUpdate', 'lib/events.php');
 
         [$event, $errors] = eventUpdate($pdo, (int)$m[1], input());
@@ -4071,7 +4083,7 @@ Respiratory Society of Kenya");
 
     if ($route === 'admin/audit-log' && $method === 'GET') {
         $user = auth($config);
-        requireAdmin($user);
+        requireSuperAdmin($user, $config);
         ensureAuditTable($pdo);
         $rows = $pdo->query(
             'SELECT a.*, u.email AS admin_email

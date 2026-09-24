@@ -7,6 +7,10 @@
  * current page's nav link active from the URL rather than a hand-set class per file, filling
  * the user chip once ResokPortal knows who is signed in, and logout. One file so the five
  * super-admin pages behave identically instead of drifting apart one inline script at a time.
+ *
+ * It also applies the role split. A super admin sees everything; an ordinary admin works on
+ * membership only - the member register and their own two-factor setup. The server refuses
+ * the other routes regardless; this only keeps the screens honest about what will work.
  */
 (function () {
   "use strict";
@@ -29,13 +33,13 @@
       hint: "Membership, learning and readership figures", keywords: "stats figures reports charts" },
     { label: "Administrators", href: "admin-review", icon: "fa-user-shield",
       hint: "Promote, demote and create administrators", keywords: "roles permissions promote admins" },
-    { label: "Member register", href: "admin-review", icon: "fa-users",
+    { label: "Member register", href: "admin-review", icon: "fa-users", admin: true,
       hint: "Every member on file, with payment status", keywords: "members list approve reject payments" },
     { label: "Events & attendance", href: "admin-review", icon: "fa-calendar-days",
       hint: "Create events and record CPD attendance", keywords: "cpd tokens attendance events" },
     { label: "Threat Assessment", href: "security", icon: "fa-shield-halved",
       hint: "Live security checks against the running site", keywords: "security posture checks" },
-    { label: "Two-factor authentication", href: "security", icon: "fa-key",
+    { label: "Two-factor authentication", href: "security", icon: "fa-key", admin: true,
       hint: "Set up 2FA on your own account", keywords: "2fa mfa totp authenticator" },
     { label: "Database migrations", href: "security", icon: "fa-database",
       hint: "Apply pending schema files", keywords: "schema sql migrate" },
@@ -54,6 +58,53 @@
     { label: "Staff & access", href: "ict#staff", icon: "fa-user-gear",
       hint: "Who holds which ICT capability", keywords: "capabilities grants ict staff" }
   ];
+
+  // Pages an ordinary admin cannot use at all. security stays reachable for their own
+  // two-factor setup; admin-review is the member register.
+  var SUPER_ONLY_PAGES = ["admin-home", "analytics", "election-admin", "ict", "pdf-tools"];
+
+  // Unknown until whoami answers, and treated as "not super" meanwhile, so a super-admin link
+  // never flashes up for someone who is about to lose it.
+  var superAdmin = false;
+
+  function currentPage() {
+    return (location.pathname.split("/").pop() || "").replace(/\.html$/, "") || "dashboard";
+  }
+
+  function setLinkText(link, text) {
+    var last = link.lastChild;
+    if (last && last.nodeType === 3) last.nodeValue = " " + text;
+  }
+
+  function applyRole(info) {
+    superAdmin = !!(info && info.isSuperAdmin);
+    document.documentElement.classList.toggle("is-super-admin", superAdmin);
+    if (!superAdmin && SUPER_ONLY_PAGES.indexOf(currentPage()) !== -1) {
+      location.replace("admin-review");
+      return;
+    }
+    document.querySelectorAll(".admin-nav-link[data-page]").forEach(function (link) {
+      var restricted = SUPER_ONLY_PAGES.indexOf(link.dataset.page) !== -1;
+      link.hidden = restricted && !superAdmin;
+      if (!superAdmin && link.dataset.page === "admin-review") setLinkText(link, "Member register");
+      if (!superAdmin && link.dataset.page === "security") setLinkText(link, "Two-factor");
+    });
+    document.querySelectorAll("[data-super-only]").forEach(function (el) { el.hidden = !superAdmin; });
+    if (superAdmin) return;
+
+    var section = document.querySelector(".admin-nav-section");
+    if (section) section.textContent = "Membership";
+    var crumb = document.querySelector(".admin-crumb strong");
+    if (crumb) crumb.textContent = "Membership";
+    var chipRole = document.querySelector(".admin-user-meta small");
+    if (chipRole) chipRole.textContent = "Admin";
+    document.querySelectorAll(".admin-footer-links a, .admin-footer-brand").forEach(function (link) {
+      var target = (link.getAttribute("href") || "").replace(/\.html$/, "");
+      if (SUPER_ONLY_PAGES.indexOf(target) === -1) return;
+      if (link.classList.contains("admin-footer-brand")) link.setAttribute("href", "admin-review");
+      else link.hidden = true;
+    });
+  }
 
   function setUpSearch() {
     var input = document.getElementById("adminSearch");
@@ -100,6 +151,7 @@
       var q = input.value.trim().toLowerCase();
       if (!q) return close();
       matches = AREAS.filter(function (area) {
+        if (!superAdmin && !area.admin) return false;
         return (area.label + " " + area.hint + " " + area.keywords).toLowerCase().indexOf(q) !== -1;
       });
       cursor = matches.length ? 0 : -1;
@@ -149,10 +201,15 @@
 
     // Active link: match by page name rather than requiring every page to hand-set it, so a
     // renamed or reordered nav item cannot leave a page with no active state.
-    var page = (location.pathname.split("/").pop() || "").replace(/\.html$/, "") || "dashboard";
+    var page = currentPage();
     document.querySelectorAll(".admin-nav-link[data-page]").forEach(function (link) {
       if (link.dataset.page === page) link.classList.add("active");
+      if (SUPER_ONLY_PAGES.indexOf(link.dataset.page) !== -1) link.hidden = true;
     });
+    document.querySelectorAll("[data-super-only]").forEach(function (el) { el.hidden = true; });
+    if (window.ResokPortal && window.ResokPortal.api) {
+      window.ResokPortal.api("/api/admin/whoami").then(applyRole).catch(function () {});
+    }
 
     // Light/dark toggle. The theme itself is applied by a tiny blocking script in each page's
     // <head> (so there's no flash on load) - this just handles the click, and shares one

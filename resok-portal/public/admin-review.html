@@ -111,6 +111,7 @@
       <div>
         <h1>Registered Members</h1>
         <p>View all registered members, payment status, membership numbers, and payment proof records.</p>
+        <div id="roleNotice" class="notice"></div>
       </div>
       <div>
         <!-- Elections, Analytics and Threat Assessment moved to the sidebar nav, which is
@@ -118,7 +119,7 @@
              buttons. PDF Toolkit has no sidebar entry yet, so it stays here, hidden unless
              the account is a super administrator, the same gate the API applies. -->
         <a class="btn btn-secondary" href="pdf-tools" id="pdfLink" hidden><i class="fas fa-file-pdf"></i> PDF Toolkit</a>
-        <a class="btn btn-secondary" href="academy-certificates"><i class="fas fa-award"></i> Certificates</a>
+        <a class="btn btn-secondary" href="academy-certificates" id="certsLink" hidden><i class="fas fa-award"></i> Certificates</a>
         <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-rotate"></i> Refresh</button>
       </div>
     </section>
@@ -176,7 +177,7 @@
       </aside>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="auditPanel" hidden>
       <div class="detail-head">
         <div>
           <h2 style="font-size:19px">Admin Audit Log</h2>
@@ -278,7 +279,7 @@
       </div>
     </div>
   </section>
-  <section class="panel" id="eventsPanel">
+  <section class="panel" id="eventsPanel" hidden>
     <h2 style="font-size:18px;margin-bottom:6px">Events &amp; CMEs</h2>
     <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
       Events created here appear on the public site at <strong>resok.org/events</strong> and in
@@ -492,7 +493,7 @@
     </div>
   </div>
 
-  <script src="js/admin-shell.js?v=20260921-shell5"></script>
+  <script src="js/admin-shell.js?v=20260924-roles2"></script>
   <script src="js/portal-state.js?v=20260915-learners"></script>
   <script>
     let members = [];
@@ -1425,13 +1426,20 @@ ${why}`);
       try {
         whoami = await window.ResokPortal.api("/api/admin/whoami");
         if (window.ResokAdminShell) window.ResokAdminShell.setUser(whoami);
-        document.getElementById("pdfLink").hidden = !whoami.isSuperAdmin;
-        document.getElementById("adminsPanel").hidden = false;
-        document.getElementById("adminsPromote").hidden = !whoami.isSuperAdmin;
-        if (whoami.isSuperAdmin && !whoami.superAdminsConfigured) {
-          adminsNotice("No super administrator is configured, so every admin currently has full access. Set super_admins in config.local.php.", "error");
+        // Super admins get everything on this page; an ordinary admin gets the membership
+        // panels only (register, claims, invites). The API refuses the rest either way.
+        const isSuper = !!whoami.isSuperAdmin;
+        ["pdfLink", "certsLink", "adminsPanel", "adminsPromote", "eventsPanel", "auditPanel"]
+          .forEach((id) => { document.getElementById(id).hidden = !isSuper; });
+        if (!whoami.superAdminsConfigured) {
+          const notice = document.getElementById("roleNotice");
+          notice.textContent = "No super administrator is configured, so administrators, events, elections, analytics and ICT are closed to everyone. Add the super admin's email to super_admins in config.local.php.";
+          notice.style.cssText = "margin-top:12px;padding:10px 14px;border-radius:8px;background:#fdecee;color:#9f1c2c;font-size:13.5px;font-weight:600";
         }
-        loadAdmins();
+        if (isSuper) {
+          loadAdmins();
+          evLoad();
+        }
       } catch (error) {
         // An older API without these routes: leave the panel hidden rather than showing an
         // error for a feature this server does not have yet.
@@ -1635,9 +1643,7 @@ ${why}`);
       if (id) evSetStatus(id, 'published');
     });
     evEl('refreshEventsBtn').addEventListener('click', evLoad);
-
-
-    evLoad();
+    // evLoad() runs from the whoami block above, for super admins only.
 
 
     /* ----- Attendance & CPD tokens ------------------------------------------------------

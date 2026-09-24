@@ -37,7 +37,11 @@ const ACADEMY_COURSE_STATUSES = ['draft', 'published', 'retired'];
 
 function academyRole(array $user): string
 {
-    return (string)($user['role'] ?? 'member');
+    $role = (string)($user['role'] ?? 'member');
+    // 'admin' in the role lists means a super admin. An ordinary admin works on membership
+    // only, so for content they count as a member. superAdmin is set by auth() from config.
+    if ($role === 'admin' && empty($user['superAdmin'])) return 'member';
+    return $role;
 }
 
 function academyCanEdit(array $user): bool

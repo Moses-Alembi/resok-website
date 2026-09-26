@@ -467,7 +467,22 @@
         ci.setAttribute('aria-hidden', 'true');
         cta.appendChild(el('span', null, 'Register'));
         cta.appendChild(ci);
-        foot.appendChild(cta);
+        // CPD token button, on the card from the start. It stays greyed out until the admin
+        // loads this event's attendees and tokens (tokensReady), then works as on past events;
+        // a click while locked just explains that tokens are released after the session.
+        const actions = el('div', 'ev-cta-row');
+        actions.appendChild(cta);
+        const cpd = el('button', `btn ev-cpd${event.tokensReady ? '' : ' is-locked'}`, 'Collect CPD token');
+        cpd.type = 'button';
+        if (!event.tokensReady) cpd.setAttribute('aria-describedby', `cpd-note-${event.slug}`);
+        cpd.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title, event.tokensReady));
+        actions.appendChild(cpd);
+        if (!event.tokensReady) {
+          const note = el('span', 'ev-cpd-note', 'CPD tokens open after the session, once attendance is confirmed.');
+          note.id = `cpd-note-${event.slug}`;
+          actions.appendChild(note);
+        }
+        foot.appendChild(actions);
         wrap.appendChild(foot);
 
         const poster = safeAsset(event.bannerImage);
@@ -571,6 +586,10 @@
     .ev-speaker img{width:56px;height:56px;border-radius:50%;object-fit:cover;object-position:top;background:#eef2f5;border:2px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.12)}
     .ev-speaker-name{font-weight:800;color:var(--ink);line-height:1.3}
     .ev-speaker-role{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#eef7f1;color:var(--brand-primary);font-size:.66rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:2px}
+    .ev-cta-row{display:flex;gap:10px;flex-wrap:wrap}
+    .ev-cpd{background:#fff;color:var(--brand-primary);border:1.5px solid var(--brand-primary)}
+    .ev-cpd.is-locked{color:#667085;border-color:#d0d5dd;background:#f5f7f9;cursor:help}
+    .ev-cpd-note{flex-basis:100%;font-size:.78rem;color:var(--muted)}
     .ev-speaker-headline{color:var(--muted);font-size:.86rem;line-height:1.45;margin-top:2px}
     .ev-speaker details{margin-top:6px}
     .ev-speaker summary{cursor:pointer;color:var(--brand-primary);font-weight:700;font-size:.84rem;list-style:none}

@@ -212,9 +212,34 @@ function eventsUpcoming(PDO $pdo, int $limit = 50): array
     $stmt->execute();
     $events = array_map('eventPublicShape', $stmt->fetchAll());
     $speakers = eventSpeakersFor($pdo, array_column($events, 'id'));
-    foreach ($events as &$event) $event['speakers'] = $speakers[$event['id']] ?? [];
+    $ready = eventsTokensReady($pdo);
+    foreach ($events as &$event) {
+        $event['speakers'] = $speakers[$event['id']] ?? [];
+        $event['tokensReady'] = isset($ready[$event['id']]);
+    }
     unset($event);
     return $events;
+}
+
+/**
+ * Events whose CPD tokens can be collected, as [event_id => true].
+ *
+ * Collection stays locked until the admin has loaded that event's attendees and assigned
+ * their tokens. "Ready" therefore means at least one token on this event is tied to an
+ * attendee - before that, nobody can collect, so the page should not offer to. The token
+ * table may not exist on a fresh install, in which case nothing is ready.
+ */
+function eventsTokensReady(PDO $pdo): array
+{
+    $ready = [];
+    try {
+        foreach ($pdo->query('SELECT DISTINCT event_id FROM cpd_tokens WHERE attendee_id IS NOT NULL') as $r) {
+            $ready[(int)$r['event_id']] = true;
+        }
+    } catch (Throwable $tokenTableAbsent) {
+        // Leave $ready empty - every event reads as not-yet-ready.
+    }
+    return $ready;
 }
 
 /** Published events that have finished, newest first - the "past events" list. */
@@ -228,19 +253,7 @@ function eventsPast(PDO $pdo, int $limit = 12): array
                             LIMIT " . max(1, min($limit, 100)));
     $stmt->execute();
     $rows = $stmt->fetchAll();
-
-    // Collection stays locked until the admin has loaded that event's attendees and assigned
-    // their tokens. "Ready" therefore means at least one token on this event is tied to an
-    // attendee - before that, nobody can collect, so the page should not offer to. The token
-    // table may not exist on a fresh install, in which case nothing is ready.
-    $ready = [];
-    try {
-        foreach ($pdo->query('SELECT DISTINCT event_id FROM cpd_tokens WHERE attendee_id IS NOT NULL') as $r) {
-            $ready[(int)$r['event_id']] = true;
-        }
-    } catch (Throwable $tokenTableAbsent) {
-        // Leave $ready empty - every event reads as not-yet-ready.
-    }
+    $ready = eventsTokensReady($pdo);
 
     return array_map(function (array $row) use ($ready): array {
         $shape = eventPublicShape($row);

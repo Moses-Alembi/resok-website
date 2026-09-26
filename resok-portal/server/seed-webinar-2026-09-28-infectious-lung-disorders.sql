@@ -43,8 +43,10 @@ INSERT INTO cpd_events
 VALUES
   ('infectious-lung-disorders-surgical-treatment-options',
    'Infectious Lung Disorders: Spectrum of Surgical Treatment Options',
-   'When and how surgery helps in infectious lung disease, with thoracic surgeon and Uniportal VATS specialist Prof. Brig. Dr. Asif Asghar. Accredited CPD webinar on Zoom.',
-   'A ReSoK webinar on the surgical management of infectious lung disorders, from minimally invasive VATS and Uniportal VATS approaches to lung resection and pleural procedures.\n\nPresented by Prof. Brig. Dr. Asif Asghar, with Dr. Joseph Mutuku Mutie as panelist and Dr. Wanjiku Kagima moderating.',
+   'The range of surgical treatment options for infectious lung disorders, presented by thoracic surgeon Prof. Brig. Dr. Asif Asghar. Accredited CPD webinar on Zoom.',
+   'A ReSoK webinar on infectious lung disorders and the spectrum of surgical treatment options available for them.
+
+Presented by Prof. Brig. Dr. Asif Asghar, with Dr. Joseph Mutuku Mutie as panelist and Dr. Wanjiku Kagima moderating.',
    'Webinar', 'online', '2026-09-28 19:00:00', NULL, 'Zoom',
    'https://us06web.zoom.us/webinar/register/WN_h7igw1KZQDGkSSSG75xw2w',
    0, 0, 'KES', 'KMPDC', 'published',
@@ -62,7 +64,7 @@ DELETE FROM cpd_event_speakers WHERE event_id = @event_id;
 
 INSERT INTO cpd_event_speakers (event_id, sort_order, role, name, headline, bio, photo) VALUES
 (@event_id, 1, 'Presenter', 'Prof. Brig. Dr. Asif Asghar',
- 'Consultant Thoracic Surgeon | VATS & Uniportal VATS Specialist',
+ 'Consultant Thoracic Surgeon, PAF Hospital, Islamabad',
  'Prof. Brig. Dr. Asif Asghar is a thoracic surgeon from Pakistan with over 14 years of specialized experience in the diagnosis and surgical management of complex chest conditions. He holds FCPS qualifications in General Surgery (1999) and Thoracic Surgery (2008), has advanced international training in VATS and Uniportal VATS, and has served as a CPSP-accredited supervisor and examiner since 2018.\n\nHe is Head of Department at PAF Hospital, Islamabad, and Consultant Thoracic Surgeon at Kulsum International Hospital, Islamabad. His expertise includes minimally invasive lung and chest surgery, lung resections, thoracic malignancies, and pleural, mediastinal and chest-wall procedures, along with training surgeons in minimally invasive techniques.\n\nProf. Asghar is currently in Nairobi and welcomes collaboration with hospitals and specialists on joint case management, developing Uniportal VATS services, demonstration surgeries, training and mentorship, CME sessions, and building sustainable thoracic surgery programmes.',
  'assets/img/events/2026-09-28-infectious-lung-disorders/asif-asghar.jpg'),
 (@event_id, 2, 'Panelist', 'Dr. Joseph Mutuku Mutie',

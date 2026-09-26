@@ -46,7 +46,7 @@ VALUES
    'The range of surgical treatment options for infectious lung disorders, presented by thoracic surgeon Prof. Brig. Dr. Asif Asghar. Accredited CPD webinar on Zoom.',
    'A ReSoK webinar on infectious lung disorders and the spectrum of surgical treatment options available for them.
 
-Presented by Prof. Brig. Dr. Asif Asghar, with Dr. Joseph Mutuku Mutie as panelist and Dr. Wanjiku Kagima moderating.',
+Presented by Prof. Brig. Dr. Asif Asghar, with Dr. Joseph Mutuku Mutie as panelist and Dr. Jacqueline Wanjiku Kagima moderating.',
    'Webinar', 'online', '2026-09-28 19:00:00', NULL, 'Zoom',
    'https://us06web.zoom.us/webinar/register/WN_h7igw1KZQDGkSSSG75xw2w',
    0, 0, 'KES', 'KMPDC', 'published',
@@ -71,7 +71,7 @@ INSERT INTO cpd_event_speakers (event_id, sort_order, role, name, headline, bio,
  'Cardiothoracic & Vascular Surgeon',
  'Dr. Joseph Mutuku Mutie is a Kenyan Cardiothoracic and Vascular Surgeon with specialized expertise in advanced thoracic surgery, minimally invasive surgery, complex airway reconstruction, and aortic surgery.\n\nHe holds an MBChB and a Master of Medicine in Thoracic and Cardiovascular Surgery from the University of Nairobi. His postgraduate research focused on operative mortality among patients with thoracic aortic aneurysm and dissection at Kenyatta National Hospital.\n\nDr. Mutie has completed specialized fellowship training in tubeless uniportal thoracic surgery, developing advanced expertise in minimally invasive thoracic procedures. His professional training has included exposure to leading thoracic surgery centres in China, including experience in uniportal VATS.\n\nHis career is distinguished by several significant milestones in cardiothoracic surgery. He was part of the surgical team that performed Kenya’s first minimally invasive esophagectomy, an important milestone in the advancement of minimally invasive esophageal surgery in the country.\n\nHe has also performed the first tubeless tracheal reconstruction under spontaneous ventilation in Africa, pioneering an advanced non-intubated approach to complex airway reconstruction. In addition, Dr. Mutie has extensive experience in aortic arch replacement surgery, managing complex aortic conditions requiring advanced cardiothoracic intervention.\n\nHis clinical interests encompass tubeless uniportal thoracic surgery, minimally invasive esophageal surgery, tracheal and airway reconstruction, complex aortic surgery, aortic arch replacement, and advanced cardiothoracic surgical techniques.\n\nThrough his specialized training, international exposure, and experience with complex surgical procedures, Dr. Mutie continues to contribute to the advancement of modern cardiothoracic and minimally invasive thoracic surgery in Kenya and across Africa.',
  'assets/img/events/2026-09-28-infectious-lung-disorders/joseph-mutie.jpg'),
-(@event_id, 3, 'Moderator', 'Dr. Wanjiku Kagima',
- 'Honourable Secretary, Respiratory Society of Kenya',
+(@event_id, 3, 'Moderator', 'Jacqueline Wanjiku Kagima, MD, PhD',
+ 'Honourable Secretary & Director of Trainings, Respiratory Society of Kenya',
  NULL,
  'assets/img/events/2026-09-28-infectious-lung-disorders/wanjiku-kagima.jpg');

@@ -5,9 +5,9 @@
 -- Safe to run again: it updates the event in place and replaces its speaker list.
 --
 -- Published straight away, since the webinar is two days out. CPD points and the KMPDC
--- approval reference are left NULL until they are confirmed - the page then says "CPD
--- points pending accreditation" rather than claiming a number nobody has approved. Fill
--- them in from Admin -> Events & CMEs once KMPDC confirms.
+-- approval reference are left NULL until they are confirmed; the card shows no points until
+-- then, rather than a number nobody has approved. Fill them in from Admin -> Events & CMEs
+-- once KMPDC confirms.
 --
 -- Fees are 0 (the card reads "Free to attend"), because registration is an open Zoom
 -- sign-up. Change member_fee / nonmember_fee below if there is a charge.

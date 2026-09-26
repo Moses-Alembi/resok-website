@@ -258,7 +258,6 @@
     .ev-meta i{color:var(--brand-primary);width:15px;text-align:center;flex:0 0 auto}
     .ev-points{margin:16px 22px 0;background:#f5f9f6;border:1px dashed #cde5d5;border-radius:11px;padding:11px 14px;font-size:.85rem;color:#2d5c40}
     .ev-points strong{font-weight:800}
-    .ev-points.is-pending{background:#fffaf0;border-color:#f0dcb4;color:#8a6414}
     .ev-foot{padding:16px 22px 20px;border-top:1px solid var(--line);margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .ev-fee{font-size:.84rem;color:var(--muted);line-height:1.45}
     .ev-fee b{color:var(--ink);font-weight:800}
@@ -430,16 +429,14 @@
         wrap.appendChild(body);
 
         // Points are only claimed where KMPDC has actually approved them. Without a
-        // reference the card says so plainly rather than showing a number nobody approved.
+        // reference nothing is shown - never a number nobody approved.
         const accredited = event.points !== null && event.points !== undefined && event.approvalRef;
-        const points = el('div', `ev-points${accredited ? '' : ' is-pending'}`);
         if (accredited) {
+          const points = el('div', 'ev-points');
           points.appendChild(el('strong', null, `${event.points} CPD point${event.points === 1 ? '' : 's'}`));
           points.appendChild(document.createTextNode(` - ${event.regulator} approved (${event.approvalRef})`));
-        } else {
-          points.textContent = 'CPD points pending accreditation';
+          wrap.appendChild(points);
         }
-        wrap.appendChild(points);
 
         const foot = el('div', 'ev-foot');
         const fee = el('div', 'ev-fee');

@@ -467,14 +467,17 @@
         // CPD token button, on the card from the start. It stays greyed out until the admin
         // loads this event's attendees and tokens (tokensReady), then works as on past events;
         // a click while locked just explains that tokens are released after the session.
+        // Anything but an explicit true counts as locked, so an older API that does not send
+        // tokensReady for upcoming events can never open the collection dialog early.
+        const tokensReady = event.tokensReady === true;
         const actions = el('div', 'ev-cta-row');
         actions.appendChild(cta);
-        const cpd = el('button', `btn ev-cpd${event.tokensReady ? '' : ' is-locked'}`, 'Collect CPD token');
+        const cpd = el('button', `btn ev-cpd${tokensReady ? '' : ' is-locked'}`, 'Collect CPD token');
         cpd.type = 'button';
-        if (!event.tokensReady) cpd.setAttribute('aria-describedby', `cpd-note-${event.slug}`);
-        cpd.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title, event.tokensReady));
+        if (!tokensReady) cpd.setAttribute('aria-describedby', `cpd-note-${event.slug}`);
+        cpd.addEventListener('click', () => window.ResokCollectToken(event.slug, event.title, tokensReady));
         actions.appendChild(cpd);
-        if (!event.tokensReady) {
+        if (!tokensReady) {
           const note = el('span', 'ev-cpd-note', 'CPD tokens open after the session, once attendance is confirmed.');
           note.id = `cpd-note-${event.slug}`;
           actions.appendChild(note);

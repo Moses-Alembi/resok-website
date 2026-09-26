@@ -344,6 +344,45 @@
        *  normalised to a form every browser parses the same way. */
       const parseDate = (value) => (value ? new Date(String(value).replace(' ', 'T')) : null);
 
+      // Admin-typed paths and links: only site assets or https addresses are used, so a value
+      // like "javascript:..." can never become a link or an image source.
+      const safeAsset = (v) => (typeof v === 'string' && (/^assets\/[\w\-./]+$/.test(v) || /^https:\/\//.test(v)) ? v : null);
+      const safeHttps = (v) => (typeof v === 'string' && /^https:\/\/[^\s"'<>]+$/.test(v) ? v : null);
+      const paragraphs = (text, cls) => {
+        const box = el('div', cls);
+        String(text).split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean)
+          .forEach((t) => box.appendChild(el('p', null, t)));
+        return box;
+      };
+
+      function speakerBlock(speakers) {
+        const box = el('div', 'ev-speakers');
+        box.appendChild(el('h4', null, speakers.length === 1 ? 'Speaker' : 'Speakers'));
+        speakers.forEach((s) => {
+          const row = el('div', 'ev-speaker');
+          const img = el('img');
+          img.alt = s.name || '';
+          img.loading = 'lazy';
+          const photo = safeAsset(s.photo);
+          if (photo) img.src = photo;
+          row.appendChild(img);
+          const text = el('div');
+          const name = el('div', 'ev-speaker-name', s.name);
+          if (s.role) name.appendChild(el('span', 'ev-speaker-role', s.role));
+          text.appendChild(name);
+          if (s.headline) text.appendChild(el('div', 'ev-speaker-headline', s.headline));
+          if (s.bio) {
+            const more = el('details');
+            more.appendChild(el('summary', null, 'Read bio'));
+            more.appendChild(paragraphs(s.bio, 'ev-bio'));
+            text.appendChild(more);
+          }
+          row.appendChild(text);
+          box.appendChild(row);
+        });
+        return box;
+      }
+
       const money = (amount, currency) => (Number(amount) > 0
         ? `${currency || 'KES'} ${Number(amount).toLocaleString()}`
         : 'Free');
@@ -385,6 +424,9 @@
         row(FORMAT_ICON[event.format] || 'fa-location-dot',
             event.venue ? `${FORMAT_LABEL[event.format]} - ${event.venue}` : FORMAT_LABEL[event.format]);
         body.appendChild(meta);
+        const speakers = Array.isArray(event.speakers) ? event.speakers : [];
+        if (event.description && speakers.length) body.appendChild(paragraphs(event.description, 'ev-about'));
+        if (speakers.length) body.appendChild(speakerBlock(speakers));
         wrap.appendChild(body);
 
         // Points are only claimed where KMPDC has actually approved them. Without a
@@ -413,13 +455,40 @@
         foot.appendChild(fee);
 
         const cta = el('a', 'btn btn-primary', null);
-        cta.href = `contact.html?event=${encodeURIComponent(event.slug)}`;
+        const signUp = safeHttps(event.registrationUrl);
+        if (signUp) {
+          cta.href = signUp;
+          cta.target = '_blank';
+          cta.rel = 'noopener';
+        } else {
+          cta.href = `contact.html?event=${encodeURIComponent(event.slug)}`;
+        }
         const ci = el('i', 'fas fa-arrow-right-long');
         ci.setAttribute('aria-hidden', 'true');
         cta.appendChild(el('span', null, 'Register'));
         cta.appendChild(ci);
         foot.appendChild(cta);
         wrap.appendChild(foot);
+
+        const poster = safeAsset(event.bannerImage);
+        if (poster || speakers.length) {
+          wrap.classList.add('is-featured');
+          const main = el('div', 'ev-main');
+          while (wrap.firstChild) main.appendChild(wrap.firstChild);
+          if (poster) {
+            const link = el('a', 'ev-poster');
+            link.href = poster;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.setAttribute('aria-label', `Open the poster for ${event.title}`);
+            const img = el('img');
+            img.src = poster;
+            img.alt = `Poster: ${event.title}`;
+            link.appendChild(img);
+            wrap.appendChild(link);
+          }
+          wrap.appendChild(main);
+        }
 
         return wrap;
       }
@@ -489,6 +558,31 @@
   </script>
 
     <style>
+    /* Featured event: poster beside the details, speakers with their bios. Used when an event
+       has a poster or speakers; every other event keeps the plain card. */
+    .ev-card.is-featured{grid-column:1 / -1;display:grid;grid-template-columns:minmax(220px,340px) minmax(0,1fr)}
+    .ev-poster{display:block;align-self:start;position:sticky;top:calc(var(--navbar-height) + 12px);padding:14px;background:#fff}
+    .ev-poster img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
+    .ev-main{display:flex;flex-direction:column;min-width:0}
+    .ev-about{margin-top:12px;color:var(--muted);font-size:.92rem;line-height:1.6;display:grid;gap:8px}
+    .ev-speakers{margin-top:18px;display:grid;gap:12px}
+    .ev-speakers h4{font-family:var(--heading);font-size:.78rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-primary);margin:0}
+    .ev-speaker{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;align-items:start}
+    .ev-speaker img{width:56px;height:56px;border-radius:50%;object-fit:cover;object-position:top;background:#eef2f5;border:2px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.12)}
+    .ev-speaker-name{font-weight:800;color:var(--ink);line-height:1.3}
+    .ev-speaker-role{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#eef7f1;color:var(--brand-primary);font-size:.66rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;vertical-align:2px}
+    .ev-speaker-headline{color:var(--muted);font-size:.86rem;line-height:1.45;margin-top:2px}
+    .ev-speaker details{margin-top:6px}
+    .ev-speaker summary{cursor:pointer;color:var(--brand-primary);font-weight:700;font-size:.84rem;list-style:none}
+    .ev-speaker summary::-webkit-details-marker{display:none}
+    .ev-speaker summary::after{content:" \25BE"}
+    .ev-speaker details[open] summary::after{content:" \25B4"}
+    .ev-speaker summary:focus-visible{outline:2px solid var(--brand-primary);outline-offset:2px;border-radius:4px}
+    .ev-bio{display:grid;gap:8px;margin-top:8px;color:#344054;font-size:.88rem;line-height:1.65}
+    @media (max-width:760px){
+      .ev-card.is-featured{grid-template-columns:1fr}
+      .ev-poster{position:static;padding:12px 12px 0}
+    }
     /* Token collection dialog */
     .tk-backdrop{position:fixed;inset:0;background:rgba(6,17,25,.62);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9000}
     .tk-modal{background:#fff;border-radius:16px;max-width:470px;width:100%;padding:30px;box-shadow:0 26px 70px rgba(6,17,25,.32);max-height:90vh;overflow-y:auto}

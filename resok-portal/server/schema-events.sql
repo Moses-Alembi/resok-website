@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS cpd_events (
   -- The joining link. Never returned by the public endpoint - it goes only to people who
   -- have registered, otherwise the paid session is one search result away from being free.
   online_url VARCHAR(500) NULL,
+  -- Public sign-up page (e.g. a Zoom registration link); unlike online_url, shown to anyone.
+  registration_url VARCHAR(500) NULL,
 
   -- Whole shillings. Non-members usually pay more, and they are a real audience here:
   -- they attend, they earn KMPDC points, and they are the warmest membership leads there are.
@@ -57,4 +59,18 @@ CREATE TABLE IF NOT EXISTS cpd_events (
   UNIQUE KEY cpd_events_slug (slug),
   KEY cpd_events_listing (status, starts_at),
   KEY cpd_events_starts (starts_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Speakers per event, in display order (presenter first). See migration-event-speakers.sql.
+CREATE TABLE IF NOT EXISTS cpd_event_speakers (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_id INT UNSIGNED NOT NULL,
+  sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  role VARCHAR(40) NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  headline VARCHAR(200) NULL,
+  bio TEXT NULL,
+  photo VARCHAR(255) NULL,
+  PRIMARY KEY (id),
+  KEY cpd_event_speakers_event (event_id, sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

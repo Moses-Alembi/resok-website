@@ -58,6 +58,7 @@ function migrateOrder(): array
         'schema-security.sql',                 // alters users; rate limiting, event log
         'schema-events.sql',                   // cpd_events
         'schema-tokens.sql',                   // attendance and CPD tokens
+        'migration-event-speakers.sql',        // event speakers; registration_url on cpd_events
         'schema-ict.sql',                      // alters users.role; ICT capabilities, audit
         'schema-ict-infrastructure.sql',       // domain, hosting, SSL, backups
         'schema-ict-assets.sql',               // equipment, assignments, maintenance

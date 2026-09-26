@@ -49,6 +49,7 @@ function eventsEnsureTable(PDO $pdo): bool
             ends_at DATETIME NULL,
             venue VARCHAR(200) NULL,
             online_url VARCHAR(500) NULL,
+            registration_url VARCHAR(500) NULL,
             member_fee INT UNSIGNED NOT NULL DEFAULT 0,
             nonmember_fee INT UNSIGNED NOT NULL DEFAULT 0,
             currency CHAR(3) NOT NULL DEFAULT 'KES',
@@ -121,7 +122,64 @@ function eventPublicShape(array $row): array
         // showing a number nobody has approved.
         'points'        => $points === null ? null : (float)$points,
         'bannerImage'   => $row['banner_image'],
+        'description'   => $row['description'],
+        // A public sign-up page (a Zoom registration link, say) - unlike online_url, which is
+        // the joining link and stays private. Absent until migration-event-speakers.sql runs.
+        'registrationUrl' => $row['registration_url'] ?? null,
     ];
+}
+
+/**
+ * Speakers, created on first use like cpd_events. A separate table rather than a column so
+ * an event can have any number of them in a set order, and so adding it needs no ALTER on a
+ * host that has refused ALTERs before. Fails soft: no table means no speakers, not a 500.
+ */
+function eventSpeakersEnsureTable(PDO $pdo): bool
+{
+    static $ready = null;
+    if ($ready !== null) return $ready;
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cpd_event_speakers (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            event_id INT UNSIGNED NOT NULL,
+            sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+            role VARCHAR(40) NOT NULL,
+            name VARCHAR(160) NOT NULL,
+            headline VARCHAR(200) NULL,
+            bio TEXT NULL,
+            photo VARCHAR(255) NULL,
+            PRIMARY KEY (id),
+            KEY cpd_event_speakers_event (event_id, sort_order)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        return $ready = true;
+    } catch (Throwable $e) {
+        error_log('cpd_event_speakers unavailable: ' . $e->getMessage());
+        return $ready = false;
+    }
+}
+
+/** Speakers for a set of events, in their set order, keyed by event id. */
+function eventSpeakersFor(PDO $pdo, array $eventIds): array
+{
+    $eventIds = array_values(array_unique(array_map('intval', $eventIds)));
+    if (!$eventIds || !eventSpeakersEnsureTable($pdo)) return [];
+    try {
+        $in = implode(',', array_fill(0, count($eventIds), '?'));
+        $stmt = $pdo->prepare("SELECT event_id, role, name, headline, bio, photo FROM cpd_event_speakers
+                               WHERE event_id IN ($in) ORDER BY event_id, sort_order, id");
+        $stmt->execute($eventIds);
+    } catch (Throwable $e) {
+        error_log('cpd_event_speakers read failed: ' . $e->getMessage());
+        return [];
+    }
+    $out = [];
+    foreach ($stmt->fetchAll() as $r) {
+        $out[(int)$r['event_id']][] = [
+            'role' => $r['role'], 'name' => $r['name'], 'headline' => $r['headline'],
+            'bio' => $r['bio'], 'photo' => $r['photo'],
+        ];
+    }
+    return $out;
 }
 
 /** Everything, for the admin screens. */
@@ -152,7 +210,11 @@ function eventsUpcoming(PDO $pdo, int $limit = 50): array
                             ORDER BY starts_at ASC
                             LIMIT " . max(1, min($limit, 200)));
     $stmt->execute();
-    return array_map('eventPublicShape', $stmt->fetchAll());
+    $events = array_map('eventPublicShape', $stmt->fetchAll());
+    $speakers = eventSpeakersFor($pdo, array_column($events, 'id'));
+    foreach ($events as &$event) $event['speakers'] = $speakers[$event['id']] ?? [];
+    unset($event);
+    return $events;
 }
 
 /** Published events that have finished, newest first - the "past events" list. */

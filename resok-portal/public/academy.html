@@ -791,6 +791,24 @@
       .ah-stats-in{gap:10px 28px}
       .ch-start{width:100%}
     }
+
+    /* Lung-health subject band (Alison-style 5-across cards, coloured icons, faint doodles). */
+    .ah-subjects{position:relative;overflow:hidden}
+    .ah-subjects .subjects{max-width:1060px;margin:0 auto}
+    .ah-subjects .subject{width:184px;min-height:156px}
+    .ah-subjects .subject > i{font-size:32px}
+    .ah-subjects .subject b{line-height:1.25}
+    .ah-subjects .subject.is-soon{cursor:default}
+    .ah-subjects .subject.is-soon:hover{transform:none;box-shadow:0 10px 26px rgba(0,0,0,.14)}
+    .ah-subjects .subject.is-soon small{color:#8a978f;font-style:italic}
+    .ah-doodle{position:absolute;color:#fff;opacity:.16;pointer-events:none}
+    .ah-doodle.d1{font-size:96px;left:3%;top:14%;transform:rotate(-14deg)}
+    .ah-doodle.d2{font-size:70px;left:9%;bottom:10%;transform:rotate(12deg)}
+    .ah-doodle.d3{font-size:84px;right:4%;top:16%;transform:rotate(10deg)}
+    .ah-doodle.d4{font-size:74px;right:8%;bottom:9%;transform:rotate(-10deg)}
+    #exploreMenu a.is-soon{opacity:.55;cursor:default}
+    @media(max-width:900px){.ah-doodle{display:none}}
+    @media(max-width:560px){.ah-subjects .subject{width:calc(50% - 11px);min-height:136px}}
   </style>
 </head>
 <body>
@@ -840,8 +858,12 @@
   <div class="ah-stats"><div class="shell ah-stats-in" id="stats"></div></div>
 
   <section class="ah-subjects" id="subjectsBand" hidden>
+    <i class="fas fa-lungs ah-doodle d1" aria-hidden="true"></i>
+    <i class="fas fa-stethoscope ah-doodle d2" aria-hidden="true"></i>
+    <i class="fas fa-microscope ah-doodle d3" aria-hidden="true"></i>
+    <i class="fas fa-book-medical ah-doodle d4" aria-hidden="true"></i>
     <div class="shell">
-      <h2 class="ah-band-title">Explore Free Online Courses</h2>
+      <h2 class="ah-band-title" id="subjectsTitle">Explore Free Online Lung Health Courses</h2>
       <div class="subjects" id="subjects"></div>
     </div>
   </section>
@@ -1191,6 +1213,31 @@
    * photo chosen by subject, so the catalogue never shows an empty grey box. Only paths under
    * the site's own assets, or https links, are used as an image source.
    */
+  /*
+   * The Academy's subjects: lung health only, in the areas the Society works in (the same as
+   * the Knowledge Hub, plus interventional pulmonology from the workshops). A course's stored
+   * category is matched to one of these by name or alias, so older labels such as "TB" or
+   * "Paediatrics" still land in the right card. A subject with no course yet says "Coming
+   * soon" rather than showing a count nobody can back up.
+   */
+  const LUNG_SUBJECTS = [
+    { name: 'Asthma', icon: 'fa-lungs', color: '#1d6fd6', aliases: [] },
+    { name: 'COPD', icon: 'fa-wind', color: '#0f8f9e', aliases: ['Chronic obstructive pulmonary disease'] },
+    { name: 'Tuberculosis', icon: 'fa-viruses', color: '#c62828', aliases: ['TB', 'DR-TB', 'Post-TB lung disease', 'TB and post-TB'] },
+    { name: 'Lung Cancer', icon: 'fa-ribbon', color: '#7b2cbf', aliases: ['Thoracic oncology', 'Oncology'] },
+    { name: 'Pleural Disease', icon: 'fa-circle-nodes', color: '#16a085', aliases: ['Pleural'] },
+    { name: 'Pulmonary Hypertension', icon: 'fa-heart-pulse', color: '#d81b60', aliases: [] },
+    { name: 'Sleep & Breathing', icon: 'fa-bed', color: '#3949ab', aliases: ['Sleep', 'Sleep and breathing', 'Sleep medicine'] },
+    { name: 'Paediatric Lung Health', icon: 'fa-child-reaching', color: '#ef6c00', aliases: ['Paediatrics', 'Pediatrics', 'Paediatric respiratory'] },
+    { name: 'Environmental & Occupational', icon: 'fa-smog', color: '#5d7a1f', aliases: ['Tobacco control', 'Air quality', 'Occupational lung health', 'Environmental and occupational lung health', 'Public health'] },
+    { name: 'Interventional Pulmonology', icon: 'fa-stethoscope', color: '#00796b', aliases: ['Bronchoscopy', 'EBUS', 'Diagnostics'] }
+  ];
+  const SUBJECT_BY_KEY = {};
+  LUNG_SUBJECTS.forEach((sub) => [sub.name].concat(sub.aliases)
+    .forEach((key) => { SUBJECT_BY_KEY[key.toLowerCase()] = sub; }));
+  const subjectOf = (category) => SUBJECT_BY_KEY[String(category || '').trim().toLowerCase()] || null;
+  const subjectCount = (sub) => allCourses.filter((c) => subjectOf(c.category) === sub).length;
+
   const IMG_BASE = '../../assets/img/pages/gallery/';
   const SUBJECT_IMAGE = {
     'Getting started': 'gallery-08.jpg', 'Tuberculosis': 'gallery-03.jpg', 'Diagnostics': 'gallery-04.jpg',
@@ -1200,7 +1247,8 @@
   function courseImage(course) {
     const own = String(course.heroImage || '');
     if (/^https:\/\//.test(own) || /^(\.\.\/)*assets\/[\w\-./]+$/.test(own)) return own;
-    return IMG_BASE + (SUBJECT_IMAGE[course.category] || 'gallery-05.jpg');
+    const sub = subjectOf(course.category);
+    return IMG_BASE + (SUBJECT_IMAGE[course.category] || (sub && SUBJECT_IMAGE[sub.name]) || 'gallery-05.jpg');
   }
   const LEVEL_LABEL = { introductory: 'Beginner level', intermediate: 'Intermediate level', advanced: 'Advanced level' };
 
@@ -1287,26 +1335,40 @@
   }
 
   function renderSubjects() {
-    el('subjectsBand').hidden = categories.length < 1;
+    el('subjectsBand').hidden = false;
+    // Lung-health courses only - the Academy orientation course is not one.
+    const total = LUNG_SUBJECTS.reduce((sum, sub) => sum + subjectCount(sub), 0);
+    el('subjectsTitle').textContent = total
+      ? 'Explore ' + total + ' Free Online Lung Health ' + (total === 1 ? 'Course' : 'Courses')
+      : 'Explore Free Online Lung Health Courses';
     const mount = el('subjects');
     mount.textContent = '';
-    categories.forEach((c) => {
-      const box = make('div', 'subject');
-      const icon = make('i', 'fas ' + (SUBJECT_ICON[c.name] || 'fa-book-open'));
+    LUNG_SUBJECTS.forEach((sub) => {
+      const count = subjectCount(sub);
+      const box = make('div', 'subject' + (count ? '' : ' is-soon'));
+      const icon = make('i', 'fas ' + sub.icon);
+      icon.style.color = sub.color;
+      icon.setAttribute('aria-hidden', 'true');
       box.appendChild(icon);
-      box.appendChild(make('b', null, c.name));
-      const count = make('small', null, c.courses + (c.courses === 1 ? ' Course ' : ' Courses '));
-      count.appendChild(make('i', 'fas fa-arrow-right'));
-      box.appendChild(count);
+      box.appendChild(make('b', null, sub.name));
+      if (!count) {
+        box.appendChild(make('small', null, 'Coming soon'));
+        box.setAttribute('aria-disabled', 'true');
+        mount.appendChild(box);
+        return;
+      }
+      const label = make('small', null, count + (count === 1 ? ' Course ' : ' Courses '));
+      label.appendChild(make('i', 'fas fa-arrow-right'));
+      box.appendChild(label);
       box.tabIndex = 0;
       box.setAttribute('role', 'button');
-      box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); box.click(); } });
       box.addEventListener('click', () => {
-        filterCategory = c.name;
+        filterCategory = sub.name;
         renderCategoryFilter();
         applyFilters();
         el('coursesBand').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
+      box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); box.click(); } });
       mount.appendChild(box);
     });
   }
@@ -1327,26 +1389,34 @@
       mount.appendChild(wrap);
     };
     option('', 'Every subject', null);
-    categories.forEach((c) => option(c.name, c.name, c.courses));
+    LUNG_SUBJECTS.forEach((sub) => { const n = subjectCount(sub); if (n) option(sub.name, sub.name, n); });
+    // Courses outside the lung-health subjects (the Academy orientation, say) stay findable.
+    categories.filter((c) => !subjectOf(c.name)).forEach((c) => option(c.name, c.name, c.courses));
   }
 
   function renderExplore() {
     const menu = el('exploreMenu');
     menu.textContent = '';
-    if (!categories.length) {
-      menu.appendChild(make('div', 'none', 'No subjects yet.'));
-      return;
-    }
-    categories.forEach((c) => {
+    LUNG_SUBJECTS.forEach((sub) => {
+      const count = subjectCount(sub);
       const link = make('a');
       link.href = '#';
-      link.appendChild(make('i', 'fas ' + (SUBJECT_ICON[c.name] || 'fa-book-open')));
-      link.appendChild(document.createTextNode(c.name));
-      link.appendChild(make('span', null, String(c.courses)));
+      const icon = make('i', 'fas ' + sub.icon);
+      icon.style.color = sub.color;
+      link.appendChild(icon);
+      link.appendChild(document.createTextNode(sub.name));
+      link.appendChild(make('span', null, count ? String(count) : 'Soon'));
+      if (!count) {
+        link.classList.add('is-soon');
+        link.setAttribute('aria-disabled', 'true');
+        link.addEventListener('click', (event) => event.preventDefault());
+        menu.appendChild(link);
+        return;
+      }
       link.addEventListener('click', (event) => {
         event.preventDefault();
         closeExplore();
-        filterCategory = c.name;
+        filterCategory = sub.name;
         renderCategoryFilter();
         go('');
         applyFilters();
@@ -1359,7 +1429,10 @@
   function applyFilters() {
     const needle = search.toLowerCase();
     let list = allCourses.filter((c) => {
-      if (filterCategory && c.category !== filterCategory) return false;
+      if (filterCategory) {
+        const sub = subjectOf(c.category);
+        if (c.category !== filterCategory && !(sub && sub.name === filterCategory)) return false;
+      }
       if (filterLevel && c.level !== filterLevel) return false;
       if (!needle) return true;
       return (c.title + ' ' + (c.summary || '') + ' ' + (c.category || '')).toLowerCase().includes(needle);

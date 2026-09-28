@@ -1,5 +1,17 @@
 DirectoryIndex index.html
 
+# Leftover WordPress install (28 Sep 2026: login page, wp-admin, wp-includes and plugin
+# code were still reachable). Nothing on this site uses it, and an unmaintained WordPress
+# login and plugins are the likeliest way into this server. Blocked here - answered as
+# "not found" - rather than deleted, so nothing is lost; remove the files and its database
+# from cPanel after taking a backup, then these lines can go.
+<IfModule mod_alias.c>
+  RedirectMatch 404 ^/(wp-admin|wp-includes)(/|$)
+  RedirectMatch 404 ^/wp-content/(plugins|themes|mu-plugins|upgrade|cache|languages)(/|$)
+  RedirectMatch 404 ^/wp-content/.*\.(php|txt|md|log)$
+  RedirectMatch 404 ^/(wp-login|wp-signup|wp-activate|wp-cron|wp-links-opml|wp-mail|wp-trackback|wp-comments-post|wp-settings|wp-load|wp-blog-header|wp-config|xmlrpc)\.php$
+</IfModule>
+
 # NOTE: previously had `AddType application/x-httpd-php .html` here to let
 # partials/header.php etc. be included via <?php ?> in the 7 converted marketing
 # pages. Removed - on this host it just labeled .html files with a MIME type

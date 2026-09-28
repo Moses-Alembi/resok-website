@@ -1,6 +1,9 @@
 User-agent: *
 Allow: /
 Disallow: /tools/
+# The members' portal stays out of search, except the Virtual Academy catalogue, which is
+# public and meant to be found. The more specific Allow wins over the Disallow.
+Allow: /resok-portal/public/academy
 Disallow: /resok-portal/
 
 Sitemap: https://www.resok.org/sitemap.xml

@@ -60,6 +60,37 @@ body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65
   .pub-aside{position:static;max-width:320px}
 }
 </style>
+  <style id="nav-fit">
+    /* Header fit: the menu, Login/Donate and "Become a Member" must stay on screen at every desktop
+       width. Below 993px the pages switch to the drawer menu, so only 993px and up is handled. */
+    @media (min-width:993px) and (max-width:1560px){
+      .nav-shell{grid-template-columns:250px minmax(0,1fr)!important}
+      .logo{padding:0 20px!important}
+      .nav-main{padding:0 2.2%!important;column-gap:16px!important}
+      .nav-menu{gap:clamp(.6rem,1.05vw,1.1rem)!important}
+      .nav-link{font-size:.84rem!important}
+      .nav-actions{gap:14px!important}
+    }
+    @media (min-width:993px) and (max-width:1420px){
+      .nav-shell{grid-template-columns:210px minmax(0,1fr)!important}
+      .logo img{max-width:180px!important}
+      .nav-link{font-size:.8rem!important}
+      .nav-actions .nav-top-action{font-size:0!important;gap:0!important}
+      .nav-actions .nav-top-action i{font-size:1.05rem!important}
+      .nav-top-member{padding:0 14px!important;font-size:.82rem!important}
+    }
+    @media (min-width:993px) and (max-width:1140px){
+      .nav-shell{grid-template-columns:170px minmax(0,1fr)!important}
+      .logo{padding:0 12px!important}
+      .logo img{max-width:148px!important}
+      .nav-main{padding:0 1.4%!important;column-gap:10px!important}
+      .nav-menu{gap:.5rem!important}
+      .nav-link{font-size:.74rem!important}
+      .nav-badge{display:none!important}
+      .nav-actions{gap:10px!important}
+      .nav-top-member{padding:0 10px!important;font-size:.74rem!important}
+    }
+  </style>
 </head><body>
 <nav class="navbar">
     <div class="nav-shell">
@@ -79,6 +110,7 @@ body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65
           <li><a href="workshops-and-training.html" class="nav-link"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
           <li><a href="knowledge.html" class="nav-link"><i class="fas fa-book-medical" aria-hidden="true"></i>Knowledge</a></li>
           <li><a href="learning.html" class="nav-link"><i class="fas fa-book-open" aria-hidden="true"></i>Learning<span class="nav-badge">Members</span></a></li>
+          <li><a href="resok-portal/public/academy" class="nav-link"><i class="fas fa-graduation-cap" aria-hidden="true"></i>Academy</a></li>
           <li><a href="blog.html" class="nav-link"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
           <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
           <li class="nav-mobile-actions">

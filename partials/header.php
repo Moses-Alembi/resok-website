@@ -15,6 +15,7 @@ $navItems = [
     'workshops' => ['workshops-and-training.html', 'fa-chalkboard-user', 'Workshops'],
     'knowledge' => ['knowledge.html', 'fa-book-medical', 'Knowledge'],
     'learning' => ['learning.html', 'fa-book-open', 'Learning', 'Members'],
+    'academy' => ['resok-portal/public/academy', 'fa-graduation-cap', 'Academy'],
     'blog' => ['blog.html', 'fa-newspaper', 'Blog'],
     'contact' => ['contact.html', 'fa-envelope', 'Contact']
 ];

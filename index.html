@@ -5462,6 +5462,37 @@ if ('serviceWorker' in navigator) {
   @media (max-width:520px){.join-community{padding:60px 16px}.join-mosaic{height:280px;gap:8px}.join-actions{display:grid}.join-btn{justify-content:center}}
   @media (prefers-reduced-motion:reduce){.join-btn{transition:none}.join-btn:hover{transform:none}}
 </style>
+  <style id="nav-fit">
+    /* Header fit: the menu, Login/Donate and "Become a Member" must stay on screen at every desktop
+       width. Below 993px the pages switch to the drawer menu, so only 993px and up is handled. */
+    @media (min-width:993px) and (max-width:1560px){
+      .nav-shell{grid-template-columns:250px minmax(0,1fr)!important}
+      .logo{padding:0 20px!important}
+      .nav-main{padding:0 2.2%!important;column-gap:16px!important}
+      .nav-menu{gap:clamp(.6rem,1.05vw,1.1rem)!important}
+      .nav-link{font-size:.84rem!important}
+      .nav-actions{gap:14px!important}
+    }
+    @media (min-width:993px) and (max-width:1420px){
+      .nav-shell{grid-template-columns:210px minmax(0,1fr)!important}
+      .logo img{max-width:180px!important}
+      .nav-link{font-size:.8rem!important}
+      .nav-actions .nav-top-action{font-size:0!important;gap:0!important}
+      .nav-actions .nav-top-action i{font-size:1.05rem!important}
+      .nav-top-member{padding:0 14px!important;font-size:.82rem!important}
+    }
+    @media (min-width:993px) and (max-width:1140px){
+      .nav-shell{grid-template-columns:170px minmax(0,1fr)!important}
+      .logo{padding:0 12px!important}
+      .logo img{max-width:148px!important}
+      .nav-main{padding:0 1.4%!important;column-gap:10px!important}
+      .nav-menu{gap:.5rem!important}
+      .nav-link{font-size:.74rem!important}
+      .nav-badge{display:none!important}
+      .nav-actions{gap:10px!important}
+      .nav-top-member{padding:0 10px!important;font-size:.74rem!important}
+    }
+  </style>
 </head>
 <body>
 
@@ -5485,6 +5516,7 @@ if ('serviceWorker' in navigator) {
           <li><a href="workshops-and-training.html" class="nav-link"><i class="fas fa-chalkboard-user" aria-hidden="true"></i>Workshops</a></li>
           <li><a href="knowledge.html" class="nav-link"><i class="fas fa-book-medical" aria-hidden="true"></i>Knowledge</a></li>
           <li><a href="learning.html" class="nav-link"><i class="fas fa-book-open" aria-hidden="true"></i>Learning<span class="nav-badge">Members</span></a></li>
+          <li><a href="resok-portal/public/academy" class="nav-link"><i class="fas fa-graduation-cap" aria-hidden="true"></i>Academy</a></li>
           <li><a href="blog.html" class="nav-link"><i class="fas fa-newspaper" aria-hidden="true"></i>Blog</a></li>
           <li><a href="contact.html" class="nav-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
           <li class="nav-mobile-actions">
@@ -5638,6 +5670,52 @@ if ('serviceWorker' in navigator) {
           </div>
           <span class="priority-gateway-link">Become a member <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
         </a>
+      </div>
+    </div>
+  </section>
+  <!-- Virtual Academy -->
+  <section class="academy-band" id="academy" aria-labelledby="academyTitle">
+    <style>
+      .academy-band{background:linear-gradient(135deg,#0a2e38 0%,#0d3f33 100%);color:#fff;padding:76px 0}
+      .academy-band-inner{width:min(1180px,90vw);margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center}
+      .academy-band-kicker{display:inline-flex;align-items:center;gap:8px;color:#9be7b2;font-weight:900;font-size:.76rem;letter-spacing:.12em;text-transform:uppercase}
+      .academy-band h2{font-family:'Mulish','Poppins',sans-serif;font-weight:900;font-size:clamp(1.7rem,3.2vw,2.7rem);line-height:1.08;margin:14px 0 14px;text-wrap:balance}
+      .academy-band p{color:rgba(255,255,255,.82);font-size:1rem;line-height:1.65;max-width:56ch}
+      .academy-band-facts{list-style:none;margin:22px 0 0;padding:0;display:grid;gap:10px}
+      .academy-band-facts li{display:flex;align-items:center;gap:11px;color:#fff;font-weight:600}
+      .academy-band-facts i{color:#9be7b2;width:18px;text-align:center}
+      .academy-band-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+      .academy-band-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:0 22px;border-radius:999px;font-weight:900;text-decoration:none;font-family:'Mulish','Poppins',sans-serif}
+      .academy-band-btn.primary{background:#00932e;color:#fff}
+      .academy-band-btn.primary:hover{background:#007a26}
+      .academy-band-btn.ghost{border:1.5px solid rgba(255,255,255,.55);color:#fff}
+      .academy-band-btn.ghost:hover{background:rgba(255,255,255,.1)}
+      .academy-band-btn:focus-visible{outline:3px solid #9be7b2;outline-offset:3px}
+      .academy-band-media{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35);aspect-ratio:6/5}
+      .academy-band-media img{width:100%;height:100%;object-fit:cover;display:block}
+      .academy-band-tag{position:absolute;left:16px;bottom:16px;background:#fff;color:#0a2e38;border-radius:12px;padding:10px 14px;font-weight:800;font-size:.86rem;display:flex;align-items:center;gap:9px;box-shadow:0 10px 24px rgba(0,0,0,.2)}
+      .academy-band-tag i{color:#00932e}
+      @media(max-width:860px){.academy-band{padding:56px 0}.academy-band-inner{grid-template-columns:1fr;gap:28px}.academy-band-media{order:-1;aspect-ratio:16/10}}
+      @media(max-width:520px){.academy-band-btn{width:100%}}
+    </style>
+    <div class="academy-band-inner">
+      <div>
+        <span class="academy-band-kicker"><i class="fas fa-graduation-cap" aria-hidden="true"></i> ReSoK Virtual Academy</span>
+        <h2 id="academyTitle">Learn respiratory health, free and online</h2>
+        <p>Self-paced online courses from the Respiratory Society of Kenya for clinicians, students and allied health professionals. Browse without an account; create a free one to keep your progress and earn your certificate.</p>
+        <ul class="academy-band-facts">
+          <li><i class="fas fa-unlock" aria-hidden="true"></i>Free to join, open to members and non-members</li>
+          <li><i class="fas fa-clock" aria-hidden="true"></i>Learn at your own pace, on phone or computer</li>
+          <li><i class="fas fa-award" aria-hidden="true"></i>Certificate when you pass the final assessment</li>
+        </ul>
+        <div class="academy-band-actions">
+          <a class="academy-band-btn primary" href="resok-portal/public/academy">Start learning free <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+          <a class="academy-band-btn ghost" href="resok-portal/public/login?next=%2Fresok-portal%2Fpublic%2Facademy">Sign in</a>
+        </div>
+      </div>
+      <div class="academy-band-media">
+        <img src="assets/img/pages/gallery/gallery-05.jpg" alt="Clinicians during a ReSoK hands-on training session" loading="lazy">
+        <span class="academy-band-tag"><i class="fas fa-laptop-medical" aria-hidden="true"></i> Courses you can take anywhere</span>
       </div>
     </div>
   </section>

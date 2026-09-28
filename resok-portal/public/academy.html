@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ReSoK Virtual Academy</title>
   <meta name="description" content="Free respiratory health courses from the Respiratory Society of Kenya. Learn online, at your own pace, with a certificate on completion." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
   <style>
     /*
@@ -666,6 +669,128 @@
     gap: 6px;
   }
 }
+
+    /* =====================================================================================
+     * Alison-style layout (28 Sep 2026): white header with Explore + search, centred search
+     * hero, navy figures band, subject cards on a green band, course cards with a level strip,
+     * cover photo and More Info / Start Learning. ReSoK's own green, logo and real figures.
+     * ===================================================================================== */
+    body{font-family:'Roboto','Segoe UI',system-ui,sans-serif;background:#fff}
+    :root{--navy:#0b2140;--ah-green:#00932e;--ah-green-dk:#007a26;--ah-mint:#e9f6ee}
+    .top{background:#fff;border-bottom:1px solid #e6ebe8;box-shadow:0 2px 10px rgba(11,33,64,.06)}
+    .top-in{min-height:72px}
+    .explore > button{background:var(--ah-mint);border:1px solid #cfe6d7;color:#1f2d27;font-weight:700;border-radius:6px;padding:9px 14px}
+    .top-search{border:1px solid #cdd6d1;border-radius:6px;background:#fff}
+    .top-search input{font-size:14px;border:0;background:transparent;border-radius:0;box-shadow:none;outline:0}
+    .top-search{box-shadow:none}
+    #signInLink{background:none;border:0;color:var(--ah-green);font-weight:700;box-shadow:none}
+    #joinLink{background:var(--ah-green);border-color:var(--ah-green);color:#fff;font-weight:700;border-radius:6px;padding-left:22px;padding-right:22px}
+    #joinLink:hover{background:var(--ah-green-dk)}
+
+    .ah-hero{background:#fff;padding:64px 22px 56px;text-align:center}
+    .ah-hero-in{max-width:900px;margin:0 auto}
+    .ah-hero h1{font-family:'Roboto',sans-serif;font-weight:900;color:#1d2a24;font-size:clamp(28px,3.6vw,42px);line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+    .ah-hero-sub{color:#5d6b64;font-size:16.5px;margin:14px auto 0;max-width:640px}
+    .ah-search{position:relative;display:flex;align-items:center;max-width:760px;margin:30px auto 0;border:1px solid #c9d3cd;border-radius:10px;background:#fff;box-shadow:0 6px 22px rgba(11,33,64,.07);padding:6px 6px 6px 50px}
+    .ah-search > i{position:absolute;left:20px;color:#6d7f74;font-size:18px}
+    .ah-search input{flex:1;border:0;outline:0;font:inherit;font-size:18px;padding:14px 8px;background:transparent;min-width:0;color:#1d2a24}
+    .ah-search .btn{border-radius:8px;min-height:50px;padding:0 26px;font-weight:700}
+    .ah-search:focus-within{border-color:var(--ah-green);box-shadow:0 0 0 3px rgba(0,147,46,.14)}
+
+    .ah-stats{background:var(--navy);color:#fff}
+    .ah-stats-in{display:flex;justify-content:center;flex-wrap:wrap;gap:12px 56px;padding-top:22px;padding-bottom:22px}
+    .ah-stats-in > div{display:flex;align-items:baseline;gap:9px}
+    .ah-stats-in > div::before{font-family:'Font Awesome 6 Free';font-weight:900;color:#9fd9b3;font-size:16px;align-self:center;margin-right:4px}
+    .ah-stats-in > div:nth-child(1)::before{content:"\f02d"}
+    .ah-stats-in > div:nth-child(2)::before{content:"\f15c"}
+    .ah-stats-in > div:nth-child(3)::before{content:"\f017"}
+    .ah-stats-in > div:nth-child(4)::before{content:"\f19d"}
+    .ah-stats-in b{font-size:19px;font-weight:700}
+    .ah-stats-in small{font-size:15px;color:rgba(255,255,255,.85)}
+
+    .ah-subjects{background:linear-gradient(120deg,#23a652 0%,#62b94f 100%);padding:44px 0 52px}
+    .ah-band-title{color:#fff;text-align:center;font-weight:500;font-size:clamp(24px,2.6vw,32px);margin-bottom:28px}
+    .ah-subjects .subjects{display:flex;flex-wrap:wrap;justify-content:center;gap:22px}
+    .ah-subjects .subject{background:#fff;border:0;border-radius:18px;box-shadow:0 10px 26px rgba(0,0,0,.14);width:190px;min-height:150px;padding:24px 16px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
+    .ah-subjects .subject:hover,.ah-subjects .subject:focus-visible{transform:translateY(-4px);box-shadow:0 16px 34px rgba(0,0,0,.2);outline:none}
+    .ah-subjects .subject > i{font-size:30px;color:var(--ah-green);background:none;width:auto;height:auto;border-radius:0;display:block}
+    .ah-subjects .subject b{font-size:17px;color:#33403a;font-weight:500}
+    .ah-subjects .subject small{font-size:13.5px;color:#5d6b64}
+    .ah-subjects .subject small i{background:none;width:auto;height:auto;display:inline;border-radius:0;padding:0;margin-left:4px;font-size:12px;color:inherit}
+
+    .ah-section-title{text-align:left;font-size:clamp(24px,2.4vw,32px);font-weight:700;color:#1d2a24}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+    .ac-card{background:#fff;border:1px solid #e3e8e5;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;box-shadow:0 2px 10px rgba(11,33,64,.06);transition:box-shadow .18s ease,transform .18s ease}
+    .ac-card:hover{box-shadow:0 12px 28px rgba(11,33,64,.14);transform:translateY(-2px)}
+    .ac-level{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;padding:5px 8px}
+    .ac-level i{margin-right:4px}
+    .ac-level.lv-introductory{background:#e2f4e8;color:#0a7a36}
+    .ac-level.lv-intermediate{background:#e2edfb;color:#1d58b3}
+    .ac-level.lv-advanced{background:#efe5fb;color:#6a2cb0}
+    .ac-media{position:relative;aspect-ratio:16/8;background:#e9eeeb}
+    .ac-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .ac-tag{position:absolute;top:10px;right:10px;background:#fff;color:#33403a;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:3px;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+    .ac-tag i{color:var(--ah-green)}
+    .ac-strip{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.62);color:#fff;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px}
+    .ac-body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
+    .ac-cat{font-size:12px;font-weight:700;color:var(--ah-green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+    .ac-body h3{font-size:16px;font-weight:500;color:#1d2a24;line-height:1.35;min-height:2.7em}
+    .ac-body .prog{margin-top:12px}
+    .ac-meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:auto;padding-top:14px;font-size:13.5px;color:#5d6b64}
+    .ac-meta i{margin-right:3px}
+    .ac-actions{display:flex;gap:10px;margin-top:14px}
+    .ac-more{background:#fff;border:1px solid #cdd6d1;color:#33403a;font-weight:500;flex:0 0 auto}
+    .ac-more:hover{border-color:#9aa9a1}
+    .ac-start{flex:1;justify-content:center;font-weight:700}
+    .filters{background:#fff;border:1px solid #e3e8e5;border-radius:10px}
+
+    .ch-hero{background:linear-gradient(180deg,#e3f3f9 0%,#eef8fb 60%,#fff 100%);padding:34px 0 88px}
+    .ch-hero-in{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.85fr);gap:48px;align-items:center}
+    .ch-crumbs{display:flex;align-items:center;gap:8px;font-size:14px;color:#44524b;margin-bottom:22px;flex-wrap:wrap}
+    .ch-crumbs .crumb{margin:0;padding:0;background:none;border:0;color:#44524b;font-size:14px;cursor:pointer}
+    .ch-crumbs .crumb:hover{color:var(--ah-green);text-decoration:underline}
+    .ch-crumbs i{font-size:10px;color:#8a978f}
+    .ch-crumbs span{font-weight:700;color:#1d2a24}
+    .ch-level{display:inline-block;background:#efe5fb;color:#6a2cb0;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:4px}
+    .ch-copy h1{font-weight:700;color:#1d2a24;font-size:clamp(26px,3vw,38px);line-height:1.2;margin:16px 0 14px;text-wrap:balance}
+    .ch-summary{font-size:16.5px;color:#3d4a44;max-width:60ch}
+    .ch-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+    .ch-start{min-height:52px;padding:0 42px;font-size:16px;font-weight:700;border-radius:6px}
+    .ch-media img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:10px;box-shadow:0 14px 34px rgba(11,33,64,.16);background:#dfe8e3}
+    .ch-body{padding-top:0}
+    .ch-facts{position:relative;margin-top:-56px;background:#fff;border:1px solid #e3e8e5;border-radius:10px;box-shadow:0 10px 30px rgba(11,33,64,.1);display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:40px}
+    .ch-facts > span{display:flex;align-items:center;gap:10px;padding:20px 22px;font-weight:700;color:#1d2a24;font-size:15px;text-transform:capitalize}
+    .ch-facts > span + span{border-left:1px solid #e3e8e5}
+    .ch-facts i{color:var(--ah-green);font-size:18px}
+    .ch-h2{font-size:clamp(22px,2.2vw,28px);font-weight:700;color:#1d2a24;margin:6px 0 14px}
+    .ch-h2 ~ .ch-h2{margin-top:34px}
+    .ch-side-h{font-size:16px;font-weight:700;color:#1d2a24;margin-bottom:10px}
+    .course-hd > .panel.side:not(:has(> :not([hidden]))){display:none}
+
+    .player{grid-template-columns:320px minmax(0,1fr)}
+    .player > .side{order:-1}
+    .player .mod-h{background:var(--navy);color:#fff}
+    .player .mod-h b{color:#fff}
+    .player .mod-h small{color:rgba(255,255,255,.8)}
+    .les.current{background:var(--ah-mint);border-left:3px solid var(--ah-green)}
+
+    @media(max-width:900px){
+      .ch-hero-in{grid-template-columns:1fr}
+      .ch-media{order:-1}
+      .ch-facts > span + span{border-left:0;border-top:1px solid #e3e8e5}
+      .player{grid-template-columns:1fr}
+      .player > .side{order:0}
+    }
+    @media(max-width:560px){
+      .ah-hero{padding:40px 16px 36px}
+      .ah-search{padding-left:40px}
+      .ah-search > i{left:14px}
+      .ah-search input{font-size:16px;padding:12px 4px}
+      .ah-search .btn{padding:0 16px}
+      .ah-subjects .subject{width:calc(50% - 11px);min-height:130px}
+      .ah-stats-in{gap:10px 28px}
+      .ch-start{width:100%}
+    }
   </style>
 </head>
 <body>
@@ -693,41 +818,30 @@
         <i class="fas fa-graduation-cap"></i> My learning
       </button>
       <a class="btn btn-ghost btn-sm" href="dashboard" id="portalLink" hidden>Members' portal</a>
-      <a class="btn btn-ghost btn-sm" href="login?next=/resok-portal/public/academy" id="signInLink">Sign in</a>
-      <a class="btn btn-primary btn-sm" href="#join" id="joinLink">Join free</a>
+      <a class="btn btn-ghost btn-sm" href="login?next=/resok-portal/public/academy" id="signInLink">Log In</a>
+      <a class="btn btn-primary btn-sm" href="#join" id="joinLink">Sign Up</a>
     </div>
   </div>
 </header>
 
 <!-- ============ Catalogue ============ -->
 <div id="viewCatalogue">
-  <div class="hero">
-    <video class="hero-video" id="heroVideo" muted playsinline webkit-playsinline loop
-           preload="none" aria-hidden="true" tabindex="-1"></video>
-    <div class="hero-in">
-      <span class="kicker"><i class="fas fa-lungs"></i> Respiratory Society of Kenya</span>
-      <h1>Learn respiratory health, free and online</h1>
-      <p>
-        Short, practical courses written by ReSoK clinicians and educators. Browse the whole
-        catalogue without an account &mdash; sign in only when you want your progress kept and
-        your certificate issued.
-      </p>
-      <form class="hero-search" id="heroForm">
-        <input id="heroSearch" type="search" placeholder="What do you want to learn?" aria-label="Search courses" />
-        <button class="btn btn-light" type="submit"><i class="fas fa-magnifying-glass"></i> Search</button>
+  <div class="ah-hero">
+    <div class="ah-hero-in">
+      <h1>Free Online Respiratory Health Courses With Certificates</h1>
+      <p class="ah-hero-sub">From the Respiratory Society of Kenya. Browse without an account; sign up free to keep your progress and earn your certificate.</p>
+      <form class="ah-search" id="heroForm" role="search">
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+        <input id="heroSearch" type="search" placeholder="What do you want to learn today?" aria-label="Search courses" />
+        <button class="btn btn-primary" type="submit">Search</button>
       </form>
-      <div class="stats" id="stats"></div>
     </div>
   </div>
+  <div class="ah-stats"><div class="shell ah-stats-in" id="stats"></div></div>
 
-  <section class="band tight" id="subjectsBand" hidden>
+  <section class="ah-subjects" id="subjectsBand" hidden>
     <div class="shell">
-      <div class="head">
-        <div>
-          <div class="eyebrow">Browse by subject</div>
-          <h2 class="t">Where would you like to start?</h2>
-        </div>
-      </div>
+      <h2 class="ah-band-title">Explore Free Online Courses</h2>
       <div class="subjects" id="subjects"></div>
     </div>
   </section>
@@ -736,8 +850,7 @@
     <div class="shell">
       <div class="head">
         <div>
-          <div class="eyebrow">Catalogue</div>
-          <h2 class="t">All courses</h2>
+          <h2 class="t ah-section-title">Free Courses With Certificates</h2>
           <p class="lede">
             Every course is free to take. Where one is a membership benefit it is marked, and
             you will need an active ReSoK membership to enrol.
@@ -796,28 +909,41 @@
 
 <!-- ============ One course ============ -->
 <div id="viewCourse" hidden>
-  <section class="band">
+  <div class="ch-hero">
+    <div class="shell ch-hero-in">
+      <div class="ch-copy">
+        <nav class="ch-crumbs" aria-label="Breadcrumb">
+          <button class="crumb" id="courseBack" type="button">Courses</button>
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          <span id="cCategory"></span>
+        </nav>
+        <span class="ch-level" id="cLevel"></span>
+        <h1 id="cTitle"></h1>
+        <p class="ch-summary" id="cSummary"></p>
+        <div class="ch-actions">
+          <button class="btn btn-primary ch-start" id="cEnrolBtn" type="button"></button>
+        </div>
+        <div id="cNotice"></div>
+      </div>
+      <div class="ch-media"><img id="cImage" alt="" /></div>
+    </div>
+  </div>
+  <section class="band ch-body">
     <div class="shell">
-      <button class="crumb" id="courseBack" type="button"><i class="fas fa-arrow-left"></i> All courses</button>
+      <div class="ch-facts" id="cFacts"></div>
       <div class="course-hd">
         <div>
-          <div class="eyebrow" id="cCategory"></div>
-          <h2 class="t" id="cTitle" style="font-size:29px"></h2>
-          <p class="lede" id="cSummary"></p>
-          <div class="prose" id="cDescription" style="margin-top:20px"></div>
-
-          <h2 class="t" style="font-size:19px;margin-top:34px;margin-bottom:14px">What the course covers</h2>
+          <h2 class="t ch-h2">Course Overview</h2>
+          <div class="prose" id="cDescription"></div>
+          <h2 class="t ch-h2">What You Will Learn</h2>
           <div id="cOutline"></div>
         </div>
-
         <aside class="panel side">
-          <div class="meta" style="margin-top:0;padding-top:0;border-top:0;flex-direction:column;gap:11px" id="cFacts"></div>
-          <div id="cProgressWrap" hidden style="margin-top:16px">
+          <div id="cProgressWrap" hidden>
+            <h3 class="ch-side-h">Your progress</h3>
             <div class="prog"><span id="cProgressBar"></span></div>
             <div style="font-size:12.5px;color:var(--muted);margin-top:7px" id="cProgressText"></div>
           </div>
-          <button class="btn btn-primary" id="cEnrolBtn" type="button" style="width:100%;margin-top:18px"></button>
-          <div id="cNotice"></div>
           <div class="cert-box" id="cAssessment" hidden></div>
           <div class="cert-box" id="cCertificate" hidden></div>
         </aside>
@@ -1060,6 +1186,24 @@
     document: 'fa-file-lines', link: 'fa-arrow-up-right-from-square'
   };
 
+  /*
+   * A cover for each card and course page. A course's own hero_image wins; otherwise a ReSoK
+   * photo chosen by subject, so the catalogue never shows an empty grey box. Only paths under
+   * the site's own assets, or https links, are used as an image source.
+   */
+  const IMG_BASE = '../../assets/img/pages/gallery/';
+  const SUBJECT_IMAGE = {
+    'Getting started': 'gallery-08.jpg', 'Tuberculosis': 'gallery-03.jpg', 'Diagnostics': 'gallery-04.jpg',
+    'Asthma': 'gallery-14.jpg', 'COPD': 'gallery-17.jpg', 'Paediatrics': 'gallery-33.jpg',
+    'Research': 'gallery-12.jpg', 'Public health': 'gallery-21.jpg', 'Tobacco control': 'gallery-22.jpg'
+  };
+  function courseImage(course) {
+    const own = String(course.heroImage || '');
+    if (/^https:\/\//.test(own) || /^(\.\.\/)*assets\/[\w\-./]+$/.test(own)) return own;
+    return IMG_BASE + (SUBJECT_IMAGE[course.category] || 'gallery-05.jpg');
+  }
+  const LEVEL_LABEL = { introductory: 'Beginner level', intermediate: 'Intermediate level', advanced: 'Advanced level' };
+
   let signedIn = false;
   let allCourses = [];
   let categories = [];
@@ -1143,7 +1287,7 @@
   }
 
   function renderSubjects() {
-    el('subjectsBand').hidden = categories.length < 2;
+    el('subjectsBand').hidden = categories.length < 1;
     const mount = el('subjects');
     mount.textContent = '';
     categories.forEach((c) => {
@@ -1151,7 +1295,12 @@
       const icon = make('i', 'fas ' + (SUBJECT_ICON[c.name] || 'fa-book-open'));
       box.appendChild(icon);
       box.appendChild(make('b', null, c.name));
-      box.appendChild(make('small', null, c.courses + (c.courses === 1 ? ' course' : ' courses')));
+      const count = make('small', null, c.courses + (c.courses === 1 ? ' Course ' : ' Courses '));
+      count.appendChild(make('i', 'fas fa-arrow-right'));
+      box.appendChild(count);
+      box.tabIndex = 0;
+      box.setAttribute('role', 'button');
+      box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); box.click(); } });
       box.addEventListener('click', () => {
         filterCategory = c.name;
         renderCategoryFilter();
@@ -1244,41 +1393,65 @@
   }
 
   function courseCard(course, options = {}) {
-    const card = make('div', 'card');
-    card.addEventListener('click', () => go('course/' + course.slug));
+    const card = make('article', 'ac-card');
+    const open = () => go('course/' + course.slug);
+    card.addEventListener('click', open);
 
-    const top = make('div', 'card-top');
-    top.appendChild(make('i', 'fas ' + (SUBJECT_ICON[course.category] || 'fa-book-open')));
-    if (course.membersOnly) top.appendChild(make('span', 'tag members', 'Members only'));
-    else if (course.category) top.appendChild(make('span', 'tag', course.category));
-    card.appendChild(top);
+    const level = make('div', 'ac-level lv-' + (course.level || 'introductory'));
+    level.appendChild(make('i', 'fas fa-signal'));
+    level.appendChild(document.createTextNode(' ' + (LEVEL_LABEL[course.level] || 'All levels')));
+    card.appendChild(level);
 
-    const body = make('div', 'card-b');
+    const media = make('div', 'ac-media');
+    const img = make('img');
+    img.src = courseImage(course);
+    img.alt = '';
+    img.loading = 'lazy';
+    media.appendChild(img);
+    if (course.certificateEnabled) {
+      const tag = make('span', 'ac-tag');
+      tag.appendChild(make('i', 'fas fa-award'));
+      tag.appendChild(document.createTextNode(' Certificate'));
+      media.appendChild(tag);
+    }
+    if (course.membersOnly) media.appendChild(make('span', 'ac-strip', 'ReSoK members only'));
+    card.appendChild(media);
+
+    const body = make('div', 'ac-body');
+    if (course.category) body.appendChild(make('div', 'ac-cat', course.category));
     body.appendChild(make('h3', null, course.title));
-    body.appendChild(make('p', null, course.summary || ''));
 
+    const meta = make('div', 'ac-meta');
+    const fact = (iconClass, text) => {
+      const span = make('span');
+      span.appendChild(make('i', 'far ' + iconClass));
+      span.appendChild(document.createTextNode(' ' + text));
+      meta.appendChild(span);
+    };
     if (options.withProgress) {
       const bar = make('div', 'prog');
       const fill = make('span');
       fill.style.width = Math.max(3, course.progress || 0) + '%';
       bar.appendChild(fill);
       body.appendChild(bar);
-      body.appendChild(make('div', 'meta',
-        course.completedAt ? 'Finished' : (course.progress || 0) + '% complete'));
+      fact('fa-circle-check', course.completedAt ? 'Finished' : (course.progress || 0) + '% complete');
     } else {
-      const meta = make('div', 'meta');
-      const fact = (iconClass, text) => {
-        const span = make('span');
-        span.appendChild(make('i', 'fas ' + iconClass));
-        span.appendChild(document.createTextNode(text));
-        meta.appendChild(span);
-      };
       fact('fa-clock', course.duration);
-      fact('fa-layer-group', (course.lessonCount || 0) + ' lessons');
-      fact('fa-signal', course.level);
-      if (course.certificateEnabled) fact('fa-award', 'Certificate');
-      body.appendChild(meta);
+      fact('fa-file-lines', (course.lessonCount || 0) + ' lessons');
     }
+    body.appendChild(meta);
+
+    const actions = make('div', 'ac-actions');
+    const more = make('button', 'btn ac-more', 'More Info');
+    more.type = 'button';
+    const start = make('button', 'btn btn-primary ac-start',
+      options.withProgress ? (course.completedAt ? 'Review Course' : 'Continue') : 'Start Learning');
+    start.type = 'button';
+    [more, start].forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); open(); }));
+    actions.appendChild(more);
+    actions.appendChild(start);
+    body.appendChild(actions);
+
     card.appendChild(body);
     return card;
   }
@@ -1328,6 +1501,8 @@
     const c = currentCourse;
     document.title = c.title + ' - ReSoK Virtual Academy';
     el('cCategory').textContent = c.category || 'Course';
+    el('cLevel').textContent = LEVEL_LABEL[c.level] || 'All levels';
+    el('cImage').src = courseImage(c);
     el('cTitle').textContent = c.title;
     el('cSummary').textContent = c.summary || '';
     el('cEnrolBtn').hidden = false;
@@ -1348,7 +1523,9 @@
 
     const description = el('cDescription');
     description.textContent = '';
-    (c.description || '').split(/\n+/).filter(Boolean)
+    // A blank line starts a new paragraph; a single line break inside one is only a wrap,
+    // so text typed with hard line breaks does not break mid-sentence.
+    (c.description || '').split(/\n\s*\n/).map((para) => para.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean)
       .forEach((para) => description.appendChild(make('p', null, para)));
 
     const enrolled = !!currentEnrolment;
@@ -1363,14 +1540,14 @@
     button.textContent = '';
     if (!signedIn) {
       button.appendChild(make('i', 'fas fa-right-to-bracket'));
-      button.appendChild(document.createTextNode(' Join free to enrol'));
+      button.appendChild(document.createTextNode(' Sign Up Free to Start'));
     } else if (enrolled) {
       button.appendChild(make('i', 'fas fa-play'));
       button.appendChild(document.createTextNode(
-        currentEnrolment.progress > 0 ? ' Continue learning' : ' Start the course'));
+        currentEnrolment.progress > 0 ? ' Continue Learning' : ' Start Course Now'));
     } else {
       button.appendChild(make('i', 'fas fa-plus'));
-      button.appendChild(document.createTextNode(' Enrol — free'));
+      button.appendChild(document.createTextNode(' Start Course Now'));
     }
     renderOutline();
     loadAssessment();

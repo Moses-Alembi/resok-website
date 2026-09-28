@@ -16,12 +16,13 @@
   "use strict";
 
   // ---------------------------------------------------------------------------------------
-  // The site was tagged with two Google Analytics properties, and every page fired both, so
-  // visits were being split across two accounts. One is kept. If the other is the property
-  // the Secretariat actually reads, change this line - it is the only place the ID appears.
-  //   in use  : G-LVVKGWHV01   (was loaded from the <head>)
-  //   retired : G-7TPH4SHLMS   (was loaded a second time further down the page)
-  var MEASUREMENT_ID = "G-LVVKGWHV01";
+  // ReSoK's own Google Analytics 4 Measurement ID ("G-..."), from Analytics -> Admin -> Data
+  // streams. This is the only place the ID appears. Empty means Analytics never loads.
+  //
+  // Emptied 28 Sep 2026: the two IDs the old site carried (G-LVVKGWHV01, G-7TPH4SHLMS)
+  // belong to accounts ReSoK never created and cannot see, so consenting visitors were being
+  // reported to someone else. Put the Society's own ID here once its property exists.
+  var MEASUREMENT_ID = "";
 
   var STORAGE_KEY = "resok_cookie_consent";
   var POLICY_VERSION = 1; // raise this if the policy changes materially and consent must be re-asked

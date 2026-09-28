@@ -822,7 +822,8 @@
   // dashboard.html. Admins manage events and elections from admin-review and
   // election-admin, which are not affected.
   // On localhost nothing is locked, so every feature can be reviewed before launch.
-  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "academy", "elections"];
+  // The Virtual Academy launched 28 Sep 2026; events and elections are still to come.
+  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections"];
   if (LOCKED_FEATURES.includes(pageName())) {
     window.location.replace("dashboard");
   }

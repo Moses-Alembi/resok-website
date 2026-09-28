@@ -19,10 +19,10 @@
   // ReSoK's own Google Analytics 4 Measurement ID ("G-..."), from Analytics -> Admin -> Data
   // streams. This is the only place the ID appears. Empty means Analytics never loads.
   //
-  // Emptied 28 Sep 2026: the two IDs the old site carried (G-LVVKGWHV01, G-7TPH4SHLMS)
-  // belong to accounts ReSoK never created and cannot see, so consenting visitors were being
-  // reported to someone else. Put the Society's own ID here once its property exists.
-  var MEASUREMENT_ID = "";
+  // Set 28 Sep 2026 to the Society's own property (resok.org). The two IDs the old site
+  // carried (G-LVVKGWHV01, G-7TPH4SHLMS) belonged to accounts ReSoK never created and could
+  // not see, so they are gone.
+  var MEASUREMENT_ID = "G-0T4PSKZ0GV";
 
   var STORAGE_KEY = "resok_cookie_consent";
   var POLICY_VERSION = 1; // raise this if the policy changes materially and consent must be re-asked

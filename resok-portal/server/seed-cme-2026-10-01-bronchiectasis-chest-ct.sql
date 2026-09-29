@@ -40,12 +40,12 @@ INSERT INTO cpd_events
 VALUES
   ('diagnosing-bronchiectasis-on-chest-ct-scan',
    'Diagnosing Bronchiectasis on Chest CT Scan',
-   'How bronchiectasis is recognised on chest CT, presented by consultant radiologist Dr Maxiwell Gachie. Accredited CPD CME on Zoom.',
-   'A ReSoK CME on diagnosing bronchiectasis on chest CT scan.\n\nPresented by Dr Maxiwell Gachie, Consultant Radiologist at Kenyatta National Hospital, and moderated by Dr Samuel Gathua, Consultant Physician and Pulmonologist.',
+   'How bronchiectasis is recognised on chest CT, presented by consultant radiologist Dr Maxwell Gachie. Accredited CPD CME on Zoom.',
+   'A ReSoK CME on diagnosing bronchiectasis on chest CT scan.\n\nPresented by Dr Maxwell Gachie, Consultant Radiologist at Kenyatta National Hospital, and moderated by Dr Samuel Gathua, Consultant Physician and Pulmonologist.',
    'CME', 'online', '2026-10-01 19:00:00', NULL, 'Zoom',
    'https://us06web.zoom.us/webinar/register/WN_HXINn3MRQ7iwTCBt-Txorg',
    0, 0, 'KES', 'KMPDC', 'published',
-   'assets/img/events/2026-10-01-bronchiectasis-chest-ct/poster.jpg')
+   'assets/img/events/2026-10-01-bronchiectasis-chest-ct/poster-v2.jpg')
 ON DUPLICATE KEY UPDATE
   title = VALUES(title), summary = VALUES(summary), description = VALUES(description),
   event_type = VALUES(event_type), format = VALUES(format), starts_at = VALUES(starts_at),
@@ -58,11 +58,11 @@ SET @event_id = (SELECT id FROM cpd_events WHERE slug = 'diagnosing-bronchiectas
 DELETE FROM cpd_event_speakers WHERE event_id = @event_id;
 
 INSERT INTO cpd_event_speakers (event_id, sort_order, role, name, headline, bio, photo) VALUES
-(@event_id, 1, 'Presenter', 'Dr Maxiwell Gachie',
+(@event_id, 1, 'Presenter', 'Dr Maxwell Gachie',
  'Consultant Radiologist, Kenyatta National Hospital',
  NULL,
- 'assets/img/events/2026-10-01-bronchiectasis-chest-ct/maxiwell-gachie.jpg'),
+ 'assets/img/events/2026-10-01-bronchiectasis-chest-ct/maxwell-gachie.jpg'),
 (@event_id, 2, 'Moderator', 'Dr Samuel Gathua',
  'Consultant Physician / Pulmonologist',
  NULL,
- 'assets/img/events/2026-10-01-bronchiectasis-chest-ct/samuel-gathua.jpg');
+ 'assets/img/events/2026-10-01-bronchiectasis-chest-ct/samuel-gathua-v2.jpg');

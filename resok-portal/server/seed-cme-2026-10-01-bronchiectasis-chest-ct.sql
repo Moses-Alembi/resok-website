@@ -45,7 +45,7 @@ VALUES
    'CME', 'online', '2026-10-01 19:00:00', NULL, 'Zoom',
    'https://us06web.zoom.us/webinar/register/WN_HXINn3MRQ7iwTCBt-Txorg',
    0, 0, 'KES', 'KMPDC', 'published',
-   'assets/img/events/2026-10-01-bronchiectasis-chest-ct/poster-v2.jpg')
+   'assets/img/events/2026-10-01-bronchiectasis-chest-ct/poster-v3.jpg')
 ON DUPLICATE KEY UPDATE
   title = VALUES(title), summary = VALUES(summary), description = VALUES(description),
   event_type = VALUES(event_type), format = VALUES(format), starts_at = VALUES(starts_at),

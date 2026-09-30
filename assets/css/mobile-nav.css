@@ -1,0 +1,160 @@
+/*
+ * Phone and tablet header, shared by every page that has the main site header.
+ *
+ * Each page carries its own copy of the header styles, and the copies had drifted: between
+ * 721px and 992px (most tablets) the homepage and several others kept the Login / Donate /
+ * Become a Member row, which pushed the menu button out of the header - so there was no way to
+ * navigate at all. Other pages showed a three-row, 150px header with a 25px menu button.
+ *
+ * Loaded after each page's own styles, this gives every page the same header whenever the
+ * drawer menu is in use (992px and below): logo on the left, one large green menu button on the
+ * right. Login, Donate and Become a Member are already at the bottom of the drawer.
+ *
+ * It also stops the floating buttons covering the page on small screens.
+ */
+
+@media (max-width: 992px) {
+  /* Only pages with the main header: the portal and verify pages load this file for the footer
+     and cookie button, and must not get a gap at the top. */
+  :root:has(.navbar .nav-shell) { --navbar-height: 72px !important; }
+  body:has(.navbar .nav-shell) { padding-top: var(--navbar-height) !important; }
+
+  .navbar .nav-shell {
+    grid-template-columns: minmax(0, 1fr) 72px !important;
+    grid-template-rows: 72px !important;
+  }
+  .navbar .logo {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    justify-content: flex-start !important;
+    padding: 0 18px !important;
+    min-width: 0 !important;
+  }
+  .navbar .logo img {
+    width: auto !important;
+    max-width: 188px !important;
+    max-height: 52px !important;
+  }
+  .navbar .nav-main,
+  .navbar.scrolled .nav-main {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    width: 72px !important;
+    min-width: 72px !important;
+    min-height: 72px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    background: var(--brand-primary, #00932e) !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+  .navbar .nav-top,
+  .navbar .nav-actions,
+  .navbar .nav-icons {
+    display: none !important;
+  }
+  .navbar .hamburger,
+  .navbar.scrolled .hamburger {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 72px !important;
+    height: 72px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    cursor: pointer !important;
+  }
+  .navbar .hamburger span,
+  .navbar.scrolled .hamburger span {
+    display: block !important;
+    width: 28px !important;
+    height: 3px !important;
+    margin: 3px 0 !important;
+    border-radius: 999px !important;
+    background: #fff !important;
+  }
+  .navbar .hamburger span { transition: transform .3s, opacity .3s !important; }
+  .navbar .hamburger.active span:nth-child(1) { transform: rotate(-45deg) translate(-5px, 6px) !important; }
+  .navbar .hamburger.active span:nth-child(2) { opacity: 0 !important; }
+  .navbar .hamburger.active span:nth-child(3) { transform: rotate(45deg) translate(-5px, -6px) !important; }
+  .navbar .hamburger:focus-visible {
+    outline: 3px solid #fff !important;
+    outline-offset: -8px !important;
+  }
+
+  /* The tick beside the current page sat outside the drawer and showed as a clipped half-circle. */
+  .navbar .nav-link.is-active::before { display: none !important; }
+
+  /* A long menu on a short phone scrolls inside the drawer instead of losing its last items. */
+  .navbar .nav-menu.active {
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  /* Floating buttons: WhatsApp only (X, LinkedIn and Facebook are in the footer), smaller, and
+     out of the way while the menu is open. Four 52px circles covered the right edge of the text. */
+  .social-float {
+    right: 12px !important;
+    bottom: 12px !important;
+    gap: 8px !important;
+  }
+  .social-float a:not(.social-whatsapp):not([href*="wa.me"]) { display: none !important; }
+  .social-float a {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  body.mobile-nav-open .social-float,
+  body.mobile-nav-open .rk-prefs {
+    display: none !important;
+  }
+}
+
+/* Footer top row on phones and tablets: the social icons go (they squeezed the logo off the left
+   edge and sat on a line of their own), and the logo and Membership button share one straight
+   row - logo on the left, button on the right, both vertically centred. */
+@media (max-width: 992px) {
+  .site-footer-top-social { display: none !important; }
+  .site-footer-top {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    padding: 18px 0 !important;
+  }
+  .site-footer-brand-row {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .site-footer-brand-row img {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: 52px !important;
+    max-width: 100% !important;
+  }
+  .site-footer-donate {
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    text-align: right !important;
+  }
+  .site-footer-donate a {
+    padding: 0 16px !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* Cookie choices button (added by consent.js): tucked a little closer to the corner on phones. */
+@media (max-width: 720px) {
+  .rk-prefs {
+    left: 10px !important;
+    right: auto !important;
+    bottom: 12px !important;
+  }
+}

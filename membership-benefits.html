@@ -1002,6 +1002,28 @@
       .nav-top-member{padding:0 10px!important;font-size:.74rem!important}
     }
   </style>
+  <style id="mobile-drawer">
+    /* Drawer menu, as on the rest of the site. This page previously hid the menu on phones and
+       tablets with nothing to open it into. */
+    .nav-mobile-actions{display:none}
+    @media (max-width:992px){
+      .nav-menu{display:flex!important;position:fixed;left:14px;top:16px;bottom:16px;flex-direction:column;align-items:stretch;background:rgba(255,255,255,.97);border:1px solid rgba(225,231,239,.92);width:min(82vw,326px);transform:translateX(calc(-100% - 28px));transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .22s ease;box-shadow:22px 0 42px rgba(17,31,53,.2);padding:78px 20px 24px;gap:4px;margin:0;z-index:1200;border-radius:0 30px 30px 0;opacity:0;overflow-y:auto;list-style:none}
+      .nav-menu:before{content:"";position:absolute;top:22px;left:24px;width:188px;height:44px;background:url('assets/img/logo.png') left center/contain no-repeat}
+      .nav-menu.active{transform:translateX(0);opacity:1}
+      .nav-menu li{margin:0;position:relative}
+      .nav-menu .nav-link{display:flex;align-items:center;gap:16px;min-height:48px;color:#607084;font-size:.9rem;font-weight:800;line-height:1.2;padding:10px 14px;border-radius:15px;text-decoration:none}
+      .nav-menu .nav-link:hover{color:#15243a;background:rgba(188,11,34,.08)}
+      .nav-menu .nav-badge{margin-left:auto;font-size:.6rem}
+      .nav-mobile-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto!important;padding-top:18px}
+      .nav-mobile-actions .mobile-action{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 12px;border-radius:999px;color:#fff;font-size:.78rem;font-weight:900;line-height:1;text-decoration:none;box-shadow:0 12px 24px rgba(17,31,53,.14)}
+      .mobile-action-member{grid-column:1 / -1;background:#070d38}
+      .mobile-action-donate{background:var(--brand-secondary,#bc0b22)}
+      .mobile-action-login{background:var(--brand-primary,#00932e)}
+      body.mobile-nav-open{overflow:hidden}
+      body.mobile-nav-open:before{content:"";position:fixed;inset:0;z-index:990;background:rgba(10,22,38,.46);backdrop-filter:blur(2px)}
+    }
+  </style>
+  <link rel="stylesheet" href="assets/css/mobile-nav.css?v=20260930">
 </head>
 <body>
   <header class="navbar">
@@ -1020,6 +1042,7 @@
           <li><a class="nav-link" href="index.html">Home</a></li>
           <li><a class="nav-link" href="about.html">About</a></li>
           <li><a class="nav-link" href="conferences.html">Conferences</a></li>
+          <li><a class="nav-link" href="events.html">Events</a></li>
           <li><a class="nav-link" href="projects.html">Projects</a></li>
           <li><a class="nav-link" href="workshops-and-training.html">Workshops</a></li>
           <li><a class="nav-link" href="knowledge.html">Knowledge</a></li>
@@ -1027,17 +1050,22 @@
           <li><a class="nav-link" href="resok-portal/public/academy">Academy</a></li>
           <li><a class="nav-link" href="blog.html">Blog</a></li>
           <li><a class="nav-link" href="contact.html">Contact</a></li>
+          <li class="nav-mobile-actions">
+            <a href="resok-portal/public/" class="mobile-action mobile-action-member"><i class="fas fa-user-plus" aria-hidden="true"></i>Become a Member</a>
+            <a href="contact.html#donate" class="mobile-action mobile-action-donate"><i class="fas fa-heart" aria-hidden="true"></i>Donate</a>
+            <a href="resok-portal/public/login" class="mobile-action mobile-action-login"><i class="fas fa-user" aria-hidden="true"></i>Login</a>
+          </li>
         </ul>
         <div class="nav-actions">
           <a href="resok-portal/public/login" class="nav-top-action"><i class="fas fa-user" aria-hidden="true"></i> Login</a>
           <a href="contact.html#donate" class="nav-top-action"><i class="fas fa-heart" aria-hidden="true"></i> Donate</a>
           <a href="resok-portal/public/" class="nav-top-member">Become a Member</a>
         </div>
-        <div class="hamburger" id="hamburger" aria-label="Open menu" role="button" tabindex="0">
+        <button class="hamburger" type="button" id="hamburger" aria-label="Open menu" aria-expanded="false">
           <span></span>
           <span></span>
           <span></span>
-        </div>
+        </button>
       </div>
     </div>
   </header>
@@ -1226,14 +1254,25 @@
       const hamburger = document.getElementById('hamburger');
       const navMenu = document.getElementById('navMenu');
 
-      if (hamburger && navMenu) {
-        hamburger.addEventListener('click', () => {
-          navMenu.classList.toggle('open');
-        });
-      }
+      if (!hamburger || !navMenu) return;
+      const setOpen = (open) => {
+        hamburger.classList.toggle('active', open);
+        navMenu.classList.toggle('active', open);
+        document.body.classList.toggle('mobile-nav-open', open);
+        hamburger.setAttribute('aria-expanded', String(open));
+      };
+      hamburger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setOpen(!navMenu.classList.contains('active'));
+      });
+      document.addEventListener('click', (event) => {
+        if (navMenu.classList.contains('active') && !navMenu.contains(event.target)) setOpen(false);
+      });
+      navMenu.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setOpen(false)));
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setOpen(false); });
     });
   </script>
-<script src="assets/js/consent.js?v=20260928-ga" defer></script></body>
+<script src="assets/js/consent.js?v=20260930-icon" defer></script></body>
 </html>
 
 

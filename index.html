@@ -2414,6 +2414,10 @@ if ('serviceWorker' in navigator) {
   .learn-skill-shell {
     gap: 24px;
   }
+  /* Kept on one line it ran past the screen edge on tablets and widened the whole page. */
+  .learn-skill-title {
+    white-space: normal;
+  }
   .learn-manifesto {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
@@ -5493,6 +5497,7 @@ if ('serviceWorker' in navigator) {
       .nav-top-member{padding:0 10px!important;font-size:.74rem!important}
     }
   </style>
+  <link rel="stylesheet" href="assets/css/mobile-nav.css?v=20260930">
 </head>
 <body>
 
@@ -5539,11 +5544,11 @@ if ('serviceWorker' in navigator) {
           <a href="resok-portal/public/" class="nav-top-member">Become a Member</a>
         </div>
        
-        <div class="hamburger" id="hamburger">
+        <button class="hamburger" type="button" id="hamburger" aria-label="Toggle menu">
           <span></span>
           <span></span>
           <span></span>
-        </div>
+        </button>
       </div>
       <a href="index.html" class="logo">
         <img src="assets/img/logo.png" alt="ReSoK logo">
@@ -6505,7 +6510,7 @@ if ('serviceWorker' in navigator) {
 
 <script src="assets/js/site-forms.js" defer></script>
   <script src="assets/js/members-only.js" defer></script>
-    <script src="assets/js/consent.js?v=20260928-ga" defer></script>
+    <script src="assets/js/consent.js?v=20260930-icon" defer></script>
 </body>
 </html>
 

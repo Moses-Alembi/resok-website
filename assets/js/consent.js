@@ -117,10 +117,13 @@
       '.rk-accept{background:#00932e;color:#fff}',
       '.rk-reject{background:#fff;color:#111f35;border-color:#111f35}',
       '@media(max-width:720px){.rk-consent-actions{width:100%}.rk-btn{flex:1 1 auto}}',
-      '.rk-prefs{position:fixed;left:14px;bottom:14px;z-index:2147482000;background:#fff;',
-      'border:1px solid #e7ebef;border-radius:999px;padding:8px 14px;font-size:.74rem;',
-      "font-family:'Poppins','Segoe UI',sans-serif;color:#667085;cursor:pointer;",
-      'box-shadow:0 6px 18px rgba(15,23,42,.12)}',
+      '.rk-prefs{position:fixed;left:14px;bottom:14px;z-index:2147482000;width:44px;height:44px;',
+      'padding:0;display:grid;place-items:center;background:#fff;color:#00932e;',
+      'border:1px solid #e7ebef;border-radius:50%;cursor:pointer;',
+      'box-shadow:0 6px 18px rgba(15,23,42,.14);transition:transform .15s,box-shadow .15s}',
+      '.rk-prefs:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(15,23,42,.2)}',
+      '.rk-prefs:focus-visible{outline:3px solid #00932e;outline-offset:2px}',
+      '.rk-prefs svg{width:24px;height:24px;display:block}',
       '.rk-prefs[hidden]{display:none}'
     ].join("");
     document.head.appendChild(css);
@@ -164,7 +167,15 @@
     prefsButton = document.createElement("button");
     prefsButton.type = "button";
     prefsButton.className = "rk-prefs";
-    prefsButton.textContent = "Cookie choices";
+    // A cookie icon in the Society's green; the name stays available to screen readers and as a tooltip.
+    prefsButton.setAttribute("aria-label", "Cookie choices");
+    prefsButton.title = "Cookie choices";
+    prefsButton.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+      + '<path fill="currentColor" d="M21.6 11.2a3.2 3.2 0 0 1-3.7-3.1 3.2 3.2 0 0 1-3.9-3.9A3.2 3.2 0 0 1 12.8 2.4 9.8 9.8 0 1 0 21.6 11.2z"/>'
+      + '<circle cx="8.2" cy="9.2" r="1.5" fill="#fff"/><circle cx="14.6" cy="14.8" r="1.6" fill="#fff"/>'
+      + '<circle cx="8.6" cy="15.6" r="1.2" fill="#fff"/><circle cx="12.4" cy="10.6" r=".9" fill="#fff"/>'
+      + '</svg>';
     prefsButton.addEventListener("click", function () { showBanner(); });
     document.body.appendChild(prefsButton);
     return prefsButton;

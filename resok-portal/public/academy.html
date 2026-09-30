@@ -686,6 +686,8 @@
     #signInLink{background:none;border:0;color:var(--ah-green);font-weight:700;box-shadow:none}
     #joinLink{background:var(--ah-green);border-color:var(--ah-green);color:#fff;font-weight:700;border-radius:6px;padding-left:22px;padding-right:22px}
     #joinLink:hover{background:var(--ah-green-dk)}
+    /* Log In / Sign Up greyed out until the Academy opens (restore the hrefs to re-enable). */
+    #signInLink.is-paused,#joinLink.is-paused{filter:grayscale(1);opacity:.5;cursor:not-allowed;pointer-events:none}
 
     .ah-hero{background:#fff;padding:64px 22px 56px;text-align:center}
     .ah-hero-in{max-width:900px;margin:0 auto}
@@ -742,6 +744,10 @@
     .ac-more{background:#fff;border:1px solid #cdd6d1;color:#33403a;font-weight:500;flex:0 0 auto}
     .ac-more:hover{border-color:#9aa9a1}
     .ac-start{flex:1;justify-content:center;font-weight:700}
+    /* A course shown but not yet open: greyed, not clickable. */
+    .ac-card.is-paused{cursor:default;filter:grayscale(1);opacity:.6}
+    .ac-card.is-paused:hover{box-shadow:0 2px 10px rgba(11,33,64,.06);transform:none}
+    .ac-card.is-paused .btn{cursor:not-allowed}
     .filters{background:#fff;border:1px solid #e3e8e5;border-radius:10px}
 
     .ch-hero{background:linear-gradient(180deg,#e3f3f9 0%,#eef8fb 60%,#fff 100%);padding:34px 0 88px}
@@ -836,8 +842,8 @@
         <i class="fas fa-graduation-cap"></i> My learning
       </button>
       <a class="btn btn-ghost btn-sm" href="dashboard" id="portalLink" hidden>Members' portal</a>
-      <a class="btn btn-ghost btn-sm" href="login?next=/resok-portal/public/academy" id="signInLink">Log In</a>
-      <a class="btn btn-primary btn-sm" href="#join" id="joinLink">Sign Up</a>
+      <a class="btn btn-ghost btn-sm is-paused" id="signInLink" aria-disabled="true" title="Coming soon">Log In</a>
+      <a class="btn btn-primary btn-sm is-paused" id="joinLink" aria-disabled="true" title="Coming soon">Sign Up</a>
     </div>
   </div>
 </header>
@@ -1238,6 +1244,10 @@
   const subjectOf = (category) => SUBJECT_BY_KEY[String(category || '').trim().toLowerCase()] || null;
   const subjectCount = (sub) => allCourses.filter((c) => subjectOf(c.category) === sub).length;
 
+  // Courses listed but not open yet: the card is greyed out and the course page won't open.
+  // Remove a slug here to open that course.
+  const PAUSED_COURSES = new Set(['using-the-resok-virtual-academy']);
+
   const IMG_BASE = '../../assets/img/pages/gallery/';
   const SUBJECT_IMAGE = {
     'Getting started': 'gallery-04.jpg', 'Tuberculosis': 'gallery-03.jpg', 'Diagnostics': 'gallery-04.jpg',
@@ -1277,7 +1287,10 @@
     if (hash.startsWith('lesson/')) return openLesson(Number(hash.slice(7)));
     if (hash.startsWith('quiz/')) return openQuiz(hash.slice(5));
     if (hash === 'join') return openJoin();
-    if (hash.startsWith('course/')) return openCourse(hash.slice(7));
+    if (hash.startsWith('course/')) {
+      if (PAUSED_COURSES.has(hash.slice(7))) { go(''); return; }
+      return openCourse(hash.slice(7));
+    }
     if (hash === 'mine') return openMine();
     show('Catalogue');
     document.title = 'ReSoK Virtual Academy';
@@ -1466,9 +1479,11 @@
   }
 
   function courseCard(course, options = {}) {
-    const card = make('article', 'ac-card');
+    const paused = PAUSED_COURSES.has(course.slug);
+    const card = make('article', 'ac-card' + (paused ? ' is-paused' : ''));
     const open = () => go('course/' + course.slug);
-    card.addEventListener('click', open);
+    if (paused) card.setAttribute('aria-disabled', 'true');
+    else card.addEventListener('click', open);
 
     const level = make('div', 'ac-level lv-' + (course.level || 'introductory'));
     level.appendChild(make('i', 'fas fa-signal'));
@@ -1520,6 +1535,11 @@
     const start = make('button', 'btn btn-primary ac-start',
       options.withProgress ? (course.completedAt ? 'Review Course' : 'Continue') : 'Start Learning');
     start.type = 'button';
+    if (paused) {
+      start.textContent = 'Coming soon';
+      more.disabled = true;
+      start.disabled = true;
+    }
     [more, start].forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); open(); }));
     actions.appendChild(more);
     actions.appendChild(start);

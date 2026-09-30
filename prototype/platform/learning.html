@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Learning — ReSoK Platform (prototype)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,200..900&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="platform.css?v=1">
+</head>
+<body data-section="learning">
+  <div class="review">
+    <strong>Platform prototype</strong> — a section landing page
+    <a href="index.html">Home</a>
+    <a href="learning.html" aria-current="page">Section page</a>
+    <a href="my-resok.html">My ReSoK</a>
+    <a href="coming-soon.html">Coming soon</a>
+    <span class="chip chip--live">Live</span><span class="chip chip--dev">In development</span><span class="chip chip--soon">Coming soon</span>
+  </div>
+  <div data-header></div>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap">
+        <div>
+          <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span>/</span><span>Learning</span></nav>
+          <h1 class="h1">Learning</h1>
+          <p class="lede">Hands-on training, accredited CMEs and webinars, clinical knowledge and a growing online academy — for every respiratory-health professional in Kenya.</p>
+          <nav class="subnav" aria-label="In this section">
+            <a href="#offer">Everything in Learning</a><a href="#cpd">How CPD works</a><a href="#topics">By topic</a>
+          </nav>
+        </div>
+        <figure class="hero-photo" style="aspect-ratio:16/10"><img src="../img/edu-train.jpg" srcset="../img/edu-train-sm.jpg 820w, ../img/edu-train.jpg 1600w" sizes="(max-width: 860px) 100vw, 45vw" alt="A trainee practises on a bronchoscopy simulator with faculty guidance"><figcaption>Simulation training, bronchoscopy workshop</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- Every Learning offer in one place, each with its honest state. -->
+    <section class="section" id="offer">
+      <div class="wrap">
+        <div class="head-row"><div><span class="eyebrow">Everything in Learning</span><h2 class="h2">Choose how you <em>learn.</em></h2></div></div>
+        <div class="offer">
+          <a href="../../workshops-and-training.html">
+            <div class="oi"><img src="../img/edu-teach-sm.jpg" alt="" loading="lazy"></div>
+            <div class="ob"><div class="row"><span class="chip chip--live">Live</span></div><h3>Workshops &amp; training</h3><p>Hands-on bronchoscopy, EBUS, pleuroscopy, lung biopsy and thoracic ultrasound camps across Kenya.</p></div>
+          </a>
+          <a href="../../events.html">
+            <div class="oi"><img src="../img/events-voice-sm.jpg" alt="" loading="lazy"></div>
+            <div class="ob"><div class="row"><span class="chip chip--live">Live</span><span class="chip chip--members">CPD</span></div><h3>CMEs &amp; webinars</h3><p>CPD-accredited sessions, open to members and non-members, with tokens for attendance.</p></div>
+          </a>
+          <a href="../../knowledge.html">
+            <div class="oi"><img src="../img/research-reader-sm.jpg" alt="" loading="lazy"></div>
+            <div class="ob"><div class="row"><span class="chip chip--live">Live</span></div><h3>Knowledge Hub</h3><p>Structured topic areas for clinicians, from TB and asthma to pleural disease and sleep.</p></div>
+          </a>
+          <a href="../../learning">
+            <div class="oi"><img src="../img/edu-faculty-sm.jpg" alt="" loading="lazy"></div>
+            <div class="ob"><div class="row"><span class="chip chip--live">Live</span><span class="chip chip--members">Members</span></div><h3>Members' learning library</h3><p>CME recordings, asthma education videos, presentation slides and a past-CMEs library.</p></div>
+          </a>
+          <a href="../../resok-portal/public/academy">
+            <div class="oi"><img src="../img/edu-scope-sm.jpg" alt="" loading="lazy"></div>
+            <div class="ob"><div class="row"><span class="chip chip--dev">In development</span></div><h3>ReSoK Virtual Academy</h3><p>Free online lung-health courses with lessons, quizzes and certificates. The platform is built; the first courses are in clinical review.</p></div>
+          </a>
+          <a class="is-soon" href="coming-soon.html">
+            <div class="oi"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="14" y="5" width="12" height="20" rx="6"/><path d="M9 19a11 11 0 0 0 22 0M20 30v5M14 35h12"/></svg></div>
+            <div class="ob"><div class="row"><span class="chip chip--soon">Coming soon</span></div><h3>ReSoK Podcasts</h3><p>Conversations with Kenyan clinicians and researchers on lung health.</p></div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- The CPD chain the brief describes, with what exists today. -->
+    <section class="section section--paper" id="cpd">
+      <div class="wrap">
+        <span class="eyebrow">How CPD works</span>
+        <h2 class="h2">From a session to a <em>certificate.</em></h2>
+        <p class="lede" style="margin-top:14px">Attendance at accredited ReSoK events already earns a CPD token and certificate. The next steps join them up into a running record in My ReSoK.</p>
+        <ol class="pathway">
+          <li><span class="pn">01</span><strong>Event or course</strong><span class="chip chip--live">Live</span></li>
+          <li><span class="pn">02</span><strong>Attendance confirmed</strong><span class="chip chip--live">Live</span></li>
+          <li><span class="pn">03</span><strong>CPD token</strong><span class="chip chip--live">Live</span></li>
+          <li><span class="pn">04</span><strong>Saved to My ReSoK</strong><span class="chip chip--live">Live</span></li>
+          <li><span class="pn">05</span><strong>CPD transcript</strong><span class="chip chip--soon">Coming soon</span></li>
+          <li><span class="pn">06</span><strong>Certificate</strong><span class="chip chip--live">Live</span></li>
+        </ol>
+        <p class="note">States in this prototype reflect the audit so far and should be confirmed before launch.</p>
+      </div>
+    </section>
+
+    <section class="section" id="topics">
+      <div class="wrap">
+        <div class="head-row"><div><span class="eyebrow">By topic</span><h2 class="h2">Learn by <em>condition.</em></h2></div><a class="more" href="../../knowledge.html">Knowledge Hub</a></div>
+        <div class="topics">
+          <a href="../../knowledge.html"><strong>Tuberculosis</strong><small>Including drug-resistant TB</small></a>
+          <a href="../../knowledge.html"><strong>Asthma</strong><small>Diagnosis and management</small></a>
+          <a href="../../knowledge.html"><strong>COPD</strong><small>Chronic lung disease</small></a>
+          <a href="../../knowledge.html"><strong>Pleural disease</strong><small>Effusions and procedures</small></a>
+          <a href="../../workshops-and-training.html"><strong>Interventional pulmonology</strong><small>Hands-on training</small></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div data-footer></div>
+  <script src="platform.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>My ReSoK — ReSoK Platform (prototype)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,200..900&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="platform.css?v=1">
+</head>
+<body data-section="membership">
+  <div class="review">
+    <strong>Platform prototype</strong> — the member dashboard
+    <a href="index.html">Home</a>
+    <a href="learning.html">Section page</a>
+    <a href="my-resok.html" aria-current="page">My ReSoK</a>
+    <a href="coming-soon.html">Coming soon</a>
+    <span class="chip chip--live">Live</span><span class="chip chip--dev">In development</span><span class="chip chip--soon">Coming soon</span>
+  </div>
+  <div data-header></div>
+  <p class="sample">Sample data for illustration — no real member's details are shown.</p>
+
+  <div class="app">
+    <nav class="side" aria-label="My ReSoK">
+      <h4>My ReSoK</h4>
+      <a href="#" aria-current="page" data-demo>Overview</a>
+      <a href="#" data-demo>Profile</a>
+      <a href="#" data-demo>Membership &amp; card</a>
+      <a href="#" data-demo>Renewal</a>
+      <a href="#" data-demo>Payments &amp; receipts</a>
+      <a href="#" data-demo>CPD &amp; certificates</a>
+      <h4>Participate</h4>
+      <a href="#" data-demo>Virtual Academy <span class="chip chip--dev">In dev</span></a>
+      <span class="is-off">Events &amp; CMEs <span class="chip chip--dev">In dev</span></span>
+      <span class="is-off">Elections <span class="chip chip--dev">In dev</span></span>
+      <span class="is-off">Notifications <span class="chip chip--soon">Soon</span></span>
+    </nav>
+
+    <main class="main">
+      <div class="welcome">
+        <div><p>Good morning,</p><h1>Dr Member Name</h1></div>
+        <span class="chip chip--live">Membership active</span>
+      </div>
+
+      <div class="cards">
+        <section class="card">
+          <h2>Membership card</h2>
+          <div class="member-card"><img src="../img/logo-light.png" alt=""><b>Member Name</b><span><em style="font-style:normal">RESOK0000</em><em style="font-style:normal">Valid thru 00/00</em></span></div>
+          <a class="btn btn-ghost" href="#" data-demo>Download card</a>
+        </section>
+
+        <section class="card">
+          <h2>Membership <span class="chip chip--live">Live</span></h2>
+          <p>Ordinary member · valid until <strong>00 Month 0000</strong></p>
+          <div class="bar" aria-label="Membership year elapsed"><span style="width:72%"></span></div>
+          <p>Renew by paybill; your proof of payment is reviewed by the membership team.</p>
+          <a class="btn btn-primary" href="#" data-demo>Renew membership</a>
+        </section>
+
+        <section class="card">
+          <h2>CPD this year <span class="chip chip--live">Live</span></h2>
+          <p class="big">0<small>tokens · sample</small></p>
+          <p>Tokens from accredited ReSoK CMEs, webinars and workshops you attended.</p>
+          <a class="more" href="#" data-demo>View certificates</a>
+        </section>
+
+        <section class="card card--span2">
+          <h2>Certificates <span class="chip chip--live">Live</span></h2>
+          <table class="table">
+            <thead><tr><th>Event</th><th>Type</th><th>Date</th></tr></thead>
+            <tbody>
+              <tr><td>Sample CME title</td><td>CME</td><td>00 Mon 0000</td></tr>
+              <tr><td>Sample workshop title</td><td>Workshop</td><td>00 Mon 0000</td></tr>
+              <tr><td>Sample webinar title</td><td>Webinar</td><td>00 Mon 0000</td></tr>
+            </tbody>
+          </table>
+          <p>Every certificate carries a code anyone can check at resok.org/verify.</p>
+        </section>
+
+        <section class="card">
+          <h2>Payments <span class="chip chip--live">Live</span></h2>
+          <table class="table">
+            <thead><tr><th>Item</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Membership 0000</td><td>Approved</td></tr>
+              <tr><td>Renewal 0000</td><td>Pending review</td></tr>
+            </tbody>
+          </table>
+          <p>M-Pesa prompt to phone <span class="chip chip--dev">In dev</span></p>
+        </section>
+
+        <section class="card">
+          <h2>Virtual Academy <span class="chip chip--dev">In dev</span></h2>
+          <p>Free online courses with quizzes and certificates. The first courses are in clinical review.</p>
+          <a class="btn btn-ghost" href="#" data-demo>Preview the Academy</a>
+        </section>
+
+        <section class="card card--off">
+          <h2>Events &amp; CMEs <span class="chip chip--dev">In dev</span></h2>
+          <p>Register for events and see your upcoming sessions here. Built, opening to members soon — until then, register from the public events page.</p>
+        </section>
+
+        <section class="card card--off">
+          <h2>Elections <span class="chip chip--dev">In dev</span></h2>
+          <p>Vote in Society elections online. Built, and will open for the next election cycle.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="platform.js?v=1"></script>
+</body>
+</html>

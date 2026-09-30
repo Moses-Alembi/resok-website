@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Design prototype only: kept out of search results so it never competes with the live site. -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>ReSoK — Homepage Prototype</title>
+  <meta name="description" content="Visual prototype of a redesigned homepage for the Respiratory Society of Kenya.">
+  <meta name="theme-color" content="#0b1c14">
+  <link rel="icon" href="../favicon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap">
+  <link rel="preload" as="image" href="img/hero.jpg" imagesrcset="img/hero-sm.jpg 820w, img/hero.jpg 1600w" imagesizes="(max-width: 760px) 100vw, 64vw">
+  <link rel="stylesheet" href="prototype.css?v=1">
+  <script>
+    // Motion is progressive: without JS (or with reduced motion) every element is simply visible.
+    document.documentElement.classList.replace('no-js', 'js');
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('motion');
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="loader" aria-hidden="true">
+    <div class="loader-inner">
+      <span class="loader-word">Pumzi</span>
+      <span class="loader-sub">Respiratory Society of Kenya</span>
+    </div>
+  </div>
+
+  <!-- ============ NAVIGATION ============ -->
+  <header class="nav" id="nav">
+    <a class="nav-logo" href="#top" aria-label="Respiratory Society of Kenya — home">
+      <img class="logo-light" src="img/logo-light.png" alt="" width="768" height="204">
+      <img class="logo-dark" src="img/logo.png" alt="" width="768" height="204">
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#society">About</a>
+      <a href="#membership">Membership</a>
+      <a href="#education">Learning</a>
+      <a href="#research">Research</a>
+      <a href="#events">Events</a>
+      <a href="#advocacy">Lung Health</a>
+      <a href="#knowledge">News</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-signin" href="../resok-portal/public/login">My ReSoK</a>
+      <a class="btn btn-nav" href="../resok-portal/public/">Become a member</a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
+        <span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="menu" id="menu" aria-hidden="true">
+    <nav class="menu-inner" aria-label="Menu">
+      <ol class="menu-list">
+        <li><a href="#society"><span>01</span>About</a></li>
+        <li><a href="#education"><span>02</span>Learning</a></li>
+        <li><a href="#research"><span>03</span>Research</a></li>
+        <li><a href="#advocacy"><span>04</span>Lung Health</a></li>
+        <li><a href="#events"><span>05</span>Events</a></li>
+        <li><a href="#membership"><span>06</span>Membership</a></li>
+        <li><a href="#knowledge"><span>07</span>News</a></li>
+      </ol>
+      <div class="menu-foot">
+        <a class="btn btn-light" href="../resok-portal/public/">Become a member</a>
+        <a class="menu-signin" href="../resok-portal/public/login">Sign in to My ReSoK</a>
+        <p>info@resok.org · +254 735 700 660</p>
+      </div>
+    </nav>
+  </div>
+
+  <main id="main">
+
+    <!-- ============ HERO ============ -->
+    <section class="hero" id="top" aria-label="Introduction">
+      <div class="hero-media">
+        <img src="img/hero.jpg" srcset="img/hero-sm.jpg 820w, img/hero.jpg 1600w" sizes="(max-width: 760px) 100vw, 64vw"
+             alt="A clinician guides a flexible bronchoscope during a ReSoK hands-on bronchoscopy workshop" fetchpriority="high">
+      </div>
+      <div class="hero-shade" aria-hidden="true"></div>
+
+      <div class="hero-inner">
+        <p class="hero-kicker reveal-up">
+          <span>Respiratory Society of Kenya</span>
+          <span class="dot" aria-hidden="true"></span>
+          <span>Formerly KAPTLD</span>
+        </p>
+        <h1 class="hero-title">
+          <span class="line"><span>Respiratory</span></span>
+          <span class="line"><span>health</span></span>
+          <span class="line"><span><em>in</em> Kenya.</span></span>
+        </h1>
+        <div class="hero-foot">
+          <p class="hero-lede reveal-up">The professional society for clinicians, researchers and partners advancing lung health through prevention, research, education and advocacy.</p>
+          <div class="hero-actions reveal-up">
+            <a class="btn btn-light" href="../resok-portal/public/">Become a member</a>
+            <a class="link-arrow link-arrow--light" href="#society">Discover the Society</a>
+          </div>
+        </div>
+      </div>
+
+      <a class="hero-next reveal-up" href="../events.html">
+        <span class="hero-next-tag">Next</span>
+        <span class="hero-next-title">CME · Diagnosing Bronchiectasis on Chest CT</span>
+        <span class="hero-next-meta">1 Oct 2026 · 7 PM · Zoom</span>
+      </a>
+      <div class="hero-scroll" aria-hidden="true"><span></span>Scroll</div>
+    </section>
+
+    <!-- ============ 01 THE SOCIETY ============ -->
+    <section class="society" id="society" aria-labelledby="society-title">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="sec-num">01</span><span class="sec-label">The Society</span>
+        </div>
+        <h2 class="display-l split" id="society-title">Kenya's professional home for <em>respiratory</em> health.</h2>
+
+        <div class="society-grid">
+          <div class="society-copy">
+            <p class="lede reveal">Formerly the Kenya Association for the Prevention of Tuberculosis and Lung Disease, ReSoK brings together health professionals with an interest in respiratory medicine — chest physicians, clinical officers, nurses, pharmacists and researchers.</p>
+            <p class="reveal">Guided by the 2026–2035 Strategic Plan, the Society works through prevention, research, education, advocacy, multidisciplinary collaboration and policy advisory, in Kenya and beyond.</p>
+            <dl class="mv reveal">
+              <div><dt>Vision</dt><dd>Healthy lungs for all people in Kenya and beyond.</dd></div>
+              <div><dt>Mission</dt><dd>To promote, improve, sustain and integrate quality lung health for all through prevention, research, education, advocacy and multidisciplinary collaboration.</dd></div>
+            </dl>
+            <a class="link-arrow reveal" href="../about.html">Read about the Society</a>
+          </div>
+          <figure class="society-figure">
+            <div class="mask" data-mask>
+              <img src="img/society.jpg" srcset="img/society-sm.jpg 820w, img/society.jpg 1600w" sizes="(max-width: 900px) 100vw, 58vw"
+                   alt="Faculty and participants of a ReSoK bronchoscopy workshop gathered for a group photograph in front of a hospital mural" loading="lazy" data-speed="0.92">
+            </div>
+            <figcaption>Faculty and participants, ReSoK bronchoscopy workshop.</figcaption>
+          </figure>
+        </div>
+
+        <div class="pumzi" aria-labelledby="pumzi-title">
+          <p class="pumzi-intro reveal" id="pumzi-title">Our values spell <strong>PUMZI</strong> — Swahili for <em>breath</em>.</p>
+          <ol class="pumzi-letters">
+            <li><span class="pl">P</span><span class="pw">Partnerships</span></li>
+            <li><span class="pl">U</span><span class="pw">Understanding</span></li>
+            <li><span class="pl">M</span><span class="pw">Meticulousness</span></li>
+            <li><span class="pl">Z</span><span class="pw">Zeal</span></li>
+            <li><span class="pl">I</span><span class="pw">Innovation</span></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 EDUCATION ============ -->
+    <section class="education dark" id="education" aria-labelledby="education-title">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="sec-num">02</span><span class="sec-label">Education</span>
+        </div>
+
+        <div class="edu-grid">
+          <div class="edu-sticky">
+            <h2 class="display-l split" id="education-title">Building respiratory <em>expertise.</em></h2>
+            <p class="lede reveal">Hands-on workshops, accredited CMEs and webinars, scientific conferences — and soon a Virtual Academy — so that learning moves straight into patient care.</p>
+            <ul class="pillars reveal">
+              <li><span>Workshops &amp; camps</span><small>Bronchoscopy, pleural procedures, thoracic ultrasound</small></li>
+              <li><span>CMEs &amp; webinars</span><small>CPD-accredited sessions, open to members and non-members</small></li>
+              <li><span>Conferences</span><small>KISLHC and national symposia</small></li>
+              <li><span>Virtual Academy</span><small>Free online lung-health courses · opening soon</small></li>
+            </ul>
+          </div>
+          <div class="edu-images">
+            <figure class="edu-img edu-img--a mask" data-mask>
+              <img src="img/edu-teach.jpg" srcset="img/edu-teach-sm.jpg 820w, img/edu-teach.jpg 1600w" sizes="(max-width: 900px) 100vw, 46vw"
+                   alt="Faculty teach a live bronchoscopy procedure with the airway view on a monitor" loading="lazy">
+            </figure>
+            <figure class="edu-img edu-img--b mask" data-mask>
+              <img src="img/edu-train.jpg" srcset="img/edu-train-sm.jpg 820w, img/edu-train.jpg 1600w" sizes="(max-width: 900px) 70vw, 30vw"
+                   alt="A trainee practises on a bronchoscopy simulator while faculty guide her" loading="lazy">
+            </figure>
+            <figure class="edu-img edu-img--c mask" data-mask>
+              <img src="img/edu-scope.jpg" srcset="img/edu-scope-sm.jpg 820w, img/edu-scope.jpg 1600w" sizes="(max-width: 900px) 70vw, 28vw"
+                   alt="A clinician prepares instruments during a hands-on procedure session" loading="lazy">
+            </figure>
+          </div>
+        </div>
+
+        <div class="ws">
+          <div class="ws-head reveal">
+            <h3>Recent hands-on training</h3>
+            <a class="link-arrow link-arrow--light" href="../workshops-and-training.html">All workshops</a>
+          </div>
+          <ul class="ws-list">
+            <li><a href="../workshop.php?w=interventional-pulmonology-cgtrh" data-img="img/ws-cgtrh-sm.jpg">
+              <span class="ws-name">Interventional Pulmonology &amp; Advanced Bronchoscopy</span><span class="ws-place">Coast General, Mombasa</span><span class="ws-year">2026</span></a></li>
+            <li><a href="../workshop.php?w=bronchoscopy-vats-camp-meru" data-img="img/ws-meru-sm.jpg">
+              <span class="ws-name">Bronchoscopy &amp; VATS Camp</span><span class="ws-place">MeTRH, Meru</span><span class="ws-year">2026</span></a></li>
+            <li><a href="../workshop.php?w=ebus-basic-bronchoscopy-knh" data-img="img/ws-knh-sm.jpg">
+              <span class="ws-name">EBUS &amp; Basic Bronchoscopy Workshop</span><span class="ws-place">KNH, Nairobi</span><span class="ws-year">2026</span></a></li>
+            <li><a href="../workshop.php?w=bronchoscopy-camp-kakamega" data-img="img/ws-kakamega-sm.jpg">
+              <span class="ws-name">Kakamega Bronchoscopy Camp</span><span class="ws-place">Kakamega</span><span class="ws-year">2025</span></a></li>
+            <li><a href="../workshop.php?w=lung-biopsy-workshop-mombasa" data-img="img/ws-mombasa-sm.jpg">
+              <span class="ws-name">Lung Biopsy Workshop</span><span class="ws-place">Mombasa</span><span class="ws-year">2025</span></a></li>
+            <li><a href="../workshop.php?w=pleuroscopy-camp" data-img="img/ws-pleuroscopy-sm.jpg">
+              <span class="ws-name">Pleuroscopy Camp</span><span class="ws-place">Two-day camp</span><span class="ws-year">2025</span></a></li>
+            <li><a href="../post.html?id=advanced-thoracic-ultrasound" data-img="img/ws-ultrasound-sm.jpg">
+              <span class="ws-name">Advanced Thoracic Ultrasound Workshop</span><span class="ws-place">Nairobi</span><span class="ws-year">2025</span></a></li>
+          </ul>
+          <div class="ws-preview" aria-hidden="true"><img alt=""></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 03 RESEARCH ============ -->
+    <section class="research" id="research" aria-labelledby="research-title">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <span class="sec-num">03</span><span class="sec-label">Research</span>
+        </div>
+        <h2 class="display-xl split" id="research-title">Research that moves lung health <em>forward.</em></h2>
+
+        <div class="research-grid">
+          <figure class="research-figure">
+            <div class="mask" data-mask>
+              <img src="img/research-notes.jpg" srcset="img/research-notes-sm.jpg 820w, img/research-notes.jpg 1600w" sizes="(max-width: 900px) 100vw, 40vw"
+                   alt="A delegate annotates the scientific programme at the Kenya International Scientific Lung Health Conference" loading="lazy" data-speed="0.9">
+            </div>
+            <figcaption>Scientific programme, KISLHC 2024.</figcaption>
+          </figure>
+
+          <div class="research-list">
+            <p class="lede reveal">ReSoK partners on research programmes that shape how TB and respiratory disease are understood and treated across Kenya and Africa.</p>
+            <ol class="rows">
+              <li class="row reveal">
+                <span class="row-num">i.</span>
+                <div class="row-body">
+                  <h3>LIGHT</h3>
+                  <p>A six-year UK aid-funded global health research programme transforming gendered pathways to TB care in urban settings. ReSoK is LIGHT's research partner in Kenya.</p>
+                  <span class="tags"><span>Urban TB</span><span>Gender</span></span>
+                </div>
+              </li>
+              <li class="row reveal">
+                <span class="row-num">ii.</span>
+                <div class="row-body">
+                  <h3>ITARA</h3>
+                  <p>Integrated Tuberculosis and Respiratory Care in Africa — a four-year NIHR-funded programme developing new approaches to integrated TB and respiratory care.</p>
+                  <span class="tags"><span>Integrated care</span><span>NIHR</span></span>
+                </div>
+              </li>
+              <li class="row reveal">
+                <span class="row-num">iii.</span>
+                <div class="row-body">
+                  <h3>ALBORADA</h3>
+                  <p>Cambridge-Africa research into the epidemiology of interstitial lung disease in Kenya, and a national multidisciplinary approach to ILD care.</p>
+                  <span class="tags"><span>ILD</span><span>Cambridge-Africa</span></span>
+                </div>
+              </li>
+            </ol>
+            <div class="research-links reveal">
+              <a class="link-arrow" href="../projects.html">All projects</a>
+              <a class="link-arrow" href="../guidelines.html">Guidelines</a>
+              <a class="link-arrow" href="../knowledge.html">Knowledge Hub</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 04 ADVOCACY ============ -->
+    <section class="advocacy" id="advocacy" aria-labelledby="advocacy-title">
+      <div class="advocacy-media">
+        <img src="img/advocacy.jpg" srcset="img/advocacy-sm.jpg 820w, img/advocacy.jpg 1600w" sizes="100vw"
+             alt="A clinician speaks with community members seated outdoors during a ReSoK screening outreach" loading="lazy" data-speed="0.85">
+      </div>
+      <div class="advocacy-shade" aria-hidden="true"></div>
+      <div class="wrap advocacy-inner">
+        <div class="sec-head sec-head--light reveal">
+          <span class="sec-num">04</span><span class="sec-label">Advocacy &amp; lung health</span>
+        </div>
+        <h2 class="display-l split" id="advocacy-title">From the clinic to the <em>community.</em></h2>
+        <div class="adv-cols">
+          <div class="adv-col reveal">
+            <h3>Finding and treating TB</h3>
+            <p>Active case finding with county teams in Kiambu, and private providers engaged in TB and lung-disease care across eight counties.</p>
+          </div>
+          <div class="adv-col reveal">
+            <h3>Raising awareness</h3>
+            <p>World Lung Cancer Day, the Lung Cancer, COPD &amp; Pulmonary Hypertension Awareness Month, and community screening outreach.</p>
+          </div>
+          <div class="adv-col reveal">
+            <h3>Informing policy</h3>
+            <p>Supporting the Ministry of Health's national TB programme to pilot care for people living with post-TB lung disease.</p>
+          </div>
+        </div>
+      </div>
+      <div class="marquee" aria-label="Areas of focus">
+        <div class="marquee-track">
+          <span>Tuberculosis</span><i></i><span>Post-TB lung disease</span><i></i><span>Lung cancer</span><i></i><span>Asthma &amp; COPD</span><i></i><span>Clean air</span><i></i><span>Tobacco control</span><i></i><span>Access to care</span><i></i>
+          <span aria-hidden="true">Tuberculosis</span><i></i><span aria-hidden="true">Post-TB lung disease</span><i></i><span aria-hidden="true">Lung cancer</span><i></i><span aria-hidden="true">Asthma &amp; COPD</span><i></i><span aria-hidden="true">Clean air</span><i></i><span aria-hidden="true">Tobacco control</span><i></i><span aria-hidden="true">Access to care</span><i></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 05 EVENTS ============ -->
+    <section class="events dark" id="events" aria-labelledby="events-title">
+      <div class="events-pin">
+        <div class="wrap events-head">
+          <div class="sec-head reveal">
+            <span class="sec-num">05</span><span class="sec-label">Events</span>
+          </div>
+          <h2 class="display-l split" id="events-title">Where Kenya's lung-health community <em>meets.</em></h2>
+        </div>
+        <div class="events-track-wrap">
+          <ol class="events-track">
+            <li class="ev ev--feature">
+              <a href="../conferences.html">
+                <div class="ev-img"><img src="img/events-hall.jpg" srcset="img/events-hall-sm.jpg 820w, img/events-hall.jpg 1600w" sizes="(max-width: 760px) 86vw, 50vw" alt="Delegates on their feet in the main hall of the Kenya International Scientific Lung Health Conference" loading="lazy"></div>
+                <div class="ev-body">
+                  <span class="ev-date">05—08<small>Aug 2026</small></span>
+                  <span class="ev-type">Conference · Diani, Kwale</span>
+                  <h3>7th Kenya International Scientific Lung Health Conference</h3>
+                  <p><em>From Detection to Recovery</em> — integrated pathways and patient-centred innovations in lung health.</p>
+                </div>
+              </a>
+            </li>
+            <li class="ev">
+              <a href="../events.html">
+                <span class="ev-flag">Upcoming</span>
+                <span class="ev-date">01<small>Oct 2026</small></span>
+                <span class="ev-type">CME · Online, Zoom</span>
+                <h3>Diagnosing Bronchiectasis on Chest CT Scan</h3>
+                <p>With consultant radiologist Dr Maxwell Gachie.</p>
+              </a>
+            </li>
+            <li class="ev">
+              <a href="../events.html">
+                <span class="ev-date">28<small>Sep 2026</small></span>
+                <span class="ev-type">Webinar · Online</span>
+                <h3>Infectious Lung Disorders: Spectrum of Surgical Treatment Options</h3>
+              </a>
+            </li>
+            <li class="ev ev--img">
+              <a href="../conferences.html">
+                <div class="ev-img"><img src="img/events-voice-sm.jpg" alt="A delegate asks a question from the floor at KISLHC 2024" loading="lazy"></div>
+                <span class="ev-date">29—30<small>Sep 2025</small></span>
+                <span class="ev-type">Symposium · The Nairobi Hospital</span>
+                <h3>TB &amp; Lung Health Symposium</h3>
+              </a>
+            </li>
+            <li class="ev ev--all">
+              <a href="../events.html">
+                <span class="ev-all-label">All events,<br>CMEs &amp; CPD</span>
+                <span class="ev-all-arrow" aria-hidden="true">→</span>
+              </a>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 06 MEMBERSHIP ============ -->
+    <section class="membership" id="membership" aria-labelledby="membership-title">
+      <div class="wrap membership-grid">
+        <div class="mem-visual">
+          <div class="mask mem-photo" data-mask>
+            <img src="img/members.jpg" srcset="img/members-sm.jpg 820w, img/members.jpg 1600w" sizes="(max-width: 900px) 100vw, 48vw"
+                 alt="Two ReSoK members sharing a laugh at the conference dinner" loading="lazy">
+          </div>
+          <div class="mem-card" aria-hidden="true">
+            <div class="mem-card-top"><img src="img/logo-light.png" alt=""><span>Member</span></div>
+            <div class="mem-card-name">Member name</div>
+            <div class="mem-card-meta"><span>RESOK0000</span><span>Valid thru 00/00</span></div>
+          </div>
+        </div>
+        <div class="mem-copy">
+          <div class="sec-head reveal">
+            <span class="sec-num">06</span><span class="sec-label">Membership</span>
+          </div>
+          <h2 class="display-l split" id="membership-title">Become part of Kenya's respiratory <em>community.</em></h2>
+          <ul class="benefits">
+            <li class="reveal"><span>CPD</span>Certificates and records for accredited CMEs, webinars and workshops, kept in one place.</li>
+            <li class="reveal"><span>Learning</span>The members' learning library and Virtual Academy courses.</li>
+            <li class="reveal"><span>Community</span>Peers across specialties and counties, at every conference, camp and CME.</li>
+            <li class="reveal"><span>My ReSoK</span>Your digital membership card, payments, renewals and certificates.</li>
+          </ul>
+          <div class="mem-actions reveal">
+            <a class="btn btn-dark" href="../resok-portal/public/">Become a member</a>
+            <a class="link-arrow" href="../resok-portal/public/login">Sign in to My ReSoK</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 07 KNOWLEDGE ============ -->
+    <section class="knowledge" id="knowledge" aria-labelledby="knowledge-title">
+      <div class="wrap">
+        <div class="k-head">
+          <div>
+            <div class="sec-head reveal">
+              <span class="sec-num">07</span><span class="sec-label">Knowledge &amp; news</span>
+            </div>
+            <h2 class="display-m split" id="knowledge-title">From the field, the clinic and the <em>lab.</em></h2>
+          </div>
+          <div class="k-filters reveal" role="group" aria-label="Filter stories">
+            <button type="button" class="is-on" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" data-filter="Research" aria-pressed="false">Research</button>
+            <button type="button" data-filter="Training" aria-pressed="false">Training</button>
+            <button type="button" data-filter="Advocacy" aria-pressed="false">Advocacy</button>
+            <button type="button" data-filter="Recognition" aria-pressed="false">Recognition</button>
+          </div>
+        </div>
+
+        <div class="k-grid">
+          <article class="k-card k-card--lead reveal" data-cat="Research">
+            <a href="../post.html?id=light-writing-workshop">
+              <div class="k-img"><img src="img/k-light.jpg" srcset="img/k-light-sm.jpg 820w, img/k-light.jpg 1600w" sizes="(max-width: 900px) 100vw, 56vw" alt="Participants at the LIGHT scientific writing workshop" loading="lazy"></div>
+              <span class="k-meta">Research · Jul 2025</span>
+              <h3>Advancing TB research capacity in Kenya: LIGHT partners spearhead a scientific writing workshop</h3>
+            </a>
+          </article>
+          <article class="k-card reveal" data-cat="Recognition">
+            <a href="../post.html?id=union-medal-chakaya">
+              <div class="k-img"><img src="img/k-union-sm.jpg" alt="The Union Medal presentation" loading="lazy"></div>
+              <span class="k-meta">Recognition · Feb 2026</span>
+              <h3>The Union Medal winner</h3>
+            </a>
+          </article>
+          <article class="k-card reveal" data-cat="Advocacy">
+            <a href="../post.html?id=world-lung-cancer-day">
+              <div class="k-img"><img src="img/k-lungcancer-sm.jpg" alt="World Lung Cancer Day panel" loading="lazy"></div>
+              <span class="k-meta">Advocacy · Apr 2026</span>
+              <h3>World Lung Cancer Day</h3>
+            </a>
+          </article>
+          <article class="k-card reveal" data-cat="Training">
+            <a href="../post.html?id=chp-training-kiambu">
+              <div class="k-img"><img src="img/k-chp-sm.jpg" alt="Community health promoters in a training session in Kiambu" loading="lazy"></div>
+              <span class="k-meta">Training · Apr 2026</span>
+              <h3>A 10-day training programme for community health promoters in Kiambu</h3>
+            </a>
+          </article>
+          <article class="k-card reveal" data-cat="Advocacy">
+            <a href="../post.html?id=screening-outreach-thika">
+              <div class="k-img"><img src="img/k-outreach-sm.jpg" alt="Clinicians screening community members during an outreach" loading="lazy"></div>
+              <span class="k-meta">Outreach · Apr 2026</span>
+              <h3>Screening outreach</h3>
+            </a>
+          </article>
+        </div>
+        <a class="link-arrow k-all reveal" href="../blog.html">All stories</a>
+
+        <!-- The wider platform: what exists today, and what the design leaves room for. -->
+        <div class="eco">
+          <div class="eco-head reveal">
+            <h3>One Society, one platform.</h3>
+            <p>The design leaves room for the digital services the Society is growing into. Items marked <em>concept</em> are illustrations, not commitments.</p>
+          </div>
+          <ul class="eco-grid">
+            <li class="reveal"><a href="../resok-portal/public/login"><span class="eco-state is-live">Live</span><strong>My ReSoK</strong><small>Membership, payments, card, certificates</small></a></li>
+            <li class="reveal"><a href="../verify.html"><span class="eco-state is-live">Live</span><strong>Certificate verification</strong><small>Check any ReSoK certificate code</small></a></li>
+            <li class="reveal"><a href="../resok-portal/public/academy"><span class="eco-state is-soon">Opening</span><strong>Virtual Academy</strong><small>Free online lung-health courses</small></a></li>
+            <li class="reveal"><div><span class="eco-state">Concept</span><strong>On-demand learning</strong><small>Recorded CMEs and conference sessions</small></div></li>
+            <li class="reveal"><div><span class="eco-state">Concept</span><strong>Research repository</strong><small>Members' publications and abstracts</small></div></li>
+            <li class="reveal"><div><span class="eco-state">Concept</span><strong>Member directory</strong><small>Find peers by specialty and county</small></div></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 08 CLOSING ============ -->
+    <section class="closing dark" aria-labelledby="closing-title">
+      <div class="closing-media">
+        <img src="img/closing.jpg" srcset="img/closing-sm.jpg 820w, img/closing.jpg 1600w" sizes="100vw" alt="" loading="lazy" data-speed="0.85">
+      </div>
+      <div class="closing-shade" aria-hidden="true"></div>
+      <div class="wrap closing-inner">
+        <h2 class="closing-word" id="closing-title" aria-label="Pumzi">
+          <span aria-hidden="true">P</span><span aria-hidden="true">u</span><span aria-hidden="true">m</span><span aria-hidden="true">z</span><span aria-hidden="true">i</span><span class="closing-dot" aria-hidden="true">.</span>
+        </h2>
+        <p class="closing-line reveal">Swahili for <em>breath</em>. The work of every member — for every breath in Kenya.</p>
+        <div class="closing-actions reveal">
+          <a class="btn btn-light" href="../resok-portal/public/">Become a member</a>
+          <a class="link-arrow link-arrow--light" href="../contact.html">Partner with ReSoK</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-top">
+        <img class="footer-logo" src="img/logo-light.png" alt="Respiratory Society of Kenya" width="768" height="204" loading="lazy">
+        <p class="footer-tag">Healthy lungs for all people in Kenya and beyond.</p>
+      </div>
+      <div class="footer-cols">
+        <div>
+          <h4>Society</h4>
+          <a href="../about.html">About</a><a href="../projects.html">Projects</a><a href="../sponsors.html">Partners</a><a href="../contact.html">Contact</a>
+        </div>
+        <div>
+          <h4>Learning</h4>
+          <a href="../events.html">Events &amp; CPD</a><a href="../workshops-and-training.html">Workshops</a><a href="../conferences.html">Conferences</a><a href="../resok-portal/public/academy">Virtual Academy</a>
+        </div>
+        <div>
+          <h4>Knowledge</h4>
+          <a href="../knowledge.html">Knowledge Hub</a><a href="../guidelines.html">Guidelines</a><a href="../patient-resources.html">Patient resources</a><a href="../blog.html">News</a>
+        </div>
+        <div>
+          <h4>Visit</h4>
+          <p>Regent Courts, Argwings Kodhek Road, Nairobi</p>
+          <p><a href="tel:+254735700660">+254 735 700 660</a><br><a href="mailto:info@resok.org">info@resok.org</a></p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span data-year>2026</span> Respiratory Society of Kenya</span>
+        <span class="footer-social">
+          <a href="https://x.com/ReSoKenya" rel="noopener">X</a>
+          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303" rel="noopener">LinkedIn</a>
+          <a href="https://www.facebook.com/share/1DLne8xyKQ/" rel="noopener">Facebook</a>
+          <a href="https://youtube.com/@respiratorysocietykenya" rel="noopener">YouTube</a>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <aside class="proto-badge" aria-label="Prototype notice">
+    <span>Design prototype</span> — not the live site
+    <button type="button" aria-label="Hide notice">×</button>
+  </aside>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
+  <script src="prototype.js?v=1" defer></script>
+</body>
+</html>

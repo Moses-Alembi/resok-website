@@ -2291,11 +2291,15 @@ if ('serviceWorker' in navigator) {
 .learn-manifesto {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: auto 1fr;
   gap: 18px;
   margin-top: 24px;
 }
+/* Photo down the left; the two cards sized to their text at the top right, with the PUMZI
+   values directly beneath them. */
 .learn-hero-panel {
   grid-column: 1 / span 6;
+  grid-row: 1 / span 2;
   position: relative;
   min-height: 384px;
   border-radius: 12px;
@@ -2339,8 +2343,8 @@ if ('serviceWorker' in navigator) {
   text-align: center;
 }
 .learn-feature-card {
-  min-height: 384px;
-  padding: 38px 30px;
+  grid-row: 1;
+  padding: 30px 28px;
   border-radius: 12px;
   border: 1px solid rgba(188, 11, 34, 0.12);
   border-top: 3px solid var(--brand-secondary);
@@ -2356,7 +2360,7 @@ if ('serviceWorker' in navigator) {
 .learn-feature-icon {
   color: var(--brand-secondary);
   font-size: 1.55rem;
-  margin-bottom: 26px;
+  margin-bottom: 18px;
 }
 .learn-feature-title {
   margin: 0 0 14px;
@@ -2372,7 +2376,9 @@ if ('serviceWorker' in navigator) {
   line-height: 1.72;
 }
 .learn-values-strip {
-  grid-column: 1 / -1;
+  grid-column: 7 / -1;
+  grid-row: 2;
+  align-self: start;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2422,14 +2428,23 @@ if ('serviceWorker' in navigator) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
   }
+  .learn-manifesto {
+    grid-template-rows: none;
+  }
   .learn-hero-panel {
     grid-column: 1 / -1;
+    grid-row: auto;
     min-height: 320px;
   }
   .learn-feature-card--mission,
   .learn-feature-card--vision {
     grid-column: auto;
+    grid-row: auto;
     min-height: auto;
+  }
+  .learn-values-strip {
+    grid-column: 1 / -1;
+    grid-row: auto;
   }
 }
 @media (max-width: 680px) {

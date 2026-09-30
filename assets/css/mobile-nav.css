@@ -158,3 +158,14 @@
     bottom: 12px !important;
   }
 }
+
+/*
+ * Wave between the page and the footer, at every width. Some pages had it and most didn't, so
+ * the footer started abruptly under whatever the last section was. Pages that already style it
+ * keep their own rules; these are the same values.
+ */
+.footer-wave-divider { width: 100%; height: 90px; margin-top: -1px; overflow: hidden; background: #eaf2fb; }
+.footer-wave-divider svg { display: block; width: 100%; height: 100%; }
+.footer-wave-divider path { fill: #fff; }
+.footer-wave-divider + .site-footer { border-top: 1px solid #23313d; margin-top: 0 !important; }
+@media (max-width: 768px) { .footer-wave-divider { height: 70px; } }

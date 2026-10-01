@@ -419,8 +419,6 @@ function sendEventTokenEmail(array $config, string $email, string $name, string 
                  . ($approvalRef !== null && $approvalRef !== '' ? " under approval reference {$approvalRef}" : '') . '.';
         $lines[] = '';
     }
-    $lines[] = 'Keep this token for your CPD records. If you attended more than one ReSoK event, request each one separately from its own event.';
-    $lines[] = '';
     $lines[] = 'Best regards,';
     $lines[] = 'ReSoK Secretariat';
     $lines[] = 'Respiratory Society of Kenya (ReSoK)';

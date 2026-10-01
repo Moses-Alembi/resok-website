@@ -420,7 +420,7 @@ function sendEventTokenEmail(array $config, string $email, string $name, string 
         $lines[] = '';
     }
     $lines[] = 'Best regards,';
-    $lines[] = 'ReSoK Secretariat';
+    $lines[] = 'ReSoK ICT';
     $lines[] = 'Respiratory Society of Kenya (ReSoK)';
     $text = implode("
 ", $lines);

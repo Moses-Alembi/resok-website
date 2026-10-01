@@ -26,6 +26,10 @@ resok-portal/public/api/cron/debug-config.php
 resok-portal/server/seed-*.php
 resok-portal/server/seed-pleural-workshop.sql
 
+# CPD import payloads contain attendee records and live tokens; upload them manually.
+/cpd-imports/
+/private/cpd-imports/
+
 # Node dependencies (the Node backend is unused in production, but just in case)
 resok-portal/node_modules/
 

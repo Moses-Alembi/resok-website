@@ -25,6 +25,7 @@ resok-portal/public/api/cron/add-*.php
 resok-portal/public/api/cron/debug-config.php
 resok-portal/server/seed-*.php
 resok-portal/server/seed-pleural-workshop.sql
+resok-portal/server/seed-ild-mdt-2026-09-30.sql
 
 # CPD import payloads contain attendee records and live tokens; upload them manually.
 /cpd-imports/

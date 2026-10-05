@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abstract Submission - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1100px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:16px}
+    .top img{height:38px;display:block}
+    .top .who{margin-left:auto;font-size:13.5px;color:var(--muted);display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+    .top .who button{background:none;border:0;color:var(--red);font:inherit;font-weight:600;cursor:pointer}
+    .deadline{background:var(--green);color:#fff;font-size:13.5px}
+    .deadline-inner{max-width:1100px;margin:0 auto;padding:9px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .deadline strong{font-weight:700}
+    .deadline .left{margin-left:auto;background:rgba(255,255,255,.16);padding:3px 10px;border-radius:999px;font-weight:700}
+    .deadline.closed{background:#475467}
+    .preview-flag{background:#fff8e6;color:#93370d;font-size:13px;text-align:center;padding:7px 12px;border-bottom:1px solid #fde7b0}
+    main{max-width:1100px;margin:0 auto;padding:24px 18px 60px;display:flex;flex-direction:column;gap:20px}
+    .panel{background:#fff;border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+    h1{font-size:23px;letter-spacing:-.01em}
+    h2{font-size:17px}
+    h3{font-size:15px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:72ch}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:18px}
+    .fact{background:#f6faf7;border:1px solid #dcebe1;border-radius:10px;padding:12px 14px}
+    .fact b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--green)}
+    .fact span{font-weight:600;font-size:14px}
+    .rules{margin:14px 0 0 18px;color:#344054;font-size:14px}
+    .rules li{margin:3px 0}
+    label{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}
+    .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+    input[type=text],input[type=email],input[type=password],select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;
+      padding:10px 12px;font:inherit;font-size:14.5px;background:#fff;color:var(--ink)}
+    textarea{resize:vertical;min-height:110px;line-height:1.55}
+    input:focus,select:focus,textarea:focus{outline:2px solid rgba(8,117,57,.25);border-color:var(--green)}
+    .field{margin-bottom:18px}
+    .field.bad input,.field.bad select,.field.bad textarea,.field.bad .kw-box{border-color:var(--red)}
+    .err{color:var(--red);font-size:12.5px;margin-top:5px}
+    .count{font-size:12.5px;color:var(--muted);margin-top:5px;text-align:right}
+    .count.over{color:var(--red);font-weight:700}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1;min-width:160px}
+    .btn{border:0;border-radius:8px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+    .btn-danger{background:#fff;border:1px solid #f1b9c1;color:var(--red)}
+    .btn-sm{padding:6px 10px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px}
+    .note{border-radius:9px;padding:12px 14px;font-size:14px;margin-top:14px}
+    .note.info{background:#eff8ff;color:#175cd3}
+    .note.ok{background:#ecfdf3;color:#05603a}
+    .note.warn{background:#fff8e6;color:#93370d}
+    .note.bad{background:#fef3f2;color:#b42318}
+    .pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+    .st-draft{background:#f2f4f7;color:#475467}
+    .st-submitted,.st-under_review,.st-decision_pending{background:#eff8ff;color:#175cd3}
+    .st-accepted,.st-confirmed{background:#ecfdf3;color:#05603a}
+    .st-waitlisted{background:#fff8e6;color:#93370d}
+    .st-rejected,.st-withdrawn{background:#fef3f2;color:#b42318}
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+    .item{border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;cursor:pointer}
+    .item:hover{border-color:var(--green)}
+    .item .t{font-weight:700;font-size:15px}
+    .item .m{color:var(--muted);font-size:13px;margin-top:2px}
+    .item .go{margin-left:auto;color:var(--green);font-weight:700;font-size:13px}
+    .empty{color:var(--muted);font-size:14px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+    /* Editor */
+    .ed-head{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .ed-head .save-state{margin-left:auto;font-size:12.5px;color:var(--muted);align-self:center}
+    .section-title{font-size:15px;margin:26px 0 12px;padding-top:18px;border-top:1px solid var(--line)}
+    .kw-box{border:1px solid #d0d5dd;border-radius:8px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:#fff}
+    .kw{background:#ecfdf3;color:#05603a;border-radius:999px;padding:4px 6px 4px 11px;font-size:13px;font-weight:600;display:inline-flex;gap:4px;align-items:center}
+    .kw button{background:none;border:0;cursor:pointer;color:inherit;font-size:14px;line-height:1;padding:0 4px}
+    .kw-box input{border:0;flex:1;min-width:140px;padding:6px;font:inherit;font-size:14px;outline:none}
+    .author{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px}
+    .author-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .author-top .n{font-weight:700;font-size:13.5px}
+    .author-top .tools{margin-left:auto;display:flex;gap:6px}
+    .author .row{margin-bottom:8px}
+    .flags{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px}
+    .flags label{display:flex;gap:6px;align-items:center;font-weight:500;margin:0;cursor:pointer}
+    .types{display:flex;gap:10px;flex-wrap:wrap}
+    .types label{border:1px solid #d0d5dd;border-radius:8px;padding:9px 14px;display:flex;gap:8px;align-items:center;font-weight:500;cursor:pointer;margin:0}
+    .types input:checked + span{font-weight:700;color:var(--green)}
+    /* Preview */
+    .pv{border:1px solid var(--line);border-radius:10px;padding:22px}
+    .pv h2{font-size:19px;line-height:1.3}
+    .pv .by{color:#344054;font-size:14px;margin-top:8px}
+    .pv .aff{color:var(--muted);font-size:13px;margin-top:2px}
+    .pv .sec{margin-top:14px}
+    .pv .sec b{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:3px}
+    .pv .sec p{white-space:pre-wrap;font-size:14.5px}
+    .pv .meta{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+    .decl{display:flex;gap:10px;align-items:flex-start;padding:10px 0;font-size:14px;font-weight:500;margin:0;cursor:pointer}
+    .decl input{margin-top:3px;width:17px;height:17px;flex:none}
+    sup{font-size:.7em}
+    .auth-tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+    .auth-tabs button{background:none;border:0;padding:10px 14px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+    .auth-tabs button.on{color:var(--green);border-bottom-color:var(--green)}
+    .trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+    @media(max-width:760px){.grid2{grid-template-columns:1fr}.panel{padding:20px}.deadline .left{margin-left:0}}
+    @media(max-width:520px){.top .who .email{display:none}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="https://www.resok.org/conferences"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <div class="who" id="who"></div>
+    </div>
+  </header>
+  <div class="preview-flag" id="previewFlag" hidden>
+    <i class="fas fa-eye"></i> Preview: this call is still a draft and only super administrators can see it.
+  </div>
+  <div class="deadline" id="deadlineBar" hidden><div class="deadline-inner" id="deadlineInner"></div></div>
+
+  <main>
+    <section class="panel" id="vLoading"><div class="empty">Loading&hellip;</div></section>
+
+    <!-- No call ------------------------------------------------------------------------>
+    <section class="panel" id="vNone" hidden>
+      <h1>Abstract submission</h1>
+      <p class="lede">There is no open call for abstracts at the moment. Calls for the Kenya International
+        Scientific Lung Health Conference (KISLHC) are announced on the <a href="https://www.resok.org/conferences">conferences page</a>.</p>
+      <div id="noneMine"></div>
+    </section>
+
+    <!-- The call, for someone not signed in --------------------------------------------->
+    <section id="vPublic" hidden>
+      <div class="panel" id="callPanel"></div>
+      <div class="panel" style="margin-top:20px">
+        <div class="auth-tabs">
+          <button type="button" class="on" data-tab="signin">I have a ReSoK account</button>
+          <button type="button" data-tab="register">Create an account</button>
+        </div>
+        <div id="tabSignin">
+          <p class="lede" style="margin-top:0">Members, Academy learners and previous authors all use the same ReSoK login.</p>
+          <div class="actions" style="margin-top:16px">
+            <a class="btn btn-primary" href="login?next=%2Fresok-portal%2Fpublic%2Fabstracts"><i class="fas fa-right-to-bracket"></i> Sign in to submit</a>
+            <a class="btn btn-ghost" href="forgot-password">Forgot password</a>
+          </div>
+        </div>
+        <form id="tabRegister" hidden novalidate>
+          <p class="lede" style="margin-top:0">You do not need to be a ReSoK member to submit. Your account stays yours for future conferences.</p>
+          <div class="trap" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+          <div class="row" style="margin-top:16px">
+            <div class="field"><label for="rFirst">First name</label><input type="text" id="rFirst" autocomplete="given-name" required></div>
+            <div class="field"><label for="rLast">Last name</label><input type="text" id="rLast" autocomplete="family-name" required></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="rAff">Affiliation <span class="hint">institution or organisation</span></label><input type="text" id="rAff" autocomplete="organization" required></div>
+            <div class="field"><label for="rCountry">Country</label><input type="text" id="rCountry" value="Kenya" autocomplete="country-name" required></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="rEmail">Email</label><input type="email" id="rEmail" autocomplete="email" required></div>
+            <div class="field"><label for="rPass">Password <span class="hint">8+ characters, upper and lower case and a number</span></label><input type="password" id="rPass" autocomplete="new-password" required></div>
+          </div>
+          <label class="decl" style="padding-top:0"><input type="checkbox" id="rConsent"> <span>I agree that ReSoK may store the details I give here to run the abstract submission and review, as described in its privacy notice.</span></label>
+          <div id="regNote"></div>
+          <div class="actions"><button class="btn btn-primary" type="submit" id="regBtn"><i class="fas fa-user-plus"></i> Create account</button></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Profile ------------------------------------------------------------------------->
+    <section class="panel" id="vProfile" hidden>
+      <h1>Your author details</h1>
+      <p class="lede">These appear on your abstracts and are kept for future conferences. Please confirm them before you start.</p>
+      <form id="profileForm" novalidate style="margin-top:18px">
+        <div class="row">
+          <div class="field" style="max-width:140px"><label for="pTitle">Title <span class="hint">optional</span></label><input type="text" id="pTitle" placeholder="Dr"></div>
+          <div class="field"><label for="pFirst">First name</label><input type="text" id="pFirst"></div>
+          <div class="field"><label for="pLast">Last name</label><input type="text" id="pLast"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="pAff">Affiliation</label><input type="text" id="pAff"></div>
+          <div class="field"><label for="pCountry">Country</label><input type="text" id="pCountry"></div>
+          <div class="field"><label for="pOrcid">ORCID iD <span class="hint">optional</span></label><input type="text" id="pOrcid" placeholder="0000-0000-0000-0000"></div>
+        </div>
+        <div id="profileNote"></div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Save details</button>
+          <button class="btn btn-ghost" type="button" id="profileCancel" hidden>Cancel</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Dashboard ----------------------------------------------------------------------->
+    <section id="vHome" hidden>
+      <div class="panel" id="homeCall"></div>
+      <div class="panel" style="margin-top:20px">
+        <div class="ed-head">
+          <div>
+            <h2>My abstracts</h2>
+            <p class="lede" id="homeMeta"></p>
+          </div>
+          <div class="actions" style="margin-left:auto;margin-top:0">
+            <button class="btn btn-ghost btn-sm" type="button" id="editProfileBtn"><i class="fas fa-user-pen"></i> My details</button>
+            <button class="btn btn-primary" type="button" id="newBtn"><i class="fas fa-plus"></i> New abstract</button>
+          </div>
+        </div>
+        <div id="homeNote"></div>
+        <div class="list" id="myList"></div>
+        <div id="pastWrap" hidden>
+          <h3 style="margin-top:26px">Earlier conferences</h3>
+          <div class="list" id="pastList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Editor -------------------------------------------------------------------------->
+    <section class="panel" id="vEdit" hidden>
+      <div class="ed-head">
+        <button class="btn btn-ghost btn-sm" type="button" data-home><i class="fas fa-arrow-left"></i> My abstracts</button>
+        <span class="pill" id="edStatus"></span>
+        <span class="save-state" id="saveState"></span>
+      </div>
+      <div id="edNote"></div>
+      <form id="edForm" novalidate style="margin-top:18px">
+        <div class="field" data-f="title">
+          <label for="fTitle">Title</label>
+          <input type="text" id="fTitle" maxlength="400">
+          <div class="count" id="cTitle"></div>
+        </div>
+        <div class="row">
+          <div class="field" data-f="trackId">
+            <label for="fTrack">Track</label>
+            <select id="fTrack"></select>
+          </div>
+          <div class="field" data-f="preferredType">
+            <label>Preferred presentation</label>
+            <div class="types" id="fTypes"></div>
+          </div>
+        </div>
+
+        <h3 class="section-title">Abstract <span class="hint" id="bodyRule"></span></h3>
+        <div id="fBodyWrap"></div>
+        <div class="count" id="cBody"></div>
+        <div class="field" data-f="body" style="margin:0"></div>
+
+        <div class="field" data-f="keywords" style="margin-top:18px">
+          <label for="kwInput">Keywords <span class="hint" id="kwRule"></span></label>
+          <div class="kw-box" id="kwBox"><input type="text" id="kwInput" placeholder="Type a keyword and press Enter"></div>
+        </div>
+
+        <h3 class="section-title">Authors <span class="hint">in the order they should appear</span></h3>
+        <div class="field" data-f="authors" style="margin-bottom:8px">
+          <div id="authorList"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" id="addAuthor"><i class="fas fa-plus"></i> Add author</button>
+
+        <div class="actions" style="margin-top:28px;padding-top:18px;border-top:1px solid var(--line)">
+          <button class="btn btn-ghost" type="button" id="saveBtn"><i class="fas fa-floppy-disk"></i> Save draft</button>
+          <button class="btn btn-primary" type="button" id="toPreviewBtn">Preview and submit <i class="fas fa-arrow-right"></i></button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Preview and submit -------------------------------------------------------------->
+    <section class="panel" id="vPreview" hidden>
+      <div class="ed-head">
+        <button class="btn btn-ghost btn-sm" type="button" id="backToEdit"><i class="fas fa-arrow-left"></i> Back to editing</button>
+      </div>
+      <h1 style="margin-top:16px" id="pvHeading">Check and submit</h1>
+      <p class="lede">This is how the committee will read your abstract. Reviewers do not see author names when review is blind.</p>
+      <div class="pv" id="pvBox" style="margin-top:18px"></div>
+      <div id="declWrap" style="margin-top:20px">
+        <h3>Declarations</h3>
+        <div id="declList"></div>
+      </div>
+      <div id="pvNote"></div>
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn-primary" type="button" id="submitBtn"><i class="fas fa-paper-plane"></i> Submit abstract</button>
+      </div>
+    </section>
+
+    <!-- One abstract, read only --------------------------------------------------------->
+    <section class="panel" id="vView" hidden>
+      <div class="ed-head">
+        <button class="btn btn-ghost btn-sm" type="button" data-home><i class="fas fa-arrow-left"></i> My abstracts</button>
+        <span class="pill" id="vwStatus"></span>
+        <span class="save-state" id="vwRef"></span>
+      </div>
+      <div id="vwNote"></div>
+      <div class="pv" id="vwBox" style="margin-top:18px"></div>
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn-primary" type="button" id="vwEdit"><i class="fas fa-pen"></i> Edit</button>
+        <button class="btn btn-danger" type="button" id="vwWithdraw"><i class="fas fa-ban"></i> Withdraw</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script>
+  /**
+   * The author's side of abstract submission.
+   *
+   * Everything typed by people is written into the page with textContent or created nodes,
+   * never innerHTML: an abstract's title and author names are read by committee members.
+   *
+   * Nothing typed here should be lost. The form is copied to this device's storage as the
+   * author types, saved to the server every 60 seconds while there are changes, and the
+   * device copy is offered back if the page is reopened before it reached the server - a
+   * dropped connection or an expired session costs nothing but a click.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined && text !== null) n.textContent = text;
+      return n;
+    };
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+    const words = (s) => { const t = String(s || '').trim(); return t ? t.split(/\s+/u).length : 0; };
+    const STATUS = { draft: 'Draft', submitted: 'Submitted', under_review: 'Under review', decision_pending: 'Under review',
+      accepted: 'Accepted', waitlisted: 'Waitlisted', rejected: 'Not accepted', withdrawn: 'Withdrawn', confirmed: 'Confirmed' };
+    // Authors never see "decision pending": the outcome is held back until it is released.
+    const statusPill = (node, status) => {
+      const shown = status === 'decision_pending' ? 'under_review' : status;
+      node.className = 'pill st-' + shown;
+      node.textContent = STATUS[status] || status;
+    };
+    const fmtDate = (iso, withTime = true) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return isNaN(d) ? iso : d.toLocaleString('en-GB', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' },
+        withTime ? { hour: '2-digit', minute: '2-digit', timeZone: state.event ? state.event.timezone : undefined } : {}));
+    };
+
+    const state = { me: null, event: null, preview: false, abstract: null, dirty: false, saving: false, signedIn: false, flash: null };
+    const VIEWS = ['Loading', 'None', 'Public', 'Profile', 'Home', 'Edit', 'Preview', 'View'];
+    function show(view) {
+      VIEWS.forEach((v) => { el('v' + v).hidden = v !== view; });
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+    function note(id, message, kind) {
+      const box = el(id);
+      box.textContent = '';
+      if (message) box.appendChild(make('div', 'note ' + (kind || 'info'), message));
+    }
+
+    // ---------------------------------------------------------------- deadline bar
+    let tick = null;
+    function renderDeadline() {
+      const ev = state.event;
+      const bar = el('deadlineBar');
+      if (!ev || !ev.callClosesAt) { bar.hidden = true; return; }
+      const inner = el('deadlineInner');
+      inner.textContent = '';
+      const closes = new Date(ev.callClosesAt);
+      const opens = ev.callOpensAt ? new Date(ev.callOpensAt) : null;
+      const now = new Date();
+      bar.hidden = false;
+      bar.classList.toggle('closed', now > closes);
+      inner.appendChild(make('strong', null, ev.name));
+      if (opens && now < opens) {
+        inner.appendChild(make('span', null, 'Submissions open ' + fmtDate(ev.callOpensAt) + ' (' + ev.timezone + ')'));
+      } else if (now <= closes) {
+        inner.appendChild(make('span', null, 'Submission deadline: ' + fmtDate(ev.callClosesAt) + ' (' + ev.timezone + ')'));
+        const ms = closes - now;
+        const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24, m = Math.floor(ms / 60000) % 60;
+        inner.appendChild(make('span', 'left', d > 0 ? `${d} day${d === 1 ? '' : 's'} ${h} h left` : `${h} h ${m} min left`));
+      } else {
+        inner.appendChild(make('span', null, 'The submission deadline passed on ' + fmtDate(ev.callClosesAt) + '.'));
+      }
+      clearTimeout(tick);
+      tick = setTimeout(renderDeadline, 30000);
+    }
+
+    function callSummary(box, ev) {
+      box.textContent = '';
+      box.appendChild(make('h1', null, 'Call for abstracts: ' + ev.name));
+      const state_ = ev.callState === 'open' ? 'Submissions are open.' : ev.callState === 'not_open'
+        ? 'Submissions have not opened yet.' : 'Submissions are closed.';
+      box.appendChild(make('p', 'lede', state_ + ' Share your research with the Kenyan and regional lung health community.'));
+      const facts = make('div', 'facts');
+      const fact = (k, v) => { if (!v) return; const f = make('div', 'fact'); f.appendChild(make('b', null, k)); f.appendChild(make('span', null, v)); facts.appendChild(f); };
+      fact('Conference', [ev.startsOn && fmtDate(ev.startsOn, false), ev.endsOn && fmtDate(ev.endsOn, false)].filter(Boolean).join(' to '));
+      fact('Venue', ev.venue);
+      fact('Deadline', ev.callClosesAt ? fmtDate(ev.callClosesAt) + ' (' + ev.timezone + ')' : '');
+      fact('Presentation', Object.values(ev.form.presentationTypes).filter((t) => t !== 'Either').join(' or '));
+      box.appendChild(facts);
+      const rules = make('ul', 'rules');
+      const f = ev.form;
+      rules.appendChild(make('li', null, `Title of up to ${f.titleWords} words; abstract of up to ${f.bodyWords} words` +
+        (f.structured ? ` in ${f.sections.length} sections (${f.sections.join(', ')}).` : '.')));
+      rules.appendChild(make('li', null, `${f.keywordsMin} to ${f.keywordsMax} keywords, and the full author list with one presenting author.`));
+      if (ev.tracks.length) rules.appendChild(make('li', null, 'Tracks: ' + ev.tracks.map((t) => t.name).join(', ') + '.'));
+      rules.appendChild(make('li', null, 'Drafts can be saved and you can edit or withdraw a submission until the deadline.'));
+      box.appendChild(rules);
+    }
+
+    // ---------------------------------------------------------------- loading
+    async function load() {
+      show('Loading');
+      try {
+        const me = await api('abstracts/me');
+        state.signedIn = true;
+        state.me = me;
+        state.event = me.event;
+        state.preview = !!me.preview;
+      } catch (error) {
+        if (error.status !== 401) { note('vLoading', error.message, 'bad'); return; }
+        state.signedIn = false;
+        try {
+          const call = await api('abstracts/call');
+          state.event = call.event;
+          state.preview = !!call.preview;
+        } catch (callError) {
+          state.event = null;
+        }
+      }
+      renderWho();
+      el('previewFlag').hidden = !state.preview;
+      renderDeadline();
+      route();
+    }
+
+    function renderWho() {
+      const who = el('who');
+      who.textContent = '';
+      if (!state.signedIn) {
+        const a = make('a', null, 'Sign in');
+        a.href = 'login?next=%2Fresok-portal%2Fpublic%2Fabstracts';
+        who.appendChild(a);
+        return;
+      }
+      if (state.me.isEventAdmin) {
+        const admin = make('a', null, 'Manage abstracts');
+        admin.href = 'abstracts-admin';
+        who.appendChild(admin);
+      }
+      who.appendChild(make('span', 'email', state.me.email));
+      const out = make('button', null, 'Sign out');
+      out.type = 'button';
+      out.addEventListener('click', () => window.ResokPortal.logout());
+      who.appendChild(out);
+    }
+
+    // Views follow the URL hash so the back button and a refresh land where the author was.
+    function route() {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (!state.signedIn) {
+        if (!state.event) { show('None'); return; }
+        callSummary(el('callPanel'), state.event);
+        show('Public');
+        return;
+      }
+      if (!state.me.profile.complete) { openProfile(false); return; }
+      const m = hash.match(/^(edit|view|preview)\/(\d+)$/);
+      if (m) { openAbstract(Number(m[2]), m[1]); return; }
+      if (hash === 'profile') { openProfile(true); return; }
+      renderHome();
+    }
+    window.addEventListener('hashchange', () => { if (!guardLeave()) return; route(); });
+    document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => { window.location.hash = ''; }));
+
+    function guardLeave() {
+      if (state.dirty && !el('vEdit').hidden) {
+        saveDraft(true);
+      }
+      return true;
+    }
+    window.addEventListener('beforeunload', (e) => {
+      if (state.dirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // ---------------------------------------------------------------- sign up
+    document.querySelectorAll('.auth-tabs button').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('.auth-tabs button').forEach((x) => x.classList.toggle('on', x === b));
+      el('tabSignin').hidden = b.dataset.tab !== 'signin';
+      el('tabRegister').hidden = b.dataset.tab !== 'register';
+    }));
+    const loadedAt = Date.now();
+    el('tabRegister').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      note('regNote', '');
+      if (!el('rConsent').checked) { note('regNote', 'Please agree to how your details are used.', 'bad'); return; }
+      const btn = el('regBtn');
+      btn.disabled = true;
+      try {
+        const result = await post('abstracts/register', {
+          firstName: el('rFirst').value, lastName: el('rLast').value, affiliation: el('rAff').value,
+          country: el('rCountry').value, email: el('rEmail').value, password: el('rPass').value,
+          website: el('tabRegister').querySelector('input[name="website"]').value, formLoadedAt: loadedAt,
+        });
+        if (result.requiresVerification) {
+          note('regNote', 'Account created. We have emailed a link to ' + el('rEmail').value + ' - confirm your address, then sign in here.', 'ok');
+          el('tabRegister').reset();
+        } else {
+          load();
+        }
+      } catch (error) {
+        note('regNote', error.message, 'bad');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---------------------------------------------------------------- profile
+    function openProfile(cancellable) {
+      const p = state.me.profile;
+      el('pTitle').value = p.title || '';
+      el('pFirst').value = p.firstName || '';
+      el('pLast').value = p.lastName || '';
+      el('pAff').value = p.affiliation || '';
+      el('pCountry').value = p.country || '';
+      el('pOrcid').value = p.orcid || '';
+      el('profileCancel').hidden = !cancellable;
+      note('profileNote', '');
+      show('Profile');
+    }
+    el('profileCancel').addEventListener('click', () => { window.location.hash = ''; });
+    el('editProfileBtn').addEventListener('click', () => { window.location.hash = 'profile'; });
+    el('profileForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        const res = await post('abstracts/me/profile', {
+          title: el('pTitle').value, firstName: el('pFirst').value, lastName: el('pLast').value,
+          affiliation: el('pAff').value, country: el('pCountry').value, orcid: el('pOrcid').value,
+        });
+        state.me.profile = res.profile;
+        if (window.location.hash === '#profile') window.location.hash = ''; else route();
+      } catch (error) {
+        note('profileNote', error.message, 'bad');
+      }
+    });
+
+    // ---------------------------------------------------------------- dashboard
+    async function refreshMe() {
+      state.me = await api('abstracts/me');
+      state.event = state.me.event;
+    }
+    function renderHome() {
+      const ev = state.event;
+      const call = el('homeCall');
+      if (ev) callSummary(call, ev); else { call.textContent = ''; call.appendChild(make('h1', null, 'Abstract submission'));
+        call.appendChild(make('p', 'lede', 'There is no open call for abstracts at the moment.')); }
+      const open = ev && ev.callState === 'open';
+      el('newBtn').hidden = !open;
+      const mine = state.me.abstracts.filter((a) => ev && a.eventId === ev.id);
+      const past = state.me.abstracts.filter((a) => !ev || a.eventId !== ev.id);
+      const live = mine.filter((a) => a.status !== 'withdrawn').length;
+      el('homeMeta').textContent = ev ? `${live} abstract${live === 1 ? '' : 's'} for ${ev.name}` +
+        (ev.form.maxPerSubmitter ? ` (up to ${ev.form.maxPerSubmitter} allowed)` : '') : '';
+      note('homeNote', mine.some((a) => a.status === 'draft' && a.editable)
+        ? 'You have a draft that has not been submitted. Drafts are not seen by the committee until you submit them.' : '', 'warn');
+      fillList(el('myList'), mine, open ? 'No abstracts yet. Start one with "New abstract".' : 'No abstracts for this conference.');
+      el('pastWrap').hidden = past.length === 0;
+      fillList(el('pastList'), past, '');
+      show('Home');
+    }
+    function fillList(box, items, emptyText) {
+      box.textContent = '';
+      if (!items.length) { if (emptyText) box.appendChild(make('div', 'empty', emptyText)); return; }
+      items.forEach((a) => {
+        const item = make('div', 'item');
+        item.tabIndex = 0;
+        const text = make('div');
+        text.appendChild(make('div', 't', a.title));
+        const meta = [a.reference, a.trackName, a.submittedAt ? 'Submitted ' + fmtDate(a.submittedAt) : 'Last saved ' + fmtDate(a.updatedAt)];
+        if (a.eventId !== (state.event && state.event.id)) meta.unshift(a.eventName);
+        text.appendChild(make('div', 'm', meta.filter(Boolean).join(' · ')));
+        item.appendChild(text);
+        const pill = make('span');
+        statusPill(pill, a.status);
+        item.appendChild(pill);
+        item.appendChild(make('span', 'go', a.status === 'draft' && a.editable ? 'Continue' : 'Open'));
+        const open = () => { window.location.hash = (a.status === 'draft' && a.editable ? 'edit/' : 'view/') + a.id; };
+        item.addEventListener('click', open);
+        item.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
+        box.appendChild(item);
+      });
+    }
+    el('newBtn').addEventListener('click', async () => {
+      try {
+        const res = await post('abstracts');
+        window.location.hash = 'edit/' + res.abstract.id;
+      } catch (error) {
+        note('homeNote', error.message, 'bad');
+      }
+    });
+
+    // ---------------------------------------------------------------- one abstract
+    async function openAbstract(id, mode) {
+      try {
+        const res = await api('abstracts/' + id);
+        state.abstract = res.abstract;
+        state.event = res.event;
+        renderDeadline();
+      } catch (error) {
+        window.location.hash = '';
+        return;
+      }
+      const a = state.abstract;
+      if (mode === 'edit' && !a.editable) mode = 'view';
+      if (mode === 'edit') fillEditor();
+      else if (mode === 'preview' && a.editable) { fillEditor(); openPreview(); }
+      else renderView();
+    }
+
+    // ---------------------------------------------------------------- editor
+    let keywords = [];
+    let authors = [];
+    function backupKey() { return 'resok-abstract-' + state.abstract.id; }
+    function fillEditor(fromData) {
+      const a = state.abstract;
+      const ev = state.event;
+      const f = ev.form;
+      const data = fromData || a;
+      statusPill(el('edStatus'), a.status);
+      // A submitted abstract has nothing left to submit: its button just saves the changes.
+      el('toPreviewBtn').textContent = '';
+      el('toPreviewBtn').append(a.status === 'submitted' ? 'Save changes ' : 'Preview and submit ', make('i', 'fas ' + (a.status === 'submitted' ? 'fa-check' : 'fa-arrow-right')));
+      el('saveBtn').hidden = a.status === 'submitted';
+      note('edNote', a.status === 'submitted'
+        ? 'This abstract is submitted. Changes you save here replace the submitted version and are recorded.'
+        : (a.reopenedUntil ? 'The committee has returned this abstract for corrections. Submit it again by ' + fmtDate(a.reopenedUntil) + '.' : ''),
+        a.reopenedUntil ? 'warn' : 'info');
+      el('fTitle').value = data.title || '';
+      const track = el('fTrack');
+      track.textContent = '';
+      track.appendChild(make('option', null, 'Choose a track')).value = '';
+      ev.tracks.forEach((t) => { const o = make('option', null, t.name); o.value = t.id; track.appendChild(o); });
+      track.value = data.trackId || '';
+      const types = el('fTypes');
+      types.textContent = '';
+      Object.entries(f.presentationTypes).forEach(([key, label]) => {
+        const l = make('label');
+        const r = make('input');
+        r.type = 'radio'; r.name = 'ptype'; r.value = key; r.checked = data.preferredType === key;
+        l.appendChild(r); l.appendChild(make('span', null, label));
+        types.appendChild(l);
+      });
+      // Body: one box per section, or a single box.
+      const wrap = el('fBodyWrap');
+      wrap.textContent = '';
+      el('bodyRule').textContent = `up to ${f.bodyWords} words in total`;
+      if (f.structured) {
+        f.sections.forEach((s) => {
+          const field = make('div', 'field');
+          field.dataset.f = 'section:' + s;
+          const lab = make('label', null, s);
+          const ta = make('textarea');
+          ta.dataset.section = s;
+          ta.rows = 4;
+          ta.value = (data.sections && data.sections[s]) || '';
+          field.appendChild(lab); field.appendChild(ta);
+          wrap.appendChild(field);
+        });
+      } else {
+        const ta = make('textarea');
+        ta.id = 'fBody'; ta.rows = 12;
+        ta.value = data.body || '';
+        wrap.appendChild(ta);
+      }
+      el('kwRule').textContent = `${f.keywordsMin} to ${f.keywordsMax}`;
+      keywords = (data.keywords || []).slice();
+      renderKeywords();
+      authors = (data.authors || []).map((x) => Object.assign({}, x));
+      if (!authors.length) authors.push(blankAuthor(true));
+      renderAuthors();
+      clearErrors();
+      counts();
+      state.dirty = !!fromData;
+      setSaveState(fromData ? 'Unsaved changes restored from this device' : (a.updatedAt ? 'Saved ' + fmtDate(a.updatedAt) : ''));
+      // A device copy newer than the server's means the last save never arrived.
+      if (!fromData) {
+        try {
+          const local = JSON.parse(localStorage.getItem(backupKey()) || 'null');
+          if (local && local.savedAt > Date.parse(a.updatedAt || 0) + 2000) { fillEditor(local.data); return; }
+        } catch (e) { /* storage unavailable: nothing to restore */ }
+      }
+      show('Edit');
+    }
+
+    function blankAuthor(first) {
+      return { firstName: '', lastName: '', email: '', affiliation: '', country: '', presenting: !!first, corresponding: !!first };
+    }
+    function renderAuthors() {
+      const list = el('authorList');
+      list.textContent = '';
+      authors.forEach((a, i) => {
+        const box = make('div', 'author');
+        const top = make('div', 'author-top');
+        top.appendChild(make('span', 'n', 'Author ' + (i + 1)));
+        const tools = make('div', 'tools');
+        const btn = (icon, label, fn, disabled) => {
+          const b = make('button', 'btn btn-ghost btn-sm');
+          b.type = 'button'; b.title = label; b.setAttribute('aria-label', label); b.disabled = !!disabled;
+          b.appendChild(make('i', 'fas ' + icon));
+          b.addEventListener('click', fn);
+          tools.appendChild(b);
+        };
+        btn('fa-arrow-up', 'Move up', () => { [authors[i - 1], authors[i]] = [authors[i], authors[i - 1]]; renderAuthors(); changed(); }, i === 0);
+        btn('fa-arrow-down', 'Move down', () => { [authors[i + 1], authors[i]] = [authors[i], authors[i + 1]]; renderAuthors(); changed(); }, i === authors.length - 1);
+        btn('fa-trash', 'Remove author', () => { authors.splice(i, 1); if (!authors.length) authors.push(blankAuthor(true)); renderAuthors(); changed(); }, authors.length === 1);
+        top.appendChild(tools);
+        box.appendChild(top);
+        const input = (key, label, type) => {
+          const f = make('div', 'field');
+          f.style.marginBottom = '0';
+          const l = make('label', null, label);
+          const inp = make('input');
+          inp.type = type || 'text'; inp.value = a[key] || '';
+          inp.setAttribute('aria-label', label + ', author ' + (i + 1));
+          inp.addEventListener('input', () => { a[key] = inp.value; changed(); });
+          f.appendChild(l); f.appendChild(inp);
+          return f;
+        };
+        const r1 = make('div', 'row');
+        r1.appendChild(input('firstName', 'First name'));
+        r1.appendChild(input('lastName', 'Last name'));
+        r1.appendChild(input('email', 'Email', 'email'));
+        const r2 = make('div', 'row');
+        r2.appendChild(input('affiliation', 'Affiliation'));
+        r2.appendChild(input('country', 'Country'));
+        box.appendChild(r1); box.appendChild(r2);
+        const flags = make('div', 'flags');
+        const flag = (key, label) => {
+          const l = make('label');
+          const r = make('input');
+          r.type = 'radio'; r.name = key; r.checked = !!a[key];
+          r.addEventListener('change', () => { authors.forEach((x, j) => { x[key] = j === i; }); changed(); });
+          l.appendChild(r); l.appendChild(make('span', null, label));
+          flags.appendChild(l);
+        };
+        flag('presenting', 'Presenting author');
+        flag('corresponding', 'Corresponding author');
+        box.appendChild(flags);
+        list.appendChild(box);
+      });
+      el('addAuthor').disabled = authors.length >= state.event.form.maxAuthors;
+    }
+    el('addAuthor').addEventListener('click', () => { authors.push(blankAuthor(false)); renderAuthors(); changed(); });
+
+    function renderKeywords() {
+      const box = el('kwBox');
+      box.querySelectorAll('.kw').forEach((k) => k.remove());
+      keywords.forEach((k, i) => {
+        const chip = make('span', 'kw', k);
+        const x = make('button', null, '×');
+        x.type = 'button'; x.setAttribute('aria-label', 'Remove keyword ' + k);
+        x.addEventListener('click', () => { keywords.splice(i, 1); renderKeywords(); changed(); });
+        chip.appendChild(x);
+        box.insertBefore(chip, el('kwInput'));
+      });
+      el('kwInput').disabled = keywords.length >= state.event.form.keywordsMax;
+      el('kwInput').placeholder = el('kwInput').disabled ? 'Keyword limit reached' : 'Type a keyword and press Enter';
+    }
+    function addKeyword() {
+      const input = el('kwInput');
+      input.value.split(/[,;]/).map((x) => x.trim()).filter(Boolean).forEach((k) => {
+        if (keywords.length < state.event.form.keywordsMax && !keywords.some((x) => x.toLowerCase() === k.toLowerCase())) keywords.push(k.slice(0, 60));
+      });
+      input.value = '';
+      renderKeywords();
+      changed();
+    }
+    el('kwInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKeyword(); }
+      if (e.key === 'Backspace' && !e.target.value && keywords.length) { keywords.pop(); renderKeywords(); changed(); }
+    });
+    el('kwInput').addEventListener('blur', () => { if (el('kwInput').value.trim()) addKeyword(); });
+
+    function collect() {
+      const f = state.event.form;
+      const data = {
+        title: el('fTitle').value,
+        trackId: Number(el('fTrack').value) || null,
+        preferredType: (document.querySelector('input[name="ptype"]:checked') || {}).value || null,
+        keywords: keywords.slice(),
+        authors: authors.map((a) => Object.assign({}, a)),
+      };
+      if (f.structured) {
+        data.sections = {};
+        el('fBodyWrap').querySelectorAll('textarea').forEach((t) => { data.sections[t.dataset.section] = t.value; });
+      } else {
+        data.body = el('fBody').value;
+      }
+      return data;
+    }
+    function counts() {
+      const f = state.event.form;
+      const t = words(el('fTitle').value);
+      el('cTitle').textContent = `${t} / ${f.titleWords} words`;
+      el('cTitle').classList.toggle('over', t > f.titleWords);
+      let b = 0;
+      el('fBodyWrap').querySelectorAll('textarea').forEach((x) => { b += words(x.value); });
+      el('cBody').textContent = `${b} / ${f.bodyWords} words`;
+      el('cBody').classList.toggle('over', b > f.bodyWords);
+    }
+
+    let backupTimer = null;
+    function changed() {
+      state.dirty = true;
+      setSaveState('Unsaved changes');
+      counts();
+      clearTimeout(backupTimer);
+      backupTimer = setTimeout(() => {
+        try { localStorage.setItem(backupKey(), JSON.stringify({ savedAt: Date.now(), data: collect() })); } catch (e) { /* storage full or blocked */ }
+      }, 400);
+    }
+    el('edForm').addEventListener('input', (e) => { if (!e.target.closest('.author') && e.target.id !== 'kwInput') changed(); });
+    el('edForm').addEventListener('change', (e) => { if (e.target.name === 'ptype' || e.target.id === 'fTrack') changed(); });
+
+    function setSaveState(text) { el('saveState').textContent = text; }
+    function clearErrors() {
+      document.querySelectorAll('#edForm .field.bad').forEach((f) => f.classList.remove('bad'));
+      document.querySelectorAll('#edForm .err').forEach((e) => e.remove());
+    }
+    function showErrors(fields) {
+      clearErrors();
+      let first = null;
+      Object.entries(fields || {}).forEach(([key, message]) => {
+        const field = document.querySelector(`#edForm [data-f="${CSS.escape(key)}"]`) || document.querySelector('#edForm [data-f="body"]');
+        if (!field) return;
+        field.classList.add('bad');
+        field.appendChild(make('div', 'err', message));
+        if (!first) first = field;
+      });
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function saveDraft(quiet) {
+      if (state.saving || !state.abstract) return false;
+      state.saving = true;
+      setSaveState('Saving…');
+      try {
+        const res = await api('abstracts/' + state.abstract.id, { method: 'POST', body: JSON.stringify(collect()) });
+        state.abstract = res.abstract;
+        state.dirty = false;
+        try { localStorage.removeItem(backupKey()); } catch (e) { /* nothing to clear */ }
+        setSaveState('Saved ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+        clearErrors();
+        if (!quiet) note('edNote', 'Saved.', 'ok');
+        return true;
+      } catch (error) {
+        setSaveState('Not saved - your changes are kept on this device');
+        if (!quiet) { note('edNote', error.message, 'bad'); showErrors(error.payload && error.payload.fields); }
+        return false;
+      } finally {
+        state.saving = false;
+      }
+    }
+    el('saveBtn').addEventListener('click', () => saveDraft(false));
+    // Autosave every 60 seconds while there are changes (NFR-6). Also keeps the session alive.
+    setInterval(() => { if (state.dirty && !el('vEdit').hidden) saveDraft(true); }, 60000);
+
+    el('toPreviewBtn').addEventListener('click', async () => {
+      if (state.abstract.status === 'submitted') {
+        // Already submitted: saving is the whole job, and saving checks every rule.
+        if (await saveDraft(false)) { window.location.hash = 'view/' + state.abstract.id; }
+        return;
+      }
+      // A draft that cannot be saved (over a word limit, say) stays in the editor with the
+      // problems marked, rather than previewing something the server would refuse.
+      if (state.dirty && !(await saveDraft(false))) return;
+      openPreview();
+    });
+
+    // ---------------------------------------------------------------- preview & submit
+    function renderAbstractInto(box, data, ev, withAuthors = true) {
+      box.textContent = '';
+      box.appendChild(make('h2', null, data.title || 'Untitled'));
+      if (withAuthors) {
+        // Superscript numbers tie each author to an affiliation, as in a printed programme.
+        const affs = [];
+        const by = make('div', 'by');
+        (data.authors || []).forEach((a, i) => {
+          const aff = (a.affiliation || '').trim();
+          let n = affs.indexOf(aff);
+          if (aff && n === -1) { affs.push(aff); n = affs.length - 1; }
+          if (i) by.appendChild(document.createTextNode(', '));
+          const name = make(a.presenting ? 'u' : 'span', null, `${a.firstName || ''} ${a.lastName || ''}`.trim() || '(name missing)');
+          by.appendChild(name);
+          if (aff) by.appendChild(make('sup', null, String(n + 1)));
+          if (a.corresponding) by.appendChild(make('sup', null, '*'));
+        });
+        box.appendChild(by);
+        affs.forEach((a, i) => box.appendChild(make('div', 'aff', `${i + 1} ${a}`)));
+        box.appendChild(make('div', 'aff', 'Underlined: presenting author. * Corresponding author.'));
+      }
+      if (ev.form.structured && data.sections) {
+        ev.form.sections.forEach((s) => {
+          const sec = make('div', 'sec');
+          sec.appendChild(make('b', null, s));
+          sec.appendChild(make('p', null, data.sections[s] || '—'));
+          box.appendChild(sec);
+        });
+      } else {
+        const sec = make('div', 'sec');
+        sec.appendChild(make('p', null, data.body || '—'));
+        box.appendChild(sec);
+      }
+      const meta = make('div', 'meta');
+      const track = ev.tracks.find((t) => t.id === Number(data.trackId));
+      meta.appendChild(make('span', null, 'Track: ' + (track ? track.name : (data.trackName || '—'))));
+      meta.appendChild(make('span', null, 'Presentation: ' + (ev.form.presentationTypes[data.preferredType] || '—')));
+      meta.appendChild(make('span', null, 'Keywords: ' + ((data.keywords || []).join(', ') || '—')));
+      box.appendChild(meta);
+    }
+
+    function openPreview() {
+      const data = collect();
+      renderAbstractInto(el('pvBox'), data, state.event);
+      const list = el('declList');
+      list.textContent = '';
+      state.event.form.declarations.forEach((d) => {
+        const l = make('label', 'decl');
+        const c = make('input');
+        c.type = 'checkbox'; c.dataset.key = d.key;
+        l.appendChild(c); l.appendChild(make('span', null, d.label));
+        list.appendChild(l);
+      });
+      el('declWrap').hidden = !state.event.form.declarations.length;
+      note('pvNote', '');
+      if (window.location.hash !== '#preview/' + state.abstract.id) history.replaceState(null, '', '#preview/' + state.abstract.id);
+      show('Preview');
+    }
+    el('backToEdit').addEventListener('click', () => {
+      history.replaceState(null, '', '#edit/' + state.abstract.id);
+      show('Edit');
+    });
+    el('submitBtn').addEventListener('click', async () => {
+      const declarations = {};
+      el('declList').querySelectorAll('input').forEach((c) => { declarations[c.dataset.key] = c.checked; });
+      const btn = el('submitBtn');
+      btn.disabled = true;
+      try {
+        const res = await post('abstracts/' + state.abstract.id + '/submit', Object.assign(collect(), { declarations }));
+        state.abstract = res.abstract;
+        state.dirty = false;
+        try { localStorage.removeItem(backupKey()); } catch (e) { /* nothing to clear */ }
+        await refreshMe();
+        state.flash = [`Submitted. Your reference is ${state.abstract.reference}. A confirmation email is on its way.`, 'ok'];
+        window.location.hash = 'view/' + state.abstract.id;
+      } catch (error) {
+        const fields = (error.payload && error.payload.fields) || {};
+        const onlyDecl = Object.keys(fields).length === 1 && fields.declarations;
+        if (Object.keys(fields).length && !onlyDecl) {
+          history.replaceState(null, '', '#edit/' + state.abstract.id);
+          show('Edit');
+          note('edNote', error.message, 'bad');
+          showErrors(fields);
+        } else {
+          note('pvNote', fields.declarations || error.message, 'bad');
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---------------------------------------------------------------- read only
+    function renderView() {
+      const a = state.abstract;
+      statusPill(el('vwStatus'), a.status);
+      el('vwRef').textContent = [a.reference, a.submittedAt && 'Submitted ' + fmtDate(a.submittedAt)].filter(Boolean).join(' · ');
+      // A message from the action that brought us here (submitted, withdrawn) wins once.
+      if (state.flash) {
+        note('vwNote', state.flash[0], state.flash[1]);
+        state.flash = null;
+      } else {
+        note('vwNote', a.editable ? (a.status === 'submitted' ? 'You can still edit or withdraw this abstract until the deadline.' : '')
+          : (a.status === 'withdrawn' ? 'This abstract was withdrawn.' : a.lockedReason || ''), a.editable ? 'info' : 'warn');
+      }
+      renderAbstractInto(el('vwBox'), a, state.event);
+      el('vwEdit').hidden = !a.editable;
+      el('vwWithdraw').hidden = !a.withdrawable;
+      show('View');
+    }
+    el('vwEdit').addEventListener('click', () => { window.location.hash = 'edit/' + state.abstract.id; });
+    el('vwWithdraw').addEventListener('click', async () => {
+      const a = state.abstract;
+      const reason = window.prompt(`Withdraw "${a.title || 'this abstract'}"? It will no longer be considered, and this cannot be undone.\n\nYou may give a reason (optional):`, '');
+      if (reason === null) return;
+      try {
+        const res = await post('abstracts/' + a.id + '/withdraw', { reason });
+        state.abstract = res.abstract;
+        await refreshMe();
+        state.flash = ['The abstract has been withdrawn.', 'ok'];
+        renderView();
+      } catch (error) {
+        note('vwNote', error.message, 'bad');
+      }
+    });
+
+    load();
+  })();
+  </script>
+</body>
+</html>

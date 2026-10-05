@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -1660,6 +1660,20 @@ Respiratory Society of Kenya");
         }
         $pdo->prepare('UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?')->execute([(int)$user['id']]);
         if ((int)$user['has_profile'] === 0) {
+            // An author who registered from the abstracts page goes back there. Checked
+            // against both tables, because a learner who later writes an abstract has both
+            // and was a learner first.
+            try {
+                $kind = $pdo->prepare('SELECT (SELECT COUNT(*) FROM abs_profiles WHERE user_id = ?) AS author,
+                                              (SELECT COUNT(*) FROM academy_learners WHERE user_id = ?) AS learner');
+                $kind->execute([(int)$user['id'], (int)$user['id']]);
+                $k = $kind->fetch();
+                if ((int)$k['author'] > 0 && (int)$k['learner'] === 0) {
+                    respondHtmlPage(200, 'Email Verified', 'Your ReSoK account is ready. Sign in to start your abstract submission.', false, 'Sign In', $loginUrl . '?next=' . rawurlencode('/resok-portal/public/abstracts'));
+                }
+            } catch (Throwable $kindError) {
+                // Either table missing just means this is not an author; carry on as before.
+            }
             // An Academy learner has no membership application to continue.
             respondHtmlPage(200, 'Email Verified', 'Your ReSoK Virtual Academy account is ready. Sign in to start learning.', false, 'Sign In', $loginUrl . '?next=' . rawurlencode('/resok-portal/public/academy'));
         }
@@ -1725,12 +1739,27 @@ Respiratory Society of Kenya");
         }
         $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
         issueAuthCookie($loginToken);
+        // A non-member who signed up to submit an abstract, and never joined the Academy,
+        // is sent to their abstracts rather than to an Academy they did not ask for.
+        $isAuthor = false;
+        if ($user['role'] === 'member' && $user['membership_status'] === null) {
+            try {
+                $kind = $pdo->prepare('SELECT (SELECT COUNT(*) FROM abs_profiles WHERE user_id = ?) AS author,
+                                              (SELECT COUNT(*) FROM academy_learners WHERE user_id = ?) AS learner');
+                $kind->execute([(int)$user['id'], (int)$user['id']]);
+                $k = $kind->fetch();
+                $isAuthor = (int)$k['author'] > 0 && (int)$k['learner'] === 0;
+            } catch (Throwable $kindError) {
+                $isAuthor = false;
+            }
+        }
         respond(200, [
             'token' => $loginToken,
             'user' => [
                 'id' => (int)$user['id'],
                 // A member account with no membership record is an Academy learner.
                 'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
+                'isAuthor' => $isAuthor,
                 'email' => $user['email'],
                 'role' => $user['role'],
                 'membershipStatus' => $user['membership_status'],
@@ -4175,6 +4204,221 @@ Respiratory Society of Kenya");
             'reason' => $row['reason'],
             'date' => $row['created_at']
         ], $rows));
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Abstract submission (KISLHC). Authors see an event only once it is published; a
+    // super administrator also sees a draft, to try the call before it launches.
+    // ---------------------------------------------------------------------------------
+    if (strpos($route, 'abstracts') === 0) {
+        requireModule('abstractsEnsureTables', 'lib/abstracts.php');
+        if (!abstractsEnsureTables($pdo)) {
+            respond(503, ['error' => 'Abstract submission is unavailable: its tables could not be created. Import resok-portal/server/schema-abstracts.sql.']);
+        }
+
+        // The author's event, or a 404 that reads the same whether nothing exists or it is
+        // still a draft - an unlaunched call is not something the public can discover.
+        $absEventFor = function (?array $viewer) use ($pdo, $config): array {
+            $preview = $viewer !== null && isSuperAdmin($viewer, $config);
+            $row = absCurrentEventRow($pdo, $preview);
+            if (!$row) respond(404, ['error' => 'There is no open call for abstracts at the moment.']);
+            return $row;
+        };
+        $absEventOfAbstract = function (array $abstract, array $viewer) use ($pdo, $config): array {
+            $event = absEventRow($pdo, (int)$abstract['event_id']);
+            if (!$event || ($event['status'] === 'draft' && !isSuperAdmin($viewer, $config))) {
+                respond(404, ['error' => 'No such abstract.']);
+            }
+            return $event;
+        };
+
+        // The call as the public and the author page see it (INT-5 can read this too).
+        if ($route === 'abstracts/call' && $method === 'GET') {
+            $viewer = authOptional($config);
+            $row = $absEventFor($viewer);
+            respond(200, ['event' => absEventShape($pdo, $row), 'preview' => $row['status'] === 'draft']);
+        }
+
+        // An author account (ACC-1): a portal login with an author profile and no membership
+        // record, so it is never asked to pay a membership fee.
+        if ($route === 'abstracts/register' && $method === 'POST') {
+            $data = input();
+            requireFields($data, ['email', 'password', 'firstName', 'lastName', 'affiliation', 'country']);
+            $email = strtolower(trim((string)$data['email']));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) respond(400, ['error' => 'Please enter a valid email address']);
+            botScreenOrFakeSuccess($pdo, $config, $data, 'register', [
+                'message' => 'Account created. Please check your email to confirm your address.',
+                'requiresVerification' => true,
+            ]);
+            validateInput($data, [
+                'firstName'   => ['First name', 'name'],
+                'lastName'    => ['Last name', 'name'],
+                'affiliation' => ['Affiliation', 'text', true, ['max' => 200]],
+                'country'     => ['Country', 'text', true, ['max' => 60]],
+            ]);
+            if (!preg_match('/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,64}$/', (string)$data['password'])) {
+                respond(400, ['error' => 'Password must be 8-64 characters and include uppercase, lowercase, and a number']);
+            }
+            throttleCheck($pdo, $config, 'register', $email);
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1');
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                throttleFailure($pdo, $config, 'register', $email);
+                respond(400, ['error' => 'An account with this email already exists. Sign in instead - members and Academy learners use the same login - or use "Forgot password".']);
+            }
+            $verified = empty($config['require_email_verification']) ? 1 : 0;
+            $verificationToken = $verified ? null : bin2hex(random_bytes(32));
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare('INSERT INTO users (email, password_hash, email_verified, role, verification_token) VALUES (?, ?, ?, "member", ?)')
+                    ->execute([$email, password_hash((string)$data['password'], PASSWORD_DEFAULT), $verified, $verificationToken]);
+                $userId = (int)$pdo->lastInsertId();
+                $profileError = absProfileSave($pdo, $userId, $data);
+                if ($profileError) { $pdo->rollBack(); respond(400, ['error' => $profileError]); }
+                $pdo->commit();
+            } catch (Throwable $registerError) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $registerError;
+            }
+            if ($verificationToken) {
+                absSendVerificationEmail($pdo, $config, $email, $verificationToken, trim((string)$data['firstName']));
+            }
+            securityLog($pdo, $config, 'author_registered', 'info', 'register', null, $userId);
+            $payload = [
+                'message' => $verified ? 'Your account is ready.' : 'Account created. Please check your email to confirm your address, then sign in.',
+                'requiresVerification' => !$verified,
+            ];
+            if ($verified) {
+                issueAuthCookie(token(['userId' => $userId, 'email' => $email, 'role' => 'member'], $config['jwt_secret']));
+            }
+            respond(201, $payload);
+        }
+
+        // ------------------------------- Author --------------------------------------
+        if ($route === 'abstracts/me' && $method === 'GET') {
+            $user = auth($config);
+            $row = absCurrentEventRow($pdo, isSuperAdmin($user, $config));
+            respond(200, [
+                'email' => $user['email'] ?? '',
+                'profile' => absProfile($pdo, (int)$user['userId']),
+                'abstracts' => absMyAbstracts($pdo, (int)$user['userId']),
+                'event' => $row ? absEventShape($pdo, $row) : null,
+                'preview' => $row && $row['status'] === 'draft',
+                'isEventAdmin' => $row ? absIsEventAdmin($pdo, $user, $config, (int)$row['id']) : isSuperAdmin($user, $config),
+            ]);
+        }
+
+        if ($route === 'abstracts/me/profile' && $method === 'POST') {
+            $user = auth($config);
+            $error = absProfileSave($pdo, (int)$user['userId'], input());
+            if ($error) respond(400, ['error' => $error]);
+            respond(200, ['profile' => absProfile($pdo, (int)$user['userId'])]);
+        }
+
+        if ($route === 'abstracts' && $method === 'POST') {
+            $user = auth($config);
+            $event = $absEventFor($user);
+            if (!absProfile($pdo, (int)$user['userId'])['complete']) {
+                respond(400, ['error' => 'Please complete your profile (name, affiliation and country) first.']);
+            }
+            [$id, $error] = absCreateDraft($pdo, $event, (int)$user['userId']);
+            if ($error) respond(400, ['error' => $error]);
+            respond(201, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, $id), $event)]);
+        }
+
+        if (preg_match('#^abstracts/(\d+)(/submit|/withdraw)?$#', $route, $m)) {
+            $user = auth($config);
+            $row = absOwnAbstract($pdo, (int)$m[1], (int)$user['userId']);
+            if (!$row) respond(404, ['error' => 'No such abstract.']);
+            $event = $absEventOfAbstract($row, $user);
+            $action = $m[2] ?? '';
+
+            if ($action === '' && $method === 'GET') {
+                respond(200, ['abstract' => absAbstractShape($pdo, $row, $event), 'event' => absEventShape($pdo, $event)]);
+            }
+            if ($action === '' && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
+                [$ok, $error, $fields] = absSave($pdo, $event, $row, input(), (int)$user['userId']);
+                if (!$ok) respond(400, ['error' => $error, 'fields' => $fields]);
+                respond(200, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, (int)$row['id']), $event)]);
+            }
+            if ($action === '/submit' && $method === 'POST') {
+                [$ok, $error, $fields, $first] = absSubmit($pdo, $event, $row, input(), (int)$user['userId']);
+                if (!$ok) respond(400, ['error' => $error, 'fields' => $fields]);
+                absSendSubmissionEmails($pdo, $config, $event, (int)$row['id'], $first);
+                respond(200, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, (int)$row['id']), $event)]);
+            }
+            if ($action === '/withdraw' && $method === 'POST') {
+                $error = absWithdraw($pdo, $event, $row, (int)$user['userId'], trim((string)(input()['reason'] ?? '')));
+                if ($error) respond(400, ['error' => $error]);
+                absSendWithdrawalEmails($pdo, $config, $event, (int)$row['id']);
+                respond(200, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, (int)$row['id']), $event)]);
+            }
+            respond(405, ['error' => 'Method not allowed']);
+        }
+
+        // --------------------------- Administration ----------------------------------
+        if ($route === 'abstracts/admin/events' && $method === 'GET') {
+            $user = auth($config);
+            requireSuperAdmin($user, $config);
+            respond(200, ['events' => absEventsList($pdo), 'defaults' => absDefaultSettings(),
+                          'timezones' => DateTimeZone::listIdentifiers()]);
+        }
+
+        if ($route === 'abstracts/admin/events' && $method === 'POST') {
+            $user = auth($config);
+            requireSuperAdmin($user, $config);
+            [$event, $error] = absEventSave($pdo, null, input(), (int)$user['userId']);
+            if ($error) respond(400, ['error' => $error]);
+            respond(201, ['event' => $event]);
+        }
+
+        if (preg_match('#^abstracts/admin/events/(\d+)(/abstracts|/audit)?$#', $route, $m)) {
+            $user = auth($config);
+            $eventId = (int)$m[1];
+            if (!absIsEventAdmin($pdo, $user, $config, $eventId)) respond(403, ['error' => 'You do not administer this event.']);
+            $event = absEventRow($pdo, $eventId);
+            if (!$event) respond(404, ['error' => 'No such event.']);
+            $sub = $m[2] ?? '';
+            if ($sub === '' && $method === 'GET') respond(200, ['event' => absEventShape($pdo, $event, true)]);
+            if ($sub === '' && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
+                [$saved, $error] = absEventSave($pdo, $eventId, input(), (int)$user['userId']);
+                if ($error) respond(400, ['error' => $error]);
+                respond(200, ['event' => $saved]);
+            }
+            if ($sub === '/abstracts' && $method === 'GET') respond(200, absAdminList($pdo, $event));
+            if ($sub === '/audit' && $method === 'GET') respond(200, ['audit' => absAuditFor($pdo, $eventId, null)]);
+            respond(405, ['error' => 'Method not allowed']);
+        }
+
+        if (preg_match('#^abstracts/admin/abstracts/(\d+)(/reopen)?$#', $route, $m)) {
+            $user = auth($config);
+            $row = absAbstractRow($pdo, (int)$m[1]);
+            if (!$row) respond(404, ['error' => 'No such abstract.']);
+            if (!absIsEventAdmin($pdo, $user, $config, (int)$row['event_id'])) respond(403, ['error' => 'You do not administer this event.']);
+            $event = absEventRow($pdo, (int)$row['event_id']);
+            if (($m[2] ?? '') === '' && $method === 'GET') {
+                $submitter = $pdo->prepare('SELECT email FROM users WHERE id = ?');
+                $submitter->execute([(int)$row['submitter_user_id']]);
+                $emails = $pdo->prepare('SELECT template, to_email, subject, status, error, created_at FROM abs_emails WHERE abstract_id = ? ORDER BY id DESC');
+                $emails->execute([(int)$row['id']]);
+                respond(200, [
+                    'abstract' => absAbstractShape($pdo, $row, $event, true),
+                    'submitterEmail' => (string)$submitter->fetchColumn(),
+                    'versions' => absVersions($pdo, (int)$row['id']),
+                    'audit' => absAuditFor($pdo, null, (int)$row['id']),
+                    'emails' => $emails->fetchAll(),
+                ]);
+            }
+            if (($m[2] ?? '') === '/reopen' && $method === 'POST') {
+                $data = input();
+                $error = absReopen($pdo, $event, $row, (int)$user['userId'], $data['until'] ?? null, trim((string)($data['note'] ?? '')));
+                if ($error) respond(400, ['error' => $error]);
+                respond(200, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, (int)$row['id']), $event, true)]);
+            }
+            respond(405, ['error' => 'Method not allowed']);
+        }
+
+        respond(404, ['error' => 'Route not found']);
     }
 
     respond(404, ['error' => 'Route not found']);

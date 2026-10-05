@@ -356,12 +356,14 @@
         const isAdmin = data.user?.role === "admin";
         // An Academy learner has no membership record, so the member dashboard has nothing for them.
         const isLearner = data.user?.isLearner === true;
+        // An author (signed up to submit an abstract, not a member or learner) goes to their abstracts.
+        const isAuthor = data.user?.isAuthor === true;
         const next = safeNextPath();
-        const destination = isAdmin ? "admin-review" : next || (isLearner ? "academy" : "dashboard");
+        const destination = isAdmin ? "admin-review" : next || (isAuthor ? "abstracts" : (isLearner ? "academy" : "dashboard"));
         showAlert(
           next && !isAdmin
             ? "Login successful. Taking you back..."
-            : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : (isLearner ? "courses" : "dashboard")}...`,
+            : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : (isAuthor ? "abstracts" : (isLearner ? "courses" : "dashboard"))}...`,
           "success"
         );
         setTimeout(() => {

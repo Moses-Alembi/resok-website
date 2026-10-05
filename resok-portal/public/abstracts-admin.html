@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abstracts Administration - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1280px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:16px}
+    .top img{height:38px;display:block}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top .links{margin-left:auto;display:flex;gap:16px;font-size:13.5px}
+    main{max-width:1280px;margin:0 auto;padding:22px 18px 60px;display:flex;flex-direction:column;gap:18px}
+    .panel{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+    h1{font-size:22px}
+    h2{font-size:17px}
+    h3{font-size:14.5px;margin:22px 0 10px;padding-top:16px;border-top:1px solid var(--line)}
+    .lede{color:var(--muted);font-size:14px;margin-top:4px;max-width:80ch}
+    .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .bar .grow{flex:1}
+    label{display:block;font-weight:600;font-size:13px;margin-bottom:5px}
+    .hint{font-weight:400;color:var(--muted);font-size:12px}
+    input[type=text],input[type=number],input[type=date],input[type=datetime-local],select,textarea{width:100%;border:1px solid #d0d5dd;
+      border-radius:8px;padding:9px 11px;font:inherit;font-size:14px;background:#fff;color:var(--ink)}
+    textarea{resize:vertical;min-height:90px}
+    input:focus,select:focus,textarea:focus{outline:2px solid rgba(8,117,57,.25);border-color:var(--green)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+    .field{margin-bottom:4px}
+    .check{display:flex;gap:8px;align-items:center;font-weight:500;font-size:14px;margin:0;cursor:pointer}
+    .btn{border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer;
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+    .btn-warn{background:#fff;border:1px solid #f5c26b;color:#93370d}
+    .btn-sm{padding:6px 10px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 0}
+    .tabs button{background:none;border:0;padding:10px 14px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+    .tabs button.on{color:var(--green);border-bottom-color:var(--green)}
+    .note{border-radius:9px;padding:11px 14px;font-size:13.5px;margin-top:12px}
+    .note.info{background:#eff8ff;color:#175cd3}
+    .note.ok{background:#ecfdf3;color:#05603a}
+    .note.warn{background:#fff8e6;color:#93370d}
+    .note.bad{background:#fef3f2;color:#b42318}
+    .pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+    .st-draft{background:#f2f4f7;color:#475467}
+    .st-submitted,.st-under_review,.st-decision_pending{background:#eff8ff;color:#175cd3}
+    .st-accepted,.st-confirmed,.st-published{background:#ecfdf3;color:#05603a}
+    .st-waitlisted{background:#fff8e6;color:#93370d}
+    .st-rejected,.st-withdrawn{background:#fef3f2;color:#b42318}
+    .st-archived{background:#f2f4f7;color:#475467}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .chip{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;background:#fff;cursor:pointer;color:#344054}
+    .chip b{margin-left:4px}
+    .chip.on{border-color:var(--green);background:#ecfdf3;color:#05603a}
+    table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px}
+    th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+    td{padding:10px;border-bottom:1px solid #f0f2f5;vertical-align:top}
+    tr.click{cursor:pointer}
+    tr.click:hover td{background:#f9fbfa}
+    .mono{font-family:Consolas,monospace;font-size:12.5px}
+    .muted{color:var(--muted)}
+    .empty{color:var(--muted);font-size:14px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px;margin-top:14px}
+    .track-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+    .track-row input:first-child{flex:1}
+    .track-row input:nth-child(2){flex:2}
+    .pv{border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:14px}
+    .pv h2{font-size:18px;line-height:1.3}
+    .pv .by{font-size:14px;margin-top:6px}
+    .pv .sec{margin-top:12px}
+    .pv .sec b{display:block;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
+    .pv .sec p{white-space:pre-wrap;font-size:14px}
+    .log{list-style:none;font-size:13px}
+    .log li{padding:7px 0;border-bottom:1px solid #f0f2f5}
+    .log .when{color:var(--muted);font-size:12px}
+    .table-wrap{overflow-x:auto}
+    @media(max-width:700px){.panel{padding:18px}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="admin-review"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <span class="title">Abstracts</span>
+      <div class="links">
+        <a href="abstracts" id="authorLink">Author view</a>
+        <a href="admin-review">Admin portal</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="gate"><div class="empty">Loading&hellip;</div></section>
+
+    <section class="panel" id="eventsPanel" hidden>
+      <div class="bar">
+        <div class="grow">
+          <h1>Conference abstracts</h1>
+          <p class="lede">Each conference is its own event with its own call, tracks and rules. Authors see a call only once it is published.</p>
+        </div>
+        <select id="eventPick" style="max-width:320px" aria-label="Event"></select>
+        <button class="btn btn-primary" type="button" id="newEventBtn"><i class="fas fa-plus"></i> New event</button>
+      </div>
+      <div class="tabs" id="tabs">
+        <button type="button" data-tab="subs" class="on">Submissions</button>
+        <button type="button" data-tab="setup">Event setup</button>
+        <button type="button" data-tab="audit">Activity</button>
+      </div>
+
+      <!-- Submissions -->
+      <div id="tabSubs">
+        <div class="chips" id="statusChips"></div>
+        <div class="table-wrap"><table id="subTable"><thead><tr>
+          <th>Ref</th><th>Title</th><th>Track</th><th>Presenter</th><th>Type</th><th>Status</th><th>Submitted</th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="subEmpty" hidden>No abstracts yet.</div>
+      </div>
+
+      <!-- Setup -->
+      <form id="tabSetup" hidden novalidate>
+        <div id="setupNote"></div>
+        <div id="copyWrap" class="field" style="margin-top:14px" hidden>
+          <label for="sCopy">Start from an earlier event <span class="hint">copies its tracks and form and review settings</span></label>
+          <select id="sCopy"></select>
+        </div>
+        <h3 style="border-top:0;padding-top:0">Event</h3>
+        <div class="grid">
+          <div class="field" style="grid-column:span 2"><label for="sName">Name</label><input type="text" id="sName" placeholder="KISLHC 2027"></div>
+          <div class="field"><label for="sPrefix">Reference prefix <span class="hint">e.g. KISLHC27</span></label><input type="text" id="sPrefix"></div>
+          <div class="field"><label for="sVenue">Venue</label><input type="text" id="sVenue"></div>
+          <div class="field"><label for="sStarts">Conference starts</label><input type="date" id="sStarts"></div>
+          <div class="field"><label for="sEnds">Conference ends</label><input type="date" id="sEnds"></div>
+        </div>
+        <h3>Call for abstracts</h3>
+        <div class="grid">
+          <div class="field"><label for="sOpens">Opens</label><input type="datetime-local" id="sOpens"></div>
+          <div class="field"><label for="sCloses">Deadline</label><input type="datetime-local" id="sCloses"></div>
+          <div class="field"><label for="sReview">Review deadline</label><input type="datetime-local" id="sReview"></div>
+          <div class="field"><label for="sTz">Time zone <span class="hint">all times above are in this zone</span></label><select id="sTz"></select></div>
+          <div class="field"><label for="sStatus">Visibility</label>
+            <select id="sStatus"><option value="draft">Draft (only super admins)</option><option value="published">Published (authors can see it)</option><option value="archived">Archived</option></select></div>
+        </div>
+        <h3>Tracks</h3>
+        <div id="trackList"></div>
+        <button class="btn btn-ghost btn-sm" type="button" id="addTrack"><i class="fas fa-plus"></i> Add track</button>
+        <h3>Submission form</h3>
+        <div class="grid">
+          <div class="field"><label for="fTitleW">Title word limit</label><input type="number" id="fTitleW" min="5" max="60"></div>
+          <div class="field"><label for="fBodyW">Abstract word limit</label><input type="number" id="fBodyW" min="50" max="2000"></div>
+          <div class="field"><label for="fKwMin">Keywords, minimum</label><input type="number" id="fKwMin" min="0" max="15"></div>
+          <div class="field"><label for="fKwMax">Keywords, maximum</label><input type="number" id="fKwMax" min="1" max="20"></div>
+          <div class="field"><label for="fMaxAuthors">Authors per abstract, max</label><input type="number" id="fMaxAuthors" min="1" max="50"></div>
+          <div class="field"><label for="fMaxPer">Abstracts per submitter <span class="hint">0 = no limit</span></label><input type="number" id="fMaxPer" min="0" max="50"></div>
+        </div>
+        <div class="grid" style="margin-top:14px">
+          <div class="field">
+            <label class="check"><input type="checkbox" id="fStructured"> Structured abstract</label>
+            <input type="text" id="fSections" style="margin-top:8px" placeholder="Background, Methods, Results, Conclusion" aria-label="Section headings, comma separated">
+          </div>
+          <div class="field">
+            <label>Presentation types offered</label>
+            <label class="check"><input type="checkbox" data-ptype="oral" data-label="Oral presentation"> Oral presentation</label>
+            <label class="check"><input type="checkbox" data-ptype="poster" data-label="Poster"> Poster</label>
+            <label class="check"><input type="checkbox" data-ptype="either" data-label="Either"> Either</label>
+          </div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label for="fDecl">Declarations <span class="hint">one per line; authors must tick each before submitting</span></label>
+          <textarea id="fDecl" rows="4"></textarea>
+        </div>
+        <h3>Review</h3>
+        <div class="grid">
+          <div class="field"><label for="rBlind">Review type</label>
+            <select id="rBlind"><option value="double">Double-blind</option><option value="single">Single-blind</option><option value="open">Open</option></select></div>
+          <div class="field"><label for="rPer">Reviews per abstract</label><input type="number" id="rPer" min="1" max="5"></div>
+        </div>
+        <div id="setupNote2"></div>
+        <div class="bar" style="margin-top:20px">
+          <button class="btn btn-primary" type="submit" id="saveEventBtn"><i class="fas fa-floppy-disk"></i> Save event</button>
+          <button class="btn btn-ghost" type="button" id="cancelNewBtn" hidden>Cancel</button>
+        </div>
+      </form>
+
+      <!-- Activity -->
+      <div id="tabAudit" hidden><ul class="log" id="auditList" style="margin-top:14px"></ul></div>
+    </section>
+
+    <!-- One abstract -->
+    <section class="panel" id="detailPanel" hidden>
+      <div class="bar">
+        <button class="btn btn-ghost btn-sm" type="button" id="detailBack"><i class="fas fa-arrow-left"></i> All submissions</button>
+        <span class="pill" id="dStatus"></span>
+        <span class="muted" id="dRef"></span>
+      </div>
+      <div id="dNote"></div>
+      <div class="pv" id="dBox"></div>
+      <div id="reopenWrap">
+        <h3>Return for corrections</h3>
+        <p class="lede">Sends the abstract back to Draft so the author can correct and resubmit it, even after the deadline.</p>
+        <div class="grid" style="margin-top:10px">
+          <div class="field"><label for="reUntil">Author may edit until</label><input type="datetime-local" id="reUntil"></div>
+          <div class="field" style="grid-column:span 2"><label for="reNote">Note for the record <span class="hint">not emailed</span></label><input type="text" id="reNote"></div>
+        </div>
+        <button class="btn btn-warn" type="button" id="reopenBtn" style="margin-top:12px"><i class="fas fa-rotate-left"></i> Return to draft</button>
+      </div>
+      <h3>Emails</h3><ul class="log" id="dEmails"></ul>
+      <h3>Edit history</h3><ul class="log" id="dVersions"></ul>
+      <h3>Activity</h3><ul class="log" id="dAudit"></ul>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script>
+  /**
+   * Abstracts administration: event setup (ADM-1..3, ADM-10), the submission list, and one
+   * abstract with its emails, edit history and activity (ADM-9). Super administrators only
+   * for now; per-event administrators arrive with reviewer roles.
+   *
+   * Author-typed text is written with textContent only.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+    const note = (id, msg, kind) => { const b = el(id); b.textContent = ''; if (msg) b.appendChild(make('div', 'note ' + (kind || 'info'), msg)); };
+    const STATUS = { draft: 'Draft', submitted: 'Submitted', under_review: 'Under review', decision_pending: 'Decision pending',
+      accepted: 'Accepted', waitlisted: 'Waitlisted', rejected: 'Rejected', withdrawn: 'Withdrawn', confirmed: 'Confirmed' };
+    const pill = (node, s, label) => { node.className = 'pill st-' + s; node.textContent = label || STATUS[s] || s; };
+    const fmt = (iso) => { if (!iso) return ''; const d = new Date(String(iso).replace(' ', 'T')); return isNaN(d) ? iso
+      : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+    const toInput = (local) => local ? String(local).slice(0, 16).replace(' ', 'T') : '';
+
+    let events = [], defaults = null, timezones = [], current = null, filter = 'all', list = null, creating = false;
+
+    async function boot() {
+      try {
+        const res = await api('abstracts/admin/events');
+        events = res.events; defaults = res.defaults; timezones = res.timezones;
+      } catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/abstracts-admin'); return; }
+        note('gate', error.status === 403 ? 'This page is for super administrators.' : error.message, 'bad');
+        return;
+      }
+      el('gate').hidden = true;
+      el('eventsPanel').hidden = false;
+      const tz = el('sTz');
+      timezones.forEach((z) => { const o = make('option', null, z); o.value = z; tz.appendChild(o); });
+      fillPicker();
+      if (events.length) selectEvent(events[0].id); else startNew();
+    }
+
+    function fillPicker(selected) {
+      const pick = el('eventPick');
+      pick.textContent = '';
+      events.forEach((e) => { const o = make('option', null, `${e.name} (${e.status})`); o.value = e.id; pick.appendChild(o); });
+      pick.hidden = !events.length;
+      if (selected) pick.value = selected;
+    }
+    el('eventPick').addEventListener('change', () => selectEvent(Number(el('eventPick').value)));
+
+    function setTab(tab) {
+      document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+      el('tabSubs').hidden = tab !== 'subs';
+      el('tabSetup').hidden = tab !== 'setup';
+      el('tabAudit').hidden = tab !== 'audit';
+      if (tab === 'audit') loadAudit();
+    }
+    document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+    async function selectEvent(id) {
+      creating = false;
+      current = events.find((e) => e.id === id) || null;
+      el('eventPick').value = id;
+      el('tabs').hidden = false;
+      el('cancelNewBtn').hidden = true;
+      el('copyWrap').hidden = true;
+      fillSetup(current);
+      el('detailPanel').hidden = true;
+      el('eventsPanel').hidden = false;
+      setTab('subs');
+      await loadSubs();
+    }
+
+    // ------------------------------------------------------------- submissions
+    async function loadSubs() {
+      if (!current) return;
+      list = await api(`abstracts/admin/events/${current.id}/abstracts`);
+      renderSubs();
+    }
+    function renderSubs() {
+      const chips = el('statusChips');
+      chips.textContent = '';
+      const total = list.abstracts.length;
+      const chip = (key, label, count) => {
+        const c = make('button', 'chip' + (filter === key ? ' on' : ''), label);
+        c.type = 'button';
+        c.appendChild(make('b', null, String(count)));
+        c.addEventListener('click', () => { filter = key; renderSubs(); });
+        chips.appendChild(c);
+      };
+      chip('all', 'All', total);
+      Object.entries(list.counts).forEach(([s, n]) => { if (n) chip(s, STATUS[s], n); });
+      const body = el('subTable').querySelector('tbody');
+      body.textContent = '';
+      const rows = list.abstracts.filter((a) => filter === 'all' || a.status === filter);
+      rows.forEach((a) => {
+        const tr = make('tr', 'click');
+        tr.appendChild(make('td', 'mono', a.reference || '—'));
+        tr.appendChild(make('td', null, a.title));
+        tr.appendChild(make('td', null, a.trackName || '—'));
+        tr.appendChild(make('td', null, a.presenter || '—'));
+        tr.appendChild(make('td', null, (current.form.presentationTypes[a.preferredType]) || '—'));
+        const st = make('td'); const p = make('span'); pill(p, a.status); st.appendChild(p); tr.appendChild(st);
+        tr.appendChild(make('td', 'muted', fmt(a.submittedAt) || 'not yet'));
+        tr.addEventListener('click', () => openDetail(a.id));
+        body.appendChild(tr);
+      });
+      el('subTable').hidden = !rows.length;
+      el('subEmpty').hidden = !!rows.length;
+    }
+
+    // ------------------------------------------------------------- one abstract
+    let detail = null;
+    async function openDetail(id) {
+      detail = await api('abstracts/admin/abstracts/' + id);
+      renderDetail();
+      el('eventsPanel').hidden = true;
+      el('detailPanel').hidden = false;
+      window.scrollTo({ top: 0 });
+    }
+    el('detailBack').addEventListener('click', async () => {
+      el('detailPanel').hidden = true;
+      el('eventsPanel').hidden = false;
+      await loadSubs();
+    });
+    function renderDetail() {
+      const a = detail.abstract;
+      pill(el('dStatus'), a.status);
+      el('dRef').textContent = [a.reference, 'submitted by ' + detail.submitterEmail, a.submittedAt && fmt(a.submittedAt)].filter(Boolean).join(' · ');
+      note('dNote', a.reopenedUntil && a.status === 'draft' ? 'Returned for corrections;the author may edit until ' + fmt(a.reopenedUntil) + '.' : '', 'warn');
+      const box = el('dBox');
+      box.textContent = '';
+      box.appendChild(make('h2', null, a.title || 'Untitled draft'));
+      const by = make('div', 'by');
+      a.authors.forEach((x, i) => {
+        if (i) by.appendChild(document.createTextNode('; '));
+        by.appendChild(make(x.presenting ? 'u' : 'span', null, `${x.firstName} ${x.lastName}`));
+        by.appendChild(document.createTextNode(` (${x.affiliation || 'no affiliation'}, ${x.email})${x.corresponding ? ' *' : ''}`));
+      });
+      box.appendChild(by);
+      if (a.sections) Object.entries(a.sections).forEach(([h, t]) => { const s = make('div', 'sec'); s.appendChild(make('b', null, h)); s.appendChild(make('p', null, t || '—')); box.appendChild(s); });
+      else { const s = make('div', 'sec'); s.appendChild(make('p', null, a.body || '—')); box.appendChild(s); }
+      const meta = make('div', 'sec');
+      meta.appendChild(make('p', 'muted', `Track: ${a.trackName || '—'} · Preferred: ${current.form.presentationTypes[a.preferredType] || '—'} · Keywords: ${a.keywords.join(', ') || '—'}`));
+      box.appendChild(meta);
+      el('reopenWrap').hidden = !['submitted', 'draft'].includes(a.status);
+      const soon = new Date(Date.now() + 7 * 86400000);
+      el('reUntil').value = new Date(soon - soon.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      el('reNote').value = '';
+      const logList = (id, items, render, empty) => { const ul = el(id); ul.textContent = '';
+        if (!items.length) ul.appendChild(make('li', 'muted', empty));
+        items.forEach((x) => { const li = make('li'); render(li, x); ul.appendChild(li); }); };
+      logList('dEmails', detail.emails, (li, m) => {
+        li.appendChild(make('span', null, `${m.template.replace(/_/g, ' ')} → ${m.to_email} `));
+        const p = make('span'); pill(p, m.status === 'sent' ? 'accepted' : 'rejected', m.status); li.appendChild(p);
+        if (m.error) li.appendChild(make('div', 'when', m.error));
+        li.appendChild(make('div', 'when', fmt(m.created_at)));
+      }, 'No emails sent.');
+      logList('dVersions', detail.versions, (li, v) => {
+        li.appendChild(make('div', null, `Before an edit by ${v.by || 'unknown'}: “${(v.snapshot && v.snapshot.title) || ''}”`));
+        li.appendChild(make('div', 'when', fmt(v.savedAt)));
+      }, 'Not edited since it was submitted.');
+      logList('dAudit', detail.audit, auditLine, 'No activity.');
+    }
+    function auditLine(li, x) {
+      const words = x.action.replace(/_/g, ' ');
+      li.appendChild(make('div', null, `${words}${x.to ? ` (${x.from || '—'} → ${x.to})` : ''} by ${x.by || 'system'}`));
+      if (x.detail) li.appendChild(make('div', 'when', Object.entries(x.detail).filter(([, v]) => v != null).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ')));
+      li.appendChild(make('div', 'when', fmt(x.at)));
+    }
+    el('reopenBtn').addEventListener('click', async () => {
+      if (!window.confirm('Return this abstract to Draft? The author will need to submit it again.')) return;
+      try {
+        await post(`abstracts/admin/abstracts/${detail.abstract.id}/reopen`, { until: el('reUntil').value, note: el('reNote').value });
+        await openDetail(detail.abstract.id);
+        note('dNote', 'Returned to draft. Let the author know what to correct.', 'ok');
+      } catch (error) { note('dNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- setup
+    function fillSetup(e) {
+      const f = e ? e.form : { titleWords: defaults.titleWords, bodyWords: defaults.bodyWords, keywordsMin: defaults.keywordsMin,
+        keywordsMax: defaults.keywordsMax, structured: defaults.structured, sections: defaults.sections, presentationTypes: defaults.presentationTypes,
+        maxAuthors: defaults.maxAuthors, maxPerSubmitter: defaults.maxPerSubmitter, declarations: defaults.declarations };
+      const r = e ? e.review : { blind: defaults.blind, reviewsPerAbstract: defaults.reviewsPerAbstract };
+      el('sName').value = e ? e.name : '';
+      el('sPrefix').value = e ? e.refPrefix : '';
+      el('sVenue').value = e ? (e.venue || '') : '';
+      el('sStarts').value = e ? (e.startsOn || '') : '';
+      el('sEnds').value = e ? (e.endsOn || '') : '';
+      el('sOpens').value = e ? toInput(e.callOpensLocal) : '';
+      el('sCloses').value = e ? toInput(e.callClosesLocal) : '';
+      el('sReview').value = e ? toInput(e.reviewDeadlineLocal) : '';
+      el('sTz').value = e ? e.timezone : 'Africa/Nairobi';
+      el('sStatus').value = e ? e.status : 'draft';
+      el('fTitleW').value = f.titleWords; el('fBodyW').value = f.bodyWords;
+      el('fKwMin').value = f.keywordsMin; el('fKwMax').value = f.keywordsMax;
+      el('fMaxAuthors').value = f.maxAuthors; el('fMaxPer').value = f.maxPerSubmitter;
+      el('fStructured').checked = !!f.structured;
+      el('fSections').value = f.sections.join(', ');
+      document.querySelectorAll('[data-ptype]').forEach((c) => { c.checked = Object.prototype.hasOwnProperty.call(f.presentationTypes, c.dataset.ptype); });
+      el('fDecl').value = f.declarations.map((d) => d.label).join('\n');
+      el('fDecl').dataset.keys = JSON.stringify(f.declarations.map((d) => d.key));
+      el('rBlind').value = r.blind; el('rPer').value = r.reviewsPerAbstract;
+      tracks = e ? e.tracks.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name, description: t.description || '' })) : [{ name: '', description: '' }];
+      renderTracks();
+      note('setupNote', e && e.status === 'published' ? 'This call is published: authors can see it now. Changes take effect immediately.' : '', 'warn');
+      note('setupNote2', '');
+    }
+    let tracks = [];
+    function renderTracks() {
+      const box = el('trackList');
+      box.textContent = '';
+      tracks.forEach((t, i) => {
+        const row = make('div', 'track-row');
+        const name = make('input'); name.type = 'text'; name.placeholder = 'Track name'; name.value = t.name;
+        name.addEventListener('input', () => { t.name = name.value; });
+        const desc = make('input'); desc.type = 'text'; desc.placeholder = 'Short description (optional)'; desc.value = t.description;
+        desc.addEventListener('input', () => { t.description = desc.value; });
+        const rm = make('button', 'btn btn-ghost btn-sm'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove track');
+        rm.appendChild(make('i', 'fas fa-trash'));
+        rm.addEventListener('click', () => { tracks.splice(i, 1); renderTracks(); });
+        row.append(name, desc, rm);
+        box.appendChild(row);
+      });
+    }
+    el('addTrack').addEventListener('click', () => { tracks.push({ name: '', description: '' }); renderTracks(); });
+
+    function startNew() {
+      creating = true;
+      current = null;
+      fillSetup(null);
+      el('tabs').hidden = true;
+      el('tabSubs').hidden = true; el('tabAudit').hidden = true; el('tabSetup').hidden = false;
+      el('cancelNewBtn').hidden = !events.length;
+      const copy = el('sCopy');
+      copy.textContent = '';
+      copy.appendChild(make('option', null, 'No - start from the defaults')).value = '';
+      events.forEach((e) => { const o = make('option', null, e.name); o.value = e.id; copy.appendChild(o); });
+      el('copyWrap').hidden = !events.length;
+      note('setupNote', 'A new event starts as a draft. Authors cannot see it until you set it to Published.', 'info');
+    }
+    el('newEventBtn').addEventListener('click', startNew);
+    el('cancelNewBtn').addEventListener('click', () => selectEvent(Number(el('eventPick').value)));
+    // Copying fills the form from the chosen event, so what will be saved is visible first.
+    el('sCopy').addEventListener('change', () => {
+      const src = events.find((e) => e.id === Number(el('sCopy').value));
+      const keep = { name: el('sName').value, prefix: el('sPrefix').value };
+      fillSetup(src || null);
+      if (src) tracks = tracks.map((t) => ({ name: t.name, description: t.description })); // new rows, not the old event's
+      renderTracks();
+      el('sName').value = keep.name; el('sPrefix').value = keep.prefix;
+      ['sOpens', 'sCloses', 'sReview', 'sStarts', 'sEnds'].forEach((id) => { el(id).value = ''; });
+      el('sStatus').value = 'draft';
+    });
+
+    el('tabSetup').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const keys = JSON.parse(el('fDecl').dataset.keys || '[]');
+      const declarations = el('fDecl').value.split('\n').map((l) => l.trim()).filter(Boolean)
+        .map((label, i) => ({ key: keys[i] || 'd' + (i + 1), label }));
+      const presentationTypes = {};
+      document.querySelectorAll('[data-ptype]').forEach((c) => { if (c.checked) presentationTypes[c.dataset.ptype] = c.dataset.label; });
+      const body = {
+        name: el('sName').value, refPrefix: el('sPrefix').value, venue: el('sVenue').value,
+        startsOn: el('sStarts').value, endsOn: el('sEnds').value,
+        callOpensAt: el('sOpens').value, callClosesAt: el('sCloses').value, reviewDeadline: el('sReview').value,
+        timezone: el('sTz').value, status: el('sStatus').value,
+        tracks: tracks.filter((t) => t.name.trim()),
+        form: {
+          titleWords: Number(el('fTitleW').value), bodyWords: Number(el('fBodyW').value),
+          keywordsMin: Number(el('fKwMin').value), keywordsMax: Number(el('fKwMax').value),
+          maxAuthors: Number(el('fMaxAuthors').value), maxPerSubmitter: Number(el('fMaxPer').value),
+          structured: el('fStructured').checked,
+          sections: el('fSections').value.split(',').map((s) => s.trim()).filter(Boolean),
+          presentationTypes, declarations,
+        },
+        review: { blind: el('rBlind').value, reviewsPerAbstract: Number(el('rPer').value) },
+      };
+      if (creating && el('sCopy').value) body.copyFromEventId = Number(el('sCopy').value);
+      if (body.status === 'published' && (!current || current.status !== 'published')
+          && !window.confirm('Publish this call? Authors will be able to see it and, once it opens, submit.')) return;
+      const btn = el('saveEventBtn');
+      btn.disabled = true;
+      try {
+        const res = creating ? await post('abstracts/admin/events', body) : await post('abstracts/admin/events/' + current.id, body);
+        const fresh = await api('abstracts/admin/events');
+        events = fresh.events;
+        fillPicker(res.event.id);
+        await selectEvent(res.event.id);
+        setTab('setup');
+        note('setupNote2', 'Saved.', 'ok');
+      } catch (error) {
+        note('setupNote2', error.message, 'bad');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ------------------------------------------------------------- activity
+    async function loadAudit() {
+      if (!current) return;
+      const res = await api(`abstracts/admin/events/${current.id}/audit`);
+      const ul = el('auditList');
+      ul.textContent = '';
+      if (!res.audit.length) ul.appendChild(make('li', 'muted', 'No activity yet.'));
+      res.audit.forEach((x) => { const li = make('li'); auditLine(li, x); ul.appendChild(li); });
+    }
+
+    boot();
+  })();
+  </script>
+</body>
+</html>

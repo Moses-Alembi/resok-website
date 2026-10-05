@@ -85,6 +85,26 @@
     .log li{padding:7px 0;border-bottom:1px solid #f0f2f5}
     .log .when{color:var(--muted);font-size:12px}
     .table-wrap{overflow-x:auto}
+    .rv{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 9px;font-size:12px;margin:2px 4px 2px 0;background:#fff;white-space:nowrap}
+    .rv b{font-weight:700}
+    .rv.submitted{border-color:#abefc6;background:#ecfdf3}
+    .rv.declined{border-color:#fecdca;background:#fef3f2;text-decoration:line-through}
+    .rv button{background:none;border:0;cursor:pointer;color:var(--muted);font-size:13px;padding:0 4px}
+    .flag{color:#b42318;font-weight:700;font-size:12px}
+    .need{color:#93370d;font-weight:700;font-size:12px}
+    .sub-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;padding:12px;background:#f9fafb;border:1px solid var(--line);border-radius:10px}
+    .sub-bar select{max-width:280px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+    .card{border:1px solid var(--line);border-radius:10px;padding:14px}
+    .card b{display:block;font-size:13px;color:#344054}
+    .card .big{font-size:22px;font-weight:800;color:var(--green)}
+    .card .small{font-size:12.5px;color:var(--muted)}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    @media(max-width:860px){.two{grid-template-columns:1fr}}
+    .review-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px}
+    .review-card .scores{font-size:12.5px;color:var(--muted);margin:4px 0}
+    .review-card p{white-space:pre-wrap;font-size:13.5px;margin-top:2px}
+    .review-card .when{color:var(--muted);font-size:12px;margin-top:10px;text-transform:uppercase;letter-spacing:.04em}
     @media(max-width:700px){.panel{padding:18px}}
   </style>
 </head>
@@ -95,7 +115,8 @@
       <span class="title">Abstracts</span>
       <div class="links">
         <a href="abstracts" id="authorLink">Author view</a>
-        <a href="admin-review">Admin portal</a>
+        <a href="abstracts-review">My reviews</a>
+        <a href="admin-review" id="adminPortalLink">Admin portal</a>
       </div>
     </div>
   </header>
@@ -114,8 +135,85 @@
       </div>
       <div class="tabs" id="tabs">
         <button type="button" data-tab="subs" class="on">Submissions</button>
-        <button type="button" data-tab="setup">Event setup</button>
-        <button type="button" data-tab="audit">Activity</button>
+        <button type="button" data-tab="review">Review</button>
+        <button type="button" data-tab="reviewers">Reviewers &amp; roles</button>
+        <button type="button" data-tab="setup" data-need="admin">Event setup</button>
+        <button type="button" data-tab="emails" data-need="admin">Emails</button>
+        <button type="button" data-tab="audit" data-need="programme">Activity</button>
+      </div>
+
+      <!-- Review: assignment, progress, reminders -->
+      <div id="tabReview" hidden>
+        <div id="reviewNote"></div>
+        <div class="cards" id="trackCards"></div>
+        <div class="sub-bar">
+          <strong style="font-size:13.5px">Assign</strong>
+          <select id="assignReviewer" aria-label="Reviewer to assign"></select>
+          <button class="btn btn-primary btn-sm" type="button" id="assignSelectedBtn"><i class="fas fa-user-plus"></i> Assign to ticked abstracts</button>
+          <span style="flex:1"></span>
+          <button class="btn btn-ghost btn-sm" type="button" id="autoBtn"><i class="fas fa-wand-magic-sparkles"></i> Propose automatic assignment</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="remindBtn"><i class="fas fa-bell"></i> Send reminders now</button>
+        </div>
+        <div id="autoWrap" hidden>
+          <h3>Proposed assignment</h3>
+          <p class="lede" id="autoLede"></p>
+          <div class="table-wrap"><table id="autoTable"><thead><tr><th>Abstract</th><th>Reviewer</th><th>Match</th></tr></thead><tbody></tbody></table></div>
+          <div class="bar" style="margin-top:12px">
+            <button class="btn btn-primary" type="button" id="autoApplyBtn"><i class="fas fa-check"></i> Apply this assignment</button>
+            <button class="btn btn-ghost" type="button" id="autoCancelBtn">Discard</button>
+          </div>
+        </div>
+        <div class="chips" id="boardFilter"></div>
+        <div class="table-wrap"><table id="boardTable"><thead><tr>
+          <th><input type="checkbox" id="boardAll" aria-label="Tick all"></th><th>Ref</th><th>Title</th><th>Track</th><th>Reviews</th><th>Average</th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="boardEmpty" hidden>No submitted abstracts to review yet.</div>
+      </div>
+
+      <!-- Reviewers and roles -->
+      <div id="tabReviewers" hidden>
+        <div class="two" style="margin-top:14px">
+          <div>
+            <h3 style="border-top:0;padding-top:0">Invite reviewers</h3>
+            <div class="field"><label for="invEmails">Email addresses <span class="hint">one or many, separated by commas or new lines</span></label><textarea id="invEmails" rows="3"></textarea></div>
+            <div class="field"><label for="invMessage">Personal message <span class="hint">optional, included in the email</span></label><input type="text" id="invMessage"></div>
+            <button class="btn btn-primary btn-sm" type="button" id="inviteBtn"><i class="fas fa-paper-plane"></i> Send invitations</button>
+            <div id="invNote"></div>
+          </div>
+          <div>
+            <h3 style="border-top:0;padding-top:0">Re-invite last year's reviewers</h3>
+            <div class="field"><label for="reinviteFrom">From event</label><select id="reinviteFrom"></select></div>
+            <button class="btn btn-ghost btn-sm" type="button" id="reinviteBtn"><i class="fas fa-users"></i> Invite them all</button>
+            <div id="reinviteNote"></div>
+          </div>
+        </div>
+        <h3>Reviewers</h3>
+        <div class="table-wrap"><table id="reviewerTable"><thead><tr><th>Name</th><th>Affiliation</th><th>Tracks</th><th>Expertise</th><th>To do</th><th>Done</th><th>Declined</th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="reviewerEmpty" hidden>No reviewers yet. Invite some above.</div>
+        <h3>Invitations not yet accepted</h3>
+        <ul class="log" id="invList"></ul>
+        <div id="rolesWrap">
+          <h3>Chairs and administrators</h3>
+          <p class="lede">Track chairs assign and follow reviews in their track. The programme chair covers every track. Administrators also manage the event setup and emails. The person needs a ReSoK account first.</p>
+          <div class="sub-bar">
+            <input type="text" id="roleEmail" placeholder="Their email" style="max-width:260px" aria-label="Email">
+            <select id="roleRole" aria-label="Role"><option value="track_chair">Track chair</option><option value="programme_chair">Programme chair</option><option value="administrator">Administrator</option></select>
+            <select id="roleTrack" aria-label="Track"></select>
+            <button class="btn btn-primary btn-sm" type="button" id="roleGrantBtn">Add</button>
+          </div>
+          <div id="roleNote"></div>
+          <ul class="log" id="roleList" style="margin-top:10px"></ul>
+        </div>
+      </div>
+
+      <!-- Email queue -->
+      <div id="tabEmails" hidden>
+        <p class="lede" style="margin-top:14px" id="mailLede"></p>
+        <div class="cards" id="mailCards"></div>
+        <div class="bar" style="margin-top:12px"><button class="btn btn-ghost btn-sm" type="button" id="pumpBtn"><i class="fas fa-paper-plane"></i> Send queued email now</button></div>
+        <div id="mailNote"></div>
+        <div class="table-wrap"><table id="mailTable"><thead><tr><th>Email</th><th>To</th><th>Status</th><th>Tries</th><th>Queued</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="mailEmpty" hidden>Nothing waiting and nothing failed.</div>
       </div>
 
       <!-- Submissions -->
@@ -184,6 +282,12 @@
           <div class="field"><label for="rBlind">Review type</label>
             <select id="rBlind"><option value="double">Double-blind</option><option value="single">Single-blind</option><option value="open">Open</option></select></div>
           <div class="field"><label for="rPer">Reviews per abstract</label><input type="number" id="rPer" min="1" max="5"></div>
+          <div class="field"><label for="rScale">Score scale, 1 to</label><input type="number" id="rScale" min="3" max="10"></div>
+          <div class="field"><label for="rSpread">Flag when scores differ by more than</label><input type="number" id="rSpread" min="0.5" step="0.5"></div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label for="rCriteria">Scoring criteria <span class="hint">one per line; add "| 2" after a criterion to weight it double</span></label>
+          <textarea id="rCriteria" rows="4"></textarea>
         </div>
         <div id="setupNote2"></div>
         <div class="bar" style="margin-top:20px">
@@ -214,6 +318,7 @@
         </div>
         <button class="btn btn-warn" type="button" id="reopenBtn" style="margin-top:12px"><i class="fas fa-rotate-left"></i> Return to draft</button>
       </div>
+      <h3>Reviews</h3><div id="dReviews"></div>
       <h3>Emails</h3><ul class="log" id="dEmails"></ul>
       <h3>Edit history</h3><ul class="log" id="dVersions"></ul>
       <h3>Activity</h3><ul class="log" id="dAudit"></ul>
@@ -242,19 +347,22 @@
       : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
     const toInput = (local) => local ? String(local).slice(0, 16).replace(' ', 'T') : '';
 
-    let events = [], defaults = null, timezones = [], current = null, filter = 'all', list = null, creating = false;
+    let events = [], defaults = null, timezones = [], current = null, filter = 'all', list = null, creating = false, canCreate = false;
+    const access = () => (current && current.access) || { admin: false, programme: false, chair: false };
 
     async function boot() {
       try {
         const res = await api('abstracts/admin/events');
-        events = res.events; defaults = res.defaults; timezones = res.timezones;
+        events = res.events; defaults = res.defaults; timezones = res.timezones; canCreate = !!res.canCreate;
       } catch (error) {
         if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/abstracts-admin'); return; }
-        note('gate', error.status === 403 ? 'This page is for super administrators.' : error.message, 'bad');
+        note('gate', error.status === 403 ? 'This page is for the conference committee: super administrators, event administrators and chairs.' : error.message, 'bad');
         return;
       }
       el('gate').hidden = true;
       el('eventsPanel').hidden = false;
+      el('newEventBtn').hidden = !canCreate;
+      el('adminPortalLink').hidden = !canCreate;
       const tz = el('sTz');
       timezones.forEach((z) => { const o = make('option', null, z); o.value = z; tz.appendChild(o); });
       fillPicker();
@@ -270,12 +378,20 @@
     }
     el('eventPick').addEventListener('change', () => selectEvent(Number(el('eventPick').value)));
 
+    const TABS = { subs: 'tabSubs', review: 'tabReview', reviewers: 'tabReviewers', setup: 'tabSetup', emails: 'tabEmails', audit: 'tabAudit' };
     function setTab(tab) {
       document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-      el('tabSubs').hidden = tab !== 'subs';
-      el('tabSetup').hidden = tab !== 'setup';
-      el('tabAudit').hidden = tab !== 'audit';
+      Object.entries(TABS).forEach(([k, id]) => { el(id).hidden = k !== tab; });
       if (tab === 'audit') loadAudit();
+      if (tab === 'review') loadBoard();
+      if (tab === 'reviewers') loadReviewers();
+      if (tab === 'emails') loadEmails();
+    }
+    // Tabs a person's role does not reach are not offered (the server refuses them anyway).
+    function applyAccess() {
+      const a = access();
+      document.querySelectorAll('#tabs button[data-need]').forEach((b) => { b.hidden = !a[b.dataset.need]; });
+      el('rolesWrap').hidden = !a.admin;
     }
     document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
@@ -287,11 +403,256 @@
       el('cancelNewBtn').hidden = true;
       el('copyWrap').hidden = true;
       fillSetup(current);
+      applyAccess();
       el('detailPanel').hidden = true;
       el('eventsPanel').hidden = false;
       setTab('subs');
       await loadSubs();
     }
+
+    // ------------------------------------------------------------- review board
+    let board = null, boardFilter = 'all', proposal = null;
+    async function loadBoard() {
+      if (!current) return;
+      board = await api(`abstracts/admin/events/${current.id}/board`);
+      renderBoard();
+    }
+    function renderBoard() {
+      note('reviewNote', board.callOpen ? 'The call is still open. Assigning an abstract now locks it: its authors can no longer edit it. Assign after the deadline unless you mean to.' : '', 'warn');
+      const cards = el('trackCards');
+      cards.textContent = '';
+      // Tracks nobody submitted to are left out, unless that is every track.
+      const shown = board.byTrack.some((t) => t.abstracts) ? board.byTrack.filter((t) => t.abstracts) : board.byTrack;
+      shown.forEach((t) => {
+        const c = make('div', 'card');
+        c.appendChild(make('b', null, t.track));
+        c.appendChild(make('div', 'big', `${t.reviewsDone} / ${t.reviewsWanted}`));
+        c.appendChild(make('div', 'small', `reviews done · ${t.abstracts} abstracts, ${t.fullyAssigned} fully assigned, ${t.fullyReviewed} fully reviewed`));
+        cards.appendChild(c);
+      });
+      const sel = el('assignReviewer');
+      sel.textContent = '';
+      sel.appendChild(make('option', null, 'Choose a reviewer')).value = '';
+      board.reviewers.forEach((r) => { const o = make('option', null, `${r.name} — ${r.open} to do${r.maxLoad ? ', max ' + r.maxLoad : ''}`); o.value = r.userId; sel.appendChild(o); });
+
+      const chips = el('boardFilter');
+      chips.textContent = '';
+      const counts = { all: board.board.length, needs: board.board.filter((a) => a.needed > 0).length,
+        flagged: board.board.filter((a) => a.flagged).length, done: board.board.filter((a) => a.completed >= a.active && a.active > 0 && a.needed === 0).length };
+      [['all', 'All'], ['needs', 'Needs reviewers'], ['flagged', 'Scores disagree'], ['done', 'Fully reviewed']].forEach(([k, label]) => {
+        const c = make('button', 'chip' + (boardFilter === k ? ' on' : ''), label); c.type = 'button';
+        c.appendChild(make('b', null, String(counts[k])));
+        c.addEventListener('click', () => { boardFilter = k; renderBoard(); });
+        chips.appendChild(c);
+      });
+
+      const rows = board.board.filter((a) => boardFilter === 'all' || (boardFilter === 'needs' && a.needed > 0)
+        || (boardFilter === 'flagged' && a.flagged) || (boardFilter === 'done' && a.needed === 0 && a.active > 0 && a.completed >= a.active));
+      const body = el('boardTable').querySelector('tbody');
+      body.textContent = '';
+      rows.forEach((a) => {
+        const tr = make('tr');
+        const tick = make('td'); const cb = make('input'); cb.type = 'checkbox'; cb.value = a.id; cb.className = 'boardTick';
+        cb.setAttribute('aria-label', 'Tick ' + (a.reference || a.title)); tick.appendChild(cb); tr.appendChild(tick);
+        tr.appendChild(make('td', 'mono', a.reference));
+        const title = make('td'); const link = make('a', null, a.title); link.href = '#';
+        link.addEventListener('click', (e) => { e.preventDefault(); openDetail(a.id); });
+        title.appendChild(link); tr.appendChild(title);
+        tr.appendChild(make('td', null, a.trackName || '—'));
+        const rv = make('td');
+        a.reviews.forEach((r) => {
+          const chip = make('span', 'rv ' + r.status);
+          chip.title = r.status === 'declined' ? 'Declined: ' + (r.declineReason || '') : r.status;
+          chip.appendChild(make('span', null, r.reviewer));
+          if (r.total != null) chip.appendChild(make('b', null, ' ' + r.total));
+          if (r.status === 'assigned' || r.status === 'in_progress') {
+            const x = make('button', null, '×'); x.type = 'button'; x.setAttribute('aria-label', 'Unassign ' + r.reviewer);
+            x.addEventListener('click', async () => {
+              if (!window.confirm(`Unassign ${r.reviewer} from ${a.reference}?`)) return;
+              try { await post(`abstracts/admin/events/${current.id}/reviews/${r.id}/unassign`); await loadBoard(); }
+              catch (error) { note('reviewNote', error.message, 'bad'); }
+            });
+            chip.appendChild(x);
+          }
+          rv.appendChild(chip);
+        });
+        if (a.needed > 0) rv.appendChild(make('span', 'need', ` needs ${a.needed} more`));
+        tr.appendChild(rv);
+        const avg = make('td', null, a.average != null ? String(a.average) : '—');
+        if (a.flagged) avg.appendChild(make('div', 'flag', `spread ${a.spread}`));
+        tr.appendChild(avg);
+        body.appendChild(tr);
+      });
+      el('boardAll').checked = false;
+      el('boardTable').hidden = !rows.length;
+      el('boardEmpty').hidden = !!rows.length;
+    }
+    el('boardAll').addEventListener('change', () => document.querySelectorAll('.boardTick').forEach((c) => { c.checked = el('boardAll').checked; }));
+    el('assignSelectedBtn').addEventListener('click', async () => {
+      const reviewer = Number(el('assignReviewer').value);
+      const ids = [...document.querySelectorAll('.boardTick:checked')].map((c) => Number(c.value));
+      if (!reviewer || !ids.length) { note('reviewNote', 'Tick one or more abstracts and choose a reviewer.', 'bad'); return; }
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/assign`, { reviewerUserId: reviewer, abstractIds: ids });
+        await loadBoard();
+        note('reviewNote', `${res.assigned} assigned.` + (res.errors.length ? ' Not assigned: ' + res.errors.join(' ') : ''), res.errors.length ? 'warn' : 'ok');
+      } catch (error) { note('reviewNote', error.message, 'bad'); }
+    });
+    el('autoBtn').addEventListener('click', async () => {
+      try {
+        proposal = await api(`abstracts/admin/events/${current.id}/auto-proposal`);
+        const body = el('autoTable').querySelector('tbody');
+        body.textContent = '';
+        proposal.pairs.forEach((p) => { const tr = make('tr'); tr.append(make('td', null, `${p.reference} ${p.title}`), make('td', null, p.reviewerName), make('td', 'muted', p.match)); body.appendChild(tr); });
+        el('autoLede').textContent = `${proposal.pairs.length} assignment(s) proposed, matching tracks and expertise and spreading the workload. Conflicts of interest are already excluded.`
+          + (proposal.unfilled.length ? ` ${proposal.unfilled.length} abstract(s) could not be filled - not enough eligible reviewers: ${proposal.unfilled.map((u) => u.reference).join(', ')}.` : '');
+        el('autoApplyBtn').disabled = !proposal.pairs.length;
+        el('autoWrap').hidden = false;
+      } catch (error) { note('reviewNote', error.message, 'bad'); }
+    });
+    el('autoCancelBtn').addEventListener('click', () => { el('autoWrap').hidden = true; proposal = null; });
+    el('autoApplyBtn').addEventListener('click', async () => {
+      if (!proposal) return;
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/assign`, { pairs: proposal.pairs });
+        el('autoWrap').hidden = true; proposal = null;
+        await loadBoard();
+        note('reviewNote', `${res.assigned} assigned; each reviewer gets one email.` + (res.errors.length ? ' Skipped: ' + res.errors.join(' ') : ''), res.errors.length ? 'warn' : 'ok');
+      } catch (error) { note('reviewNote', error.message, 'bad'); }
+    });
+    el('remindBtn').addEventListener('click', async () => {
+      if (!window.confirm('Email every reviewer who still has reviews to do? Each reviewer gets at most one reminder a day.')) return;
+      try { const res = await post(`abstracts/admin/events/${current.id}/reminders`); note('reviewNote', `${res.sent} reminder(s) sent.`, 'ok'); }
+      catch (error) { note('reviewNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- reviewers & roles
+    async function loadReviewers() {
+      if (!current) return;
+      const res = await api(`abstracts/admin/events/${current.id}/reviewers`);
+      const body = el('reviewerTable').querySelector('tbody');
+      body.textContent = '';
+      res.reviewers.forEach((r) => {
+        const tr = make('tr');
+        const who = make('td'); who.appendChild(make('div', null, r.name)); who.appendChild(make('div', 'muted', r.email));
+        tr.append(who, make('td', null, r.affiliation || '—'), make('td', null, r.tracks.join(', ') || 'any'),
+          make('td', 'muted', r.expertise || '—'), make('td', null, String(r.open) + (r.overdue ? ' (overdue)' : '')),
+          make('td', null, String(r.completed)), make('td', null, String(r.declined)));
+        body.appendChild(tr);
+      });
+      el('reviewerTable').hidden = !res.reviewers.length;
+      el('reviewerEmpty').hidden = !!res.reviewers.length;
+      renderInvitations(res.invitations);
+      const from = el('reinviteFrom');
+      from.textContent = '';
+      events.filter((e) => e.id !== current.id).forEach((e) => { const o = make('option', null, e.name); o.value = e.id; from.appendChild(o); });
+      el('reinviteBtn').disabled = !from.options.length;
+      if (!from.options.length) from.appendChild(make('option', null, 'No earlier events'));
+      if (access().admin) loadRoles();
+    }
+    function renderInvitations(list) {
+      const ul = el('invList');
+      ul.textContent = '';
+      if (!list.length) ul.appendChild(make('li', 'muted', 'None.'));
+      list.forEach((i) => {
+        const li = make('li');
+        li.appendChild(make('span', null, `${i.name ? i.name + ' - ' : ''}${i.email} `));
+        const p = make('span'); pill(p, i.status === 'pending' ? 'submitted' : 'withdrawn', i.status); li.appendChild(p);
+        li.appendChild(make('div', 'when', 'Invited ' + fmt(i.invitedAt)));
+        if (i.status === 'pending') {
+          ['resend', 'revoke'].forEach((verb) => {
+            const b = make('button', 'btn btn-ghost btn-sm', verb === 'resend' ? 'Resend' : 'Revoke'); b.type = 'button'; b.style.marginRight = '6px';
+            b.addEventListener('click', async () => {
+              try { const res = await post(`abstracts/admin/events/${current.id}/invitations/${i.id}/${verb}`); renderInvitations(res.invitations); }
+              catch (error) { note('invNote', error.message, 'bad'); }
+            });
+            li.appendChild(b);
+          });
+        }
+        ul.appendChild(li);
+      });
+    }
+    el('inviteBtn').addEventListener('click', async () => {
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/invitations`, { emails: el('invEmails').value, message: el('invMessage').value });
+        renderInvitations(res.invitations);
+        note('invNote', `${res.sent} invitation(s) sent.` + (res.errors.length ? ' ' + res.errors.join(' ') : ''), res.errors.length ? 'warn' : 'ok');
+        if (res.sent) el('invEmails').value = '';
+      } catch (error) { note('invNote', error.message, 'bad'); }
+    });
+    el('reinviteBtn').addEventListener('click', async () => {
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/reinvite`, { fromEventId: Number(el('reinviteFrom').value) });
+        note('reinviteNote', `${res.invited} invited, ${res.skipped} skipped (already invited, declined or already reviewers).`, 'ok');
+        loadReviewers();
+      } catch (error) { note('reinviteNote', error.message, 'bad'); }
+    });
+    async function loadRoles() {
+      const res = await api(`abstracts/admin/events/${current.id}/roles`);
+      renderRoles(res.roles);
+      const t = el('roleTrack');
+      t.textContent = '';
+      current.tracks.filter((x) => x.active).forEach((x) => { const o = make('option', null, x.name); o.value = x.id; t.appendChild(o); });
+    }
+    const ROLE = { track_chair: 'Track chair', programme_chair: 'Programme chair', administrator: 'Administrator' };
+    function renderRoles(roles) {
+      const ul = el('roleList');
+      ul.textContent = '';
+      if (!roles.length) ul.appendChild(make('li', 'muted', 'No chairs or administrators yet. Super administrators can do everything.'));
+      roles.forEach((r) => {
+        const li = make('li');
+        li.appendChild(make('span', null, `${r.name} (${r.email}) - ${ROLE[r.role]}${r.trackName ? ', ' + r.trackName : ''} `));
+        const b = make('button', 'btn btn-ghost btn-sm', 'Remove'); b.type = 'button';
+        b.addEventListener('click', async () => {
+          if (!window.confirm(`Remove ${r.name} as ${ROLE[r.role]}?`)) return;
+          try { renderRoles((await post(`abstracts/admin/events/${current.id}/roles/${r.id}/revoke`)).roles); }
+          catch (error) { note('roleNote', error.message, 'bad'); }
+        });
+        li.appendChild(b);
+        ul.appendChild(li);
+      });
+    }
+    el('roleRole').addEventListener('change', () => { el('roleTrack').hidden = el('roleRole').value !== 'track_chair'; });
+    el('roleGrantBtn').addEventListener('click', async () => {
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/roles`, { email: el('roleEmail').value, role: el('roleRole').value, trackId: Number(el('roleTrack').value) || null });
+        renderRoles(res.roles); el('roleEmail').value = ''; note('roleNote', 'Added.', 'ok');
+      } catch (error) { note('roleNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- email queue
+    async function loadEmails() {
+      if (!current) return;
+      const res = await api(`abstracts/admin/events/${current.id}/emails`);
+      el('mailLede').textContent = `Email is sent through a queue so the host's hourly limit is never exceeded: up to ${res.hourlyLimit} an hour are sent straight away, the rest wait their turn. Failed messages are tried three times.`;
+      const cards = el('mailCards');
+      cards.textContent = '';
+      [['sent', 'Sent'], ['queued', 'Waiting'], ['failed', 'Failed']].forEach(([k, label]) => {
+        const c = make('div', 'card'); c.append(make('b', null, label), make('div', 'big', String(res.counts[k] || 0))); cards.appendChild(c);
+      });
+      const body = el('mailTable').querySelector('tbody');
+      body.textContent = '';
+      res.emails.forEach((m) => {
+        const tr = make('tr');
+        const what = make('td'); what.appendChild(make('div', null, m.subject)); what.appendChild(make('div', 'muted', m.template.replace(/_/g, ' ')));
+        if (m.error) what.appendChild(make('div', 'flag', m.error));
+        const st = make('td'); const p = make('span'); pill(p, m.status === 'failed' ? 'rejected' : 'submitted', m.status); st.appendChild(p);
+        const act = make('td');
+        if (m.status === 'failed') {
+          const b = make('button', 'btn btn-ghost btn-sm', 'Resend'); b.type = 'button';
+          b.addEventListener('click', async () => { try { await post(`abstracts/admin/events/${current.id}/emails/${m.id}/resend`); loadEmails(); } catch (error) { note('mailNote', error.message, 'bad'); } });
+          act.appendChild(b);
+        }
+        tr.append(what, make('td', null, m.to_email), st, make('td', null, String(m.attempts)), make('td', 'muted', fmt(m.created_at)), act);
+        body.appendChild(tr);
+      });
+      el('mailTable').hidden = !res.emails.length;
+      el('mailEmpty').hidden = !!res.emails.length;
+    }
+    el('pumpBtn').addEventListener('click', async () => {
+      try { const r = await post(`abstracts/admin/events/${current.id}/emails`); note('mailNote', `${r.sent} sent, ${r.failed} failed attempt(s), ${r.waiting} still waiting.`, 'ok'); loadEmails(); }
+      catch (error) { note('mailNote', error.message, 'bad'); }
+    });
 
     // ------------------------------------------------------------- submissions
     async function loadSubs() {
@@ -365,7 +726,26 @@
       const meta = make('div', 'sec');
       meta.appendChild(make('p', 'muted', `Track: ${a.trackName || '—'} · Preferred: ${current.form.presentationTypes[a.preferredType] || '—'} · Keywords: ${a.keywords.join(', ') || '—'}`));
       box.appendChild(meta);
-      el('reopenWrap').hidden = !['submitted', 'draft'].includes(a.status);
+      el('reopenWrap').hidden = !['submitted', 'draft'].includes(a.status) || !detail.access.admin;
+      // Every review in full, with who wrote it: the committee sees what reviewers do not.
+      const rbox = el('dReviews');
+      rbox.textContent = '';
+      if (!detail.reviews.length) rbox.appendChild(make('div', 'muted', 'No reviewers assigned yet.'));
+      const crit = Object.fromEntries((detail.criteria || []).map((c) => [c.key, c.label]));
+      detail.reviews.forEach((r) => {
+        const card = make('div', 'review-card');
+        const head = make('div');
+        head.appendChild(make('strong', null, r.reviewer + ' '));
+        const p = make('span'); pill(p, r.status === 'submitted' ? 'accepted' : (r.status === 'declined' ? 'rejected' : 'submitted'), r.status.replace('_', ' ')); head.appendChild(p);
+        if (r.total != null) head.appendChild(make('span', null, `  Overall ${r.total}`));
+        if (r.recommendation) head.appendChild(make('span', 'muted', `  · recommends ${r.recommendation}${r.recommendedType ? ' as ' + (current.form.presentationTypes[r.recommendedType] || r.recommendedType) : ''}`));
+        card.appendChild(head);
+        if (Object.keys(r.scores).length) card.appendChild(make('div', 'scores', Object.entries(r.scores).map(([k, v]) => `${crit[k] || k}: ${v}`).join(' · ')));
+        if (r.declineReason) card.appendChild(make('p', 'muted', 'Declined: ' + r.declineReason));
+        if (r.commentsAuthors) { card.appendChild(make('div', 'when', 'For the authors')); card.appendChild(make('p', null, r.commentsAuthors)); }
+        if (r.commentsCommittee) { card.appendChild(make('div', 'when', 'Confidential, for the committee')); card.appendChild(make('p', null, r.commentsCommittee)); }
+        rbox.appendChild(card);
+      });
       const soon = new Date(Date.now() + 7 * 86400000);
       el('reUntil').value = new Date(soon - soon.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
       el('reNote').value = '';
@@ -424,6 +804,11 @@
       el('fDecl').value = f.declarations.map((d) => d.label).join('\n');
       el('fDecl').dataset.keys = JSON.stringify(f.declarations.map((d) => d.key));
       el('rBlind').value = r.blind; el('rPer').value = r.reviewsPerAbstract;
+      const crit = r.criteria || defaults.criteria;
+      el('rScale').value = r.scaleMax || defaults.scaleMax;
+      el('rSpread').value = r.discrepancyThreshold || defaults.discrepancyThreshold;
+      el('rCriteria').value = crit.map((c) => c.label + (Number(c.weight) !== 1 ? ' | ' + c.weight : '')).join('\n');
+      el('rCriteria').dataset.keys = JSON.stringify(crit.map((c) => c.key));
       tracks = e ? e.tracks.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name, description: t.description || '' })) : [{ name: '', description: '' }];
       renderTracks();
       note('setupNote', e && e.status === 'published' ? 'This call is published: authors can see it now. Changes take effect immediately.' : '', 'warn');
@@ -497,7 +882,16 @@
           sections: el('fSections').value.split(',').map((s) => s.trim()).filter(Boolean),
           presentationTypes, declarations,
         },
-        review: { blind: el('rBlind').value, reviewsPerAbstract: Number(el('rPer').value) },
+        review: {
+          blind: el('rBlind').value, reviewsPerAbstract: Number(el('rPer').value),
+          scaleMax: Number(el('rScale').value), discrepancyThreshold: Number(el('rSpread').value),
+          // Keys stay with their line, so renaming a criterion keeps scores already given.
+          criteria: el('rCriteria').value.split('\n').map((l) => l.trim()).filter(Boolean).map((line, i) => {
+            const [label, weight] = line.split('|').map((x) => x.trim());
+            const keys = JSON.parse(el('rCriteria').dataset.keys || '[]');
+            return { key: keys[i] || 'c' + (i + 1), label, weight: weight ? Number(weight) : 1 };
+          }),
+        },
       };
       if (creating && el('sCopy').value) body.copyFromEventId = Number(el('sCopy').value);
       if (body.status === 'published' && (!current || current.status !== 'published')

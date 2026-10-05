@@ -43,6 +43,7 @@ function abstractsEnsureTables(PDO $pdo): bool
     if ($ready !== null) return $ready;
     try {
         foreach (abstractsSchema() as $sql) $pdo->exec($sql);
+        abstractsUpgrade($pdo);
         return $ready = true;
     } catch (Throwable $e) {
         error_log('Abstract tables unavailable: ' . $e->getMessage());
@@ -187,8 +188,9 @@ function abstractsSchema(): array
             KEY abs_audit_abstract (abstract_id, created_at),
             KEY abs_audit_event (event_id, created_at)
         )" . $tail,
-        // Every email the module sends, with whether the mail server took it, so an
-        // administrator can answer "did the author get it" and resend.
+        // Every email the module sends, and the queue it is sent from: a row is written
+        // first and sent when the hourly budget allows (see absMailPump). An administrator
+        // can see whether each one reached the mail server, and resend it.
         "CREATE TABLE IF NOT EXISTS abs_emails (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
             event_id INT UNSIGNED NULL,
@@ -196,14 +198,97 @@ function abstractsSchema(): array
             template VARCHAR(40) NOT NULL,
             to_email VARCHAR(190) NOT NULL,
             subject VARCHAR(300) NOT NULL,
-            status ENUM('sent','failed') NOT NULL,
+            status ENUM('queued','sending','sent','failed') NOT NULL DEFAULT 'queued',
             error VARCHAR(500) NULL,
+            text_body MEDIUMTEXT NULL,
+            html_body MEDIUMTEXT NULL,
+            attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            dedupe_key VARCHAR(160) NULL,
+            sent_at DATETIME NULL,
+            next_attempt_at DATETIME NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
+            UNIQUE KEY abs_emails_dedupe (dedupe_key),
+            KEY abs_emails_queue (status, id),
             KEY abs_emails_abstract (abstract_id),
             KEY abs_emails_event (event_id, created_at)
         )" . $tail,
+        // Review (phase 2). A reviewer's standing for one event: the tracks they cover,
+        // their expertise in their own words, and how many abstracts they will take.
+        "CREATE TABLE IF NOT EXISTS abs_reviewers (
+            event_id INT UNSIGNED NOT NULL,
+            user_id INT UNSIGNED NOT NULL,
+            tracks TEXT NULL,
+            expertise VARCHAR(500) NULL,
+            max_load SMALLINT UNSIGNED NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (event_id, user_id)
+        )" . $tail,
+        "CREATE TABLE IF NOT EXISTS abs_invitations (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            event_id INT UNSIGNED NOT NULL,
+            email VARCHAR(190) NOT NULL,
+            name VARCHAR(160) NULL,
+            token_hash CHAR(64) NOT NULL,
+            status ENUM('pending','accepted','declined','revoked') NOT NULL DEFAULT 'pending',
+            invited_by INT UNSIGNED NULL,
+            user_id INT UNSIGNED NULL,
+            message VARCHAR(1000) NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            responded_at DATETIME NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY abs_invitations_token (token_hash),
+            KEY abs_invitations_event (event_id, email)
+        )" . $tail,
+        // One row per reviewer per abstract: the assignment and the review in one, so an
+        // abstract can never carry two reviews from the same person.
+        "CREATE TABLE IF NOT EXISTS abs_reviews (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            abstract_id INT UNSIGNED NOT NULL,
+            reviewer_user_id INT UNSIGNED NOT NULL,
+            status ENUM('assigned','in_progress','submitted','declined','cancelled') NOT NULL DEFAULT 'assigned',
+            scores TEXT NULL,
+            total DECIMAL(5,2) NULL,
+            comments_authors TEXT NULL,
+            comments_committee TEXT NULL,
+            recommendation VARCHAR(20) NULL,
+            recommended_type VARCHAR(30) NULL,
+            decline_reason VARCHAR(500) NULL,
+            assigned_by INT UNSIGNED NULL,
+            assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            submitted_at DATETIME NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY abs_reviews_pair (abstract_id, reviewer_user_id),
+            KEY abs_reviews_reviewer (reviewer_user_id, status)
+        )" . $tail,
     ];
+}
+
+/**
+ * Brings a table created by an earlier version of this file up to date. MySQL has no
+ * ADD COLUMN IF NOT EXISTS, so each change is checked first and skipped when present.
+ */
+function abstractsUpgrade(PDO $pdo): void
+{
+    $columns = static function (string $table) use ($pdo): array {
+        return array_column($pdo->query('SHOW COLUMNS FROM ' . $table)->fetchAll(), 'Type', 'Field');
+    };
+    $emails = $columns('abs_emails');
+    if (strpos((string)($emails['status'] ?? ''), 'queued') === false) {
+        $pdo->exec("ALTER TABLE abs_emails MODIFY status ENUM('queued','sending','sent','failed') NOT NULL DEFAULT 'queued'");
+    }
+    $adds = [
+        'text_body' => 'ADD COLUMN text_body MEDIUMTEXT NULL',
+        'html_body' => 'ADD COLUMN html_body MEDIUMTEXT NULL',
+        'attempts' => 'ADD COLUMN attempts TINYINT UNSIGNED NOT NULL DEFAULT 0',
+        'dedupe_key' => 'ADD COLUMN dedupe_key VARCHAR(160) NULL, ADD UNIQUE KEY abs_emails_dedupe (dedupe_key)',
+        'sent_at' => 'ADD COLUMN sent_at DATETIME NULL, ADD KEY abs_emails_queue (status, id)',
+        'next_attempt_at' => 'ADD COLUMN next_attempt_at DATETIME NULL',
+    ];
+    foreach ($adds as $column => $sql) {
+        if (!array_key_exists($column, $emails)) $pdo->exec('ALTER TABLE abs_emails ' . $sql);
+    }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -230,6 +315,16 @@ function absDefaultSettings(): array
         ],
         'blind' => 'double',
         'reviewsPerAbstract' => 2,
+        // Scored 1..scaleMax each; the total is the weighted mean, on the same scale.
+        'criteria' => [
+            ['key' => 'originality', 'label' => 'Originality', 'weight' => 1],
+            ['key' => 'methods', 'label' => 'Methods', 'weight' => 1],
+            ['key' => 'relevance', 'label' => 'Relevance to lung health in the region', 'weight' => 1],
+            ['key' => 'clarity', 'label' => 'Clarity', 'weight' => 1],
+        ],
+        'scaleMax' => 5,
+        // Reviews of one abstract further apart than this (on the total) are flagged.
+        'discrepancyThreshold' => 1.5,
     ];
 }
 
@@ -272,6 +367,19 @@ function absSettings(?string $stored): array
         $declarations[] = ['key' => $key, 'label' => mb_substr($label, 0, 300)];
     }
     $s['declarations'] = $declarations;
+
+    $criteria = [];
+    foreach (is_array($s['criteria']) ? $s['criteria'] : [] as $i => $c) {
+        $label = trim((string)($c['label'] ?? ''));
+        if ($label === '') continue;
+        $key = preg_replace('/[^a-z0-9_]/', '', strtolower((string)($c['key'] ?? ''))) ?: 'c' . ($i + 1);
+        $weight = is_numeric($c['weight'] ?? null) ? max(0.0, min(10.0, (float)$c['weight'])) : 1.0;
+        $criteria[] = ['key' => $key, 'label' => mb_substr($label, 0, 120), 'weight' => $weight];
+    }
+    $s['criteria'] = $criteria ?: $defaults['criteria'];
+    $s['scaleMax'] = $int($s['scaleMax'], 3, 10, $defaults['scaleMax']);
+    $s['discrepancyThreshold'] = is_numeric($s['discrepancyThreshold'])
+        ? max(0.5, min((float)$s['scaleMax'], (float)$s['discrepancyThreshold'])) : $defaults['discrepancyThreshold'];
     return $s;
 }
 
@@ -383,7 +491,10 @@ function absEventShape(PDO $pdo, array $row, bool $forAdmin = false): array
         $shape['callOpensLocal'] = $row['call_opens_at'];
         $shape['callClosesLocal'] = $row['call_closes_at'];
         $shape['reviewDeadlineLocal'] = $row['review_deadline'];
-        $shape['review'] = ['blind' => $settings['blind'], 'reviewsPerAbstract' => $settings['reviewsPerAbstract']];
+        $shape['reviewDeadline'] = absIso($row['review_deadline'], $zone);
+        $shape['review'] = ['blind' => $settings['blind'], 'reviewsPerAbstract' => $settings['reviewsPerAbstract'],
+                            'criteria' => $settings['criteria'], 'scaleMax' => $settings['scaleMax'],
+                            'discrepancyThreshold' => $settings['discrepancyThreshold']];
     }
     return $shape;
 }
@@ -1050,6 +1161,9 @@ function absWithdraw(PDO $pdo, array $eventRow, array $row, int $userId, string 
     if (!in_array($row['status'], ABS_WITHDRAWABLE, true)) return 'This abstract cannot be withdrawn.';
     $now = (new DateTimeImmutable('now', absZone($eventRow)))->format('Y-m-d H:i:s');
     $pdo->prepare("UPDATE abs_abstracts SET status = 'withdrawn', withdrawn_at = ?, reopened_until = NULL WHERE id = ?")->execute([$now, (int)$row['id']]);
+    // Reviewers stop being asked for an abstract that is no longer in the running.
+    $pdo->prepare("UPDATE abs_reviews SET status = 'cancelled' WHERE abstract_id = ? AND status IN ('assigned','in_progress')")
+        ->execute([(int)$row['id']]);
     absAudit($pdo, (int)$row['event_id'], (int)$row['id'], $userId, 'withdrawn', $row['status'], 'withdrawn',
              $reason !== '' ? ['reason' => mb_substr($reason, 0, 500)] : null);
     return null;
@@ -1145,25 +1259,116 @@ function absVersions(PDO $pdo, int $abstractId): array
 // Email
 // ---------------------------------------------------------------------------------------
 
+/**
+ * Sends through the queue (NFR-10, and the deadline rush).
+ *
+ * Shared hosting caps outgoing mail per hour, and most abstracts arrive in the last two
+ * days, each with a confirmation and co-author notices. Sending every message the moment it
+ * is triggered would hit that cap exactly when it matters, and the messages the host then
+ * refuses are confirmations authors are waiting for. So every message is written to the
+ * queue first and sent at once only while the hour's budget lasts; the rest go out on later
+ * requests, or from the cron job, as the budget frees up.
+ *
+ * A $dedupeKey makes the message once-only (reminders): a second call with the same key is
+ * ignored rather than queued again.
+ *
+ * Returns true when the message has been handed to the mail server already, false when it
+ * is waiting in the queue or failed.
+ */
 function absSendLogged(PDO $pdo, array $config, ?int $eventId, ?int $abstractId, string $template,
-                       string $to, string $subject, string $text, string $html): bool
+                       string $to, string $subject, string $text, string $html, ?string $dedupeKey = null): bool
 {
-    $ok = false;
-    $error = null;
     try {
-        $mailer = new SimpleMailer($config);
-        $ok = $mailer->send($to, $subject, $text, [], $html);
-        if (!$ok) $error = 'The mail server did not accept the message.';
+        $stmt = $pdo->prepare('INSERT IGNORE INTO abs_emails (event_id, abstract_id, template, to_email, subject, status, text_body, html_body, dedupe_key)
+                               VALUES (?, ?, ?, ?, ?, "queued", ?, ?, ?)');
+        $stmt->execute([$eventId, $abstractId, $template, mb_substr($to, 0, 190), mb_substr($subject, 0, 300), $text, $html,
+                        $dedupeKey !== null ? mb_substr($dedupeKey, 0, 160) : null]);
+        if ($stmt->rowCount() === 0) return false; // already queued or sent under this key
+        $id = (int)$pdo->lastInsertId();
     } catch (Throwable $e) {
-        $error = mb_substr($e->getMessage(), 0, 500);
+        error_log('Could not queue abstract email: ' . $e->getMessage());
+        return false;
     }
+    absMailPump($pdo, $config, 5);
+    $check = $pdo->prepare('SELECT status FROM abs_emails WHERE id = ?');
+    $check->execute([$id]);
+    return $check->fetchColumn() === 'sent';
+}
+
+/** Messages the host allows per hour, from config (abstracts_mail_hourly_limit). */
+function absMailHourlyLimit(array $config): int
+{
+    return max(10, (int)($config['abstracts_mail_hourly_limit'] ?? 150));
+}
+
+/**
+ * Sends up to $max queued messages, never more than the hour's remaining budget. Each row is
+ * claimed before it is sent, so two requests pumping at once cannot send the same message
+ * twice. A message that fails is retried on later pumps, up to three attempts.
+ *
+ * @return array{sent:int, failed:int, waiting:int}
+ */
+function absMailPump(PDO $pdo, array $config, int $max = 20): array
+{
+    $result = ['sent' => 0, 'failed' => 0, 'waiting' => 0];
     try {
-        $pdo->prepare('INSERT INTO abs_emails (event_id, abstract_id, template, to_email, subject, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)')
-            ->execute([$eventId, $abstractId, $template, $to, mb_substr($subject, 0, 300), $ok ? 'sent' : 'failed', $error]);
+        // A request that died mid-send leaves its row claimed (sent_at holds the claim time
+        // while 'sending'); release it after ten minutes.
+        $pdo->exec("UPDATE abs_emails SET status = 'queued', sent_at = NULL
+                    WHERE status = 'sending' AND sent_at < (NOW() - INTERVAL 10 MINUTE)");
+        $used = (int)$pdo->query("SELECT COUNT(*) FROM abs_emails WHERE sent_at >= (NOW() - INTERVAL 1 HOUR)")->fetchColumn();
+        $budget = min($max, absMailHourlyLimit($config) - $used);
+        if ($budget > 0) {
+            $rows = $pdo->query("SELECT id FROM abs_emails WHERE status = 'queued'
+                                 AND (next_attempt_at IS NULL OR next_attempt_at <= NOW()) ORDER BY id LIMIT " . (int)$budget)->fetchAll();
+            foreach ($rows as $r) {
+                $claim = $pdo->prepare("UPDATE abs_emails SET status = 'sending', attempts = attempts + 1, sent_at = NOW() WHERE id = ? AND status = 'queued'");
+                $claim->execute([(int)$r['id']]);
+                if ($claim->rowCount() === 0) continue;
+                $msg = $pdo->prepare('SELECT * FROM abs_emails WHERE id = ?');
+                $msg->execute([(int)$r['id']]);
+                $m = $msg->fetch();
+                $ok = false;
+                $error = null;
+                try {
+                    $ok = (new SimpleMailer($config))->send((string)$m['to_email'], (string)$m['subject'], (string)$m['text_body'], [], $m['html_body'] ?: null);
+                    if (!$ok) $error = 'The mail server did not accept the message.';
+                } catch (Throwable $e) {
+                    $error = mb_substr($e->getMessage(), 0, 500);
+                }
+                if ($ok) {
+                    // sent_at is what the hourly budget counts (claimed rows count too, briefly).
+                    $pdo->prepare("UPDATE abs_emails SET status = 'sent', error = NULL, sent_at = NOW() WHERE id = ?")->execute([(int)$m['id']]);
+                    $result['sent']++;
+                } else {
+                    // Back in the queue until the third attempt fails, waiting 10 then 20 minutes
+                    // first, so a short outage at the mail server does not use up every try.
+                    $final = (int)$m['attempts'] >= 3;
+                    $pdo->prepare('UPDATE abs_emails SET status = ?, error = ?, sent_at = NULL,
+                                          next_attempt_at = NOW() + INTERVAL ? MINUTE WHERE id = ?')
+                        ->execute([$final ? 'failed' : 'queued', $error, 10 * (int)$m['attempts'], (int)$m['id']]);
+                    $result['failed']++;
+                }
+            }
+        }
+        $result['waiting'] = (int)$pdo->query("SELECT COUNT(*) FROM abs_emails WHERE status IN ('queued','sending')")->fetchColumn();
     } catch (Throwable $e) {
-        error_log('Could not log abstract email: ' . $e->getMessage());
+        error_log('Abstract mail pump failed: ' . $e->getMessage());
     }
-    return $ok;
+    return $result;
+}
+
+/** Queues a fresh copy of a logged message (ADM: "administrators can resend any of them"). */
+function absMailResend(PDO $pdo, array $config, int $emailId): bool
+{
+    $stmt = $pdo->prepare('SELECT * FROM abs_emails WHERE id = ?');
+    $stmt->execute([$emailId]);
+    $m = $stmt->fetch();
+    if (!$m || $m['text_body'] === null) return false;
+    absSendLogged($pdo, $config, $m['event_id'] !== null ? (int)$m['event_id'] : null,
+                  $m['abstract_id'] !== null ? (int)$m['abstract_id'] : null, (string)$m['template'],
+                  (string)$m['to_email'], (string)$m['subject'], (string)$m['text_body'], (string)$m['html_body']);
+    return true;
 }
 
 function absEmailUrl(array $config): string

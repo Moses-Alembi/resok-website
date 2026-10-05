@@ -53,6 +53,9 @@ return [
     'super_admins' => ['super-admin@resok.org'],
     // Set this and pass ?key=... to cron/renewal-reminders.php if the host only offers URL-triggered cron.
     'cron_secret' => '',
+    // Abstract emails sent per hour at most (the queue holds the rest). Set it a little under
+    // the host's own outgoing-mail limit, which cPanel shows or the host can confirm.
+    'abstracts_mail_hourly_limit' => 150,
     'portal_base_url' => 'https://www.resok.org/resok-portal/public',
     'mail_from' => 'no-reply@example.org',
 

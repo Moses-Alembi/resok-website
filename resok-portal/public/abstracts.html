@@ -442,6 +442,11 @@
         who.appendChild(a);
         return;
       }
+      if (state.me.isReviewer) {
+        const rev = make('a', null, 'My reviews');
+        rev.href = 'abstracts-review';
+        who.appendChild(rev);
+      }
       if (state.me.isEventAdmin) {
         const admin = make('a', null, 'Manage abstracts');
         admin.href = 'abstracts-admin';

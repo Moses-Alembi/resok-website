@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -4215,6 +4215,9 @@ Respiratory Society of Kenya");
         if (!abstractsEnsureTables($pdo)) {
             respond(503, ['error' => 'Abstract submission is unavailable: its tables could not be created. Import resok-portal/server/schema-abstracts.sql.']);
         }
+        // Any visit moves a little of the email queue along, so queued mail goes out even if
+        // the cron job was never set up. Bounded by the hourly budget like every send.
+        absMailPump($pdo, $config, 3);
 
         // The author's event, or a 404 that reads the same whether nothing exists or it is
         // still a draft - an unlaunched call is not something the public can discover.
@@ -4304,7 +4307,13 @@ Respiratory Society of Kenya");
                 'abstracts' => absMyAbstracts($pdo, (int)$user['userId']),
                 'event' => $row ? absEventShape($pdo, $row) : null,
                 'preview' => $row && $row['status'] === 'draft',
-                'isEventAdmin' => $row ? absIsEventAdmin($pdo, $user, $config, (int)$row['id']) : isSuperAdmin($user, $config),
+                // Whether to show the links to the chairs' page and the reviewer's page.
+                'isEventAdmin' => $row && function_exists('absAccess') ? absAccess($pdo, $user, $config, (int)$row['id'])['chair'] : isSuperAdmin($user, $config),
+                'isReviewer' => (function () use ($pdo, $user) {
+                    $r = $pdo->prepare("SELECT 1 FROM abs_roles WHERE user_id = ? AND role = 'reviewer' LIMIT 1");
+                    $r->execute([(int)$user['userId']]);
+                    return (bool)$r->fetch();
+                })(),
             ]);
         }
 
@@ -4356,11 +4365,91 @@ Respiratory Society of Kenya");
             respond(405, ['error' => 'Method not allowed']);
         }
 
+        // ------------------------------- Reviewer ------------------------------------
+        // An invitation link: who it is for and whether it is still open. Public, because
+        // the invitee may not have an account yet; the token is the only key.
+        if (preg_match('#^abstracts/invite/([a-f0-9]{48})(/accept|/decline)?$#', $route, $m)) {
+            requireModule('absInvitationByToken', 'lib/abstracts-review.php');
+            $invitation = absInvitationByToken($pdo, $m[1]);
+            if (!$invitation) respond(404, ['error' => 'This invitation link is not valid. Ask the programme committee for a new one.']);
+            $event = absEventRow($pdo, (int)$invitation['event_id']);
+            $action = $m[2] ?? '';
+            if ($action === '' && $method === 'GET') {
+                $viewer = authOptional($config);
+                respond(200, [
+                    'invitation' => ['email' => $invitation['email'], 'name' => $invitation['name'], 'status' => $invitation['status'],
+                                     'message' => $invitation['message']],
+                    'event' => absEventShape($pdo, $event),
+                    'reviewDeadline' => absIso($event['review_deadline'], absZone($event)),
+                    'signedInAs' => $viewer['email'] ?? null,
+                    'profile' => $viewer ? absProfile($pdo, (int)$viewer['userId']) : null,
+                ]);
+            }
+            if ($method === 'POST') {
+                $viewer = $action === '/accept' ? auth($config) : authOptional($config);
+                $error = absInvitationRespond($pdo, $invitation, $viewer ? (int)$viewer['userId'] : null, $action === '/accept', input());
+                if ($error) respond(400, ['error' => $error]);
+                respond(200, ['status' => $action === '/accept' ? 'accepted' : 'declined']);
+            }
+            respond(405, ['error' => 'Method not allowed']);
+        }
+
+        if ($route === 'abstracts/reviews' && $method === 'GET') {
+            $user = auth($config);
+            requireModule('absMyReviews', 'lib/abstracts-review.php');
+            $roles = $pdo->prepare("SELECT e.id, e.name, v.tracks, v.expertise, v.max_load FROM abs_roles r
+                                    JOIN abs_events e ON e.id = r.event_id
+                                    LEFT JOIN abs_reviewers v ON v.event_id = r.event_id AND v.user_id = r.user_id
+                                    WHERE r.user_id = ? AND r.role = 'reviewer' AND e.status <> 'archived' ORDER BY e.id DESC");
+            $roles->execute([(int)$user['userId']]);
+            $events = array_map(fn($r) => [
+                'id' => (int)$r['id'], 'name' => $r['name'], 'tracks' => absTracks($pdo, (int)$r['id']),
+                'trackIds' => array_map('intval', json_decode((string)($r['tracks'] ?? '[]'), true) ?: []),
+                'expertise' => $r['expertise'], 'maxLoad' => $r['max_load'] !== null ? (int)$r['max_load'] : null,
+            ], $roles->fetchAll());
+            respond(200, ['email' => $user['email'] ?? '', 'events' => $events, 'reviews' => absMyReviews($pdo, (int)$user['userId'])]);
+        }
+
+        if (preg_match('#^abstracts/reviewer/(\d+)$#', $route, $m) && $method === 'POST') {
+            $user = auth($config);
+            requireModule('absReviewerProfileSave', 'lib/abstracts-review.php');
+            if (!absAccess($pdo, $user, $config, (int)$m[1])['reviewer']) respond(403, ['error' => 'You are not a reviewer for this event.']);
+            $error = absReviewerProfileSave($pdo, (int)$m[1], (int)$user['userId'], input());
+            if ($error) respond(400, ['error' => $error]);
+            respond(200, ['saved' => true]);
+        }
+
+        if (preg_match('#^abstracts/reviews/(\d+)(/submit|/decline)?$#', $route, $m)) {
+            $user = auth($config);
+            requireModule('absOwnReview', 'lib/abstracts-review.php');
+            $review = absOwnReview($pdo, (int)$m[1], (int)$user['userId']);
+            if (!$review) respond(404, ['error' => 'No such review.']);
+            $event = absEventRow($pdo, (int)$review['event_id']);
+            $action = $m[2] ?? '';
+            if ($action === '' && $method === 'GET') respond(200, ['review' => absReviewForReviewer($pdo, $review, $event)]);
+            if ($action === '/decline' && $method === 'POST') {
+                $error = absReviewDecline($pdo, $event, $review, (string)(input()['reason'] ?? ''), (int)$user['userId']);
+                if ($error) respond(400, ['error' => $error]);
+            } elseif ($method === 'POST' && in_array($action, ['', '/submit'], true)) {
+                [$ok, $error, $fields] = absReviewSave($pdo, $event, $review, input(), $action === '/submit', (int)$user['userId']);
+                if (!$ok) respond(400, ['error' => $error, 'fields' => $fields]);
+            } else {
+                respond(405, ['error' => 'Method not allowed']);
+            }
+            respond(200, ['review' => absReviewForReviewer($pdo, absOwnReview($pdo, (int)$review['id'], (int)$user['userId']) ?? $review, $event)]);
+        }
+
         // --------------------------- Administration ----------------------------------
+        // Super administrators see every event; chairs and event administrators see the
+        // events they hold a role in. Only super administrators create events.
         if ($route === 'abstracts/admin/events' && $method === 'GET') {
             $user = auth($config);
-            requireSuperAdmin($user, $config);
-            respond(200, ['events' => absEventsList($pdo), 'defaults' => absDefaultSettings(),
+            requireModule('absChairEvents', 'lib/abstracts-review.php');
+            $events = absChairEvents($pdo, $user, $config);
+            if (!$events && !isSuperAdmin($user, $config)) respond(403, ['error' => 'You do not chair or administer any conference.']);
+            foreach ($events as &$e) $e['access'] = absAccess($pdo, $user, $config, $e['id']);
+            unset($e);
+            respond(200, ['events' => $events, 'defaults' => absDefaultSettings(), 'canCreate' => isSuperAdmin($user, $config),
                           'timezones' => DateTimeZone::listIdentifiers()]);
         }
 
@@ -4372,44 +4461,179 @@ Respiratory Society of Kenya");
             respond(201, ['event' => $event]);
         }
 
-        if (preg_match('#^abstracts/admin/events/(\d+)(/abstracts|/audit)?$#', $route, $m)) {
+        if (preg_match('#^abstracts/admin/events/(\d+)(?:/([a-z-]+))?(?:/(\d+))?(?:/([a-z]+))?$#', $route, $m)) {
             $user = auth($config);
+            requireModule('absAccess', 'lib/abstracts-review.php');
             $eventId = (int)$m[1];
-            if (!absIsEventAdmin($pdo, $user, $config, $eventId)) respond(403, ['error' => 'You do not administer this event.']);
             $event = absEventRow($pdo, $eventId);
             if (!$event) respond(404, ['error' => 'No such event.']);
+            $access = absAccess($pdo, $user, $config, $eventId);
+            if (!$access['chair']) respond(403, ['error' => 'You do not chair or administer this event.']);
             $sub = $m[2] ?? '';
-            if ($sub === '' && $method === 'GET') respond(200, ['event' => absEventShape($pdo, $event, true)]);
+            $itemId = isset($m[3]) ? (int)$m[3] : null;
+            $verb = $m[4] ?? '';
+            $me = (int)$user['userId'];
+            $needAdmin = function () use ($access) { if (!$access['admin']) respond(403, ['error' => 'Only an event administrator can do that.']); };
+            $needProgramme = function () use ($access) { if (!$access['programme']) respond(403, ['error' => 'Only the programme chair can do that.']); };
+
+            if ($sub === '' && $method === 'GET') respond(200, ['event' => absEventShape($pdo, $event, true), 'access' => $access]);
             if ($sub === '' && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
-                [$saved, $error] = absEventSave($pdo, $eventId, input(), (int)$user['userId']);
+                $needAdmin();
+                [$saved, $error] = absEventSave($pdo, $eventId, input(), $me);
                 if ($error) respond(400, ['error' => $error]);
                 respond(200, ['event' => $saved]);
             }
-            if ($sub === '/abstracts' && $method === 'GET') respond(200, absAdminList($pdo, $event));
-            if ($sub === '/audit' && $method === 'GET') respond(200, ['audit' => absAuditFor($pdo, $eventId, null)]);
-            respond(405, ['error' => 'Method not allowed']);
+            if ($sub === 'abstracts' && $method === 'GET') {
+                $list = absAdminList($pdo, $event);
+                if (!$access['programme']) {
+                    $ids = $access['trackIds'];
+                    $trackOf = $pdo->prepare('SELECT id, track_id FROM abs_abstracts WHERE event_id = ?');
+                    $trackOf->execute([$eventId]);
+                    $map = array_column($trackOf->fetchAll(), 'track_id', 'id');
+                    $list['abstracts'] = array_values(array_filter($list['abstracts'], fn($a) => in_array((int)($map[$a['id']] ?? 0), $ids, true)));
+                    $list['counts'] = array_fill_keys(ABS_STATUSES, 0);
+                    foreach ($list['abstracts'] as $a) $list['counts'][$a['status']]++;
+                }
+                respond(200, $list);
+            }
+            if ($sub === 'audit' && $method === 'GET') { $needProgramme(); respond(200, ['audit' => absAuditFor($pdo, $eventId, null)]); }
+
+            // Roles (administrators).
+            if ($sub === 'roles' && $method === 'GET') respond(200, ['roles' => absRolesList($pdo, $eventId)]);
+            if ($sub === 'roles' && $method === 'POST' && !$itemId) {
+                $needAdmin();
+                $data = input();
+                $error = absRoleGrant($pdo, $eventId, (string)($data['email'] ?? ''), (string)($data['role'] ?? ''),
+                                      isset($data['trackId']) ? (int)$data['trackId'] : null, $me);
+                if ($error) respond(400, ['error' => $error]);
+                respond(200, ['roles' => absRolesList($pdo, $eventId)]);
+            }
+            if ($sub === 'roles' && $itemId && $verb === 'revoke' && $method === 'POST') {
+                $needAdmin();
+                if ($error = absRoleRevoke($pdo, $eventId, $itemId, $me)) respond(400, ['error' => $error]);
+                respond(200, ['roles' => absRolesList($pdo, $eventId)]);
+            }
+
+            // Reviewers and invitations (any chair).
+            if ($sub === 'reviewers' && $method === 'GET') {
+                respond(200, ['reviewers' => absReviewersList($pdo, $event), 'invitations' => absInvitationsList($pdo, $eventId)]);
+            }
+            if ($sub === 'invitations' && $method === 'POST' && !$itemId) {
+                $data = input();
+                $emails = preg_split('/[\s,;]+/', strtolower((string)($data['emails'] ?? ''))) ?: [];
+                $emails = array_values(array_unique(array_filter($emails)));
+                if (!$emails) respond(400, ['error' => 'Enter at least one email address.']);
+                if (count($emails) > 100) respond(400, ['error' => 'Invite up to 100 people at a time.']);
+                $errors = [];
+                $sent = 0;
+                foreach ($emails as $email) {
+                    $error = absInvite($pdo, $config, $event, $email, count($emails) === 1 ? (string)($data['name'] ?? '') : '', (string)($data['message'] ?? ''), $me);
+                    $error ? $errors[] = $error : $sent++;
+                }
+                respond(200, ['sent' => $sent, 'errors' => $errors, 'invitations' => absInvitationsList($pdo, $eventId)]);
+            }
+            if ($sub === 'invitations' && $itemId && in_array($verb, ['resend', 'revoke'], true) && $method === 'POST') {
+                $inv = $pdo->prepare('SELECT * FROM abs_invitations WHERE id = ? AND event_id = ?');
+                $inv->execute([$itemId, $eventId]);
+                $row = $inv->fetch();
+                if (!$row || $row['status'] !== 'pending') respond(400, ['error' => 'That invitation is no longer pending.']);
+                if ($verb === 'revoke') {
+                    $pdo->prepare("UPDATE abs_invitations SET status = 'revoked', responded_at = NOW() WHERE id = ?")->execute([$itemId]);
+                } elseif ($error = absInvite($pdo, $config, $event, (string)$row['email'], (string)($row['name'] ?? ''), (string)($row['message'] ?? ''), $me)) {
+                    respond(400, ['error' => $error]);
+                }
+                respond(200, ['invitations' => absInvitationsList($pdo, $eventId)]);
+            }
+            if ($sub === 'reinvite' && $method === 'POST') {
+                $from = (int)(input()['fromEventId'] ?? 0);
+                if (!$from || $from === $eventId) respond(400, ['error' => 'Choose an earlier event.']);
+                respond(200, absReinvitePrevious($pdo, $config, $event, $from, $me));
+            }
+
+            // Assignment and progress (chairs, within their tracks).
+            if ($sub === 'board' && $method === 'GET') {
+                $board = absReviewBoard($pdo, $event, $access);
+                $tracks = array_values(array_filter(absTracks($pdo, $eventId), fn($t) => absReaches($access, $t['id'])));
+                respond(200, ['board' => $board, 'reviewers' => absReviewersList($pdo, $event),
+                              'byTrack' => absProgressByTrack($board, $tracks, absSettings($event['settings'])['reviewsPerAbstract']),
+                              'callOpen' => absCallState($event) === 'open', 'reviewOverdue' => absReviewOverdue($event)]);
+            }
+            if ($sub === 'assign' && $method === 'POST') {
+                $data = input();
+                $pairs = is_array($data['pairs'] ?? null) ? $data['pairs'] : [];
+                if (!$pairs && isset($data['reviewerUserId'])) {
+                    foreach ((array)($data['abstractIds'] ?? []) as $aid) $pairs[] = ['abstractId' => (int)$aid, 'reviewerUserId' => (int)$data['reviewerUserId']];
+                }
+                if (!$pairs) respond(400, ['error' => 'Choose abstracts and a reviewer.']);
+                respond(200, absAssignMany($pdo, $config, $event, $access, $pairs, $me));
+            }
+            if ($sub === 'reviews' && $itemId && $verb === 'unassign' && $method === 'POST') {
+                if ($error = absUnassign($pdo, $event, $access, $itemId, $me)) respond(400, ['error' => $error]);
+                respond(200, ['ok' => true]);
+            }
+            if ($sub === 'auto-proposal' && $method === 'GET') respond(200, absAutoProposal($pdo, $event, $access));
+            if ($sub === 'reminders' && $method === 'POST') respond(200, ['sent' => absSendReviewReminders($pdo, $config, $event, true)]);
+
+            // The email queue (administrators).
+            if ($sub === 'emails' && $method === 'GET') {
+                $needAdmin();
+                $q = $pdo->prepare("SELECT id, template, to_email, subject, status, error, attempts, created_at, sent_at FROM abs_emails
+                                    WHERE (event_id = ? OR event_id IS NULL) AND status IN ('queued','sending','failed') ORDER BY id DESC LIMIT 300");
+                $q->execute([$eventId]);
+                $counts = $pdo->prepare("SELECT status, COUNT(*) AS n FROM abs_emails WHERE event_id = ? OR event_id IS NULL GROUP BY status");
+                $counts->execute([$eventId]);
+                respond(200, ['emails' => $q->fetchAll(), 'counts' => array_column($counts->fetchAll(), 'n', 'status'),
+                              'hourlyLimit' => absMailHourlyLimit($config)]);
+            }
+            if ($sub === 'emails' && $itemId && $verb === 'resend' && $method === 'POST') {
+                $needAdmin();
+                if (!absMailResend($pdo, $config, $itemId)) respond(400, ['error' => 'That message cannot be resent.']);
+                respond(200, ['ok' => true]);
+            }
+            if ($sub === 'emails' && $verb === '' && !$itemId && $method === 'POST') {
+                $needAdmin();
+                respond(200, absMailPump($pdo, $config, 50));
+            }
+            respond(404, ['error' => 'Route not found']);
         }
 
         if (preg_match('#^abstracts/admin/abstracts/(\d+)(/reopen)?$#', $route, $m)) {
             $user = auth($config);
+            requireModule('absAccess', 'lib/abstracts-review.php');
             $row = absAbstractRow($pdo, (int)$m[1]);
             if (!$row) respond(404, ['error' => 'No such abstract.']);
-            if (!absIsEventAdmin($pdo, $user, $config, (int)$row['event_id'])) respond(403, ['error' => 'You do not administer this event.']);
+            $access = absAccess($pdo, $user, $config, (int)$row['event_id']);
+            if (!$access['chair'] || !absReaches($access, $row['track_id'])) respond(403, ['error' => 'This abstract is outside what you chair.']);
             $event = absEventRow($pdo, (int)$row['event_id']);
             if (($m[2] ?? '') === '' && $method === 'GET') {
                 $submitter = $pdo->prepare('SELECT email FROM users WHERE id = ?');
                 $submitter->execute([(int)$row['submitter_user_id']]);
-                $emails = $pdo->prepare('SELECT template, to_email, subject, status, error, created_at FROM abs_emails WHERE abstract_id = ? ORDER BY id DESC');
+                $emails = $pdo->prepare('SELECT id, template, to_email, subject, status, error, created_at FROM abs_emails WHERE abstract_id = ? ORDER BY id DESC');
                 $emails->execute([(int)$row['id']]);
+                // The committee sees every review in full, with who wrote it (REV-11 limits
+                // reviewers, not chairs).
+                $reviews = $pdo->prepare("SELECT * FROM abs_reviews WHERE abstract_id = ? AND status <> 'cancelled' ORDER BY id");
+                $reviews->execute([(int)$row['id']]);
+                $reviewList = array_map(fn($r) => [
+                    'id' => (int)$r['id'], 'reviewer' => absPersonName($pdo, (int)$r['reviewer_user_id'])['name'], 'status' => $r['status'],
+                    'scores' => json_decode((string)($r['scores'] ?? '{}'), true) ?: [], 'total' => $r['total'] !== null ? (float)$r['total'] : null,
+                    'commentsAuthors' => $r['comments_authors'], 'commentsCommittee' => $r['comments_committee'],
+                    'recommendation' => $r['recommendation'], 'recommendedType' => $r['recommended_type'], 'declineReason' => $r['decline_reason'],
+                    'submittedAt' => $r['submitted_at'],
+                ], $reviews->fetchAll());
                 respond(200, [
                     'abstract' => absAbstractShape($pdo, $row, $event, true),
                     'submitterEmail' => (string)$submitter->fetchColumn(),
                     'versions' => absVersions($pdo, (int)$row['id']),
                     'audit' => absAuditFor($pdo, null, (int)$row['id']),
                     'emails' => $emails->fetchAll(),
+                    'reviews' => $reviewList,
+                    'criteria' => absSettings($event['settings'])['criteria'],
+                    'access' => $access,
                 ]);
             }
             if (($m[2] ?? '') === '/reopen' && $method === 'POST') {
+                if (!$access['admin']) respond(403, ['error' => 'Only an event administrator can return an abstract for corrections.']);
                 $data = input();
                 $error = absReopen($pdo, $event, $row, (int)$user['userId'], $data['until'] ?? null, trim((string)($data['note'] ?? '')));
                 if ($error) respond(400, ['error' => $error]);

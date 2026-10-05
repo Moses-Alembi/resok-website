@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abstract Review - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1000px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
+    .top img{height:38px;display:block}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top .who{margin-left:auto;font-size:13.5px;color:var(--muted);display:flex;gap:14px;align-items:center}
+    .top .who button{background:none;border:0;color:var(--red);font:inherit;font-weight:600;cursor:pointer}
+    main{max-width:1000px;margin:0 auto;padding:22px 18px 60px;display:flex;flex-direction:column;gap:18px}
+    .panel{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+    h1{font-size:22px}
+    h2{font-size:17px}
+    h3{font-size:14.5px;margin:22px 0 10px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:72ch}
+    label{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}
+    .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+    input[type=text],input[type=number],textarea,select{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+    textarea{resize:vertical;min-height:110px}
+    input:focus,textarea:focus,select:focus{outline:2px solid rgba(8,117,57,.25);border-color:var(--green)}
+    .field{margin-bottom:16px}
+    .field.bad textarea,.field.bad .scale{outline:1px solid var(--red);border-radius:8px}
+    .err{color:var(--red);font-size:12.5px;margin-top:5px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1;min-width:170px}
+    .btn{border:0;border-radius:8px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+    .btn-danger{background:#fff;border:1px solid #f1b9c1;color:var(--red)}
+    .btn-sm{padding:6px 10px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+    .note{border-radius:9px;padding:12px 14px;font-size:14px;margin-top:14px}
+    .note.info{background:#eff8ff;color:#175cd3}.note.ok{background:#ecfdf3;color:#05603a}
+    .note.warn{background:#fff8e6;color:#93370d}.note.bad{background:#fef3f2;color:#b42318}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+    .r-assigned{background:#fff8e6;color:#93370d}.r-in_progress{background:#eff8ff;color:#175cd3}
+    .r-submitted{background:#ecfdf3;color:#05603a}.r-declined{background:#f2f4f7;color:#475467}
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+    .item{border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;cursor:pointer}
+    .item:hover{border-color:var(--green)}
+    .item .t{font-weight:700;font-size:15px}
+    .item .m{color:var(--muted);font-size:13px}
+    .item .go{margin-left:auto;color:var(--green);font-weight:700;font-size:13px}
+    .empty{color:var(--muted);font-size:14px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+    .checks{display:flex;flex-wrap:wrap;gap:8px}
+    .checks label{border:1px solid #d0d5dd;border-radius:8px;padding:8px 12px;display:flex;gap:8px;align-items:center;font-weight:500;cursor:pointer;margin:0}
+    .pv{border:1px solid var(--line);border-radius:10px;padding:20px;background:#fcfdfc}
+    .pv h2{font-size:18px;line-height:1.3}
+    .pv .sec{margin-top:12px}
+    .pv .sec b{display:block;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
+    .pv .sec p{white-space:pre-wrap;font-size:14.5px}
+    .pv .meta{color:var(--muted);font-size:13px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+    .crit{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #f0f2f5}
+    .crit .name{flex:1;min-width:200px;font-weight:600;font-size:14px}
+    .crit .name small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+    .scale{display:flex;gap:6px}
+    .scale label{margin:0;cursor:pointer}
+    .scale input{position:absolute;opacity:0;pointer-events:none}
+    .scale span{display:grid;place-items:center;width:38px;height:38px;border:1px solid #d0d5dd;border-radius:8px;font-weight:700;font-size:14px;background:#fff}
+    .scale input:checked + span{background:var(--green);border-color:var(--green);color:#fff}
+    .scale input:focus-visible + span{outline:2px solid rgba(8,117,57,.4)}
+    .total{font-size:14px;margin-top:10px;color:#344054}
+    .rec{display:flex;gap:10px;flex-wrap:wrap}
+    .rec label{border:1px solid #d0d5dd;border-radius:8px;padding:9px 14px;display:flex;gap:8px;align-items:center;font-weight:500;cursor:pointer;margin:0}
+    .trap{position:absolute;left:-10000px}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="abstracts"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <span class="title">Abstract review</span>
+      <div class="who" id="who"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="vLoading"><div class="empty">Loading&hellip;</div></section>
+
+    <!-- Invitation -->
+    <section class="panel" id="vInvite" hidden>
+      <h1 id="invTitle">Invitation to review</h1>
+      <p class="lede" id="invLede"></p>
+      <div id="invMsg"></div>
+      <div id="invNote"></div>
+      <div id="invSignIn" hidden>
+        <p class="lede" style="margin-top:14px">Sign in to accept. If you do not have a ReSoK account yet, create one first - it is free and you do not need to be a member.</p>
+        <div class="actions">
+          <a class="btn btn-primary" id="invLogin" href="#"><i class="fas fa-right-to-bracket"></i> Sign in</a>
+          <a class="btn btn-ghost" href="abstracts#register" id="invRegister">Create an account</a>
+          <button class="btn btn-danger" type="button" id="invDeclineAnon">Decline the invitation</button>
+        </div>
+      </div>
+      <form id="invForm" hidden novalidate style="margin-top:18px">
+        <p class="lede" id="invAs"></p>
+        <h3>Your details</h3>
+        <div class="row">
+          <div class="field"><label for="iFirst">First name</label><input type="text" id="iFirst"></div>
+          <div class="field"><label for="iLast">Last name</label><input type="text" id="iLast"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="iAff">Affiliation <span class="hint">used to avoid assigning you abstracts from your own institution</span></label><input type="text" id="iAff"></div>
+          <div class="field"><label for="iCountry">Country</label><input type="text" id="iCountry"></div>
+        </div>
+        <h3>What you can review</h3>
+        <div class="field"><label>Tracks</label><div class="checks" id="iTracks"></div></div>
+        <div class="field"><label for="iExpertise">Your expertise <span class="hint">a few topics or keywords; used to match abstracts to you</span></label><input type="text" id="iExpertise" placeholder="e.g. drug-resistant TB, paediatric asthma, spirometry"></div>
+        <div class="field" style="max-width:260px"><label for="iLoad">Most abstracts you can take <span class="hint">optional</span></label><input type="number" id="iLoad" min="1" max="200"></div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Accept and become a reviewer</button>
+          <button class="btn btn-danger" type="button" id="invDecline">Decline</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- My reviews -->
+    <section class="panel" id="vList" hidden>
+      <h1>My reviews</h1>
+      <p class="lede">Abstracts assigned to you. Review is blind: you will not see who wrote an abstract when the event uses double-blind review, and authors never see who reviewed them.</p>
+      <div id="listNote"></div>
+      <div id="listBody"></div>
+    </section>
+
+    <!-- One review -->
+    <section class="panel" id="vReview" hidden>
+      <div class="actions" style="margin-top:0">
+        <button class="btn btn-ghost btn-sm" type="button" id="backBtn"><i class="fas fa-arrow-left"></i> My reviews</button>
+        <span class="pill" id="rvStatus"></span>
+        <span class="hint" id="rvDue"></span>
+      </div>
+      <div id="rvNote"></div>
+      <div class="pv" id="rvAbstract" style="margin-top:16px"></div>
+      <form id="rvForm" novalidate>
+        <h3>Scores <span class="hint" id="scaleHint"></span></h3>
+        <div id="critList"></div>
+        <div class="total" id="totalLine"></div>
+        <h3>Recommendation</h3>
+        <div class="field" data-f="recommendation">
+          <div class="rec">
+            <label><input type="radio" name="rec" value="accept"> Accept</label>
+            <label><input type="radio" name="rec" value="reject"> Reject</label>
+          </div>
+        </div>
+        <div class="field"><label for="rvType">Best presented as</label><select id="rvType"></select></div>
+        <div class="field" data-f="commentsAuthors">
+          <label for="rvAuthors">Comments for the authors <span class="hint">sent to the authors with the decision, without your name</span></label>
+          <textarea id="rvAuthors" rows="5"></textarea>
+        </div>
+        <div class="field">
+          <label for="rvCommittee">Confidential comments for the committee <span class="hint">never shown to authors</span></label>
+          <textarea id="rvCommittee" rows="3"></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" type="button" id="saveBtn"><i class="fas fa-floppy-disk"></i> Save</button>
+          <button class="btn btn-primary" type="button" id="submitBtn"><i class="fas fa-paper-plane"></i> Submit review</button>
+          <button class="btn btn-danger" type="button" id="declineBtn" style="margin-left:auto"><i class="fas fa-hand"></i> Conflict of interest / decline</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Reviewer settings per event -->
+    <section class="panel" id="vSettings" hidden>
+      <h2>My reviewer settings</h2>
+      <div id="setBody"></div>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script>
+  /**
+   * The reviewer's side: answering an invitation, the assigned abstracts, and the review.
+   *
+   * What reaches this page is already anonymised by the server under double-blind review -
+   * the authors are not in the response - so there is nothing here to hide. Text from the
+   * server is written with textContent only.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+    const note = (id, msg, kind) => { const b = el(id); b.textContent = ''; if (msg) b.appendChild(make('div', 'note ' + (kind || 'info'), msg)); };
+    const fmt = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+    const STATUS = { assigned: 'To do', in_progress: 'In progress', submitted: 'Submitted', declined: 'Declined' };
+    const VIEWS = ['Loading', 'Invite', 'List', 'Review', 'Settings'];
+    const show = (...views) => VIEWS.forEach((v) => { el('v' + v).hidden = !views.includes(v); });
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('invite');
+    let mine = null, current = null, dirty = false;
+
+    function renderWho(email) {
+      const who = el('who');
+      who.textContent = '';
+      if (!email) return;
+      who.appendChild(make('span', null, email));
+      const out = make('button', null, 'Sign out');
+      out.type = 'button';
+      out.addEventListener('click', () => window.ResokPortal.logout());
+      who.appendChild(out);
+    }
+
+    // ------------------------------------------------------------- invitation
+    async function openInvite() {
+      let res;
+      try { res = await api('abstracts/invite/' + token); }
+      catch (error) { show('Invite'); el('invLede').textContent = ''; note('invNote', error.message, 'bad'); return; }
+      const inv = res.invitation;
+      renderWho(res.signedInAs);
+      el('invTitle').textContent = 'Invitation to review: ' + res.event.name;
+      el('invLede').textContent = `The programme committee invites ${inv.name || inv.email} to review abstracts for ${res.event.name}.`
+        + (res.reviewDeadline ? ' Reviews are due by ' + fmt(res.reviewDeadline) + '.' : '');
+      el('invMsg').textContent = '';
+      if (inv.message) el('invMsg').appendChild(make('div', 'note info', '“' + inv.message + '”'));
+      show('Invite');
+      if (inv.status !== 'pending') {
+        note('invNote', inv.status === 'accepted' ? 'This invitation has been accepted.' : 'This invitation was ' + inv.status + '.', 'warn');
+        if (inv.status === 'accepted' && res.signedInAs) { const a = make('a', 'btn btn-primary', 'Go to my reviews'); a.href = 'abstracts-review'; el('invNote').appendChild(a); }
+        return;
+      }
+      if (!res.signedInAs) {
+        el('invSignIn').hidden = false;
+        el('invLogin').href = 'login?next=' + encodeURIComponent('/resok-portal/public/abstracts-review?invite=' + token);
+        return;
+      }
+      el('invForm').hidden = false;
+      el('invAs').textContent = 'Signed in as ' + res.signedInAs + '.' + (res.signedInAs.toLowerCase() !== inv.email.toLowerCase()
+        ? ' The invitation was sent to ' + inv.email + '; accepting makes this account the reviewer.' : '');
+      const p = res.profile || {};
+      el('iFirst').value = p.firstName || ''; el('iLast').value = p.lastName || '';
+      el('iAff').value = p.affiliation || ''; el('iCountry').value = p.country || 'Kenya';
+      const box = el('iTracks');
+      box.textContent = '';
+      res.event.tracks.forEach((t) => {
+        const l = make('label'); const c = make('input'); c.type = 'checkbox'; c.value = t.id;
+        l.append(c, make('span', null, t.name)); box.appendChild(l);
+      });
+    }
+    el('invForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await post(`abstracts/invite/${token}/accept`, {
+          firstName: el('iFirst').value, lastName: el('iLast').value, affiliation: el('iAff').value, country: el('iCountry').value,
+          tracks: [...el('iTracks').querySelectorAll('input:checked')].map((c) => Number(c.value)),
+          expertise: el('iExpertise').value, maxLoad: el('iLoad').value,
+        });
+        history.replaceState(null, '', 'abstracts-review');
+        await openList('Thank you - you are now a reviewer. Abstracts will appear here when the committee assigns them, and you will get an email.');
+      } catch (error) { note('invNote', error.message, 'bad'); }
+    });
+    const decline = async () => {
+      if (!window.confirm('Decline this invitation?')) return;
+      try { await post(`abstracts/invite/${token}/decline`); note('invNote', 'You have declined. Thank you for letting us know.', 'ok');
+        el('invForm').hidden = true; el('invSignIn').hidden = true; }
+      catch (error) { note('invNote', error.message, 'bad'); }
+    };
+    el('invDecline').addEventListener('click', decline);
+    el('invDeclineAnon').addEventListener('click', decline);
+
+    // ------------------------------------------------------------- list
+    async function openList(flash) {
+      try { mine = await api('abstracts/reviews'); }
+      catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/abstracts-review'); return; }
+        show('List'); note('listNote', error.message, 'bad'); return;
+      }
+      renderWho(mine.email);
+      const body = el('listBody');
+      body.textContent = '';
+      if (!mine.events.length) {
+        body.appendChild(make('div', 'empty', 'You are not a reviewer for any current conference. If you were invited, open the link in the invitation email.'));
+      }
+      mine.events.forEach((ev) => {
+        const items = mine.reviews.filter((r) => r.eventId === ev.id);
+        const open = items.filter((r) => r.status === 'assigned' || r.status === 'in_progress').length;
+        body.appendChild(make('h3', null, `${ev.name} - ${open} to review, ${items.filter((r) => r.status === 'submitted').length} submitted`));
+        const list = make('div', 'list');
+        if (!items.length) list.appendChild(make('div', 'empty', 'Nothing assigned to you yet.'));
+        items.forEach((r) => {
+          const item = make('div', 'item');
+          item.tabIndex = 0;
+          const txt = make('div');
+          txt.appendChild(make('div', 't', r.title));
+          txt.appendChild(make('div', 'm', [r.reference, r.trackName, r.reviewDeadline && 'Due ' + fmt(r.reviewDeadline)].filter(Boolean).join(' · ')));
+          const pill = make('span', 'pill r-' + r.status, STATUS[r.status] || r.status);
+          item.append(txt, pill, make('span', 'go', r.status === 'submitted' || r.status === 'declined' ? 'View' : 'Review'));
+          const go = () => openReview(r.id);
+          item.addEventListener('click', go);
+          item.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+          list.appendChild(item);
+        });
+        body.appendChild(list);
+      });
+      renderSettings();
+      note('listNote', flash || '', 'ok');
+      show('List', 'Settings');
+    }
+
+    function renderSettings() {
+      const box = el('setBody');
+      box.textContent = '';
+      mine.events.forEach((ev) => {
+        const wrap = make('div');
+        wrap.appendChild(make('h3', null, ev.name));
+        const checks = make('div', 'checks');
+        ev.tracks.forEach((t) => {
+          const l = make('label'); const c = make('input'); c.type = 'checkbox'; c.value = t.id; c.checked = ev.trackIds.includes(t.id);
+          l.append(c, make('span', null, t.name)); checks.appendChild(l);
+        });
+        wrap.appendChild(checks);
+        const row = make('div', 'row'); row.style.marginTop = '10px';
+        const exp = make('input'); exp.type = 'text'; exp.value = ev.expertise || ''; exp.placeholder = 'Your expertise'; exp.setAttribute('aria-label', 'Expertise');
+        const load = make('input'); load.type = 'number'; load.min = 1; load.value = ev.maxLoad || ''; load.placeholder = 'Max abstracts'; load.setAttribute('aria-label', 'Most abstracts you can take'); load.style.maxWidth = '180px';
+        row.append(exp, load);
+        wrap.appendChild(row);
+        const msg = make('div');
+        const btn = make('button', 'btn btn-ghost btn-sm', 'Save settings'); btn.type = 'button'; btn.style.marginTop = '10px';
+        btn.addEventListener('click', async () => {
+          msg.textContent = '';
+          try {
+            await post('abstracts/reviewer/' + ev.id, { tracks: [...checks.querySelectorAll('input:checked')].map((c) => Number(c.value)), expertise: exp.value, maxLoad: load.value });
+            msg.appendChild(make('div', 'note ok', 'Saved.'));
+          } catch (error) { msg.appendChild(make('div', 'note bad', error.message)); }
+        });
+        wrap.append(btn, msg);
+        box.appendChild(wrap);
+      });
+      el('vSettings').hidden = !mine.events.length;
+    }
+
+    // ------------------------------------------------------------- one review
+    async function openReview(id) {
+      try { current = (await api('abstracts/reviews/' + id)).review; }
+      catch (error) { note('listNote', error.message, 'bad'); return; }
+      renderReview();
+      show('Review');
+      window.scrollTo({ top: 0 });
+    }
+    el('backBtn').addEventListener('click', () => { if (dirty && !window.confirm('Leave without saving your changes?')) return; dirty = false; openList(); });
+
+    function renderReview() {
+      const r = current, a = r.abstract;
+      el('rvStatus').className = 'pill r-' + r.status;
+      el('rvStatus').textContent = STATUS[r.status] || r.status;
+      el('rvDue').textContent = r.reviewDeadline ? 'Due ' + fmt(r.reviewDeadline) : '';
+      note('rvNote', !r.editable ? r.lockedReason : (r.status === 'submitted' ? 'Submitted. You can still change it until the review deadline.' : ''), r.editable ? 'ok' : 'warn');
+      const box = el('rvAbstract');
+      box.textContent = '';
+      box.appendChild(make('h2', null, a.title));
+      if (a.authors) box.appendChild(make('div', 'meta', a.authors.map((x) => `${x.name} (${x.affiliation})`).join('; ')));
+      else box.appendChild(make('div', 'meta', 'Authors are hidden: this is a double-blind review.'));
+      if (a.sections) Object.entries(a.sections).forEach(([h, t]) => { const s = make('div', 'sec'); s.append(make('b', null, h), make('p', null, t)); box.appendChild(s); });
+      else { const s = make('div', 'sec'); s.appendChild(make('p', null, a.body)); box.appendChild(s); }
+      box.appendChild(make('div', 'meta', `${a.reference} · Track: ${a.trackName || '—'} · Author's preference: ${a.preferredType || '—'} · Keywords: ${a.keywords.join(', ')}`));
+
+      el('scaleHint').textContent = `1 (poor) to ${r.scaleMax} (excellent)`;
+      const crit = el('critList');
+      crit.textContent = '';
+      r.criteria.forEach((c) => {
+        const row = make('div', 'crit field');
+        row.dataset.f = 'score:' + c.key;
+        const name = make('div', 'name', c.label);
+        if (c.weight !== 1) name.appendChild(make('small', null, `weight ${c.weight}`));
+        const scale = make('div', 'scale');
+        scale.setAttribute('role', 'radiogroup');
+        scale.setAttribute('aria-label', c.label);
+        for (let i = 1; i <= r.scaleMax; i++) {
+          const l = make('label'); const inp = make('input'); inp.type = 'radio'; inp.name = 'c_' + c.key; inp.value = i;
+          inp.checked = Number(r.review.scores[c.key]) === i;
+          inp.setAttribute('aria-label', `${c.label}: ${i}`);
+          l.append(inp, make('span', null, String(i)));
+          scale.appendChild(l);
+        }
+        row.append(name, scale);
+        crit.appendChild(row);
+      });
+      document.querySelectorAll('input[name="rec"]').forEach((x) => { x.checked = x.value === r.review.recommendation; });
+      const type = el('rvType');
+      type.textContent = '';
+      type.appendChild(make('option', null, 'No preference')).value = '';
+      Object.entries(r.presentationTypes).forEach(([k, v]) => { const o = make('option', null, v); o.value = k; type.appendChild(o); });
+      type.value = r.review.recommendedType || '';
+      el('rvAuthors').value = r.review.commentsAuthors;
+      el('rvCommittee').value = r.review.commentsCommittee;
+      el('rvForm').querySelectorAll('input,textarea,select,button').forEach((x) => { x.disabled = !r.editable; });
+      el('declineBtn').hidden = r.status === 'submitted' || r.status === 'declined';
+      el('saveBtn').hidden = r.status === 'submitted';
+      el('submitBtn').textContent = '';
+      el('submitBtn').append(make('i', 'fas fa-paper-plane'), r.status === 'submitted' ? ' Save changes' : ' Submit review');
+      clearErrors();
+      updateTotal();
+      dirty = false;
+    }
+
+    function collect() {
+      const scores = {};
+      current.criteria.forEach((c) => { const x = document.querySelector(`input[name="c_${c.key}"]:checked`); if (x) scores[c.key] = Number(x.value); });
+      return { scores, recommendation: (document.querySelector('input[name="rec"]:checked') || {}).value || null,
+               recommendedType: el('rvType').value || null, commentsAuthors: el('rvAuthors').value, commentsCommittee: el('rvCommittee').value };
+    }
+    function updateTotal() {
+      const { scores } = collect();
+      let sum = 0, w = 0;
+      current.criteria.forEach((c) => { if (scores[c.key]) { sum += scores[c.key] * c.weight; w += c.weight; } });
+      const done = Object.keys(scores).length === current.criteria.length;
+      el('totalLine').textContent = done && w ? `Overall: ${(sum / w).toFixed(2)} out of ${current.scaleMax}` : `${Object.keys(scores).length} of ${current.criteria.length} criteria scored`;
+    }
+    el('rvForm').addEventListener('change', () => { dirty = true; updateTotal(); });
+    el('rvForm').addEventListener('input', () => { dirty = true; });
+    function clearErrors() { document.querySelectorAll('#rvForm .bad').forEach((f) => f.classList.remove('bad')); document.querySelectorAll('#rvForm .err').forEach((e) => e.remove()); }
+    function showErrors(fields) {
+      clearErrors();
+      Object.entries(fields || {}).forEach(([k, m]) => { const f = document.querySelector(`#rvForm [data-f="${CSS.escape(k)}"]`); if (f) { f.classList.add('bad'); f.appendChild(make('div', 'err', m)); } });
+    }
+    async function send(submit) {
+      try {
+        const res = await post('abstracts/reviews/' + current.id + (submit ? '/submit' : ''), collect());
+        current = res.review;
+        renderReview();
+        note('rvNote', submit ? 'Review submitted. Thank you.' : 'Saved. Submit it when you are ready.', 'ok');
+      } catch (error) { note('rvNote', error.message, 'bad'); showErrors(error.payload && error.payload.fields); }
+    }
+    el('saveBtn').addEventListener('click', () => send(false));
+    el('submitBtn').addEventListener('click', () => send(true));
+    el('declineBtn').addEventListener('click', async () => {
+      const reason = window.prompt('Why are you declining this abstract? For example: "I know the authors’ work - conflict of interest". It will be reassigned.', '');
+      if (reason === null) return;
+      try {
+        const res = await post('abstracts/reviews/' + current.id + '/decline', { reason });
+        current = res.review; renderReview(); note('rvNote', 'Declined. The committee will reassign it.', 'ok');
+      } catch (error) { note('rvNote', error.message, 'bad'); }
+    });
+    window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+    show('Loading');
+    if (token) openInvite(); else openList();
+  })();
+  </script>
+</body>
+</html>

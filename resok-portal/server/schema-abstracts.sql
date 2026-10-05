@@ -1,4 +1,4 @@
--- Abstract submission (KISLHC): tables for lib/abstracts.php.
+-- Abstract submission (KISLHC): tables for lib/abstracts.php and lib/abstracts-review.php.
 --
 -- The module creates these itself on first use; this file is for the admin Migrations page
 -- or phpMyAdmin when the database user cannot CREATE. Keep it in step with abstractsSchema().
@@ -137,10 +137,66 @@ CREATE TABLE IF NOT EXISTS abs_emails (
     template VARCHAR(40) NOT NULL,
     to_email VARCHAR(190) NOT NULL,
     subject VARCHAR(300) NOT NULL,
-    status ENUM('sent','failed') NOT NULL,
+    status ENUM('queued','sending','sent','failed') NOT NULL DEFAULT 'queued',
     error VARCHAR(500) NULL,
+    text_body MEDIUMTEXT NULL,
+    html_body MEDIUMTEXT NULL,
+    attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    dedupe_key VARCHAR(160) NULL,
+    sent_at DATETIME NULL,
+    next_attempt_at DATETIME NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    UNIQUE KEY abs_emails_dedupe (dedupe_key),
+    KEY abs_emails_queue (status, id),
     KEY abs_emails_abstract (abstract_id),
     KEY abs_emails_event (event_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS abs_reviewers (
+    event_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    tracks TEXT NULL,
+    expertise VARCHAR(500) NULL,
+    max_load SMALLINT UNSIGNED NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (event_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS abs_invitations (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    event_id INT UNSIGNED NOT NULL,
+    email VARCHAR(190) NOT NULL,
+    name VARCHAR(160) NULL,
+    token_hash CHAR(64) NOT NULL,
+    status ENUM('pending','accepted','declined','revoked') NOT NULL DEFAULT 'pending',
+    invited_by INT UNSIGNED NULL,
+    user_id INT UNSIGNED NULL,
+    message VARCHAR(1000) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    responded_at DATETIME NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY abs_invitations_token (token_hash),
+    KEY abs_invitations_event (event_id, email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS abs_reviews (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    abstract_id INT UNSIGNED NOT NULL,
+    reviewer_user_id INT UNSIGNED NOT NULL,
+    status ENUM('assigned','in_progress','submitted','declined','cancelled') NOT NULL DEFAULT 'assigned',
+    scores TEXT NULL,
+    total DECIMAL(5,2) NULL,
+    comments_authors TEXT NULL,
+    comments_committee TEXT NULL,
+    recommendation VARCHAR(20) NULL,
+    recommended_type VARCHAR(30) NULL,
+    decline_reason VARCHAR(500) NULL,
+    assigned_by INT UNSIGNED NULL,
+    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    submitted_at DATETIME NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY abs_reviews_pair (abstract_id, reviewer_user_id),
+    KEY abs_reviews_reviewer (reviewer_user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

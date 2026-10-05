@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'google-signin', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -330,6 +330,84 @@ function issueAuthCookie(string $token): void {
         'secure' => requestIsSecure(),
         'httponly' => true,
         'samesite' => 'Lax'
+    ]);
+}
+
+/**
+ * Everything after the first factor has passed - a correct password, or a verified Google
+ * token: the second factor if the account has one, then the session cookie and the answer
+ * the login page uses to decide where to go. One function, so every way in goes through the
+ * same two-factor check.
+ *
+ * $user needs id, email, role, membership_status, membership_id and cpd_points.
+ *
+ * @return never
+ */
+function completeLogin(PDO $pdo, array $config, array $user): void
+{
+    // Second factor. The password is only the first step for anyone whose account can
+    // reach member data; the challenge token proves this step passed and nothing more.
+    //
+    // Read separately rather than joined into the login query. That query must work on a
+    // database where the mfa_ columns were never added - if it names a column that does
+    // not exist, the SELECT fails and nobody can log in at all, which is how this broke.
+    $mfaEnabled = false;
+    if (mfaEnsureColumns($pdo)) {
+        try {
+            $mfaStmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
+            $mfaStmt->execute([(int)$user['id']]);
+            $mfaEnabled = (bool)(int)($mfaStmt->fetch()['mfa_enabled'] ?? 0);
+        } catch (Throwable $e) {
+            error_log('Could not read two-factor state: ' . $e->getMessage());
+        }
+    }
+    if ($mfaEnabled) {
+        // Refuse rather than wave them through: this member enrolled precisely so that
+        // a password alone would not be enough.
+        requireModule('mfaIssueChallenge', 'lib/mfa.php');
+        securityLog($pdo, $config, 'mfa_challenge_issued', 'info', 'login', null, (int)$user['id']);
+        respond(200, [
+            'mfaRequired' => true,
+            'challenge' => mfaIssueChallenge($config, (int)$user['id']),
+            'message' => 'Enter the 6-digit code from your authenticator app.',
+        ]);
+    }
+    if (mfaRequiredForRole((string)$user['role'])) {
+        // Not a refusal: an admin who has not enrolled yet still gets in, but the portal
+        // is told to make them set it up. Locking them out of their own site would be a
+        // worse outcome than a short window where the control is pending.
+        securityLog($pdo, $config, 'mfa_missing_privileged_login', 'warning', 'login',
+            'Privileged account signed in without two-factor enabled', (int)$user['id']);
+    }
+    $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
+    issueAuthCookie($loginToken);
+    // A non-member who signed up to submit an abstract, and never joined the Academy,
+    // is sent to their abstracts rather than to an Academy they did not ask for.
+    $isAuthor = false;
+    if ($user['role'] === 'member' && $user['membership_status'] === null) {
+        try {
+            $kind = $pdo->prepare('SELECT (SELECT COUNT(*) FROM abs_profiles WHERE user_id = ?) AS author,
+                                          (SELECT COUNT(*) FROM academy_learners WHERE user_id = ?) AS learner');
+            $kind->execute([(int)$user['id'], (int)$user['id']]);
+            $k = $kind->fetch();
+            $isAuthor = (int)$k['author'] > 0 && (int)$k['learner'] === 0;
+        } catch (Throwable $kindError) {
+            $isAuthor = false;
+        }
+    }
+    respond(200, [
+        'token' => $loginToken,
+        'user' => [
+            'id' => (int)$user['id'],
+            // A member account with no membership record is an Academy learner.
+            'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
+            'isAuthor' => $isAuthor,
+            'email' => $user['email'],
+            'role' => $user['role'],
+            'membershipStatus' => $user['membership_status'],
+            'membershipId' => $user['membership_id'],
+            'cpdPoints' => (int)($user['cpd_points'] ?? 0)
+        ]
     ]);
 }
 
@@ -1703,70 +1781,71 @@ Respiratory Society of Kenya");
         if (!$user['email_verified']) respond(403, ['error' => 'Please verify your email before logging in']);
         authThrottleSuccess($pdo, $config, $loginEmail);
 
-        // Second factor. The password is only the first step for anyone whose account can
-        // reach member data; the challenge token proves this step passed and nothing more.
-        //
-        // Read separately rather than joined into the query above. That query must work on a
-        // database where the mfa_ columns were never added - if it names a column that does
-        // not exist, the SELECT fails and nobody can log in at all, which is how this broke.
-        $mfaEnabled = false;
-        if (mfaEnsureColumns($pdo)) {
-            try {
-                $mfaStmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
-                $mfaStmt->execute([(int)$user['id']]);
-                $mfaEnabled = (bool)(int)($mfaStmt->fetch()['mfa_enabled'] ?? 0);
-            } catch (Throwable $e) {
-                error_log('Could not read two-factor state: ' . $e->getMessage());
+        completeLogin($pdo, $config, $user);
+    }
+
+    // Which sign-in options the pages should offer. Public: the Google client ID is not a
+    // secret, it is printed into Google's button on every page that shows it.
+    if ($route === 'auth/providers' && $method === 'GET') {
+        respond(200, ['google' => function_exists('googleSignInEnabled') && googleSignInEnabled($config) ? googleClientId($config) : null]);
+    }
+
+    // "Continue with Google" (lib/google-signin.php). An existing account is signed in -
+    // matched by the email address Google has verified, so this is no weaker than the
+    // password-reset email, and the account's second factor still applies. With purpose
+    // "abstracts", someone with no account gets an author account (ACC-1), like the form on
+    // the abstracts page; anywhere else they are told to register first.
+    if ($route === 'auth/google' && $method === 'POST') {
+        if (!function_exists('googleSignInEnabled') || !googleSignInEnabled($config)) {
+            respond(404, ['error' => 'Google sign-in is not available.']);
+        }
+        $data = input();
+        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+        throttleCheck($pdo, $config, 'google_login', $ip);
+        $claims = googleVerifyIdToken($config, (string)($data['credential'] ?? ''), $why);
+        if (!$claims) {
+            throttleFailure($pdo, $config, 'google_login', $ip);
+            securityLog($pdo, $config, 'google_login_rejected', 'warning', 'login', 'Google token rejected: ' . $why);
+            respond(401, ['error' => 'Google sign-in did not work. Please try again, or sign in with your password.']);
+        }
+        throttleSuccess($pdo, $config, 'google_login', $ip);
+        $email = $claims['email'];
+        $find = $pdo->prepare('SELECT u.id, u.email, u.email_verified, u.role, mp.membership_status, mp.membership_id, mp.cpd_points
+                               FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE LOWER(u.email) = ? LIMIT 1');
+        $find->execute([$email]);
+        $user = $find->fetch();
+
+        if (!$user) {
+            if (($data['purpose'] ?? '') !== 'abstracts' || !function_exists('absProfileSave')) {
+                respond(404, ['error' => "There is no ReSoK account for {$email}. Members register through the membership form; "
+                    . 'to submit an abstract, use "Continue with Google" on the abstract submission page.', 'noAccount' => true]);
             }
-        }
-        if ($mfaEnabled) {
-            // Refuse rather than wave them through: this member enrolled precisely so that
-            // a password alone would not be enough.
-            requireModule('mfaIssueChallenge', 'lib/mfa.php');
-            securityLog($pdo, $config, 'mfa_challenge_issued', 'info', 'login', null, (int)$user['id']);
-            respond(200, [
-                'mfaRequired' => true,
-                'challenge' => mfaIssueChallenge($config, (int)$user['id']),
-                'message' => 'Enter the 6-digit code from your authenticator app.',
-            ]);
-        }
-        if (mfaRequiredForRole((string)$user['role'])) {
-            // Not a refusal: an admin who has not enrolled yet still gets in, but the portal
-            // is told to make them set it up. Locking them out of their own site would be a
-            // worse outcome than a short window where the control is pending.
-            securityLog($pdo, $config, 'mfa_missing_privileged_login', 'warning', 'login',
-                'Privileged account signed in without two-factor enabled', (int)$user['id']);
-        }
-        $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
-        issueAuthCookie($loginToken);
-        // A non-member who signed up to submit an abstract, and never joined the Academy,
-        // is sent to their abstracts rather than to an Academy they did not ask for.
-        $isAuthor = false;
-        if ($user['role'] === 'member' && $user['membership_status'] === null) {
+            abstractsEnsureTables($pdo);
+            $pdo->beginTransaction();
             try {
-                $kind = $pdo->prepare('SELECT (SELECT COUNT(*) FROM abs_profiles WHERE user_id = ?) AS author,
-                                              (SELECT COUNT(*) FROM academy_learners WHERE user_id = ?) AS learner');
-                $kind->execute([(int)$user['id'], (int)$user['id']]);
-                $k = $kind->fetch();
-                $isAuthor = (int)$k['author'] > 0 && (int)$k['learner'] === 0;
-            } catch (Throwable $kindError) {
-                $isAuthor = false;
+                // No usable password: random, and never shown. "Forgot password" sets one if
+                // they ever want to sign in without Google.
+                $pdo->prepare('INSERT INTO users (email, password_hash, email_verified, role, verification_token) VALUES (?, ?, 1, "member", NULL)')
+                    ->execute([$email, password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT)]);
+                $userId = (int)$pdo->lastInsertId();
+                // The name from Google; affiliation and country are asked for on the abstracts page.
+                $first = mb_substr($claims['given_name'] !== '' ? $claims['given_name'] : $claims['name'], 0, 80);
+                $pdo->prepare("INSERT INTO abs_profiles (user_id, first_name, last_name, affiliation, country) VALUES (?, ?, ?, '', '')")
+                    ->execute([$userId, $first, mb_substr($claims['family_name'], 0, 80)]);
+                $pdo->commit();
+            } catch (Throwable $googleError) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $googleError;
             }
+            securityLog($pdo, $config, 'author_registered', 'info', 'register', 'Signed up with Google', $userId);
+            $find->execute([$email]);
+            $user = $find->fetch();
+        } elseif (!(int)$user['email_verified']) {
+            // Google has just proved they own the address, which is all verification asks.
+            $pdo->prepare('UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?')->execute([(int)$user['id']]);
         }
-        respond(200, [
-            'token' => $loginToken,
-            'user' => [
-                'id' => (int)$user['id'],
-                // A member account with no membership record is an Academy learner.
-                'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
-                'isAuthor' => $isAuthor,
-                'email' => $user['email'],
-                'role' => $user['role'],
-                'membershipStatus' => $user['membership_status'],
-                'membershipId' => $user['membership_id'],
-                'cpdPoints' => (int)($user['cpd_points'] ?? 0)
-            ]
-        ]);
+        securityLog($pdo, $config, 'google_login', 'info', 'login', null, (int)$user['id']);
+        completeLogin($pdo, $config, $user);
     }
 
     // Second factor: exchange a challenge token plus a code for a session.
@@ -4341,6 +4420,48 @@ Respiratory Society of Kenya");
             [$id, $error] = absCreateDraft($pdo, $event, (int)$user['userId']);
             if ($error) respond(400, ['error' => $error]);
             respond(201, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, $id), $event)]);
+        }
+
+        // Figures (SUB-10, lib/abstracts-figures.php). The image itself, for anyone who may
+        // read the abstract; a 404 for everyone else, so a guessed id learns nothing.
+        if (preg_match('#^abstracts/figures/(\d+)$#', $route, $m) && $method === 'GET') {
+            requireModule('absFigureSend', 'lib/abstracts-figures.php');
+            $user = auth($config);
+            $figure = absFigureRow($pdo, (int)$m[1]);
+            $abstract = $figure ? absAbstractRow($pdo, (int)$figure['abstract_id']) : null;
+            if (!$abstract || !absFigureVisible($pdo, $user, $config, $abstract)) respond(404, ['error' => 'Figure not found.']);
+            absFigureSend($config, $figure, $abstract['reference']);
+        }
+
+        // Adding, captioning and removing figures: the author, or an administrator working
+        // for them (ADM-4), while the abstract can still be edited.
+        if (preg_match('#^abstracts/(\d+)/figures(?:/(\d+))?$#', $route, $m)) {
+            requireModule('absFigureUpload', 'lib/abstracts-figures.php');
+            $user = auth($config);
+            $row = absOwnAbstract($pdo, (int)$m[1], (int)$user['userId']);
+            if (!$row && function_exists('absAccess')) {
+                $candidate = absAbstractRow($pdo, (int)$m[1]);
+                if ($candidate && absAccess($pdo, $user, $config, (int)$candidate['event_id'])['admin']) $row = $candidate;
+            }
+            if (!$row) respond(404, ['error' => 'No such abstract.']);
+            $event = $absEventOfAbstract($row, $user);
+            $figureId = isset($m[2]) ? (int)$m[2] : 0;
+            if (!$figureId && $method === 'POST') {
+                [$figures, $error] = absFigureUpload($pdo, $config, $event, $row, $_FILES['figure'] ?? [], (string)($_POST['caption'] ?? ''), (int)$user['userId']);
+                if ($error) respond(400, ['error' => $error]);
+                respond(201, ['figures' => $figures]);
+            }
+            if ($figureId && $method === 'POST') {
+                $error = absFigureCaption($pdo, $event, $row, $figureId, (string)(input()['caption'] ?? ''), (int)$user['userId']);
+                if ($error) respond(400, ['error' => $error]);
+                respond(200, ['figures' => absFigures($pdo, (int)$row['id'])]);
+            }
+            if ($figureId && $method === 'DELETE') {
+                $error = absFigureDelete($pdo, $config, $event, $row, $figureId, (int)$user['userId']);
+                if ($error) respond(400, ['error' => $error]);
+                respond(200, ['figures' => absFigures($pdo, (int)$row['id'])]);
+            }
+            respond(405, ['error' => 'Method not allowed']);
         }
 
         if (preg_match('#^abstracts/(\d+)(/submit|/withdraw|/attendance)?$#', $route, $m)) {

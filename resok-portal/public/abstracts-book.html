@@ -33,6 +33,10 @@
     .sec{font-size:13.5px;margin-top:5px;text-align:justify}
     .sec b{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
     .kw{font-size:12.5px;color:var(--muted);margin-top:5px}
+    figure{margin:10px 0 4px;break-inside:avoid}
+    figure img{max-width:100%;max-height:420px;display:block;margin:0 auto}
+    figcaption{font-size:12.5px;margin-top:4px}
+    sup,sub{font-size:.72em;line-height:0}
     .empty{font-family:'Segoe UI',Arial,sans-serif;color:var(--muted);text-align:center;padding:60px}
     @media print{
       body{background:#fff}
@@ -53,8 +57,10 @@
   <div class="book" id="book"><div class="empty">Loading&hellip;</div></div>
 
   <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script src="js/abstract-text.js?v=20261005-phase4"></script>
   <script>
-  // The abstract book (ADM-7), laid out for printing. Text is written with textContent only.
+  // The abstract book (ADM-7), laid out for printing. Text is written with textContent only;
+  // titles and abstract text get their italics and superscripts from js/abstract-text.js.
   (async () => {
     const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
     const box = document.getElementById('book');
@@ -84,7 +90,7 @@
       t.abstracts.forEach((a) => {
         if (a.typeLabel !== type) { type = a.typeLabel; sec.appendChild(make('div', 'type', type + 's')); }
         const art = make('article', 'abs');
-        art.appendChild(make('h3', null, a.title));
+        art.appendChild(window.AbsText.make('h3', null, a.title));
         art.appendChild(make('div', 'ref', a.reference));
         const affs = [];
         const aut = make('div', 'aut');
@@ -97,8 +103,12 @@
         });
         art.appendChild(aut);
         affs.forEach((f, i) => art.appendChild(make('div', 'aff', `${i + 1} ${f}`)));
-        if (a.sections) Object.entries(a.sections).forEach(([h, txt]) => { const p = make('p', 'sec'); p.append(make('b', null, h + ': '), document.createTextNode(txt)); art.appendChild(p); });
-        else art.appendChild(make('p', 'sec', a.body));
+        if (a.sections) Object.entries(a.sections).forEach(([h, txt]) => { const p = make('p', 'sec'); p.append(make('b', null, h + ': '), window.AbsText.make('span', null, txt)); art.appendChild(p); });
+        else art.appendChild(window.AbsText.make('p', 'sec', a.body));
+        (a.figures || []).forEach((f, i) => {
+          const fig = make('figure'); const img = make('img'); img.src = f.url; img.alt = 'Figure ' + (i + 1); img.loading = 'lazy';
+          const cap = make('figcaption'); cap.append(make('b', null, `Figure ${i + 1}. `), window.AbsText.make('span', null, f.caption)); fig.append(img, cap); art.appendChild(fig);
+        });
         if (a.keywords.length) art.appendChild(make('p', 'kw', 'Keywords: ' + a.keywords.join(', ')));
         sec.appendChild(art);
       });

@@ -231,3 +231,19 @@ CREATE TABLE IF NOT EXISTS abs_decisions (
     attendance_at DATETIME NULL,
     PRIMARY KEY (abstract_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS abs_figures (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    abstract_id INT UNSIGNED NOT NULL,
+    file VARCHAR(80) NOT NULL,
+    mime VARCHAR(20) NOT NULL,
+    bytes INT UNSIGNED NOT NULL,
+    width SMALLINT UNSIGNED NOT NULL,
+    height SMALLINT UNSIGNED NOT NULL,
+    caption VARCHAR(300) NOT NULL DEFAULT '',
+    sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    uploaded_by INT UNSIGNED NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY abs_figures_abstract (abstract_id, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

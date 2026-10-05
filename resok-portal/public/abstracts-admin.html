@@ -79,6 +79,9 @@
     .pv h2{font-size:18px;line-height:1.3}
     .pv .by{font-size:14px;margin-top:6px}
     .pv .sec{margin-top:12px}
+    .pv figure{margin-top:14px}
+    .pv figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;display:block}
+    .pv figcaption{font-size:13px;margin-top:5px}
     .pv .sec b{display:block;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
     .pv .sec p{white-space:pre-wrap;font-size:14px}
     .log{list-style:none;font-size:13px}
@@ -330,6 +333,7 @@
           <div class="field"><label for="fKwMax">Keywords, maximum</label><input type="number" id="fKwMax" min="1" max="20"></div>
           <div class="field"><label for="fMaxAuthors">Authors per abstract, max</label><input type="number" id="fMaxAuthors" min="1" max="50"></div>
           <div class="field"><label for="fMaxPer">Abstracts per submitter <span class="hint">0 = no limit</span></label><input type="number" id="fMaxPer" min="0" max="50"></div>
+          <div class="field"><label for="fFigures">Figures per abstract <span class="hint">0 = none allowed</span></label><input type="number" id="fFigures" min="0" max="5"></div>
         </div>
         <div class="grid" style="margin-top:14px">
           <div class="field">
@@ -402,6 +406,7 @@
   </main>
 
   <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script src="js/abstract-text.js?v=20261005-phase4"></script>
   <script>
   /**
    * Abstracts administration: event setup (ADM-1..3, ADM-10), the submission list, and one
@@ -534,9 +539,9 @@
       rows.forEach((a) => {
         const tr = make('tr');
         const tick = make('td'); const cb = make('input'); cb.type = 'checkbox'; cb.value = a.id; cb.className = 'boardTick';
-        cb.setAttribute('aria-label', 'Tick ' + (a.reference || a.title)); tick.appendChild(cb); tr.appendChild(tick);
+        cb.setAttribute('aria-label', 'Tick ' + (a.reference || window.AbsText.plain(a.title))); tick.appendChild(cb); tr.appendChild(tick);
         tr.appendChild(make('td', 'mono', a.reference));
-        const title = make('td'); const link = make('a', null, a.title); link.href = '#';
+        const title = make('td'); const link = window.AbsText.make('a', null, a.title); link.href = '#';
         link.addEventListener('click', (e) => { e.preventDefault(); openDetail(a.id); });
         title.appendChild(link); tr.appendChild(title);
         tr.appendChild(make('td', null, a.trackName || '—'));
@@ -758,11 +763,11 @@
       body.textContent = '';
       const q = el('subSearch').value.trim().toLowerCase();
       const rows = list.abstracts.filter((a) => (filter === 'all' || a.status === filter)
-        && (!q || [a.reference, a.title, a.presenter, a.submitterEmail, a.trackName].some((v) => String(v || '').toLowerCase().includes(q))));
+        && (!q || [a.reference, window.AbsText.plain(a.title), a.presenter, a.submitterEmail, a.trackName].some((v) => String(v || '').toLowerCase().includes(q))));
       rows.forEach((a) => {
         const tr = make('tr', 'click');
         tr.appendChild(make('td', 'mono', a.reference || '—'));
-        tr.appendChild(make('td', null, a.title));
+        tr.appendChild(window.AbsText.make('td', null, a.title));
         tr.appendChild(make('td', null, a.trackName || '—'));
         tr.appendChild(make('td', null, a.presenter || '—'));
         tr.appendChild(make('td', null, (current.form.presentationTypes[a.preferredType]) || '—'));
@@ -796,7 +801,7 @@
       note('dNote', a.reopenedUntil && a.status === 'draft' ? 'Returned for corrections;the author may edit until ' + fmt(a.reopenedUntil) + '.' : '', 'warn');
       const box = el('dBox');
       box.textContent = '';
-      box.appendChild(make('h2', null, a.title || 'Untitled draft'));
+      box.appendChild(window.AbsText.make('h2', null, a.title || 'Untitled draft'));
       const by = make('div', 'by');
       a.authors.forEach((x, i) => {
         if (i) by.appendChild(document.createTextNode('; '));
@@ -804,8 +809,12 @@
         by.appendChild(document.createTextNode(` (${x.affiliation || 'no affiliation'}, ${x.email})${x.corresponding ? ' *' : ''}`));
       });
       box.appendChild(by);
-      if (a.sections) Object.entries(a.sections).forEach(([h, t]) => { const s = make('div', 'sec'); s.appendChild(make('b', null, h)); s.appendChild(make('p', null, t || '—')); box.appendChild(s); });
-      else { const s = make('div', 'sec'); s.appendChild(make('p', null, a.body || '—')); box.appendChild(s); }
+      if (a.sections) Object.entries(a.sections).forEach(([h, t]) => { const s = make('div', 'sec'); s.appendChild(make('b', null, h)); s.appendChild(window.AbsText.make('p', null, t || '—')); box.appendChild(s); });
+      else { const s = make('div', 'sec'); s.appendChild(window.AbsText.make('p', null, a.body || '—')); box.appendChild(s); }
+      (a.figures || []).forEach((f, i) => {
+        const fig = make('figure'); const img = make('img'); img.src = f.url; img.alt = 'Figure ' + (i + 1); img.loading = 'lazy';
+          const cap = make('figcaption'); cap.append(make('b', null, `Figure ${i + 1}. `), window.AbsText.make('span', null, f.caption)); fig.append(img, cap); box.appendChild(fig);
+      });
       const meta = make('div', 'sec');
       meta.appendChild(make('p', 'muted', `Track: ${a.trackName || '—'} · Preferred: ${current.form.presentationTypes[a.preferredType] || '—'} · Keywords: ${a.keywords.join(', ') || '—'}`));
       box.appendChild(meta);
@@ -847,7 +856,7 @@
         li.appendChild(make('div', 'when', fmt(m.created_at)));
       }, 'No emails sent.');
       logList('dVersions', detail.versions, (li, v) => {
-        li.appendChild(make('div', null, `Before an edit by ${v.by || 'unknown'}: “${(v.snapshot && v.snapshot.title) || ''}”`));
+        li.appendChild(make('div', null, `Before an edit by ${v.by || 'unknown'}: “${window.AbsText.plain(v.snapshot && v.snapshot.title)}”`));
         li.appendChild(make('div', 'when', fmt(v.savedAt)));
       }, 'Not edited since it was submitted.');
       logList('dAudit', detail.audit, auditLine, 'No activity.');
@@ -871,7 +880,7 @@
     function fillSetup(e) {
       const f = e ? e.form : { titleWords: defaults.titleWords, bodyWords: defaults.bodyWords, keywordsMin: defaults.keywordsMin,
         keywordsMax: defaults.keywordsMax, structured: defaults.structured, sections: defaults.sections, presentationTypes: defaults.presentationTypes,
-        maxAuthors: defaults.maxAuthors, maxPerSubmitter: defaults.maxPerSubmitter, declarations: defaults.declarations };
+        maxAuthors: defaults.maxAuthors, maxPerSubmitter: defaults.maxPerSubmitter, figuresMax: defaults.figuresMax, declarations: defaults.declarations };
       const r = e ? e.review : { blind: defaults.blind, reviewsPerAbstract: defaults.reviewsPerAbstract };
       el('sName').value = e ? e.name : '';
       el('sPrefix').value = e ? e.refPrefix : '';
@@ -885,7 +894,7 @@
       el('sStatus').value = e ? e.status : 'draft';
       el('fTitleW').value = f.titleWords; el('fBodyW').value = f.bodyWords;
       el('fKwMin').value = f.keywordsMin; el('fKwMax').value = f.keywordsMax;
-      el('fMaxAuthors').value = f.maxAuthors; el('fMaxPer').value = f.maxPerSubmitter;
+      el('fMaxAuthors').value = f.maxAuthors; el('fMaxPer').value = f.maxPerSubmitter; el('fFigures').value = f.figuresMax != null ? f.figuresMax : 1;
       el('fStructured').checked = !!f.structured;
       el('fSections').value = f.sections.join(', ');
       document.querySelectorAll('[data-ptype]').forEach((c) => { c.checked = Object.prototype.hasOwnProperty.call(f.presentationTypes, c.dataset.ptype); });
@@ -966,7 +975,7 @@
         form: {
           titleWords: Number(el('fTitleW').value), bodyWords: Number(el('fBodyW').value),
           keywordsMin: Number(el('fKwMin').value), keywordsMax: Number(el('fKwMax').value),
-          maxAuthors: Number(el('fMaxAuthors').value), maxPerSubmitter: Number(el('fMaxPer').value),
+          maxAuthors: Number(el('fMaxAuthors').value), maxPerSubmitter: Number(el('fMaxPer').value), figuresMax: Number(el('fFigures').value),
           structured: el('fStructured').checked,
           sections: el('fSections').value.split(',').map((s) => s.trim()).filter(Boolean),
           presentationTypes, declarations,
@@ -1087,7 +1096,7 @@
         cb.setAttribute('aria-label', 'Tick ' + r.reference); tick.appendChild(cb); tr.appendChild(tick);
         tr.appendChild(make('td', null, r.rank ? '#' + r.rank : '—'));
         tr.appendChild(make('td', 'mono', r.reference));
-        const t = make('td'); const link = make('a', null, r.title); link.href = '#';
+        const t = make('td'); const link = window.AbsText.make('a', null, r.title); link.href = '#';
         link.addEventListener('click', (e) => { e.preventDefault(); openDetail(r.id); });
         t.appendChild(link); if (r.presenter) t.appendChild(make('div', 'muted', r.presenter)); tr.appendChild(t);
         const avg = make('td', null, r.average != null ? String(r.average) : '—');

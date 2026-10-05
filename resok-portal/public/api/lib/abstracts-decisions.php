@@ -475,7 +475,9 @@ function absCsv(array $rows): string
     fwrite($fh, "\xEF\xBB\xBF");
     foreach ($rows as $row) {
         // A cell starting with = + - @ is a formula to a spreadsheet; prefixing it keeps a
-        // submitted title from running as one when the file is opened.
+        // submitted title from running as one when the file is opened. Formatting tokens
+        // (<i> and the like) mean nothing in a spreadsheet, so they go.
+        $row = array_map(static fn($v) => is_string($v) ? absPlain($v) : $v, $row);
         fputcsv($fh, array_map(static fn($v) => is_string($v) && $v !== '' && strpbrk($v[0], '=+-@') !== false ? "'" . $v : $v, $row));
     }
     rewind($fh);
@@ -494,7 +496,7 @@ function absXlsx(array $rows, string $sheetName = 'Sheet1'): string
             $ref = $col($c) . ($r + 1);
             if ($v === null || $v === '') continue;
             if ((is_int($v) || is_float($v)) && $r > 0) $xml .= '<c r="' . $ref . '"><v>' . $v . '</v></c>';
-            else $xml .= '<c r="' . $ref . '" t="inlineStr"' . ($r === 0 ? ' s="1"' : '') . '><is><t xml:space="preserve">' . $esc(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', (string)$v)) . '</t></is></c>';
+            else $xml .= '<c r="' . $ref . '" t="inlineStr"' . ($r === 0 ? ' s="1"' : '') . '><is><t xml:space="preserve">' . $esc(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', absPlain((string)$v))) . '</t></is></c>';
         }
         $xml .= '</row>';
     }
@@ -553,6 +555,7 @@ function absBookData(PDO $pdo, array $eventRow): array
                                                      'presenting' => $x['presenting']], $authors),
             'sections' => $a['sections'] ? json_decode((string)$a['sections'], true) : null,
             'body' => (string)$a['body'], 'keywords' => json_decode((string)($a['keywords'] ?? '[]'), true) ?: [],
+            'figures' => function_exists('absFigures') ? absFigures($pdo, (int)$a['id']) : [],
             'status' => $a['status'],
         ];
     }
@@ -586,12 +589,17 @@ function absBookWordHtml(array $book): string
                 if ($i === false) { $affs[] = $au['affiliation']; $i = count($affs) - 1; }
                 $names[] = ($au['presenting'] ? '<u>' . $h($au['name']) . '</u>' : $h($au['name'])) . '<sup>' . ($i + 1) . '</sup>';
             }
-            $html .= '<h3>' . $h($a['title']) . '</h3><div class="ref">' . $h($a['reference']) . '</div><div class="aut">' . implode(', ', $names) . '</div>';
+            $html .= '<h3>' . absRichHtml($a['title']) . '</h3><div class="ref">' . $h($a['reference']) . '</div><div class="aut">' . implode(', ', $names) . '</div>';
             foreach ($affs as $i => $aff) $html .= '<div class="aff"><sup>' . ($i + 1) . '</sup> ' . $h($aff) . '</div>';
             if (is_array($a['sections'])) {
-                foreach ($a['sections'] as $sh => $st) $html .= '<p class="sec"><b>' . $h($sh) . ':</b> ' . nl2br($h($st)) . '</p>';
+                foreach ($a['sections'] as $sh => $st) $html .= '<p class="sec"><b>' . $h($sh) . ':</b> ' . nl2br(absRichHtml($st)) . '</p>';
             } else {
-                $html .= '<p class="sec">' . nl2br($h($a['body'])) . '</p>';
+                $html .= '<p class="sec">' . nl2br(absRichHtml($a['body'])) . '</p>';
+            }
+            // Word does not reliably show images embedded in an HTML file, so the Word book
+            // names each figure; the printable book page shows the figures themselves.
+            foreach ($a['figures'] ?? [] as $i => $f) {
+                $html .= '<p class="kw"><b>Figure ' . ($i + 1) . ':</b> ' . absRichHtml($f['caption']) . ' <i>(see the online abstract book)</i></p>';
             }
             if ($a['keywords']) $html .= '<p class="kw"><b>Keywords:</b> ' . $h(implode(', ', $a['keywords'])) . '</p>';
         }
@@ -604,7 +612,7 @@ function absAcceptedPublic(PDO $pdo, array $eventRow): array
 {
     $book = absBookData($pdo, $eventRow);
     return array_map(static fn($t) => ['track' => $t['track'], 'abstracts' => array_map(static fn($a) => [
-        'reference' => $a['reference'], 'title' => $a['title'], 'type' => $a['typeLabel'],
+        'reference' => $a['reference'], 'title' => absPlain($a['title']), 'type' => $a['typeLabel'],
         'authors' => implode(', ', array_column($a['authors'], 'name')),
     ], $t['abstracts'])], $book['tracks']);
 }

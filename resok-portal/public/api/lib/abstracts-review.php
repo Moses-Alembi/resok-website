@@ -666,6 +666,7 @@ function absReviewForReviewer(PDO $pdo, array $review, array $eventRow): array
         'sections' => is_array($sections) ? $sections : null, 'body' => is_array($sections) ? null : (string)$a['body'],
         'keywords' => json_decode((string)($a['keywords'] ?? '[]'), true) ?: [],
         'preferredType' => $s['presentationTypes'][$a['preferred_type']] ?? $a['preferred_type'],
+        'figures' => function_exists('absFigures') ? absFigures($pdo, (int)$a['id']) : [],
     ];
     if ($s['blind'] !== 'double') {
         $abstract['authors'] = array_map(static fn($x) => ['name' => trim($x['firstName'] . ' ' . $x['lastName']),

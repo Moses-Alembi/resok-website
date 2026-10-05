@@ -294,6 +294,23 @@ function abstractsSchema(): array
             attendance_at DATETIME NULL,
             PRIMARY KEY (abstract_id)
         )" . $tail,
+        // Figures (SUB-10). The file itself is in upload_dir/abstract-figures under a random
+        // name; see lib/abstracts-figures.php.
+        "CREATE TABLE IF NOT EXISTS abs_figures (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            abstract_id INT UNSIGNED NOT NULL,
+            file VARCHAR(80) NOT NULL,
+            mime VARCHAR(20) NOT NULL,
+            bytes INT UNSIGNED NOT NULL,
+            width SMALLINT UNSIGNED NOT NULL,
+            height SMALLINT UNSIGNED NOT NULL,
+            caption VARCHAR(300) NOT NULL DEFAULT '',
+            sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+            uploaded_by INT UNSIGNED NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY abs_figures_abstract (abstract_id, sort_order)
+        )" . $tail,
     ];
 }
 
@@ -340,6 +357,8 @@ function absDefaultSettings(): array
         'presentationTypes' => ['oral' => 'Oral presentation', 'poster' => 'Poster', 'either' => 'Either'],
         'maxAuthors' => 20,
         'maxPerSubmitter' => 0,
+        // Figures per abstract (SUB-10); 0 turns figure upload off.
+        'figuresMax' => 1,
         'declarations' => [
             ['key' => 'original', 'label' => 'This work is original and has not been published elsewhere.'],
             ['key' => 'consent', 'label' => 'All co-authors have seen this abstract and agree to its submission.'],
@@ -377,6 +396,7 @@ function absSettings(?string $stored): array
     $s['keywordsMax'] = $int($s['keywordsMax'], max(1, $s['keywordsMin']), 20, $defaults['keywordsMax']);
     $s['maxAuthors'] = $int($s['maxAuthors'], 1, 50, $defaults['maxAuthors']);
     $s['maxPerSubmitter'] = $int($s['maxPerSubmitter'], 0, 50, 0);
+    $s['figuresMax'] = $int($s['figuresMax'], 0, 5, $defaults['figuresMax']);
     $s['reviewsPerAbstract'] = $int($s['reviewsPerAbstract'], 1, 5, $defaults['reviewsPerAbstract']);
     $s['structured'] = (bool)$s['structured'];
     $s['blind'] = in_array($s['blind'], ['double', 'single', 'open'], true) ? $s['blind'] : 'double';
@@ -518,6 +538,7 @@ function absEventShape(PDO $pdo, array $row, bool $forAdmin = false): array
             'presentationTypes' => $settings['presentationTypes'],
             'maxAuthors' => $settings['maxAuthors'],
             'maxPerSubmitter' => $settings['maxPerSubmitter'],
+            'figuresMax' => function_exists('absFigures') ? $settings['figuresMax'] : 0,
             'declarations' => $settings['declarations'],
         ],
         'attendanceConfirmBy' => $settings['attendanceConfirmBy'],
@@ -753,7 +774,11 @@ function absProfile(PDO $pdo, int $userId): array
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     if ($row) {
-        return ['complete' => true, 'title' => $row['title'], 'firstName' => $row['first_name'],
+        // Someone who signed up with Google has a profile with their name but nothing else
+        // yet, so a row alone does not mean the details are complete.
+        $complete = trim((string)$row['first_name']) !== '' && trim((string)$row['last_name']) !== ''
+                 && trim((string)$row['affiliation']) !== '' && trim((string)$row['country']) !== '';
+        return ['complete' => $complete, 'title' => $row['title'], 'firstName' => $row['first_name'],
                 'lastName' => $row['last_name'], 'affiliation' => $row['affiliation'],
                 'country' => $row['country'], 'orcid' => $row['orcid']];
     }
@@ -809,10 +834,69 @@ function absProfileSave(PDO $pdo, int $userId, array $data): ?string
 // Abstracts: reading
 // ---------------------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------------------
+// Formatting: italics, superscript and subscript
+// ---------------------------------------------------------------------------------------
+//
+// Scientific writing needs a little formatting: species names in italics, units like m² and
+// CO₂. Titles and abstract text stay plain text in which exactly six tokens are formatting:
+// <i> </i> <sup> </sup> <sub> </sub>. Nothing else is markup, so "p<0.05" or "age <5 years"
+// stays as typed, and there is no HTML to sanitise: a page escapes the text and turns only
+// those exact tokens back into elements. js/abstract-text.js does the same in the browser.
+
+const ABS_RICH_TOKEN = '#<(/?)(i|sup|sub)>#i';
+
+/**
+ * The canonical stored form: tokens in lower case, every opening token closed, closing
+ * tokens without an opening one dropped, and empty pairs removed.
+ */
+function absRichClean(string $text): string
+{
+    $parts = preg_split(ABS_RICH_TOKEN, $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+    if ($parts === false) return $text;
+    $out = '';
+    $open = [];
+    for ($i = 0, $n = count($parts); $i < $n; $i++) {
+        if ($i % 3 === 0) { $out .= $parts[$i]; continue; }
+        $closing = $parts[$i] === '/';
+        $tag = strtolower($parts[++$i]);
+        if (!$closing) {
+            if (in_array($tag, $open, true)) continue; // already inside one: <i><i> means nothing more
+            $open[] = $tag;
+            $out .= '<' . $tag . '>';
+        } elseif (in_array($tag, $open, true)) {
+            // Close everything opened inside it first, so the result always nests.
+            while (($last = array_pop($open)) !== null) {
+                $out .= '</' . $last . '>';
+                if ($last === $tag) break;
+            }
+        }
+    }
+    while (($last = array_pop($open)) !== null) $out .= '</' . $last . '>';
+    do {
+        $before = $out;
+        $out = (string)preg_replace('#<(i|sup|sub)></\1>#', '', $out);
+    } while ($out !== $before);
+    return $out;
+}
+
+/** The text with the formatting tokens removed: for word counts, emails and spreadsheets. */
+function absPlain(?string $text): string
+{
+    return (string)preg_replace(ABS_RICH_TOKEN, '', (string)$text);
+}
+
+/** Escaped HTML with the formatting applied, for documents the server builds (the Word book). */
+function absRichHtml(?string $text): string
+{
+    $escaped = htmlspecialchars(absRichClean((string)$text), ENT_QUOTES, 'UTF-8');
+    return (string)preg_replace('#&lt;(/?)(i|sup|sub)&gt;#', '<$1$2>', $escaped);
+}
+
 /** Words as a reader counts them. The page counts the same way, so the two never disagree. */
 function absWordCount(string $text): int
 {
-    $text = trim($text);
+    $text = trim(absPlain($text));
     if ($text === '') return 0;
     return count(preg_split('/\s+/u', $text) ?: []);
 }
@@ -886,6 +970,7 @@ function absAbstractShape(PDO $pdo, array $row, array $eventRow, bool $forAdmin 
         'preferredType' => $row['preferred_type'],
         'finalType' => $row['final_type'],
         'authors' => absAuthors($pdo, (int)$row['id']),
+        'figures' => function_exists('absFigures') ? absFigures($pdo, (int)$row['id']) : [],
         'declarations' => json_decode((string)($row['declarations'] ?? 'null'), true),
         'submittedAt' => absIso($row['submitted_at'], $zone),
         'withdrawnAt' => absIso($row['withdrawn_at'], $zone),
@@ -948,16 +1033,16 @@ function absMyAbstracts(PDO $pdo, int $userId): array
  *
  * @return array{0: array, 1: array<string,string>} [clean values, errors by field]
  */
-function absValidate(PDO $pdo, array $eventRow, array $data, bool $strict): array
+function absValidate(PDO $pdo, array $eventRow, array $data, bool $strict, ?int $abstractId = null): array
 {
     $s = absSettings($eventRow['settings'] ?? null);
     $errors = [];
     $clean = [];
 
-    $title = trim((string)preg_replace('/\s+/u', ' ', (string)($data['title'] ?? '')));
+    $title = absRichClean(trim((string)preg_replace('/\s+/u', ' ', (string)($data['title'] ?? ''))));
     $clean['title'] = mb_substr($title, 0, 400);
     $titleWords = absWordCount($title);
-    if ($strict && $title === '') $errors['title'] = 'Add a title.';
+    if ($strict && trim(absPlain($title)) === '') $errors['title'] = 'Add a title.';
     elseif ($titleWords > $s['titleWords']) $errors['title'] = "The title is {$titleWords} words; the limit is {$s['titleWords']}.";
 
     // The body: either structured sections or one block of text, counted together.
@@ -967,18 +1052,18 @@ function absValidate(PDO $pdo, array $eventRow, array $data, bool $strict): arra
         $incoming = is_array($data['sections'] ?? null) ? $data['sections'] : [];
         $sections = [];
         foreach ($s['sections'] as $heading) {
-            $text = trim(str_replace("\r\n", "\n", (string)($incoming[$heading] ?? '')));
+            $text = absRichClean(trim(str_replace("\r\n", "\n", (string)($incoming[$heading] ?? ''))));
             $sections[$heading] = mb_substr($text, 0, 20000);
-            if ($strict && $text === '') $errors['section:' . $heading] = "Fill in the {$heading} section.";
+            if ($strict && trim(absPlain($text)) === '') $errors['section:' . $heading] = "Fill in the {$heading} section.";
         }
         $clean['sections'] = $sections;
         $clean['body'] = implode("\n\n", array_map(static fn($h, $t) => $h . ': ' . $t, array_keys($sections), $sections));
         $bodyWords = array_sum(array_map('absWordCount', $sections));
     } else {
-        $body = trim(str_replace("\r\n", "\n", (string)($data['body'] ?? '')));
+        $body = absRichClean(trim(str_replace("\r\n", "\n", (string)($data['body'] ?? ''))));
         $clean['body'] = mb_substr($body, 0, 20000);
         $bodyWords = absWordCount($body);
-        if ($strict && $body === '') $errors['body'] = 'Write the abstract.';
+        if ($strict && trim(absPlain($body)) === '') $errors['body'] = 'Write the abstract.';
     }
     if ($bodyWords > $s['bodyWords']) $errors['body'] = "The abstract is {$bodyWords} words; the limit is {$s['bodyWords']}.";
 
@@ -1049,6 +1134,12 @@ function absValidate(PDO $pdo, array $eventRow, array $data, bool $strict): arra
     }
     $clean['authors'] = $authors;
 
+    // Figures are uploaded on their own, so they are only checked here, never sent.
+    if ($strict && $abstractId && function_exists('absFigureErrors')) {
+        $figureError = absFigureErrors($pdo, $s, $abstractId);
+        if ($figureError) $errors['figures'] = $figureError;
+    }
+
     return [$clean, $errors];
 }
 
@@ -1059,6 +1150,8 @@ function absSnapshot(PDO $pdo, array $row): string
         'title' => $row['title'], 'body' => $row['body'], 'sections' => json_decode((string)($row['sections'] ?? 'null'), true),
         'keywords' => json_decode((string)($row['keywords'] ?? '[]'), true), 'trackId' => $row['track_id'],
         'preferredType' => $row['preferred_type'], 'authors' => absAuthors($pdo, (int)$row['id']),
+        'figures' => function_exists('absFigures') ? array_map(static fn($f) => ['id' => $f['id'], 'caption' => $f['caption']],
+                                                                absFigures($pdo, (int)$row['id'])) : [],
         'status' => $row['status'],
     ], JSON_UNESCAPED_UNICODE);
 }
@@ -1120,7 +1213,7 @@ function absSave(PDO $pdo, array $eventRow, array $row, array $data, int $userId
     [$editable, $why] = absEditable($eventRow, $row);
     if (!$editable) return [false, $why, []];
     $strict = $row['status'] === 'submitted';
-    [$clean, $errors] = absValidate($pdo, $eventRow, $data, $strict);
+    [$clean, $errors] = absValidate($pdo, $eventRow, $data, $strict, (int)$row['id']);
     if ($errors) {
         return [false, $strict ? 'This abstract is already submitted, so every change must still meet the rules.'
                                : 'Some fields need attention before this draft can be saved.', $errors];
@@ -1165,7 +1258,7 @@ function absSubmit(PDO $pdo, array $eventRow, array $row, array $data, int $user
     if (!$editable) return [false, $why, [], false];
     if ($row['status'] !== 'draft') return [false, 'This abstract has already been submitted.', [], false];
 
-    [$clean, $errors] = absValidate($pdo, $eventRow, $data, true);
+    [$clean, $errors] = absValidate($pdo, $eventRow, $data, true, (int)$row['id']);
     $s = absSettings($eventRow['settings'] ?? null);
     $accepted = is_array($data['declarations'] ?? null) ? $data['declarations'] : [];
     foreach ($s['declarations'] as $d) {
@@ -1535,6 +1628,8 @@ function absRender(PDO $pdo, ?int $eventId, string $key, array $vars): array
         $stmt->execute([$eventId, $key]);
         if ($o = $stmt->fetch()) { $subject = $o['subject']; $body = $o['body']; }
     }
+    // Emails are plain text: a title's italics tokens would only show as "<i>".
+    $vars = array_map(static fn($v) => is_string($v) ? absPlain($v) : $v, $vars);
     $fill = static fn(string $s) => preg_replace_callback('/\{\{([a-z_]+)\}\}/', static fn($m) => (string)($vars[$m[1]] ?? ''), $s);
     $subject = trim((string)preg_replace('/\s+/', ' ', $fill($subject)));
     // A line that a merge left empty, where the template line was only fields, goes away.

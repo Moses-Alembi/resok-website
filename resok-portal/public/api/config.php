@@ -64,6 +64,9 @@ return [
     // access to change, and so it needs no schema migration. Comma-separated in the env var.
     'super_admins' => config_list($local, 'super_admins', 'RESOK_SUPER_ADMINS'),
     'cron_secret' => config_value($local, 'cron_secret', 'RESOK_CRON_SECRET', ''),
+    // "Continue with Google" (lib/google-signin.php). The OAuth client ID of a Web application
+    // in Google Cloud Console; empty keeps the button hidden everywhere.
+    'google_client_id' => config_value($local, 'google_client_id', 'RESOK_GOOGLE_CLIENT_ID', ''),
     'portal_base_url' => rtrim((string)config_value($local, 'portal_base_url', 'RESOK_PORTAL_BASE_URL', ''), '/'),
     'mail_from' => config_value($local, 'mail_from', 'RESOK_MAIL_FROM', ''),
 

@@ -66,6 +66,9 @@
     .pv .sec b{display:block;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
     .pv .sec p{white-space:pre-wrap;font-size:14.5px}
     .pv .meta{color:var(--muted);font-size:13px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+    .pv figure{margin-top:14px}
+    .pv figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;display:block;cursor:zoom-in}
+    .pv figcaption{font-size:13px;margin-top:5px}
     .crit{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #f0f2f5}
     .crit .name{flex:1;min-width:200px;font-weight:600;font-size:14px}
     .crit .name small{display:block;font-weight:400;color:var(--muted);font-size:12px}
@@ -182,6 +185,7 @@
   </main>
 
   <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script src="js/abstract-text.js?v=20261005-phase4"></script>
   <script>
   /**
    * The reviewer's side: answering an invitation, the assigned abstracts, and the review.
@@ -295,7 +299,7 @@
           const item = make('div', 'item');
           item.tabIndex = 0;
           const txt = make('div');
-          txt.appendChild(make('div', 't', r.title));
+          txt.appendChild(window.AbsText.make('div', 't', r.title));
           txt.appendChild(make('div', 'm', [r.reference, r.trackName, r.reviewDeadline && 'Due ' + fmt(r.reviewDeadline)].filter(Boolean).join(' · ')));
           const pill = make('span', 'pill r-' + r.status, STATUS[r.status] || r.status);
           item.append(txt, pill, make('span', 'go', r.status === 'submitted' || r.status === 'declined' ? 'View' : 'Review'));
@@ -361,11 +365,17 @@
       note('rvNote', !r.editable ? r.lockedReason : (r.status === 'submitted' ? 'Submitted. You can still change it until the review deadline.' : ''), r.editable ? 'ok' : 'warn');
       const box = el('rvAbstract');
       box.textContent = '';
-      box.appendChild(make('h2', null, a.title));
+      box.appendChild(window.AbsText.make('h2', null, a.title));
       if (a.authors) box.appendChild(make('div', 'meta', a.authors.map((x) => `${x.name} (${x.affiliation})`).join('; ')));
       else box.appendChild(make('div', 'meta', 'Authors are hidden: this is a double-blind review.'));
-      if (a.sections) Object.entries(a.sections).forEach(([h, t]) => { const s = make('div', 'sec'); s.append(make('b', null, h), make('p', null, t)); box.appendChild(s); });
-      else { const s = make('div', 'sec'); s.appendChild(make('p', null, a.body)); box.appendChild(s); }
+      if (a.sections) Object.entries(a.sections).forEach(([h, t]) => { const s = make('div', 'sec'); s.append(make('b', null, h), window.AbsText.make('p', null, t)); box.appendChild(s); });
+      else { const s = make('div', 'sec'); s.appendChild(window.AbsText.make('p', null, a.body)); box.appendChild(s); }
+      // A figure opens full size in a new tab, for reading the detail of a chart.
+      (a.figures || []).forEach((f, i) => {
+        const fig = make('figure'); const img = make('img'); img.src = f.url; img.alt = 'Figure ' + (i + 1); img.loading = 'lazy';
+          const cap = make('figcaption'); cap.append(make('b', null, `Figure ${i + 1}. `), window.AbsText.make('span', null, f.caption)); fig.append(img, cap); img.addEventListener('click', () => window.open(f.url, '_blank', 'noopener'));
+        box.appendChild(fig);
+      });
       box.appendChild(make('div', 'meta', `${a.reference} · Track: ${a.trackName || '—'} · Author's preference: ${a.preferredType || '—'} · Keywords: ${a.keywords.join(', ')}`));
 
       el('scaleHint').textContent = `1 (poor) to ${r.scaleMax} (excellent)`;

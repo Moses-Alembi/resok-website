@@ -53,6 +53,10 @@ return [
     'super_admins' => ['super-admin@resok.org'],
     // Set this and pass ?key=... to cron/renewal-reminders.php if the host only offers URL-triggered cron.
     'cron_secret' => '',
+    // "Continue with Google". Google Cloud Console > APIs & Services > Credentials > Create
+    // OAuth client ID > Web application, with https://www.resok.org (and https://resok.org)
+    // as Authorized JavaScript origins. No redirect URI is needed. Empty hides the button.
+    'google_client_id' => '',
     // Abstract emails sent per hour at most (the queue holds the rest). Set it a little under
     // the host's own outgoing-mail limit, which cPanel shows or the host can confirm.
     'abstracts_mail_hourly_limit' => 150,

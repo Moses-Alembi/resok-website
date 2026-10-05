@@ -113,6 +113,14 @@
     .decision h2{font-size:18px}
     .decision .cm{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:10px;font-size:14px;white-space:pre-wrap}
     .decision .cm b{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .fig{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;flex-wrap:wrap}
+    .fig img{width:160px;max-height:160px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#f9fafb}
+    .fig-side{flex:1;min-width:220px}
+    .fig-side .actions{margin-top:8px}
+    .fig-state{font-size:12.5px;color:var(--muted)}
+    .pv figure{margin-top:16px}
+    .pv figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;display:block}
+    .pv figcaption{font-size:13px;color:#344054;margin-top:6px}
     .decl{display:flex;gap:10px;align-items:flex-start;padding:10px 0;font-size:14px;font-weight:500;margin:0;cursor:pointer}
     .decl input{margin-top:3px;width:17px;height:17px;flex:none}
     sup{font-size:.7em}
@@ -120,6 +128,8 @@
     .auth-tabs button{background:none;border:0;padding:10px 14px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
     .auth-tabs button.on{color:var(--green);border-bottom-color:var(--green)}
     .trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+    .google{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+    .google [data-google-button]{margin-top:10px;max-width:400px}
     @media(max-width:760px){.grid2{grid-template-columns:1fr}.panel{padding:20px}.deadline .left{margin-left:0}}
     @media(max-width:520px){.top .who .email{display:none}}
   </style>
@@ -151,6 +161,13 @@
     <section id="vPublic" hidden>
       <div class="panel" id="callPanel"></div>
       <div class="panel" style="margin-top:20px">
+        <!-- Shown only once the server says Google sign-in is configured. -->
+        <div class="google" id="googleWrap" hidden>
+          <h2>Quickest: continue with Google</h2>
+          <p class="lede" style="margin-top:4px">Signs you in, or creates your author account if you are new. You will then add your affiliation and country.</p>
+          <div data-google-button></div>
+          <div id="googleNote"></div>
+        </div>
         <div class="auth-tabs">
           <button type="button" class="on" data-tab="signin">I have a ReSoK account</button>
           <button type="button" data-tab="register">Create an account</button>
@@ -265,6 +282,19 @@
           <div class="kw-box" id="kwBox"><input type="text" id="kwInput" placeholder="Type a keyword and press Enter"></div>
         </div>
 
+        <div id="figWrap" hidden>
+          <h3 class="section-title">Figures <span class="hint" id="figRule"></span></h3>
+          <p class="hint" style="margin:-4px 0 12px">Reviewers see your figures, so leave out author names, logos and anything else that identifies you or your institution. Each figure needs a caption.</p>
+          <div class="field" data-f="figures" style="margin-bottom:8px">
+            <div id="figList"></div>
+          </div>
+          <input type="file" id="figFile" accept="image/png,image/jpeg" hidden>
+          <div class="actions" style="margin-top:0">
+            <button class="btn btn-ghost btn-sm" type="button" id="figAdd"><i class="fas fa-image"></i> Add a figure</button>
+            <span class="fig-state" id="figState"></span>
+          </div>
+        </div>
+
         <h3 class="section-title">Authors <span class="hint">in the order they should appear</span></h3>
         <div class="field" data-f="authors" style="margin-bottom:8px">
           <div id="authorList"></div>
@@ -314,6 +344,8 @@
   </main>
 
   <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script src="js/abstract-text.js?v=20261005-phase4"></script>
+  <script src="js/google-signin.js?v=20261005-phase4"></script>
   <script>
   /**
    * The author's side of abstract submission.
@@ -336,7 +368,9 @@
       return n;
     };
     const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
-    const words = (s) => { const t = String(s || '').trim(); return t ? t.split(/\s+/u).length : 0; };
+    // Formatting tokens (<i>, <sup>, <sub>) are not words; js/abstract-text.js counts as the server does.
+    const words = (s) => window.AbsText.words(s);
+    const rich = (tag, cls, text) => window.AbsText.make(tag, cls, text);
     const STATUS = { draft: 'Draft', submitted: 'Submitted', under_review: 'Under review', decision_pending: 'Under review',
       accepted: 'Accepted', waitlisted: 'Waitlisted', rejected: 'Not accepted', withdrawn: 'Withdrawn', confirmed: 'Confirmed' };
     // Authors never see "decision pending": the outcome is held back until it is released.
@@ -474,6 +508,7 @@
         if (!state.event) { show('None'); return; }
         callSummary(el('callPanel'), state.event);
         show('Public');
+        mountGoogle();
         return;
       }
       // A direct link to an abstract opens it first: an administrator working on an author's
@@ -528,6 +563,27 @@
         btn.disabled = false;
       }
     });
+
+    let googleMounted = false;
+    function mountGoogle() {
+      if (googleMounted || !window.ResokGoogle) return;
+      googleMounted = true;
+      window.ResokGoogle.mount(el('googleWrap'), {
+        purpose: 'abstracts',
+        onStart: () => note('googleNote', 'Signing you in…', 'info'),
+        onResult: (result) => {
+          // An account with two-factor sign-in finishes on the login page, which asks for the code.
+          if (result.mfaRequired) {
+            note('googleNote', 'Your account uses two-factor sign-in. Use "Sign in to submit" below, then enter your code.', 'warn');
+            return;
+          }
+          window.ResokPortal.login(result.user && result.user.email, result.user);
+          note('googleNote', '');
+          load();
+        },
+        onError: (error) => note('googleNote', error.message, 'bad'),
+      });
+    }
 
     // ---------------------------------------------------------------- profile
     function openProfile(cancellable) {
@@ -589,7 +645,7 @@
         const item = make('div', 'item');
         item.tabIndex = 0;
         const text = make('div');
-        text.appendChild(make('div', 't', a.title));
+        text.appendChild(rich('div', 't', a.title));
         const meta = [a.reference, a.trackName, a.submittedAt ? 'Submitted ' + fmtDate(a.submittedAt) : 'Last saved ' + fmtDate(a.updatedAt)];
         if (a.eventId !== (state.event && state.event.id)) meta.unshift(a.eventName);
         text.appendChild(make('div', 'm', meta.filter(Boolean).join(' · ')));
@@ -651,6 +707,7 @@
         : (a.reopenedUntil ? 'The committee has returned this abstract for corrections. Submit it again by ' + fmtDate(a.reopenedUntil) + '.' : ''),
         a.reopenedUntil ? 'warn' : 'info');
       el('fTitle').value = data.title || '';
+      titleBar.refresh();
       const track = el('fTrack');
       track.textContent = '';
       track.appendChild(make('option', null, 'Choose a track')).value = '';
@@ -680,12 +737,14 @@
           ta.value = (data.sections && data.sections[s]) || '';
           field.appendChild(lab); field.appendChild(ta);
           wrap.appendChild(field);
+          window.AbsText.toolbar(ta);
         });
       } else {
         const ta = make('textarea');
         ta.id = 'fBody'; ta.rows = 12;
         ta.value = data.body || '';
         wrap.appendChild(ta);
+        window.AbsText.toolbar(ta);
       }
       el('kwRule').textContent = `${f.keywordsMin} to ${f.keywordsMax}`;
       keywords = (data.keywords || []).slice();
@@ -693,6 +752,7 @@
       authors = (data.authors || []).map((x) => Object.assign({}, x));
       if (!authors.length) authors.push(blankAuthor(true));
       renderAuthors();
+      renderFigures();
       clearErrors();
       counts();
       state.dirty = !!fromData;
@@ -834,7 +894,7 @@
         try { localStorage.setItem(backupKey(), JSON.stringify({ savedAt: Date.now(), data: collect() })); } catch (e) { /* storage full or blocked */ }
       }, 400);
     }
-    el('edForm').addEventListener('input', (e) => { if (!e.target.closest('.author') && e.target.id !== 'kwInput') changed(); });
+    el('edForm').addEventListener('input', (e) => { if (!e.target.closest('.author') && !e.target.closest('#figWrap') && e.target.id !== 'kwInput') changed(); });
     el('edForm').addEventListener('change', (e) => { if (e.target.name === 'ptype' || e.target.id === 'fTrack') changed(); });
 
     function setSaveState(text) { el('saveState').textContent = text; }
@@ -892,10 +952,91 @@
       openPreview();
     });
 
+    // ---------------------------------------------------------------- figures
+    // Uploaded, captioned and removed straight away, apart from the draft: a file cannot
+    // wait in this device's storage the way typed text does.
+    const titleBar = window.AbsText.toolbar(el('fTitle'));
+    function figState(text) { el('figState').textContent = text || ''; }
+    function renderFigures() {
+      const max = state.event.form.figuresMax || 0;
+      el('figWrap').hidden = max < 1;
+      if (max < 1) return;
+      el('figRule').textContent = `optional, up to ${max}, JPG or PNG, 3 MB each`;
+      const list = el('figList');
+      list.textContent = '';
+      const figures = state.abstract.figures || [];
+      figures.forEach((f, i) => {
+        const box = make('div', 'fig');
+        const img = make('img');
+        img.src = f.url; img.alt = 'Figure ' + (i + 1);
+        const side = make('div', 'fig-side');
+        const lab = make('label', null, `Figure ${i + 1} caption`);
+        const cap = make('input');
+        cap.type = 'text'; cap.maxLength = 300; cap.value = f.caption || '';
+        cap.id = 'figCap' + f.id; lab.htmlFor = cap.id;
+        side.append(lab, cap);
+        window.AbsText.toolbar(cap);
+        let timer = null;
+        cap.addEventListener('input', () => {
+          clearTimeout(timer);
+          figState('Caption not saved yet…');
+          timer = setTimeout(async () => {
+            try {
+              const res = await post(`abstracts/${state.abstract.id}/figures/${f.id}`, { caption: cap.value });
+              state.abstract.figures = res.figures;
+              figState('Caption saved');
+            } catch (error) { figState(error.message); }
+          }, 800);
+        });
+        const actions = make('div', 'actions');
+        const remove = make('button', 'btn btn-danger btn-sm');
+        remove.type = 'button';
+        remove.append(make('i', 'fas fa-trash'), ' Remove');
+        remove.addEventListener('click', async () => {
+          if (!window.confirm(`Remove figure ${i + 1}?`)) return;
+          try {
+            const res = await api(`abstracts/${state.abstract.id}/figures/${f.id}`, { method: 'DELETE' });
+            state.abstract.figures = res.figures;
+            renderFigures();
+            figState('Figure removed');
+          } catch (error) { figState(error.message); }
+        });
+        actions.appendChild(remove);
+        side.appendChild(actions);
+        box.append(img, side);
+        list.appendChild(box);
+      });
+      el('figAdd').hidden = figures.length >= max;
+    }
+    el('figAdd').addEventListener('click', () => el('figFile').click());
+    el('figFile').addEventListener('change', async () => {
+      const file = el('figFile').files[0];
+      el('figFile').value = '';
+      if (!file) return;
+      if (file.size > 3 * 1024 * 1024) { figState('That file is larger than 3 MB. Export the figure at a smaller size.'); return; }
+      const form = new FormData();
+      form.append('figure', file);
+      form.append('caption', '');
+      el('figAdd').disabled = true;
+      figState('Uploading…');
+      try {
+        const res = await api(`abstracts/${state.abstract.id}/figures`, { method: 'POST', body: form });
+        state.abstract.figures = res.figures;
+        renderFigures();
+        figState('Uploaded. Add a caption.');
+        const last = res.figures[res.figures.length - 1];
+        if (last) el('figCap' + last.id).focus();
+      } catch (error) {
+        figState(error.message);
+      } finally {
+        el('figAdd').disabled = false;
+      }
+    });
+
     // ---------------------------------------------------------------- preview & submit
     function renderAbstractInto(box, data, ev, withAuthors = true) {
       box.textContent = '';
-      box.appendChild(make('h2', null, data.title || 'Untitled'));
+      box.appendChild(rich('h2', null, data.title || 'Untitled'));
       if (withAuthors) {
         // Superscript numbers tie each author to an affiliation, as in a printed programme.
         const affs = [];
@@ -918,14 +1059,24 @@
         ev.form.sections.forEach((s) => {
           const sec = make('div', 'sec');
           sec.appendChild(make('b', null, s));
-          sec.appendChild(make('p', null, data.sections[s] || '—'));
+          sec.appendChild(rich('p', null, data.sections[s] || '—'));
           box.appendChild(sec);
         });
       } else {
         const sec = make('div', 'sec');
-        sec.appendChild(make('p', null, data.body || '—'));
+        sec.appendChild(rich('p', null, data.body || '—'));
         box.appendChild(sec);
       }
+      (data.figures || (state.abstract && state.abstract.figures) || []).forEach((f, i) => {
+        const fig = make('figure');
+        const img = make('img');
+        img.src = f.url; img.alt = 'Figure ' + (i + 1); img.loading = 'lazy';
+        const cap = make('figcaption');
+        cap.appendChild(make('b', null, `Figure ${i + 1}. `));
+        cap.appendChild(rich('span', null, f.caption || '(caption missing)'));
+        fig.append(img, cap);
+        box.appendChild(fig);
+      });
       const meta = make('div', 'meta');
       const track = ev.tracks.find((t) => t.id === Number(data.trackId));
       meta.appendChild(make('span', null, 'Track: ' + (track ? track.name : (data.trackName || '—'))));
@@ -1055,7 +1206,7 @@
     }
     el('vwWithdraw').addEventListener('click', async () => {
       const a = state.abstract;
-      const reason = window.prompt(`Withdraw "${a.title || 'this abstract'}"? It will no longer be considered, and this cannot be undone.\n\nYou may give a reason (optional):`, '');
+      const reason = window.prompt(`Withdraw "${window.AbsText.plain(a.title) || 'this abstract'}"? It will no longer be considered, and this cannot be undone.\n\nYou may give a reason (optional):`, '');
       if (reason === null) return;
       try {
         const res = await post('abstracts/' + a.id + '/withdraw', { reason });

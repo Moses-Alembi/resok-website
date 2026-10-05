@@ -163,6 +163,13 @@
       transform: translateY(-1px);
     }
 
+    .alt-signin { margin-top: 22px; }
+    .alt-signin .or {
+      display: flex; align-items: center; gap: 12px; color: #98a2b3; font-size: .85rem; margin-bottom: 16px;
+    }
+    .alt-signin .or::before, .alt-signin .or::after { content: ""; flex: 1; height: 1px; background: #e4e7ec; }
+    .alt-signin [data-google-button] { display: flex; justify-content: center; min-height: 44px; }
+
     .login-btn:disabled {
       cursor: wait;
       transform: none;
@@ -226,6 +233,12 @@
         </div>
 
         <button id="loginBtn" class="login-btn" type="submit">Login</button>
+
+        <!-- Shown only once the server says Google sign-in is configured. -->
+        <div class="alt-signin" id="googleWrap" hidden>
+          <div class="or">or</div>
+          <div data-google-button></div>
+        </div>
       </form>
 
       <!-- Second factor. Shown only when the server says the account has it enabled; the
@@ -251,6 +264,7 @@
   </main>
 
   <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script src="js/google-signin.js?v=20261005-phase4"></script>
   <script>
     const form = document.getElementById("loginForm");
     const emailInput = document.getElementById("loginEmail");
@@ -341,34 +355,7 @@
         }
 
         if (!response.ok) throw new Error(data.error || "Invalid email or password.");
-
-        // A second factor stands between the password and the session.
-        if (data.mfaRequired) {
-          pendingChallenge = data.challenge;
-          form.hidden = true;
-          document.getElementById("mfaForm").hidden = false;
-          document.getElementById("mfaCode").focus();
-          showAlert(data.message || "Enter the code from your authenticator app.", "success");
-          return;
-        }
-
-        window.ResokPortal.login(email, data.user, data.token);
-        const isAdmin = data.user?.role === "admin";
-        // An Academy learner has no membership record, so the member dashboard has nothing for them.
-        const isLearner = data.user?.isLearner === true;
-        // An author (signed up to submit an abstract, not a member or learner) goes to their abstracts.
-        const isAuthor = data.user?.isAuthor === true;
-        const next = safeNextPath();
-        const destination = isAdmin ? "admin-review" : next || (isAuthor ? "abstracts" : (isLearner ? "academy" : "dashboard"));
-        showAlert(
-          next && !isAdmin
-            ? "Login successful. Taking you back..."
-            : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : (isAuthor ? "abstracts" : (isLearner ? "courses" : "dashboard"))}...`,
-          "success"
-        );
-        setTimeout(() => {
-          window.location.href = destination;
-        }, 650);
+        finishLogin(data, email);
       } catch (error) {
         showAlert(error.message || "We could not complete your login. Please try again.");
       } finally {
@@ -378,6 +365,51 @@
     });
 
     let pendingChallenge = "";
+
+    /**
+     * After the first factor, from the password form or from Google: the second factor if
+     * the account has one, otherwise into the portal.
+     */
+    function finishLogin(data, email) {
+      // A second factor stands between the password and the session.
+      if (data.mfaRequired) {
+        pendingChallenge = data.challenge;
+        form.hidden = true;
+        document.getElementById("mfaForm").hidden = false;
+        document.getElementById("mfaCode").focus();
+        showAlert(data.message || "Enter the code from your authenticator app.", "success");
+        return;
+      }
+
+      window.ResokPortal.login(email || data.user?.email, data.user, data.token);
+      const isAdmin = data.user?.role === "admin";
+      // An Academy learner has no membership record, so the member dashboard has nothing for them.
+      const isLearner = data.user?.isLearner === true;
+      // An author (signed up to submit an abstract, not a member or learner) goes to their abstracts.
+      const isAuthor = data.user?.isAuthor === true;
+      const next = safeNextPath();
+      const destination = isAdmin ? "admin-review" : next || (isAuthor ? "abstracts" : (isLearner ? "academy" : "dashboard"));
+      showAlert(
+        next && !isAdmin
+          ? "Login successful. Taking you back..."
+          : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : (isAuthor ? "abstracts" : (isLearner ? "courses" : "dashboard"))}...`,
+        "success"
+      );
+      setTimeout(() => {
+        window.location.href = destination;
+      }, 650);
+    }
+
+    // Someone new may only be given an account by Google when they came here to submit an
+    // abstract; everyone else signs in to an account they already have.
+    if (window.ResokGoogle) {
+      window.ResokGoogle.mount(document.getElementById("googleWrap"), {
+        purpose: safeNextPath().includes("/abstracts") ? "abstracts" : "login",
+        onStart: () => showAlert("Signing you in with Google...", "success"),
+        onResult: (data) => finishLogin(data, ""),
+        onError: (error) => showAlert(error.message || "Google sign-in did not work. Please try again."),
+      });
+    }
 
     document.getElementById("mfaForm").addEventListener("submit", async (event) => {
       event.preventDefault();

@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -4242,6 +4242,14 @@ Respiratory Society of Kenya");
             respond(200, ['event' => absEventShape($pdo, $row), 'preview' => $row['status'] === 'draft']);
         }
 
+        // Accepted abstracts, once released, for the conference website (INT-5).
+        if ($route === 'abstracts/accepted' && $method === 'GET') {
+            requireModule('absAcceptedPublic', 'lib/abstracts-decisions.php');
+            $row = absCurrentEventRow($pdo, false);
+            if (!$row) respond(404, ['error' => 'There is no published conference.']);
+            respond(200, ['event' => $row['name'], 'tracks' => absAcceptedPublic($pdo, $row)]);
+        }
+
         // An author account (ACC-1): a portal login with an author profile and no membership
         // record, so it is never asked to pay a membership fee.
         if ($route === 'abstracts/register' && $method === 'POST') {
@@ -4335,12 +4343,31 @@ Respiratory Society of Kenya");
             respond(201, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, $id), $event)]);
         }
 
-        if (preg_match('#^abstracts/(\d+)(/submit|/withdraw)?$#', $route, $m)) {
+        if (preg_match('#^abstracts/(\d+)(/submit|/withdraw|/attendance)?$#', $route, $m)) {
             $user = auth($config);
             $row = absOwnAbstract($pdo, (int)$m[1], (int)$user['userId']);
+            $onBehalf = false;
+            // An event administrator may work on an author's abstract for them (ADM-4).
+            // Attendance stays the author's own answer.
+            if (!$row && ($m[2] ?? '') !== '/attendance' && function_exists('absAccess')) {
+                $candidate = absAbstractRow($pdo, (int)$m[1]);
+                if ($candidate && absAccess($pdo, $user, $config, (int)$candidate['event_id'])['admin']) { $row = $candidate; $onBehalf = true; }
+            }
             if (!$row) respond(404, ['error' => 'No such abstract.']);
             $event = $absEventOfAbstract($row, $user);
             $action = $m[2] ?? '';
+            if ($action === '/attendance' && $method === 'POST') {
+                requireModule('absAttendance', 'lib/abstracts-decisions.php');
+                $data = input();
+                $error = absAttendance($pdo, $config, $event, $row, (int)$user['userId'], !empty($data['confirm']), trim((string)($data['reason'] ?? '')));
+                if ($error) respond(400, ['error' => $error]);
+                respond(200, ['abstract' => absAbstractShape($pdo, absAbstractRow($pdo, (int)$row['id']), $event)]);
+            }
+            if ($onBehalf && $action === '' && $method === 'GET') {
+                $shape = absAbstractShape($pdo, $row, $event);
+                $shape['onBehalfOf'] = absPersonName($pdo, (int)$row['submitter_user_id'])['email'];
+                respond(200, ['abstract' => $shape, 'event' => absEventShape($pdo, $event)]);
+            }
 
             if ($action === '' && $method === 'GET') {
                 respond(200, ['abstract' => absAbstractShape($pdo, $row, $event), 'event' => absEventShape($pdo, $event)]);
@@ -4476,6 +4503,13 @@ Respiratory Society of Kenya");
             $needAdmin = function () use ($access) { if (!$access['admin']) respond(403, ['error' => 'Only an event administrator can do that.']); };
             $needProgramme = function () use ($access) { if (!$access['programme']) respond(403, ['error' => 'Only the programme chair can do that.']); };
 
+            // An archived event is read-only (INT-2): it can be looked at, exported and
+            // un-archived from the setup tab, but nothing in it changes.
+            if ($event['status'] === 'archived' && $method === 'POST' && $sub !== '') {
+                respond(403, ['error' => 'This event is archived and read-only. Change its visibility in Event setup to make changes.']);
+            }
+
+
             if ($sub === '' && $method === 'GET') respond(200, ['event' => absEventShape($pdo, $event, true), 'access' => $access]);
             if ($sub === '' && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
                 $needAdmin();
@@ -4573,6 +4607,93 @@ Respiratory Society of Kenya");
             }
             if ($sub === 'auto-proposal' && $method === 'GET') respond(200, absAutoProposal($pdo, $event, $access));
             if ($sub === 'reminders' && $method === 'POST') respond(200, ['sent' => absSendReviewReminders($pdo, $config, $event, true)]);
+
+            // Decisions (DEC-1..7), reporting and templates.
+            if (in_array($sub, ['decisions', 'recommend', 'decide', 'release', 'move', 'on-behalf', 'export', 'book', 'stats', 'templates'], true)) {
+                requireModule('absDecisionBoard', 'lib/abstracts-decisions.php');
+            }
+            if ($sub === 'decisions' && $method === 'GET') {
+                $pending = $pdo->prepare("SELECT COUNT(*) FROM abs_abstracts a JOIN abs_decisions d ON d.abstract_id = a.id
+                                          WHERE a.event_id = ? AND a.status = 'decision_pending' AND d.released_at IS NULL");
+                $pending->execute([$eventId]);
+                respond(200, ['board' => absDecisionBoard($pdo, $event, $access),
+                              'finalTypes' => absFinalTypes(absSettings($event['settings'])),
+                              'pendingRelease' => (int)$pending->fetchColumn()]);
+            }
+            if ($sub === 'recommend' && $method === 'POST') {
+                $data = input();
+                if ($error = absRecommend($pdo, $event, $access, (int)($data['abstractId'] ?? 0), (string)($data['outcome'] ?? ''), $data['type'] ?? null, $me)) {
+                    respond(400, ['error' => $error]);
+                }
+                respond(200, ['ok' => true]);
+            }
+            if ($sub === 'decide' && $method === 'POST') {
+                $needProgramme();
+                $data = input();
+                respond(200, absDecide($pdo, $event, $access, (array)($data['abstractIds'] ?? []), (string)($data['outcome'] ?? ''),
+                                       $data['type'] ?? null, trim((string)($data['note'] ?? '')), !empty($data['override']), $me));
+            }
+            if ($sub === 'release' && $method === 'POST') {
+                $needProgramme();
+                $data = input();
+                respond(200, absRelease($pdo, $config, $event, $access, !empty($data['trackId']) ? (int)$data['trackId'] : null,
+                                        isset($data['abstractIds']) ? (array)$data['abstractIds'] : null, $me));
+            }
+            if ($sub === 'move' && $method === 'POST') {
+                $data = input();
+                if ($error = absMoveTrack($pdo, $event, $access, (int)($data['abstractId'] ?? 0), (int)($data['trackId'] ?? 0), $me)) {
+                    respond(400, ['error' => $error]);
+                }
+                respond(200, ['ok' => true]);
+            }
+            if ($sub === 'on-behalf' && $method === 'POST') {
+                $needAdmin();
+                [$id, $error] = absStartOnBehalf($pdo, $event, input(), $me);
+                if ($error) respond(400, ['error' => $error]);
+                respond(201, ['abstractId' => $id]);
+            }
+            if ($sub === 'stats' && $method === 'GET') { $needProgramme(); respond(200, absStats($pdo, $event)); }
+            if ($sub === 'templates' && $method === 'GET') { $needAdmin(); respond(200, ['templates' => absTemplatesFor($pdo, $eventId)]); }
+            if ($sub === 'templates' && $method === 'POST') {
+                $needAdmin();
+                $data = input();
+                if ($error = absTemplateSave($pdo, $eventId, (string)($data['key'] ?? ''), (string)($data['subject'] ?? ''), (string)($data['body'] ?? ''), $me)) {
+                    respond(400, ['error' => $error]);
+                }
+                respond(200, ['templates' => absTemplatesFor($pdo, $eventId)]);
+            }
+            // Downloads, sent as files rather than JSON; the filename carries the event and date.
+            if (in_array($sub, ['export', 'book'], true) && $method === 'GET') {
+                $kind = (string)($_GET['kind'] ?? 'abstracts');
+                $format = (string)($_GET['format'] ?? 'csv');
+                if ($sub === 'book' || $kind === 'reviews') $needProgramme();
+                if ($sub === 'export' && !in_array($kind, ['abstracts', 'authors', 'reviews', 'decisions'], true)) respond(400, ['error' => 'Unknown export.']);
+                $stamp = $event['ref_prefix'] . '-' . date('Y-m-d');
+                absAudit($pdo, $eventId, null, $me, 'exported', null, null, ['kind' => $sub === 'book' ? 'book' : $kind, 'format' => $format]);
+                header_remove('Content-Type');
+                header('Cache-Control: no-store');
+                if ($sub === 'book') {
+                    $book = absBookData($pdo, $event);
+                    if ($format === 'word') {
+                        header('Content-Type: application/msword; charset=UTF-8');
+                        header('Content-Disposition: attachment; filename="abstract-book-' . $stamp . '.doc"');
+                        echo absBookWordHtml($book);
+                        exit;
+                    }
+                    respond(200, $book);
+                }
+                $rows = absExportRows($pdo, $event, $access, $kind);
+                if ($format === 'xlsx') {
+                    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                    header('Content-Disposition: attachment; filename="' . $kind . '-' . $stamp . '.xlsx"');
+                    echo absXlsx($rows, ucfirst($kind));
+                } else {
+                    header('Content-Type: text/csv; charset=UTF-8');
+                    header('Content-Disposition: attachment; filename="' . $kind . '-' . $stamp . '.csv"');
+                    echo absCsv($rows);
+                }
+                exit;
+            }
 
             // The email queue (administrators).
             if ($sub === 'emails' && $method === 'GET') {

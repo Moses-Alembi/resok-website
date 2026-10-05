@@ -262,6 +262,38 @@ function abstractsSchema(): array
             UNIQUE KEY abs_reviews_pair (abstract_id, reviewer_user_id),
             KEY abs_reviews_reviewer (reviewer_user_id, status)
         )" . $tail,
+        // Per-event wording for an email, overriding the default in absTemplateDefaults().
+        "CREATE TABLE IF NOT EXISTS abs_templates (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            event_id INT UNSIGNED NOT NULL,
+            template VARCHAR(40) NOT NULL,
+            subject VARCHAR(250) NOT NULL,
+            body TEXT NOT NULL,
+            updated_by INT UNSIGNED NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY abs_templates_key (event_id, template)
+        )" . $tail,
+        // Phase 3. The one current decision per abstract (changes are in abs_audit). A track
+        // chair's recommendation sits beside the programme chair's decision; released_at is
+        // the moment authors could first see it.
+        "CREATE TABLE IF NOT EXISTS abs_decisions (
+            abstract_id INT UNSIGNED NOT NULL,
+            outcome ENUM('accept','reject','waitlist') NULL,
+            presentation_type VARCHAR(30) NULL,
+            decided_by INT UNSIGNED NULL,
+            decided_at DATETIME NULL,
+            recommended_outcome VARCHAR(20) NULL,
+            recommended_type VARCHAR(30) NULL,
+            recommended_by INT UNSIGNED NULL,
+            recommended_at DATETIME NULL,
+            note VARCHAR(1000) NULL,
+            released_at DATETIME NULL,
+            released_by INT UNSIGNED NULL,
+            attendance ENUM('pending','confirmed','declined') NULL,
+            attendance_at DATETIME NULL,
+            PRIMARY KEY (abstract_id)
+        )" . $tail,
     ];
 }
 
@@ -325,6 +357,8 @@ function absDefaultSettings(): array
         'scaleMax' => 5,
         // Reviews of one abstract further apart than this (on the total) are flagged.
         'discrepancyThreshold' => 1.5,
+        // Accepted presenters confirm attendance by this date (YYYY-MM-DD), or null for none.
+        'attendanceConfirmBy' => null,
     ];
 }
 
@@ -378,6 +412,8 @@ function absSettings(?string $stored): array
     }
     $s['criteria'] = $criteria ?: $defaults['criteria'];
     $s['scaleMax'] = $int($s['scaleMax'], 3, 10, $defaults['scaleMax']);
+    $s['attendanceConfirmBy'] = is_string($s['attendanceConfirmBy']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $s['attendanceConfirmBy'])
+        ? $s['attendanceConfirmBy'] : null;
     $s['discrepancyThreshold'] = is_numeric($s['discrepancyThreshold'])
         ? max(0.5, min((float)$s['scaleMax'], (float)$s['discrepancyThreshold'])) : $defaults['discrepancyThreshold'];
     return $s;
@@ -484,6 +520,7 @@ function absEventShape(PDO $pdo, array $row, bool $forAdmin = false): array
             'maxPerSubmitter' => $settings['maxPerSubmitter'],
             'declarations' => $settings['declarations'],
         ],
+        'attendanceConfirmBy' => $settings['attendanceConfirmBy'],
     ];
     if ($forAdmin) {
         $shape['refPrefix'] = $row['ref_prefix'];
@@ -857,6 +894,8 @@ function absAbstractShape(PDO $pdo, array $row, array $eventRow, bool $forAdmin 
         'editable' => $editable,
         'lockedReason' => $lockedReason,
         'withdrawable' => in_array($row['status'], ABS_WITHDRAWABLE, true),
+        // The released outcome with the reviewers' comments for authors; null until release.
+        'decision' => function_exists('absDecisionForAuthor') ? absDecisionForAuthor($pdo, $row, $eventRow) : null,
     ];
     if ($forAdmin) {
         $shape['submitterUserId'] = (int)$row['submitter_user_id'];
@@ -1381,6 +1420,161 @@ function absPara(string $text): string
     return '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">' . htmlspecialchars($text, ENT_QUOTES) . '</p>';
 }
 
+// ---------------------------------------------------------------------------------------
+// Templates (ADM-5)
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Every email the module sends, as editable text with {{merge}} fields.
+ *
+ * An administrator can override the subject and body per event; anything not overridden
+ * uses the wording here. The body is plain text: blank lines separate paragraphs, and the
+ * HTML version is built from it, so the two always say the same thing. A line that comes
+ * out empty after merging (an optional message nobody wrote) disappears.
+ */
+function absTemplateDefaults(): array
+{
+    $sig = "\n\nRespiratory Society of Kenya";
+    return [
+        'account_verification' => ['label' => 'Account verification', 'cta' => 'Confirm my email',
+            'subject' => 'Confirm your ReSoK account',
+            'body' => "Dear {{first_name}},\n\nThank you for creating a ReSoK account to submit an abstract. Please confirm your email address, then sign in to start your submission:\n{{link}}\n\nIf you did not create this account, you can ignore this email.{$sig}"],
+        'submission_confirmation' => ['label' => 'Submission confirmation', 'cta' => 'View my abstracts',
+            'subject' => 'Abstract received: {{reference}}',
+            'body' => "Thank you for submitting your abstract to {{event}}.\n\nReference: {{reference}}\nTitle: {{title}}\nTrack: {{track}}\nAuthors: {{authors}}\n\nYou can edit or withdraw it until the submission deadline, {{deadline}}. Track its status at {{link}}{$sig}"],
+        'coauthor_notice' => ['label' => 'Co-author notice', 'cta' => null,
+            'subject' => 'Co-author notice: {{reference}}',
+            'body' => "Dear {{first_name}},\n\nYou are listed as a co-author on an abstract submitted to {{event}}.\n\nReference: {{reference}}\nTitle: {{title}}\nAuthors: {{authors}}\n\nIf you did not agree to be listed, please contact the corresponding author or the ReSoK secretariat.{$sig}"],
+        'withdrawal_confirmation' => ['label' => 'Withdrawal confirmation', 'cta' => null,
+            'subject' => 'Abstract withdrawn: {{reference}}',
+            'body' => "Your abstract {{reference}}, \"{{title}}\", has been withdrawn from {{event}}.\n\nIf this was a mistake, contact the ReSoK secretariat.{$sig}"],
+        'deadline_reminder' => ['label' => 'Deadline reminder (unsubmitted drafts)', 'cta' => 'Finish my abstract',
+            'subject' => 'Deadline reminder: {{event}}',
+            'body' => "Your abstract \"{{title}}\" for {{event}} has not been submitted yet. The deadline is {{deadline}}.\n\nDrafts are not considered by the committee. Finish and submit it here:\n{{link}}{$sig}"],
+        'reviewer_invitation' => ['label' => 'Reviewer invitation', 'cta' => 'Respond to the invitation',
+            'subject' => 'Invitation to review abstracts: {{event}}',
+            'body' => "Dear {{name}},\n\nThe programme committee of {{event}} invites you to review submitted abstracts.\n\n{{message}}\n\nReviews are due by {{review_deadline}}. You can choose the tracks you review, and declare any conflict of interest on an abstract. Accept or decline here:\n{{link}}{$sig}"],
+        'review_assignment' => ['label' => 'Review assignment', 'cta' => 'Open my reviews',
+            'subject' => 'Abstracts to review: {{event}}',
+            'body' => "Dear {{name}},\n\n{{count}} new abstract(s) have been assigned to you for review for {{event}}. Reviews are due by {{review_deadline}}.\n\nIf you have a conflict of interest with any abstract, declare it on the review page and it will be reassigned:\n{{link}}{$sig}"],
+        'review_reminder' => ['label' => 'Review reminder', 'cta' => 'Open my reviews',
+            'subject' => 'Reminder: abstracts to review for {{event}}',
+            'body' => "Dear {{name}},\n\n{{count}} abstract(s) are still waiting for your review for {{event}}. Reviews are due by {{review_deadline}}.\n\n{{link}}\n\nThank you for your help.{$sig}"],
+        'decision_accepted' => ['label' => 'Decision: accepted', 'cta' => 'Confirm my attendance',
+            'subject' => 'Your abstract has been accepted: {{reference}}',
+            'body' => "Dear {{name}},\n\nWe are pleased to tell you that your abstract \"{{title}}\" ({{reference}}) has been accepted for {{presentation}} at {{event}}.\n\nPlease confirm that the presenting author, {{presenter}}, will attend, by {{confirm_by}}:\n{{link}}\n\nComments from the reviewers:\n{{reviewer_comments}}{$sig}"],
+        'decision_rejected' => ['label' => 'Decision: not accepted', 'cta' => null,
+            'subject' => 'Decision on your abstract {{reference}}',
+            'body' => "Dear {{name}},\n\nThank you for submitting \"{{title}}\" ({{reference}}) to {{event}}. The programme committee received many strong abstracts, and we regret that yours could not be accepted this year.\n\nComments from the reviewers:\n{{reviewer_comments}}\n\nWe hope to see you at the conference.{$sig}"],
+        'decision_waitlisted' => ['label' => 'Decision: waitlisted', 'cta' => null,
+            'subject' => 'Decision on your abstract {{reference}}',
+            'body' => "Dear {{name}},\n\nThank you for submitting \"{{title}}\" ({{reference}}) to {{event}}. Your abstract has been placed on the waiting list: if a place becomes free, we will contact you.\n\nComments from the reviewers:\n{{reviewer_comments}}{$sig}"],
+        'attendance_reminder' => ['label' => 'Attendance confirmation reminder', 'cta' => 'Confirm my attendance',
+            'subject' => 'Please confirm your presentation: {{reference}}',
+            'body' => "Dear {{name}},\n\nYour abstract \"{{title}}\" ({{reference}}) has been accepted for {{event}}, and we have not yet heard whether the presenting author will attend. Please confirm by {{confirm_by}}:\n{{link}}\n\nIf we do not hear from you, the place may be offered to another abstract.{$sig}"],
+    ];
+}
+
+/** The merge fields each template understands, for the editor's help text. */
+function absTemplateFields(string $body): array
+{
+    preg_match_all('/\{\{([a-z_]+)\}\}/', $body, $m);
+    return array_values(array_unique($m[1]));
+}
+
+function absTemplatesFor(PDO $pdo, int $eventId): array
+{
+    $stmt = $pdo->prepare('SELECT template, subject, body, updated_at FROM abs_templates WHERE event_id = ?');
+    $stmt->execute([$eventId]);
+    $overrides = [];
+    foreach ($stmt->fetchAll() as $r) $overrides[$r['template']] = $r;
+    $out = [];
+    foreach (absTemplateDefaults() as $key => $d) {
+        $o = $overrides[$key] ?? null;
+        $out[] = ['key' => $key, 'label' => $d['label'], 'subject' => $o['subject'] ?? $d['subject'], 'body' => $o['body'] ?? $d['body'],
+                  'customised' => $o !== null, 'fields' => absTemplateFields($d['body'] . ' ' . $d['subject'])];
+    }
+    return $out;
+}
+
+/** Saves an override; an empty subject and body restores the default. */
+function absTemplateSave(PDO $pdo, int $eventId, string $key, string $subject, string $body, int $by): ?string
+{
+    $defaults = absTemplateDefaults();
+    if (!isset($defaults[$key])) return 'Unknown email.';
+    $subject = trim($subject);
+    $body = trim(str_replace("\r\n", "\n", $body));
+    if ($subject === '' && $body === '') {
+        $pdo->prepare('DELETE FROM abs_templates WHERE event_id = ? AND template = ?')->execute([$eventId, $key]);
+        absAudit($pdo, $eventId, null, $by, 'template_reset', null, null, ['template' => $key]);
+        return null;
+    }
+    if ($subject === '' || $body === '') return 'An email needs both a subject and a body.';
+    if (mb_strlen($subject) > 250 || mb_strlen($body) > 10000) return 'That email is too long.';
+    $unknown = array_diff(absTemplateFields($subject . ' ' . $body), absTemplateFields($defaults[$key]['subject'] . ' ' . $defaults[$key]['body']));
+    if ($unknown) return 'This email does not know the field(s) {{' . implode('}}, {{', $unknown) . '}}.';
+    $pdo->prepare('INSERT INTO abs_templates (event_id, template, subject, body, updated_by) VALUES (?, ?, ?, ?, ?)
+                   ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), updated_by = VALUES(updated_by)')
+        ->execute([$eventId, $key, $subject, $body, $by]);
+    absAudit($pdo, $eventId, null, $by, 'template_saved', null, null, ['template' => $key]);
+    return null;
+}
+
+/**
+ * Builds one email from its template.
+ *
+ * @return array{0: string, 1: string, 2: string} [subject, text, html]
+ */
+function absRender(PDO $pdo, ?int $eventId, string $key, array $vars): array
+{
+    $d = absTemplateDefaults()[$key];
+    $subject = $d['subject'];
+    $body = $d['body'];
+    if ($eventId) {
+        $stmt = $pdo->prepare('SELECT subject, body FROM abs_templates WHERE event_id = ? AND template = ?');
+        $stmt->execute([$eventId, $key]);
+        if ($o = $stmt->fetch()) { $subject = $o['subject']; $body = $o['body']; }
+    }
+    $fill = static fn(string $s) => preg_replace_callback('/\{\{([a-z_]+)\}\}/', static fn($m) => (string)($vars[$m[1]] ?? ''), $s);
+    $subject = trim((string)preg_replace('/\s+/', ' ', $fill($subject)));
+    // A line that a merge left empty, where the template line was only fields, goes away.
+    $lines = [];
+    foreach (explode("\n", $body) as $line) {
+        $merged = $fill($line);
+        if (trim($merged) === '' && trim($line) !== '' && trim((string)preg_replace('/\{\{[a-z_]+\}\}/', '', $line)) === '') continue;
+        $lines[] = rtrim($merged);
+    }
+    $text = trim((string)preg_replace("/\n{3,}/", "\n\n", implode("\n", $lines)));
+
+    $link = (string)($vars['link'] ?? '');
+    $html = '';
+    foreach (preg_split("/\n{2,}/", $text) ?: [] as $para) {
+        // The link has its own button; a paragraph that is only the link is left out of the HTML.
+        if ($link !== '' && trim($para) === $link && $d['cta']) continue;
+        $escaped = nl2br(htmlspecialchars($para, ENT_QUOTES));
+        if ($link !== '') {
+            $escaped = str_replace(htmlspecialchars($link, ENT_QUOTES),
+                '<a href="' . htmlspecialchars($link, ENT_QUOTES) . '" style="color:#087539;">' . htmlspecialchars($link, ENT_QUOTES) . '</a>', $escaped);
+        }
+        $html .= '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">' . $escaped . '</p>';
+    }
+    $html = brandedEmailHtml($subject, $html, $d['cta'] && $link !== '' ? $d['cta'] : null, $d['cta'] && $link !== '' ? $link : null);
+    return [$subject, $text, $html];
+}
+
+/** Renders and queues in one step. */
+function absSendTemplate(PDO $pdo, array $config, ?int $eventId, ?int $abstractId, string $key, string $to, array $vars, ?string $dedupeKey = null): bool
+{
+    [$subject, $text, $html] = absRender($pdo, $eventId, $key, $vars);
+    return absSendLogged($pdo, $config, $eventId, $abstractId, $key, $to, $subject, $text, $html, $dedupeKey);
+}
+
+function absDeadlineText(array $eventRow, string $column): string
+{
+    $at = absAt($eventRow[$column] ?? null, absZone($eventRow));
+    return $at ? $at->format('j F Y, H:i') . ' (' . absZone($eventRow)->getName() . ')' : 'the deadline';
+}
+
 /** Confirmation to the submitter and corresponding author, and a notice to every other co-author. */
 function absSendSubmissionEmails(PDO $pdo, array $config, array $eventRow, int $abstractId, bool $first): void
 {
@@ -1392,53 +1586,19 @@ function absSendSubmissionEmails(PDO $pdo, array $config, array $eventRow, int $
     $submitterEmail = strtolower((string)$submitter->fetchColumn());
     $corresponding = '';
     foreach ($authors as $a) if ($a['corresponding']) $corresponding = strtolower($a['email']);
-
-    $event = (string)$eventRow['name'];
-    $ref = (string)$row['reference'];
-    $title = (string)$row['title'];
-    $names = implode(', ', array_map(static fn($a) => trim($a['firstName'] . ' ' . $a['lastName']), $authors));
-    $closes = absAt($eventRow['call_closes_at'], absZone($eventRow));
-    $deadline = $closes ? $closes->format('j F Y, H:i') . ' (' . absZone($eventRow)->getName() . ')' : '';
-    $url = absEmailUrl($config);
-
-    $subject = "Abstract received: {$ref}";
-    $text = "Thank you for submitting your abstract to {$event}.\n\nReference: {$ref}\nTitle: {$title}\n"
-        . "Track: " . ($row['track_name'] ?? '-') . "\nAuthors: {$names}\n\n"
-        . ($deadline !== '' ? "You can edit or withdraw it until the submission deadline, {$deadline}.\n" : '')
-        . "Track its status at {$url}\n\nRespiratory Society of Kenya";
-    $html = brandedEmailHtml('Your abstract has been received',
-        absPara("Thank you for submitting your abstract to {$event}.")
-        . '<table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 16px;">'
-        . '<tr><td style="padding:6px 0;color:#667085;width:90px;">Reference</td><td style="padding:6px 0;font-weight:700;">' . htmlspecialchars($ref, ENT_QUOTES) . '</td></tr>'
-        . '<tr><td style="padding:6px 0;color:#667085;">Title</td><td style="padding:6px 0;">' . htmlspecialchars($title, ENT_QUOTES) . '</td></tr>'
-        . '<tr><td style="padding:6px 0;color:#667085;">Track</td><td style="padding:6px 0;">' . htmlspecialchars((string)($row['track_name'] ?? '-'), ENT_QUOTES) . '</td></tr>'
-        . '<tr><td style="padding:6px 0;color:#667085;">Authors</td><td style="padding:6px 0;">' . htmlspecialchars($names, ENT_QUOTES) . '</td></tr>'
-        . '</table>'
-        . ($deadline !== '' ? absPara("You can edit or withdraw it until the submission deadline, {$deadline}.") : ''),
-        'View my abstracts', $url);
-
-    $confirmTo = array_unique(array_filter([$submitterEmail, $corresponding]));
-    foreach ($confirmTo as $to) {
-        absSendLogged($pdo, $config, (int)$eventRow['id'], $abstractId, 'submission_confirmation', $to, $subject, $text, $html);
-    }
+    $vars = [
+        'event' => (string)$eventRow['name'], 'reference' => (string)$row['reference'], 'title' => (string)$row['title'],
+        'track' => (string)($row['track_name'] ?? '-'),
+        'authors' => implode(', ', array_map(static fn($a) => trim($a['firstName'] . ' ' . $a['lastName']), $authors)),
+        'deadline' => absDeadlineText($eventRow, 'call_closes_at'), 'link' => absEmailUrl($config),
+    ];
+    $confirmTo = array_values(array_unique(array_filter([$submitterEmail, $corresponding])));
+    foreach ($confirmTo as $to) absSendTemplate($pdo, $config, (int)$eventRow['id'], $abstractId, 'submission_confirmation', $to, $vars);
     if (!$first) return;
-
-    // Co-author notice (spec section 7): everyone listed who has not already had the confirmation.
     foreach ($authors as $a) {
         $to = strtolower($a['email']);
         if ($to === '' || in_array($to, $confirmTo, true)) continue;
-        $greeting = 'Dear ' . trim($a['firstName']) . ',';
-        $coText = "{$greeting}\n\nYou are listed as a co-author on an abstract submitted to {$event}.\n\nReference: {$ref}\nTitle: {$title}\nAuthors: {$names}\n\n"
-            . "If you did not agree to be listed, please contact the corresponding author or reply to the ReSoK secretariat.\n\nRespiratory Society of Kenya";
-        $coHtml = brandedEmailHtml('You are listed as a co-author',
-            absPara($greeting)
-            . absPara("You are listed as a co-author on an abstract submitted to {$event}.")
-            . absPara("Reference: {$ref}")
-            . absPara("Title: {$title}")
-            . absPara("Authors: {$names}")
-            . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">If you did not agree to be listed, please contact the corresponding author or the ReSoK secretariat.</p>');
-        absSendLogged($pdo, $config, (int)$eventRow['id'], $abstractId, 'coauthor_notice', $to,
-                      "Co-author notice: {$ref}", $coText, $coHtml);
+        absSendTemplate($pdo, $config, (int)$eventRow['id'], $abstractId, 'coauthor_notice', $to, $vars + ['first_name' => trim($a['firstName'])]);
     }
 }
 
@@ -1450,16 +1610,9 @@ function absSendWithdrawalEmails(PDO $pdo, array $config, array $eventRow, int $
     $submitter->execute([(int)$row['submitter_user_id']]);
     $to = [strtolower((string)$submitter->fetchColumn())];
     foreach (absAuthors($pdo, $abstractId) as $a) if ($a['corresponding']) $to[] = strtolower($a['email']);
-    $event = (string)$eventRow['name'];
-    $ref = (string)$row['reference'];
-    $text = "Your abstract {$ref}, \"{$row['title']}\", has been withdrawn from {$event}.\n\n"
-        . "If this was a mistake, contact the ReSoK secretariat.\n\nRespiratory Society of Kenya";
-    $html = brandedEmailHtml('Abstract withdrawn',
-        absPara("Your abstract {$ref}, \"{$row['title']}\", has been withdrawn from {$event}.")
-        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">If this was a mistake, contact the ReSoK secretariat.</p>');
+    $vars = ['event' => (string)$eventRow['name'], 'reference' => (string)$row['reference'], 'title' => (string)$row['title']];
     foreach (array_unique(array_filter($to)) as $address) {
-        absSendLogged($pdo, $config, (int)$eventRow['id'], $abstractId, 'withdrawal_confirmation', $address,
-                      "Abstract withdrawn: {$ref}", $text, $html);
+        absSendTemplate($pdo, $config, (int)$eventRow['id'], $abstractId, 'withdrawal_confirmation', $address, $vars);
     }
 }
 
@@ -1467,15 +1620,9 @@ function absSendWithdrawalEmails(PDO $pdo, array $config, array $eventRow, int $
 function absSendVerificationEmail(PDO $pdo, array $config, string $email, string $token, string $firstName): bool
 {
     $baseUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/');
-    $url = $baseUrl !== '' ? $baseUrl . '/api/index.php?route=' . rawurlencode('auth/verify/' . $token) : '';
-    $greeting = trim($firstName) !== '' ? 'Dear ' . trim($firstName) : 'Hello';
-    $text = "{$greeting},\n\nThank you for creating a ReSoK account to submit an abstract. Please confirm your email address:\n{$url}\n\n"
-        . "If you did not create this account, you can ignore this email.\n\nRespiratory Society of Kenya";
-    $html = brandedEmailHtml('Confirm your email to submit an abstract',
-        absPara($greeting . ',')
-        . absPara('Thank you for creating a ReSoK account to submit an abstract. Confirm your email address, then sign in to start your submission.')
-        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">If you did not create this account, you can safely ignore this email.</p>',
-        'Confirm my email', $url);
-    return absSendLogged($pdo, $config, null, null, 'account_verification', $email,
-                         'Confirm your ReSoK account', $text, $html);
+    $event = absCurrentEventRow($pdo);
+    return absSendTemplate($pdo, $config, $event ? (int)$event['id'] : null, null, 'account_verification', $email, [
+        'first_name' => trim($firstName) !== '' ? trim($firstName) : 'colleague',
+        'link' => $baseUrl !== '' ? $baseUrl . '/api/index.php?route=' . rawurlencode('auth/verify/' . $token) : '',
+    ]);
 }

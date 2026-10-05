@@ -106,6 +106,13 @@
     .pv .sec b{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:3px}
     .pv .sec p{white-space:pre-wrap;font-size:14.5px}
     .pv .meta{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+    .decision{border-radius:10px;padding:18px;margin-top:16px;border:1px solid}
+    .decision.accept{background:#ecfdf3;border-color:#abefc6}
+    .decision.reject{background:#f9fafb;border-color:var(--line)}
+    .decision.waitlist{background:#fff8e6;border-color:#fde7b0}
+    .decision h2{font-size:18px}
+    .decision .cm{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:10px;font-size:14px;white-space:pre-wrap}
+    .decision .cm b{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
     .decl{display:flex;gap:10px;align-items:flex-start;padding:10px 0;font-size:14px;font-weight:500;margin:0;cursor:pointer}
     .decl input{margin-top:3px;width:17px;height:17px;flex:none}
     sup{font-size:.7em}
@@ -297,6 +304,7 @@
         <span class="save-state" id="vwRef"></span>
       </div>
       <div id="vwNote"></div>
+      <div id="vwDecision"></div>
       <div class="pv" id="vwBox" style="margin-top:18px"></div>
       <div class="actions" style="margin-top:16px">
         <button class="btn btn-primary" type="button" id="vwEdit"><i class="fas fa-pen"></i> Edit</button>
@@ -468,9 +476,11 @@
         show('Public');
         return;
       }
-      if (!state.me.profile.complete) { openProfile(false); return; }
+      // A direct link to an abstract opens it first: an administrator working on an author's
+      // behalf needs no author profile of their own.
       const m = hash.match(/^(edit|view|preview)\/(\d+)$/);
       if (m) { openAbstract(Number(m[2]), m[1]); return; }
+      if (!state.me.profile.complete) { openProfile(false); return; }
       if (hash === 'profile') { openProfile(true); return; }
       renderHome();
     }
@@ -635,7 +645,8 @@
       el('toPreviewBtn').textContent = '';
       el('toPreviewBtn').append(a.status === 'submitted' ? 'Save changes ' : 'Preview and submit ', make('i', 'fas ' + (a.status === 'submitted' ? 'fa-check' : 'fa-arrow-right')));
       el('saveBtn').hidden = a.status === 'submitted';
-      note('edNote', a.status === 'submitted'
+      note('edNote', a.onBehalfOf ? 'You are working on behalf of ' + a.onBehalfOf + '. The abstract is theirs, and its confirmation goes to them.'
+        : a.status === 'submitted'
         ? 'This abstract is submitted. Changes you save here replace the submitted version and are recorded.'
         : (a.reopenedUntil ? 'The committee has returned this abstract for corrections. Submit it again by ' + fmtDate(a.reopenedUntil) + '.' : ''),
         a.reopenedUntil ? 'warn' : 'info');
@@ -918,7 +929,7 @@
       const meta = make('div', 'meta');
       const track = ev.tracks.find((t) => t.id === Number(data.trackId));
       meta.appendChild(make('span', null, 'Track: ' + (track ? track.name : (data.trackName || '—'))));
-      meta.appendChild(make('span', null, 'Presentation: ' + (ev.form.presentationTypes[data.preferredType] || '—')));
+      meta.appendChild(make('span', null, 'Preferred presentation: ' + (ev.form.presentationTypes[data.preferredType] || '—')));
       meta.appendChild(make('span', null, 'Keywords: ' + ((data.keywords || []).join(', ') || '—')));
       box.appendChild(meta);
     }
@@ -983,15 +994,65 @@
         note('vwNote', state.flash[0], state.flash[1]);
         state.flash = null;
       } else {
+        // A released decision says everything itself; the generic "locked" line would only repeat it.
         note('vwNote', a.editable ? (a.status === 'submitted' ? 'You can still edit or withdraw this abstract until the deadline.' : '')
-          : (a.status === 'withdrawn' ? 'This abstract was withdrawn.' : a.lockedReason || ''), a.editable ? 'info' : 'warn');
+          : (a.status === 'withdrawn' ? 'This abstract was withdrawn.' : (a.decision ? '' : a.lockedReason || '')), a.editable ? 'info' : 'warn');
       }
+      renderDecision(a);
       renderAbstractInto(el('vwBox'), a, state.event);
       el('vwEdit').hidden = !a.editable;
       el('vwWithdraw').hidden = !a.withdrawable;
       show('View');
     }
     el('vwEdit').addEventListener('click', () => { window.location.hash = 'edit/' + state.abstract.id; });
+
+    // The released outcome, the reviewers' comments for authors, and - for an accepted
+    // abstract - the attendance answer the committee is waiting for (DEC-4, DEC-5).
+    function renderDecision(a) {
+      const box = el('vwDecision');
+      box.textContent = '';
+      const d = a.decision;
+      if (!d) return;
+      const wrap = make('div', 'decision ' + d.outcome);
+      const head = { accept: `Accepted for ${d.presentation ? d.presentation.toLowerCase() : 'presentation'}`, reject: 'Not accepted this year',
+                     waitlist: 'On the waiting list' }[d.outcome];
+      wrap.appendChild(make('h2', null, head));
+      if (d.outcome === 'accept') {
+        const by = d.confirmBy ? ' by ' + fmtDate(d.confirmBy, false) : '';
+        const line = { pending: `Please confirm that the presenting author will attend${by}.`, confirmed: 'Thank you - attendance is confirmed.',
+                       declined: 'You declined to present, so the abstract was withdrawn.' }[d.attendance] || '';
+        if (line) wrap.appendChild(make('p', null, line));
+        if (a.status === 'accepted' && d.attendance === 'pending' && !a.onBehalfOf) {
+          const row = make('div', 'actions');
+          const yes = make('button', 'btn btn-primary', 'Confirm attendance'); yes.type = 'button';
+          const no = make('button', 'btn btn-danger', 'We cannot present'); no.type = 'button';
+          yes.addEventListener('click', () => attendance(true));
+          no.addEventListener('click', () => attendance(false));
+          row.append(yes, no);
+          wrap.appendChild(row);
+        }
+      } else if (d.outcome === 'waitlist') {
+        wrap.appendChild(make('p', null, 'If a place becomes free, we will contact you.'));
+      }
+      if (d.comments.length) {
+        d.comments.forEach((c, i) => { const cm = make('div', 'cm'); cm.appendChild(make('b', null, 'Reviewer ' + (i + 1))); cm.appendChild(document.createTextNode(c)); wrap.appendChild(cm); });
+      }
+      box.appendChild(wrap);
+    }
+    async function attendance(confirm) {
+      let reason = '';
+      if (!confirm) {
+        reason = window.prompt('Withdraw this abstract because nobody can present it? The place may go to another abstract. You may give a reason:', '');
+        if (reason === null) return;
+      }
+      try {
+        const res = await post('abstracts/' + state.abstract.id + '/attendance', { confirm, reason });
+        state.abstract = res.abstract;
+        await refreshMe();
+        state.flash = [confirm ? 'Attendance confirmed. Thank you.' : 'The abstract has been withdrawn.', 'ok'];
+        renderView();
+      } catch (error) { note('vwNote', error.message, 'bad'); }
+    }
     el('vwWithdraw').addEventListener('click', async () => {
       const a = state.abstract;
       const reason = window.prompt(`Withdraw "${a.title || 'this abstract'}"? It will no longer be considered, and this cannot be undone.\n\nYou may give a reason (optional):`, '');

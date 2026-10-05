@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 /**
  * Abstract submission's scheduled work: sends queued email, reminds authors with unsubmitted
- * drafts 7 days and 1 day before the deadline, and reminds reviewers with open reviews 7, 3
- * and 1 days before the review deadline (and daily once it has passed).
+ * drafts 7 days and 1 day before the deadline, reminds reviewers with open reviews 7, 3
+ * and 1 days before the review deadline (and daily once it has passed), and reminds
+ * accepted presenters who have not confirmed 7 days and 1 day before the confirmation date.
  *
  * Run it every 15 minutes via cPanel's Cron Jobs:
  *   php /path/to/resok-portal/public/api/cron/abstracts.php
@@ -29,7 +30,7 @@ if (!$isCli) {
     }
 }
 
-foreach (['SimpleMailer', 'portal-mail', 'abstracts', 'abstracts-review'] as $module) {
+foreach (['SimpleMailer', 'portal-mail', 'abstracts', 'abstracts-review', 'abstracts-decisions'] as $module) {
     require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 
@@ -44,5 +45,6 @@ if (!abstractsEnsureTables($pdo)) exit("Abstract tables are unavailable.\n");
 $report = absRunScheduled($pdo, $config);
 echo 'Deadline reminders queued: ' . $report['deadlineReminders'] . "\n"
    . 'Review reminders queued: ' . $report['reviewReminders'] . "\n"
+   . 'Attendance reminders queued: ' . ($report['attendanceReminders'] ?? 0) . "\n"
    . 'Mail sent: ' . $report['mail']['sent'] . ', failed attempts: ' . $report['mail']['failed']
    . ', still waiting: ' . $report['mail']['waiting'] . "\n";

@@ -138,6 +138,8 @@
         <button type="button" data-tab="review">Review</button>
         <button type="button" data-tab="reviewers">Reviewers &amp; roles</button>
         <button type="button" data-tab="setup" data-need="admin">Event setup</button>
+        <button type="button" data-tab="decisions">Decisions</button>
+        <button type="button" data-tab="reports" data-need="programme">Reports &amp; exports</button>
         <button type="button" data-tab="emails" data-need="admin">Emails</button>
         <button type="button" data-tab="audit" data-need="programme">Activity</button>
       </div>
@@ -206,6 +208,44 @@
         </div>
       </div>
 
+      <!-- Decisions -->
+      <div id="tabDecisions" hidden>
+        <div id="decNote"></div>
+        <div class="sub-bar" id="releaseBar">
+          <strong style="font-size:13.5px" id="pendingLine"></strong>
+          <span style="flex:1"></span>
+          <select id="releaseTrack" aria-label="Track to release"></select>
+          <button class="btn btn-primary btn-sm" type="button" id="releaseBtn"><i class="fas fa-paper-plane"></i> Release decisions</button>
+        </div>
+        <div class="sub-bar">
+          <label for="decTrack" style="margin:0">Track</label>
+          <select id="decTrack" aria-label="Show track"></select>
+          <span style="flex:1"></span>
+          <span class="muted" style="font-size:13px" id="bulkLabel">For ticked abstracts:</span>
+          <select id="bulkOutcome" aria-label="Decision for ticked abstracts"></select>
+          <button class="btn btn-ghost btn-sm" type="button" id="bulkBtn">Apply</button>
+        </div>
+        <p class="lede" id="decHelp" style="margin-top:10px"></p>
+        <div class="table-wrap"><table id="decTable"><thead><tr>
+          <th><input type="checkbox" id="decAll" aria-label="Tick all"></th><th>Rank</th><th>Ref</th><th>Title</th><th>Average</th><th>Reviewers say</th><th id="decCol">Decision</th><th>Status</th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="empty" id="decEmpty" hidden>Nothing to decide yet.</div>
+      </div>
+
+      <!-- Reports and exports -->
+      <div id="tabReports" hidden>
+        <h3 style="border-top:0">Downloads</h3>
+        <div class="table-wrap"><table><tbody id="exportRows"></tbody></table></div>
+        <div class="bar" style="margin-top:14px">
+          <a class="btn btn-primary btn-sm" id="bookLink" href="#" target="_blank" rel="noopener"><i class="fas fa-book-open"></i> Abstract book (print or save as PDF)</a>
+          <button class="btn btn-ghost btn-sm" type="button" id="bookWordBtn"><i class="fas fa-file-word"></i> Abstract book for Word</button>
+        </div>
+        <p class="lede">The abstract book lists accepted abstracts whose decision has been released, by track, orals before posters.</p>
+        <div id="repNote"></div>
+        <h3>Statistics</h3>
+        <div class="cards" id="statCards"></div>
+      </div>
+
       <!-- Email queue -->
       <div id="tabEmails" hidden>
         <p class="lede" style="margin-top:14px" id="mailLede"></p>
@@ -214,10 +254,40 @@
         <div id="mailNote"></div>
         <div class="table-wrap"><table id="mailTable"><thead><tr><th>Email</th><th>To</th><th>Status</th><th>Tries</th><th>Queued</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="empty" id="mailEmpty" hidden>Nothing waiting and nothing failed.</div>
+        <h3>Email wording</h3>
+        <p class="lede">Every email the system sends can be reworded for this event. Use the fields in double braces, such as {{title}}; they are filled in for each message. Blank lines start new paragraphs.</p>
+        <div class="grid" style="margin-top:10px">
+          <div class="field"><label for="tplPick">Email</label><select id="tplPick"></select></div>
+        </div>
+        <div class="field"><label for="tplSubject">Subject</label><input type="text" id="tplSubject"></div>
+        <div class="field"><label for="tplBody">Body</label><textarea id="tplBody" rows="12"></textarea></div>
+        <p class="lede" id="tplFields"></p>
+        <div class="bar" style="margin-top:10px">
+          <button class="btn btn-primary btn-sm" type="button" id="tplSave">Save wording</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="tplReset">Restore the default</button>
+        </div>
+        <div id="tplNote"></div>
       </div>
 
       <!-- Submissions -->
       <div id="tabSubs">
+        <div class="sub-bar">
+          <input type="text" id="subSearch" placeholder="Search title, reference, presenter or email" style="max-width:360px" aria-label="Search submissions">
+          <span style="flex:1"></span>
+          <button class="btn btn-ghost btn-sm" type="button" id="onBehalfToggle" data-need-admin><i class="fas fa-user-pen"></i> Submit on behalf of an author</button>
+        </div>
+        <div id="onBehalfWrap" hidden class="sub-bar" style="display:block">
+          <p class="lede" style="margin:0 0 10px">For an author who cannot use the form. The abstract belongs to them and their confirmation goes to them. If they have no account yet, one is made; they can set a password with "Forgot password".</p>
+          <div class="grid">
+            <div class="field"><label for="obEmail">Author's email</label><input type="text" id="obEmail"></div>
+            <div class="field"><label for="obFirst">First name <span class="hint">new authors</span></label><input type="text" id="obFirst"></div>
+            <div class="field"><label for="obLast">Last name</label><input type="text" id="obLast"></div>
+            <div class="field"><label for="obAff">Affiliation</label><input type="text" id="obAff"></div>
+            <div class="field"><label for="obCountry">Country</label><input type="text" id="obCountry" value="Kenya"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" type="button" id="obStart" style="margin-top:8px">Start the abstract</button>
+          <div id="obNote"></div>
+        </div>
         <div class="chips" id="statusChips"></div>
         <div class="table-wrap"><table id="subTable"><thead><tr>
           <th>Ref</th><th>Title</th><th>Track</th><th>Presenter</th><th>Type</th><th>Status</th><th>Submitted</th>
@@ -284,6 +354,7 @@
           <div class="field"><label for="rPer">Reviews per abstract</label><input type="number" id="rPer" min="1" max="5"></div>
           <div class="field"><label for="rScale">Score scale, 1 to</label><input type="number" id="rScale" min="3" max="10"></div>
           <div class="field"><label for="rSpread">Flag when scores differ by more than</label><input type="number" id="rSpread" min="0.5" step="0.5"></div>
+          <div class="field"><label for="rConfirmBy">Accepted presenters confirm by</label><input type="date" id="rConfirmBy"></div>
         </div>
         <div class="field" style="margin-top:14px">
           <label for="rCriteria">Scoring criteria <span class="hint">one per line; add "| 2" after a criterion to weight it double</span></label>
@@ -317,6 +388,11 @@
           <div class="field" style="grid-column:span 2"><label for="reNote">Note for the record <span class="hint">not emailed</span></label><input type="text" id="reNote"></div>
         </div>
         <button class="btn btn-warn" type="button" id="reopenBtn" style="margin-top:12px"><i class="fas fa-rotate-left"></i> Return to draft</button>
+      </div>
+      <div class="sub-bar" id="moveWrap">
+        <label for="moveTrack" style="margin:0">Track</label>
+        <select id="moveTrack" aria-label="Move to track"></select>
+        <button class="btn btn-ghost btn-sm" type="button" id="moveBtn">Move</button>
       </div>
       <h3>Reviews</h3><div id="dReviews"></div>
       <h3>Emails</h3><ul class="log" id="dEmails"></ul>
@@ -378,20 +454,25 @@
     }
     el('eventPick').addEventListener('change', () => selectEvent(Number(el('eventPick').value)));
 
-    const TABS = { subs: 'tabSubs', review: 'tabReview', reviewers: 'tabReviewers', setup: 'tabSetup', emails: 'tabEmails', audit: 'tabAudit' };
+    const TABS = { subs: 'tabSubs', review: 'tabReview', reviewers: 'tabReviewers', decisions: 'tabDecisions', reports: 'tabReports',
+                   setup: 'tabSetup', emails: 'tabEmails', audit: 'tabAudit' };
     function setTab(tab) {
       document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
       Object.entries(TABS).forEach(([k, id]) => { el(id).hidden = k !== tab; });
       if (tab === 'audit') loadAudit();
       if (tab === 'review') loadBoard();
       if (tab === 'reviewers') loadReviewers();
-      if (tab === 'emails') loadEmails();
+      if (tab === 'emails') { loadEmails(); loadTemplates(); }
+      if (tab === 'decisions') loadDecisions();
+      if (tab === 'reports') loadReports();
     }
     // Tabs a person's role does not reach are not offered (the server refuses them anyway).
     function applyAccess() {
       const a = access();
       document.querySelectorAll('#tabs button[data-need]').forEach((b) => { b.hidden = !a[b.dataset.need]; });
       el('rolesWrap').hidden = !a.admin;
+      document.querySelectorAll('[data-need-admin]').forEach((b) => { b.hidden = !a.admin; });
+      el('onBehalfWrap').hidden = true;
     }
     document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
@@ -675,7 +756,9 @@
       Object.entries(list.counts).forEach(([s, n]) => { if (n) chip(s, STATUS[s], n); });
       const body = el('subTable').querySelector('tbody');
       body.textContent = '';
-      const rows = list.abstracts.filter((a) => filter === 'all' || a.status === filter);
+      const q = el('subSearch').value.trim().toLowerCase();
+      const rows = list.abstracts.filter((a) => (filter === 'all' || a.status === filter)
+        && (!q || [a.reference, a.title, a.presenter, a.submitterEmail, a.trackName].some((v) => String(v || '').toLowerCase().includes(q))));
       rows.forEach((a) => {
         const tr = make('tr', 'click');
         tr.appendChild(make('td', 'mono', a.reference || '—'));
@@ -727,6 +810,11 @@
       meta.appendChild(make('p', 'muted', `Track: ${a.trackName || '—'} · Preferred: ${current.form.presentationTypes[a.preferredType] || '—'} · Keywords: ${a.keywords.join(', ') || '—'}`));
       box.appendChild(meta);
       el('reopenWrap').hidden = !['submitted', 'draft'].includes(a.status) || !detail.access.admin;
+      const mv = el('moveTrack');
+      mv.textContent = '';
+      current.tracks.filter((t) => t.active).forEach((t) => { const o = make('option', null, t.name); o.value = t.id; mv.appendChild(o); });
+      mv.value = a.trackId || '';
+      el('moveWrap').hidden = ['draft', 'withdrawn'].includes(a.status);
       // Every review in full, with who wrote it: the committee sees what reviewers do not.
       const rbox = el('dReviews');
       rbox.textContent = '';
@@ -809,6 +897,7 @@
       el('rSpread').value = r.discrepancyThreshold || defaults.discrepancyThreshold;
       el('rCriteria').value = crit.map((c) => c.label + (Number(c.weight) !== 1 ? ' | ' + c.weight : '')).join('\n');
       el('rCriteria').dataset.keys = JSON.stringify(crit.map((c) => c.key));
+      el('rConfirmBy').value = (e && e.attendanceConfirmBy) || '';
       tracks = e ? e.tracks.filter((t) => t.active).map((t) => ({ id: t.id, name: t.name, description: t.description || '' })) : [{ name: '', description: '' }];
       renderTracks();
       note('setupNote', e && e.status === 'published' ? 'This call is published: authors can see it now. Changes take effect immediately.' : '', 'warn');
@@ -885,6 +974,7 @@
         review: {
           blind: el('rBlind').value, reviewsPerAbstract: Number(el('rPer').value),
           scaleMax: Number(el('rScale').value), discrepancyThreshold: Number(el('rSpread').value),
+          attendanceConfirmBy: el('rConfirmBy').value || null,
           // Keys stay with their line, so renaming a criterion keeps scores already given.
           criteria: el('rCriteria').value.split('\n').map((l) => l.trim()).filter(Boolean).map((line, i) => {
             const [label, weight] = line.split('|').map((x) => x.trim());
@@ -922,6 +1012,247 @@
       if (!res.audit.length) ul.appendChild(make('li', 'muted', 'No activity yet.'));
       res.audit.forEach((x) => { const li = make('li'); auditLine(li, x); ul.appendChild(li); });
     }
+
+    // ------------------------------------------------------------- submissions extras
+    el('subSearch').addEventListener('input', () => { if (list) renderSubs(); });
+    el('onBehalfToggle').addEventListener('click', () => { el('onBehalfWrap').hidden = !el('onBehalfWrap').hidden; });
+    el('obStart').addEventListener('click', async () => {
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/on-behalf`, {
+          email: el('obEmail').value, firstName: el('obFirst').value, lastName: el('obLast').value,
+          affiliation: el('obAff').value, country: el('obCountry').value });
+        note('obNote', 'Started. The form opens in a new tab; submit it there when it is complete.', 'ok');
+        window.open('abstracts#edit/' + res.abstractId, '_blank', 'noopener');
+        loadSubs();
+      } catch (error) { note('obNote', error.message, 'bad'); }
+    });
+    el('moveBtn').addEventListener('click', async () => {
+      try {
+        await post(`abstracts/admin/events/${current.id}/move`, { abstractId: detail.abstract.id, trackId: Number(el('moveTrack').value) });
+        await openDetail(detail.abstract.id);
+        note('dNote', 'Moved.', 'ok');
+      } catch (error) { note('dNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- decisions
+    let dec = null;
+    const OUTCOME = { accept: 'Accept', reject: 'Reject', waitlist: 'Waitlist' };
+    function outcomeOptions(select, types, withClear) {
+      select.textContent = '';
+      select.appendChild(make('option', null, withClear ? '— no decision —' : 'Choose…')).value = '';
+      Object.entries(types).forEach(([k, label]) => { const o = make('option', null, 'Accept: ' + label); o.value = 'accept:' + k; select.appendChild(o); });
+      [['waitlist', 'Waitlist'], ['reject', 'Reject']].forEach(([v, label]) => { const o = make('option', null, label); o.value = v; select.appendChild(o); });
+    }
+    async function loadDecisions() {
+      if (!current) return;
+      dec = await api(`abstracts/admin/events/${current.id}/decisions`);
+      renderDecisions();
+    }
+    function renderDecisions() {
+      const a = access();
+      const decider = a.programme;
+      el('releaseBar').hidden = !decider;
+      el('pendingLine').textContent = dec.pendingRelease
+        ? `${dec.pendingRelease} decision(s) recorded but not yet released. Authors cannot see them until you release.`
+        : 'No decisions waiting for release.';
+      const rt = el('releaseTrack');
+      rt.textContent = '';
+      rt.appendChild(make('option', null, 'All tracks')).value = '';
+      current.tracks.filter((t) => t.active).forEach((t) => { const o = make('option', null, t.name); o.value = t.id; rt.appendChild(o); });
+      el('releaseBtn').disabled = !dec.pendingRelease;
+      const dt = el('decTrack');
+      const keep = dt.value;
+      dt.textContent = '';
+      dt.appendChild(make('option', null, 'All tracks')).value = '';
+      current.tracks.filter((t) => t.active && dec.board.some((r) => r.trackId === t.id)).forEach((t) => { const o = make('option', null, t.name); o.value = t.id; dt.appendChild(o); });
+      dt.value = keep;
+      outcomeOptions(el('bulkOutcome'), dec.finalTypes, true);
+      el('decCol').textContent = decider ? 'Decision' : 'Your recommendation';
+      el('bulkLabel').textContent = decider ? 'For ticked abstracts:' : 'Recommend for ticked:';
+      el('decHelp').textContent = decider
+        ? 'Ranked by average score within each track. A decision is saved as soon as you choose it, and stays hidden from authors until released. Track chairs\' recommendations are shown under each choice.'
+        : 'Ranked by average score. Your recommendation goes to the programme chair, who makes the final decision.';
+      const body = el('decTable').querySelector('tbody');
+      body.textContent = '';
+      const rows = dec.board.filter((r) => !dt.value || r.trackId === Number(dt.value));
+      let lastTrack = null;
+      rows.forEach((r) => {
+        if (r.trackName !== lastTrack && !dt.value) {
+          lastTrack = r.trackName;
+          const th = make('tr'); const td = make('td', null, r.trackName || 'No track'); td.colSpan = 8;
+          td.style.cssText = 'background:#f6faf7;font-weight:700;color:#087539'; th.appendChild(td); body.appendChild(th);
+        }
+        const tr = make('tr');
+        const tick = make('td'); const cb = make('input'); cb.type = 'checkbox'; cb.className = 'decTick'; cb.value = r.id;
+        cb.setAttribute('aria-label', 'Tick ' + r.reference); tick.appendChild(cb); tr.appendChild(tick);
+        tr.appendChild(make('td', null, r.rank ? '#' + r.rank : '—'));
+        tr.appendChild(make('td', 'mono', r.reference));
+        const t = make('td'); const link = make('a', null, r.title); link.href = '#';
+        link.addEventListener('click', (e) => { e.preventDefault(); openDetail(r.id); });
+        t.appendChild(link); if (r.presenter) t.appendChild(make('div', 'muted', r.presenter)); tr.appendChild(t);
+        const avg = make('td', null, r.average != null ? String(r.average) : '—');
+        avg.appendChild(make('div', 'muted', `${r.completed}/${r.wanted} reviews`));
+        if (r.spread != null && r.spread > (current.review.discrepancyThreshold || 1.5)) avg.appendChild(make('div', 'flag', 'scores disagree'));
+        tr.appendChild(avg);
+        const recs = r.reviews.map((x) => x.recommendation).filter(Boolean);
+        const say = make('td', null, recs.length ? `${recs.filter((x) => x === 'accept').length} accept, ${recs.filter((x) => x === 'reject').length} reject` : '—');
+        const typesWanted = r.reviews.map((x) => x.recommendedType).filter(Boolean);
+        if (typesWanted.length) say.appendChild(make('div', 'muted', 'as ' + [...new Set(typesWanted.map((x) => dec.finalTypes[x] || x))].join(' / ')));
+        tr.appendChild(say);
+        const cell = make('td');
+        const sel = make('select');
+        sel.setAttribute('aria-label', 'Decision for ' + r.reference);
+        outcomeOptions(sel, dec.finalTypes, true);
+        const d = r.decision;
+        const val = decider ? (d.outcome ? (d.outcome === 'accept' ? 'accept:' + d.type : d.outcome) : '')
+                            : (d.recommendedOutcome ? (d.recommendedOutcome === 'accept' && d.recommendedType ? 'accept:' + d.recommendedType : d.recommendedOutcome) : '');
+        sel.value = val;
+        sel.disabled = ['withdrawn', 'draft'].includes(r.status) || r.status === 'confirmed';
+        sel.addEventListener('change', () => decideRows([r.id], sel.value));
+        cell.appendChild(sel);
+        if (decider && d.recommendedOutcome) cell.appendChild(make('div', 'muted', 'Track chair: ' + (OUTCOME[d.recommendedOutcome] || d.recommendedOutcome) + (d.recommendedType ? ' (' + (dec.finalTypes[d.recommendedType] || d.recommendedType) + ')' : '')));
+        if (decider && d.outcome && !d.released) {
+          const rel = make('button', 'btn btn-ghost btn-sm', 'Release this one'); rel.type = 'button'; rel.style.marginTop = '4px';
+          rel.addEventListener('click', () => release(null, [r.id]));
+          cell.appendChild(rel);
+        }
+        tr.appendChild(cell);
+        const st = make('td'); const p = make('span'); pill(p, r.status); st.appendChild(p);
+        if (d.released && d.attendance) {
+          const late = d.attendance === 'pending' && current.attendanceConfirmBy && new Date() > new Date(current.attendanceConfirmBy + 'T23:59:59');
+          st.appendChild(make('div', late ? 'flag' : 'muted', d.attendance === 'pending' ? (late ? 'no reply - past the date' : 'awaiting confirmation') : 'attendance ' + d.attendance));
+        }
+        tr.appendChild(st);
+        body.appendChild(tr);
+      });
+      el('decAll').checked = false;
+      el('decTable').hidden = !rows.length;
+      el('decEmpty').hidden = !!rows.length;
+    }
+    el('decTrack').addEventListener('change', renderDecisions);
+    el('decAll').addEventListener('change', () => document.querySelectorAll('.decTick').forEach((c) => { c.checked = el('decAll').checked; }));
+    async function decideRows(ids, value, override) {
+      const [outcome, type] = value ? value.split(':') : ['', null];
+      try {
+        if (!access().programme) {
+          for (const id of ids) await post(`abstracts/admin/events/${current.id}/recommend`, { abstractId: id, outcome, type });
+          note('decNote', 'Recommendation saved.', 'ok');
+        } else {
+          const res = await post(`abstracts/admin/events/${current.id}/decide`, { abstractIds: ids, outcome, type, override: !!override });
+          const short = res.errors.filter((e) => / of \d+ reviews\.$/.test(e));
+          if (short.length && !override && window.confirm(short.join('\n') + '\n\nDecide anyway, without all the reviews?')) return decideRows(ids, value, true);
+          note('decNote', `${res.decided} decision(s) saved${res.decided ? ' - not visible to authors until released' : ''}.` + (res.errors.length ? ' ' + res.errors.join(' ') : ''), res.errors.length ? 'warn' : 'ok');
+        }
+      } catch (error) { note('decNote', error.message, 'bad'); }
+      await loadDecisions();
+    }
+    el('bulkBtn').addEventListener('click', () => {
+      const ids = [...document.querySelectorAll('.decTick:checked')].map((c) => Number(c.value));
+      if (!ids.length) { note('decNote', 'Tick the abstracts first.', 'bad'); return; }
+      decideRows(ids, el('bulkOutcome').value);
+    });
+    async function release(trackId, ids) {
+      const what = ids ? 'this decision' : (trackId ? 'the decisions in this track' : 'all recorded decisions');
+      if (!window.confirm(`Release ${what}? Each author is emailed the outcome with the reviewers' comments for authors. This cannot be undone.`)) return;
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/release`, ids ? { abstractIds: ids } : { trackId: trackId || null });
+        note('decNote', `${res.released} decision(s) released and emailed.`, 'ok');
+      } catch (error) { note('decNote', error.message, 'bad'); }
+      await loadDecisions();
+    }
+    el('releaseBtn').addEventListener('click', () => release(Number(el('releaseTrack').value) || null, null));
+
+    // ------------------------------------------------------------- reports and exports
+    async function download(path, fallbackName) {
+      try {
+        // apiUrl() encodes the whole route, so the options go on afterwards as real query parameters.
+        const [route, query] = path.split(/&(.*)/s);
+        const response = await fetch(window.ResokPortal.apiUrl(route) + (query ? '&' + query : ''), { credentials: 'same-origin' });
+        if (!response.ok) { let m = 'Download failed.'; try { m = (await response.json()).error || m; } catch (e) { /* not JSON */ } throw new Error(m); }
+        const name = (response.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+        const url = URL.createObjectURL(await response.blob());
+        const a = make('a'); a.href = url; a.download = name ? name[1] : fallbackName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch (error) { note('repNote', error.message, 'bad'); }
+    }
+    async function loadReports() {
+      if (!current) return;
+      const rows = el('exportRows');
+      rows.textContent = '';
+      [['abstracts', 'Abstracts', 'one row per abstract, with authors, scores and the text'],
+       ['authors', 'Authors', 'one row per author per abstract'],
+       ['reviews', 'Reviews', 'every review with its scores and comments'],
+       ['decisions', 'Decisions', 'outcome, presentation, release and attendance']].forEach(([kind, label, help]) => {
+        const tr = make('tr');
+        const td = make('td'); td.appendChild(make('strong', null, label)); td.appendChild(make('div', 'muted', help)); tr.appendChild(td);
+        ['xlsx', 'csv'].forEach((format) => {
+          const c = make('td'); const b = make('button', 'btn btn-ghost btn-sm', format === 'xlsx' ? 'Excel' : 'CSV'); b.type = 'button';
+          b.addEventListener('click', () => download(`abstracts/admin/events/${current.id}/export&kind=${kind}&format=${format}`, `${kind}.${format}`));
+          c.appendChild(b); tr.appendChild(c);
+        });
+        rows.appendChild(tr);
+      });
+      el('bookLink').href = 'abstracts-book?event=' + current.id;
+      const stats = await api(`abstracts/admin/events/${current.id}/stats`);
+      const cards = el('statCards');
+      cards.textContent = '';
+      const card = (title, items, labeler) => {
+        const c = make('div', 'card');
+        c.appendChild(make('b', null, title));
+        const max = Math.max(1, ...items.map((i) => i.count));
+        if (!items.length) c.appendChild(make('div', 'small', 'No data yet.'));
+        items.forEach((i) => {
+          const row = make('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px';
+          const lab = make('span', null, labeler ? labeler(i.label) : i.label); lab.style.cssText = 'flex:0 0 46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+          const bar = make('span'); bar.style.cssText = `height:10px;border-radius:5px;background:#087539;width:${Math.max(4, 50 * i.count / max)}%`;
+          row.append(lab, bar, make('span', 'muted', String(i.count)));
+          c.appendChild(row);
+        });
+        cards.appendChild(c);
+      };
+      card('By status', stats.byStatus, (l) => STATUS[l] || l);
+      card('By track', stats.byTrack);
+      card('By presenting author\'s country', stats.byCountry);
+      card('Preferred presentation', stats.byType);
+      card('Submissions per day', stats.perDay.slice(-14), (l) => fmt(l + ' 00:00').replace(/,.*$/, ''));
+    }
+    el('bookWordBtn').addEventListener('click', () => download(`abstracts/admin/events/${current.id}/book&format=word`, 'abstract-book.doc'));
+
+    // ------------------------------------------------------------- email wording
+    let templates = [];
+    async function loadTemplates() {
+      if (!current || !access().admin) return;
+      templates = (await api(`abstracts/admin/events/${current.id}/templates`)).templates;
+      const pick = el('tplPick');
+      const keep = pick.value;
+      pick.textContent = '';
+      templates.forEach((t) => { const o = make('option', null, t.label + (t.customised ? ' (edited)' : '')); o.value = t.key; pick.appendChild(o); });
+      pick.value = keep && templates.some((t) => t.key === keep) ? keep : templates[0].key;
+      showTemplate();
+    }
+    function showTemplate() {
+      const t = templates.find((x) => x.key === el('tplPick').value);
+      if (!t) return;
+      el('tplSubject').value = t.subject;
+      el('tplBody').value = t.body;
+      el('tplFields').textContent = 'Fields for this email: ' + t.fields.map((f) => '{{' + f + '}}').join('  ');
+      el('tplReset').disabled = !t.customised;
+      note('tplNote', '');
+    }
+    el('tplPick').addEventListener('change', showTemplate);
+    async function saveTemplate(reset) {
+      try {
+        const res = await post(`abstracts/admin/events/${current.id}/templates`, reset
+          ? { key: el('tplPick').value, subject: '', body: '' }
+          : { key: el('tplPick').value, subject: el('tplSubject').value, body: el('tplBody').value });
+        templates = res.templates;
+        await loadTemplates();
+        note('tplNote', reset ? 'Default wording restored.' : 'Saved. New emails use this wording.', 'ok');
+      } catch (error) { note('tplNote', error.message, 'bad'); }
+    }
+    el('tplSave').addEventListener('click', () => saveTemplate(false));
+    el('tplReset').addEventListener('click', () => { if (window.confirm('Restore the default wording for this email?')) saveTemplate(true); });
 
     boot();
   })();

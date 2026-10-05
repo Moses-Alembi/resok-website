@@ -187,22 +187,10 @@ function absInvite(PDO $pdo, array $config, array $eventRow, string $email, stri
             ->execute([$eventId, $email, $name !== '' ? $name : null, $hash, $by, $message !== '' ? $message : null]);
     }
 
-    $event = (string)$eventRow['name'];
-    $url = absReviewUrl($config, '?invite=' . $token);
-    $greeting = $name !== '' ? 'Dear ' . $name . ',' : 'Dear colleague,';
-    $deadline = absAt($eventRow['review_deadline'] ?? null, absZone($eventRow));
-    $when = $deadline ? 'Reviews are due by ' . $deadline->format('j F Y') . '.' : '';
-    $text = "{$greeting}\n\nThe programme committee of {$event} invites you to review submitted abstracts.\n"
-        . ($message !== '' ? "\n{$message}\n" : '')
-        . "\n{$when}\nAccept or decline here (you can choose the tracks you review):\n{$url}\n\nRespiratory Society of Kenya";
-    $html = brandedEmailHtml('Invitation to review abstracts',
-        absPara($greeting)
-        . absPara("The programme committee of {$event} invites you to review submitted abstracts.")
-        . ($message !== '' ? absPara($message) : '')
-        . ($when !== '' ? absPara($when) : '')
-        . absPara('You can choose the tracks you review, and declare any conflict of interest on an abstract.'),
-        'Respond to the invitation', $url);
-    absSendLogged($pdo, $config, $eventId, null, 'reviewer_invitation', $email, "Invitation to review abstracts: {$event}", $text, $html);
+    absSendTemplate($pdo, $config, $eventId, null, 'reviewer_invitation', $email, [
+        'name' => $name !== '' ? $name : 'colleague', 'event' => (string)$eventRow['name'], 'message' => $message,
+        'review_deadline' => absDeadlineText($eventRow, 'review_deadline'), 'link' => absReviewUrl($config, '?invite=' . $token),
+    ]);
     absAudit($pdo, $eventId, null, $by, 'reviewer_invited', null, null, ['email' => $email]);
     return null;
 }
@@ -559,17 +547,10 @@ function absNotifyAssigned(PDO $pdo, array $config, array $eventRow, int $review
 {
     $p = absPersonName($pdo, $reviewerUserId);
     if ($p['email'] === '') return;
-    $event = (string)$eventRow['name'];
-    $deadline = absAt($eventRow['review_deadline'] ?? null, absZone($eventRow));
-    $when = $deadline ? ' Reviews are due by ' . $deadline->format('j F Y, H:i') . ' (' . absZone($eventRow)->getName() . ').' : '';
-    $what = $count === 1 ? '1 new abstract has' : "{$count} new abstracts have";
-    $text = "Dear {$p['name']},\n\n{$what} been assigned to you for review for {$event}.{$when}\n\n"
-        . "Open your reviews here:\n" . absReviewUrl($config) . "\n\nIf you have a conflict of interest with any abstract, declare it there and it will be reassigned.\n\nRespiratory Society of Kenya";
-    $html = brandedEmailHtml('Abstracts assigned to you',
-        absPara("Dear {$p['name']},") . absPara("{$what} been assigned to you for review for {$event}.{$when}")
-        . absPara('If you have a conflict of interest with any abstract, declare it on the review page and it will be reassigned.'),
-        'Open my reviews', absReviewUrl($config));
-    absSendLogged($pdo, $config, (int)$eventRow['id'], null, 'review_assignment', $p['email'], "Abstracts to review: {$event}", $text, $html);
+    absSendTemplate($pdo, $config, (int)$eventRow['id'], null, 'review_assignment', $p['email'], [
+        'name' => $p['name'], 'event' => (string)$eventRow['name'], 'count' => $count,
+        'review_deadline' => absDeadlineText($eventRow, 'review_deadline'), 'link' => absReviewUrl($config),
+    ]);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -813,31 +794,25 @@ function absSendReviewReminders(PDO $pdo, array $config, array $eventRow, bool $
                            WHERE a.event_id = ? AND rv.status IN ('assigned','in_progress') GROUP BY rv.reviewer_user_id");
     $stmt->execute([(int)$eventRow['id']]);
     $sent = 0;
-    $event = (string)$eventRow['name'];
     foreach ($stmt->fetchAll() as $r) {
         $p = absPersonName($pdo, (int)$r['reviewer_user_id']);
         if ($p['email'] === '') continue;
-        $n = (int)$r['open_count'];
-        $what = $n === 1 ? '1 abstract is' : "{$n} abstracts are";
-        $due = $deadline ? ($deadline < $now ? ' The review deadline (' . $deadline->format('j F Y') . ') has passed.'
-                                             : ' Reviews are due by ' . $deadline->format('j F Y, H:i') . '.') : '';
-        $text = "Dear {$p['name']},\n\n{$what} still waiting for your review for {$event}.{$due}\n\n" . absReviewUrl($config) . "\n\nThank you for your help.\n\nRespiratory Society of Kenya";
-        $html = brandedEmailHtml('Reviews waiting for you', absPara("Dear {$p['name']},")
-            . absPara("{$what} still waiting for your review for {$event}.{$due}") . absPara('Thank you for your help.'),
-            'Open my reviews', absReviewUrl($config));
         $key = 'revrem:' . $eventRow['id'] . ':' . $r['reviewer_user_id'] . ':' . $now->format('Y-m-d');
-        if (absQueueOnce($pdo, $config, (int)$eventRow['id'], 'review_reminder', $p['email'], "Reminder: abstracts to review for {$event}", $text, $html, $key)) $sent++;
+        if (absQueueOnce($pdo, $config, (int)$eventRow['id'], 'review_reminder', $p['email'], [
+            'name' => $p['name'], 'event' => (string)$eventRow['name'], 'count' => (int)$r['open_count'],
+            'review_deadline' => absDeadlineText($eventRow, 'review_deadline'), 'link' => absReviewUrl($config),
+        ], $key)) $sent++;
     }
     return $sent;
 }
 
-/** Queues a message under a dedupe key; true when it was new (sent now or queued). */
-function absQueueOnce(PDO $pdo, array $config, int $eventId, string $template, string $to, string $subject, string $text, string $html, string $key): bool
+/** Queues a templated message under a dedupe key; true when it was new (sent now or queued). */
+function absQueueOnce(PDO $pdo, array $config, int $eventId, string $template, string $to, array $vars, string $key, ?int $abstractId = null): bool
 {
     $exists = $pdo->prepare('SELECT 1 FROM abs_emails WHERE dedupe_key = ?');
     $exists->execute([$key]);
     if ($exists->fetch()) return false;
-    absSendLogged($pdo, $config, $eventId, null, $template, $to, $subject, $text, $html, $key);
+    absSendTemplate($pdo, $config, $eventId, $abstractId, $template, $to, $vars, $key);
     return true;
 }
 
@@ -854,17 +829,11 @@ function absSendDeadlineReminders(PDO $pdo, array $config, array $eventRow): int
                            WHERE a.event_id = ? AND a.status = 'draft'");
     $stmt->execute([(int)$eventRow['id']]);
     $sent = 0;
-    $event = (string)$eventRow['name'];
-    $deadline = $closes->format('j F Y, H:i') . ' (' . $zone->getName() . ')';
     foreach ($stmt->fetchAll() as $r) {
-        $title = $r['title'] !== '' ? "\"{$r['title']}\"" : 'your draft abstract';
-        $text = "Your abstract {$title} for {$event} has not been submitted yet. The deadline is {$deadline}.\n\n"
-            . "Drafts are not considered - finish and submit it here:\n" . absEmailUrl($config) . "\n\nRespiratory Society of Kenya";
-        $html = brandedEmailHtml('Your abstract is not submitted yet',
-            absPara("Your abstract {$title} for {$event} has not been submitted yet. The deadline is {$deadline}.")
-            . absPara('Drafts are not considered by the committee.'), 'Finish my abstract', absEmailUrl($config));
-        if (absQueueOnce($pdo, $config, (int)$eventRow['id'], 'deadline_reminder', (string)$r['email'],
-                         "Deadline reminder: {$event}", $text, $html, "deadline{$window}:{$r['id']}")) $sent++;
+        if (absQueueOnce($pdo, $config, (int)$eventRow['id'], 'deadline_reminder', (string)$r['email'], [
+            'event' => (string)$eventRow['name'], 'title' => $r['title'] !== '' ? $r['title'] : 'Untitled draft',
+            'deadline' => absDeadlineText($eventRow, 'call_closes_at'), 'link' => absEmailUrl($config),
+        ], "deadline{$window}:{$r['id']}", (int)$r['id'])) $sent++;
     }
     return $sent;
 }
@@ -876,6 +845,9 @@ function absRunScheduled(PDO $pdo, array $config): array
     foreach ($pdo->query("SELECT * FROM abs_events WHERE status = 'published'")->fetchAll() as $event) {
         $report['deadlineReminders'] += absSendDeadlineReminders($pdo, $config, $event);
         $report['reviewReminders'] += absSendReviewReminders($pdo, $config, $event, false);
+        if (function_exists('absSendAttendanceReminders')) {
+            $report['attendanceReminders'] = ($report['attendanceReminders'] ?? 0) + absSendAttendanceReminders($pdo, $config, $event);
+        }
     }
     $report['mail'] = absMailPump($pdo, $config, 200);
     return $report;

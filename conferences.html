@@ -350,6 +350,33 @@
   </script>
 
   <main>
+    <!-- Call for abstracts, live from the abstract system (INT-5). Stays hidden until a call
+         is published there, so nothing shows before launch. -->
+    <section class="section" id="abstract-call" hidden style="padding-bottom:0">
+      <style>
+        #abstract-call .call-box{display:flex;gap:22px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid #dfe8e4;
+          border-left:7px solid #087539;border-radius:8px;padding:24px 26px;box-shadow:0 18px 44px rgba(15,23,42,.08)}
+        #abstract-call .call-text{flex:1;min-width:240px}
+        #abstract-call .call-kicker{color:#087539;font-weight:900;text-transform:uppercase;letter-spacing:.1em;font-size:.76rem}
+        #abstract-call h2{font-family:var(--heading);font-size:clamp(1.4rem,2.2vw,2rem);line-height:1.1;margin:6px 0}
+        #abstract-call p{color:#344054;font-weight:600;font-size:.95rem}
+        #abstract-call .call-left{display:inline-block;margin-top:8px;background:#ecfdf3;color:#05603a;border-radius:999px;padding:5px 12px;font-weight:800;font-size:.85rem}
+        #abstract-call .call-btn{display:inline-flex;align-items:center;gap:8px;background:#087539;color:#fff;text-decoration:none;font-weight:900;
+          padding:14px 22px;border-radius:6px;font-family:var(--heading)}
+        #abstract-call .call-btn:hover{background:#065a2c}
+      </style>
+      <div class="section-inner">
+        <div class="call-box">
+          <div class="call-text">
+            <div class="call-kicker">Call for abstracts</div>
+            <h2 id="abstractCallTitle"></h2>
+            <p id="abstractCallText"></p>
+            <span class="call-left" id="abstractCallLeft" hidden></span>
+          </div>
+          <a class="call-btn" id="abstractCallBtn" href="/resok-portal/public/abstracts"><i class="fas fa-paper-plane" aria-hidden="true"></i> Submit an abstract</a>
+        </div>
+      </div>
+    </section>
     <section class="section" id="downloads">
       <div class="section-inner">
         <div class="section-head">
@@ -633,6 +660,34 @@
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') closeMobileNav();
       });
+    })();
+  </script>
+  <script>
+    // Fills the call-for-abstracts box from the abstract system. Any failure - no call, the
+    // API unreachable - leaves the box hidden, which is the right answer either way.
+    (async () => {
+      try {
+        const res = await fetch('/resok-portal/public/api/index.php?route=abstracts/call', { credentials: 'omit' });
+        if (!res.ok) return;
+        const { event, preview } = await res.json();
+        if (!event || preview || event.callState === 'closed') return;
+        const closes = new Date(event.callClosesAt);
+        const opens = event.callOpensAt ? new Date(event.callOpensAt) : null;
+        const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: event.timezone });
+        document.getElementById('abstractCallTitle').textContent = event.name;
+        const text = document.getElementById('abstractCallText');
+        if (event.callState === 'not_open') {
+          text.textContent = 'Abstract submission opens on ' + fmt(opens) + ' and closes on ' + fmt(closes) + '.';
+          document.getElementById('abstractCallBtn').lastChild.textContent = ' See the call';
+        } else {
+          text.textContent = 'Submit your research by ' + fmt(closes) + '. Tracks: ' + event.tracks.map((t) => t.name).join(', ') + '.';
+          const days = Math.ceil((closes - new Date()) / 86400000);
+          const left = document.getElementById('abstractCallLeft');
+          left.textContent = days > 1 ? days + ' days left' : 'Closes within a day';
+          left.hidden = false;
+        }
+        document.getElementById('abstract-call').hidden = false;
+      } catch (e) { /* leave the box hidden */ }
     })();
   </script>
   <script src="assets/js/site-forms.js" defer></script>

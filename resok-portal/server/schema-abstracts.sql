@@ -1,4 +1,5 @@
--- Abstract submission (KISLHC): tables for lib/abstracts.php and lib/abstracts-review.php.
+-- Abstract submission (KISLHC): tables for lib/abstracts.php, lib/abstracts-review.php and
+-- lib/abstracts-decisions.php.
 --
 -- The module creates these itself on first use; this file is for the admin Migrations page
 -- or phpMyAdmin when the database user cannot CREATE. Keep it in step with abstractsSchema().
@@ -199,4 +200,34 @@ CREATE TABLE IF NOT EXISTS abs_reviews (
     PRIMARY KEY (id),
     UNIQUE KEY abs_reviews_pair (abstract_id, reviewer_user_id),
     KEY abs_reviews_reviewer (reviewer_user_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS abs_templates (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    event_id INT UNSIGNED NOT NULL,
+    template VARCHAR(40) NOT NULL,
+    subject VARCHAR(250) NOT NULL,
+    body TEXT NOT NULL,
+    updated_by INT UNSIGNED NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY abs_templates_key (event_id, template)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS abs_decisions (
+    abstract_id INT UNSIGNED NOT NULL,
+    outcome ENUM('accept','reject','waitlist') NULL,
+    presentation_type VARCHAR(30) NULL,
+    decided_by INT UNSIGNED NULL,
+    decided_at DATETIME NULL,
+    recommended_outcome VARCHAR(20) NULL,
+    recommended_type VARCHAR(30) NULL,
+    recommended_by INT UNSIGNED NULL,
+    recommended_at DATETIME NULL,
+    note VARCHAR(1000) NULL,
+    released_at DATETIME NULL,
+    released_by INT UNSIGNED NULL,
+    attendance ENUM('pending','confirmed','declined') NULL,
+    attendance_at DATETIME NULL,
+    PRIMARY KEY (abstract_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

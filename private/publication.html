@@ -175,6 +175,7 @@ body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65
             <h2>Overview</h2>
             <p class="pub-abstract" id="pubOverview"></p>
             <div class="pub-topics" id="pubTopics"></div>
+            <p class="pub-kenya" id="pubOverviewNote" hidden></p>
             <p class="pub-kenya" id="pubRelated" hidden></p>
           </section>
 
@@ -291,7 +292,7 @@ body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
     }
   </script>
-  <script src="assets/js/publications.js?v=2"></script>
+  <script src="assets/js/publications.js?v=3"></script>
   <script>
     // Renders one publication from the shared manifest, chosen by ?id=. Everything is set
     // with textContent rather than innerHTML: the manifest holds real abstracts with
@@ -345,6 +346,11 @@ body{font-family:var(--b);background:var(--bg);color:var(--ink);line-height:1.65
       }
 
       set("pubOverview", pub.overview || "");
+      if (pub.overviewNote) {
+        const note = document.getElementById("pubOverviewNote");
+        note.textContent = pub.overviewNote;
+        note.hidden = false;
+      }
 
       const topics = document.getElementById("pubTopics");
       (pub.topics || []).forEach((topic) => {

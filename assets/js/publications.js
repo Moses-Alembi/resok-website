@@ -17,6 +17,33 @@
  */
 window.RESOK_PUBLICATIONS = [
   {
+    id: "nurses-interventional-pulmonology-2026",
+    title: "The Role of Nurses in Interventional Pulmonology: Comprehensive Care Across Procedures - Reflections from a Nursing Fellowship Program in India",
+    type: "Review Article",
+    journal: "Journal of Pulmonology Research & Reports",
+    year: "2026",
+    doi: "10.47363/JPRR/2026(8)203",
+    openAccess: true,
+    authors: ["John Ndung’u"],
+    kenyaNote: "Written by John Ndung’u, Respiratory Nurse at the Bronchoscopy Unit, Kenyatta National Hospital, Nairobi.",
+    file: "assets/publications/nurses-interventional-pulmonology-2026.pdf",
+    fileSize: "600 KB",
+    cover: "assets/img/publications/nurses-interventional-pulmonology-2026-cover.jpg",
+    topics: ["Interventional pulmonology", "Respiratory nursing", "Bronchoscopy", "EBUS", "Pleural procedures"],
+    // The article has no published abstract, so this is the summary ReSoK was given, put in
+    // the third person; overviewNote says so on the page.
+    overview:
+      "This article draws on the author's interventional pulmonology nursing fellowship in India " +
+      "to describe the nurse's role before, during and after procedures such as bronchoscopy, " +
+      "endobronchial ultrasound (EBUS) and pleural interventions. It covers patient assessment and " +
+      "education, equipment preparation, monitoring, specimen handling, recovery care and " +
+      "coordination across clinical teams. A case reflection on EBUS-guided mediastinal lymph node " +
+      "cryobiopsy shows how these responsibilities come together during a complex procedure. The " +
+      "article also discusses the need for structured training, ongoing competency development and " +
+      "greater recognition of specialised respiratory nursing practice.",
+    overviewNote: "ReSoK summary - this article has no published abstract."
+  },
+  {
     id: "cap-adults-complications",
     title: "Community-acquired pneumonia in adults: acute and long-term complications",
     type: "Review",

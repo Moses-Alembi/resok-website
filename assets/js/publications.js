@@ -30,8 +30,8 @@ window.RESOK_PUBLICATIONS = [
     fileSize: "600 KB",
     cover: "assets/img/publications/nurses-interventional-pulmonology-2026-cover.jpg",
     topics: ["Interventional pulmonology", "Respiratory nursing", "Bronchoscopy", "EBUS", "Pleural procedures"],
-    // The article has no published abstract, so this is the summary ReSoK was given, put in
-    // the third person; overviewNote says so on the page.
+    // The article has no published abstract; this is the author's own summary, put in the
+    // third person.
     overview:
       "This article draws on the author's interventional pulmonology nursing fellowship in India " +
       "to describe the nurse's role before, during and after procedures such as bronchoscopy, " +
@@ -40,8 +40,7 @@ window.RESOK_PUBLICATIONS = [
       "coordination across clinical teams. A case reflection on EBUS-guided mediastinal lymph node " +
       "cryobiopsy shows how these responsibilities come together during a complex procedure. The " +
       "article also discusses the need for structured training, ongoing competency development and " +
-      "greater recognition of specialised respiratory nursing practice.",
-    overviewNote: "ReSoK summary - this article has no published abstract."
+      "greater recognition of specialised respiratory nursing practice."
   },
   {
     id: "cap-adults-complications",

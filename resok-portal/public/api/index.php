@@ -1674,8 +1674,11 @@ Respiratory Society of Kenya");
         $viewer = auth($config);
         $filename = basename(rawurldecode($m[1]));
 
-        $owner = $pdo->prepare('SELECT user_id FROM member_profiles WHERE profile_image = ? LIMIT 1');
-        $owner->execute([$filename]);
+        // Uploads store the path as 'profile-images/<file>', and this used to look up the bare
+        // file name - so no member ever matched as the owner of their own photo, and only
+        // admins could see any. Both forms are accepted in case an older row holds the bare name.
+        $owner = $pdo->prepare('SELECT user_id FROM member_profiles WHERE profile_image IN (?, ?) LIMIT 1');
+        $owner->execute(['profile-images/' . $filename, $filename]);
         $ownerRow = $owner->fetch();
         $isOwner = $ownerRow && (int)$ownerRow['user_id'] === (int)$viewer['userId'];
         if (!$isOwner && ($viewer['role'] ?? '') !== 'admin') {
@@ -1699,7 +1702,10 @@ Respiratory Society of Kenya");
         header_remove('Content-Type');
         header('Content-Type: ' . $mimeTypes[$extension]);
         header('Content-Length: ' . filesize($file));
-        header('Cache-Control: public, max-age=86400');
+        // private: the browser may keep it, a shared cache may not. The host runs one in front
+        // of the site, and 'public' let it hold a member's photo for anyone with the URL.
+        header('Cache-Control: private, max-age=86400');
+        header('Vary: Cookie');
         readfile($file);
         exit;
     }

@@ -18,6 +18,45 @@ function securityCheck(string $id, string $title, string $status, string $detail
     return ['id' => $id, 'title' => $title, 'status' => $status, 'detail' => $detail, 'action' => $action];
 }
 
+/**
+ * Asks the live site for a URL, the way a browser would, and returns the status code and
+ * lower-cased response headers - or null if the server cannot reach itself (some shared
+ * hosts block loopback requests). This is what lets a check report what a visitor actually
+ * gets, rather than what the configuration files suggest they should get.
+ *
+ * @return array{status:int,headers:array<string,string>}|null
+ */
+function securityFetch(string $url): ?array
+{
+    if (!function_exists('curl_init') || !preg_match('#^https?://#i', $url)) return null;
+    $headers = [];
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_NOBODY => false,
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_TIMEOUT => 6,
+        CURLOPT_USERAGENT => 'ReSoK-security-assessment',
+        CURLOPT_HEADERFUNCTION => function ($handle, string $line) use (&$headers): int {
+            $parts = explode(':', $line, 2);
+            if (count($parts) === 2) $headers[strtolower(trim($parts[0]))] = trim($parts[1]);
+            return strlen($line);
+        },
+    ]);
+    $ok = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    if ($ok === false || $status === 0) return null;
+    return ['status' => $status, 'headers' => $headers];
+}
+
+/** A query string no cache has seen, so the answer is the server's and not a cached copy. */
+function securityCacheBuster(): string
+{
+    return 'nocache=' . bin2hex(random_bytes(6));
+}
+
 function securityAssessTransport(array $config): array
 {
     $out = [];
@@ -29,10 +68,20 @@ function securityAssessTransport(array $config): array
             'The admin panel is being served over plain HTTP. The session cookie is Secure, so it is not even being sent.',
             'Force HTTPS in .htaccess or enable the host\'s Force HTTPS Redirect.');
 
-    // Reported from the response headers Apache is configured to add.
+    // Read from a real response to the site, because most of these headers are added by
+    // Apache (.htaccess) after PHP has finished, and apache_response_headers() only ever saw
+    // the ones PHP set itself - which is how HSTS was reported missing while being sent.
+    // The PHP-side view is the fallback for a host that blocks requests to itself.
     $headers = [];
-    foreach (function_exists('apache_response_headers') ? apache_response_headers() : [] as $k => $v) {
-        $headers[strtolower($k)] = $v;
+    $base = rtrim((string)($config['portal_base_url'] ?? ''), '/');
+    $live = $base !== '' ? securityFetch($base . '/api/index.php?route=health&' . securityCacheBuster()) : null;
+    // Only a 200 from the health route proves the request reached this site.
+    if ($live !== null && $live['status'] === 200) {
+        $headers = $live['headers'];
+    } else {
+        foreach (function_exists('apache_response_headers') ? apache_response_headers() : [] as $k => $v) {
+            $headers[strtolower($k)] = $v;
+        }
     }
     $wanted = [
         'strict-transport-security' => 'HSTS',
@@ -115,6 +164,33 @@ function securityAssessUploads(array $config): array
     $norm = fn(string $p): string => rtrim(str_replace('\\', '/', $p), '/');
     $uploads = (string)($config['upload_dir'] ?? '');
     $uploadsReal = $uploads !== '' ? realpath($uploads) : false;
+
+    // First, the direct question: ask the site for a payment proof that does not exist. A
+    // blocked folder answers 403 whatever the name; an open one answers 404, which means a
+    // real file at that path would have been served. Only possible when uploads are in the
+    // default place beside public/, because that is the only layout with a known URL.
+    $base = rtrim((string)($config['portal_base_url'] ?? ''), '/');
+    $defaultDir = realpath(__DIR__ . '/../../../uploads');
+    // The health route answering 200 first proves portal_base_url points at this site; a
+    // 404 from some other server would otherwise read as an open folder.
+    $self = ($base !== '' && $uploadsReal !== false && $defaultDir !== false && $norm($uploadsReal) === $norm($defaultDir))
+        ? securityFetch($base . '/api/index.php?route=health&' . securityCacheBuster()) : null;
+    if ($self !== null && $self['status'] === 200) {
+        $probeUrl = dirname($base) . '/uploads/Payment_Proof/probe-' . bin2hex(random_bytes(8)) . '.png?' . securityCacheBuster();
+        $live = securityFetch($probeUrl);
+        if ($live !== null && in_array($live['status'], [401, 403], true)) {
+            return securityCheck('uploads', 'Upload location', 'pass',
+                'Checked live: a request for a file in the upload folder is refused, so payment proofs and photos are only reachable through the API.');
+        }
+        if ($live !== null && $live['status'] === 404) {
+            return securityCheck('uploads', 'Upload location', 'fail',
+                'Checked live: the upload folder answers requests directly, so anyone with a link can open a member\'s payment proof or photo without signing in.',
+                'Deploy the current .htaccess, which refuses /resok-portal/uploads/, then purge the host cache so copies it already holds are dropped.');
+        }
+        // Anything else (a redirect, a timeout, a host blocking self-requests) proves
+        // nothing either way, so fall through to reading the rules.
+    }
+
     $docRoot = realpath((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
     if ($uploadsReal === false || $docRoot === false) {
         return securityCheck('uploads', 'Upload location', 'warn',
@@ -128,19 +204,28 @@ function securityAssessUploads(array $config): array
     }
 
     $relative = ltrim(substr($uploadsPath, strlen($rootPath)), '/');
-    $probe = $relative . '/Payment_Proof/proof-example.png';
     $blockedBy = null;
 
-    $rootRules = @file_get_contents($docRoot . '/.htaccess');
-    if (is_string($rootRules)) {
-        foreach (preg_split('/\R/', $rootRules) as $line) {
-            if (!preg_match('/^\s*RewriteRule\s+(\S+)\s+-\s+\[[^\]]*\bF\b[^\]]*\]/i', $line, $m)) continue;
-            $pattern = '#' . str_replace('#', '\\#', $m[1]) . '#';
-            if (@preg_match($pattern, $probe) === 1) {
-                $blockedBy = 'a rule in the site .htaccess';
-                break;
+    // Every .htaccess from the web root down to the upload folder applies, and each one
+    // matches paths relative to its own directory. Reading only the root's missed the live
+    // layout, where the site sits in a subfolder of the web root with its own .htaccess.
+    $dir = $uploadsPath;
+    while ($blockedBy === null && stripos($dir . '/', $rootPath . '/') === 0) {
+        $rules = @file_get_contents($dir . '/.htaccess');
+        if (is_string($rules)) {
+            $probe = ltrim(substr($uploadsPath . '/Payment_Proof/proof-example.png', strlen($dir)), '/');
+            foreach (preg_split('/\R/', $rules) as $line) {
+                if (!preg_match('/^\s*RewriteRule\s+(\S+)\s+-\s+\[[^\]]*\bF\b[^\]]*\]/i', $line, $m)) continue;
+                $pattern = '#' . str_replace('#', '\\#', $m[1]) . '#';
+                if (@preg_match($pattern, $probe) === 1) {
+                    $where = ltrim(substr($dir, strlen($rootPath)), '/');
+                    $blockedBy = 'a rule in ' . ($where === '' ? 'the site .htaccess' : "the .htaccess in /{$where}/");
+                    break;
+                }
             }
         }
+        if ($dir === $rootPath) break;
+        $dir = $norm(dirname($dir));
     }
     if ($blockedBy === null) {
         $localRules = @file_get_contents($uploadsReal . '/.htaccess');
@@ -153,7 +238,7 @@ function securityAssessUploads(array $config): array
         ? securityCheck('uploads', 'Upload location', 'pass',
             "Uploads are inside the web root, but {$blockedBy} refuses every direct request, so files are only reachable through the API.")
         : securityCheck('uploads', 'Upload location', 'fail',
-            "Uploads are inside the web root at /{$relative}/ and nothing blocks them. Anyone with a link can open a member's payment proof or photo without signing in.",
+            "Uploads are inside the web root at /{$relative}/ and no .htaccess rule blocking them could be found. If none exists, anyone with a link can open a member's payment proof or photo without signing in.",
             'Deploy the current .htaccess, which refuses /resok-portal/uploads/, then purge the host cache so copies it already holds are dropped.');
 }
 

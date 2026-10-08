@@ -97,6 +97,13 @@
       // lands mid-page, tear the local session down and send the member to login with an
       // explanation, rather than surfacing a bare "request failed" on whatever they clicked.
       if (response.status === 401 && data?.reason === "idle") endSessionForInactivity();
+      // Ended on the server: logged out on this device, a password reset, or a role change.
+      if (response.status === 401 && data?.reason === "revoked") endSessionRevoked();
+      // A staff account without two-factor is held at the setup page. The server refuses
+      // everything else until it is on, so send them where they can finish it.
+      if (response.status === 403 && data?.mfaSetupRequired && pageName() !== "two-factor-setup") {
+        window.location.href = "two-factor-setup";
+      }
       // The status travels with the error. Without it every caller has to guess what went
       // wrong from the wording of a message written for a human, and "not signed in" and
       // "the server is not there" are opposite problems that need opposite handling.
@@ -745,6 +752,19 @@
     clearInterval(idleTimer);
     idleTimer = null;
     ACTIVITY_EVENTS.forEach((type) => window.removeEventListener(type, markActivity));
+  }
+
+  // The server has already ended this session, so there is nothing to log out of - only the
+  // page's own idea that someone is signed in, which would otherwise outlive it.
+  function endSessionRevoked() {
+    stopIdleWatch();
+    hideIdleWarning();
+    localStorage.removeItem(TOKEN_KEY);
+    const state = getState();
+    state.loggedIn = false;
+    state.token = "";
+    saveState(state);
+    if (pageName() !== "login") window.location.href = "login";
   }
 
   function endSessionForInactivity() {

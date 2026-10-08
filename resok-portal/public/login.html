@@ -263,7 +263,7 @@
     </section>
   </main>
 
-  <script src="js/portal-state.js?v=20260928-academy"></script>
+  <script src="js/portal-state.js?v=20261008-sessions"></script>
   <script src="js/google-signin.js?v=20261005-phase4"></script>
   <script>
     const form = document.getElementById("loginForm");
@@ -382,6 +382,13 @@
       }
 
       window.ResokPortal.login(email || data.user?.email, data.user, data.token);
+      // Staff without two-factor: the server will refuse everything but setup, so go there
+      // directly instead of landing on a page that cannot load.
+      if (data.mfaSetupRequired === true) {
+        showAlert("Signed in. Your account needs two-factor authentication before you continue...", "success");
+        setTimeout(() => { window.location.href = "two-factor-setup"; }, 650);
+        return;
+      }
       const isAdmin = data.user?.role === "admin";
       // An Academy learner has no membership record, so the member dashboard has nothing for them.
       const isLearner = data.user?.isLearner === true;

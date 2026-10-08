@@ -65,8 +65,6 @@ function resok_gate_check(): array
     if ($payload === null) return $anonymous;
 
     $userId = (int)($payload['userId'] ?? 0);
-    $email = (string)($payload['email'] ?? '');
-    $role = (string)($payload['role'] ?? 'member');
     if ($userId <= 0) return $anonymous;
 
     // Idle timeout, mirroring auth() in the portal API. A token with no `seen` claim
@@ -76,15 +74,6 @@ function resok_gate_check(): array
     if ($seen > 0 && $idleFor > RESOK_GATE_IDLE_TIMEOUT) {
         resok_gate_clear_cookie();
         return $timedout;
-    }
-    if ($idleFor >= RESOK_GATE_REFRESH_INTERVAL) {
-        resok_gate_refresh_cookie($payload, $secret);
-    }
-
-    // Admins get in regardless of their own membership record - they need to see exactly
-    // what members see when reviewing or updating the learning content.
-    if ($role === 'admin') {
-        return ['state' => 'active', 'userId' => $userId, 'email' => $email, 'role' => $role, 'status' => 'active'];
     }
 
     try {
@@ -99,15 +88,35 @@ function resok_gate_check(): array
             (string)$config['db_pass'],
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
         );
+        // Same live check as sessionLookup() in the portal API: the session must not have
+        // been ended (logout, password reset, role change), and role and email come from the
+        // database, not the token. Without the revocation tables, the role check alone.
+        $account = resok_gate_live_account($pdo, $userId, (string)($payload['jti'] ?? ''));
+        if ($account === null || (int)($account['token_revoked'] ?? 0) === 1
+            || ($account['revoked_before'] !== null && (int)($payload['iat'] ?? 0) <= (int)$account['revoked_before'])) {
+            resok_gate_clear_cookie();
+            return $anonymous;
+        }
+        $email = (string)$account['email'];
+        $role = (string)$account['role'];
+
         $stmt = $pdo->prepare('SELECT membership_status FROM member_profiles WHERE user_id = ? LIMIT 1');
         $stmt->execute([$userId]);
         $row = $stmt->fetch();
     } catch (Throwable $error) {
-        error_log('member-gate: membership lookup failed: ' . $error->getMessage());
+        error_log('member-gate: session or membership lookup failed: ' . $error->getMessage());
         $unavailable['userId'] = $userId;
-        $unavailable['email'] = $email;
-        $unavailable['role'] = $role;
         return $unavailable;
+    }
+
+    if ($idleFor >= RESOK_GATE_REFRESH_INTERVAL) {
+        resok_gate_refresh_cookie($payload, $secret);
+    }
+
+    // Admins get in regardless of their own membership record - they need to see exactly
+    // what members see when reviewing or updating the learning content.
+    if ($role === 'admin') {
+        return ['state' => 'active', 'userId' => $userId, 'email' => $email, 'role' => $role, 'status' => 'active'];
     }
 
     // No profile row yet means the account was created but the membership form was never
@@ -121,6 +130,27 @@ function resok_gate_check(): array
         'role' => $role,
         'status' => $status,
     ];
+}
+
+/**
+ * The account behind a session, with its revocation state, or null if it no longer exists.
+ * Falls back to the users table alone when the revocation tables have not been created yet
+ * (the API creates them on first use), so the gate never fails over a missing table.
+ */
+function resok_gate_live_account(PDO $pdo, int $userId, string $jti): ?array
+{
+    try {
+        $stmt = $pdo->prepare('SELECT u.email, u.role, r.revoked_before,
+                                      (SELECT 1 FROM revoked_tokens t WHERE t.jti = ? LIMIT 1) AS token_revoked
+                                 FROM users u LEFT JOIN session_revocations r ON r.user_id = u.id
+                                WHERE u.id = ? LIMIT 1');
+        $stmt->execute([$jti, $userId]);
+    } catch (Throwable $e) {
+        $stmt = $pdo->prepare('SELECT email, role, NULL AS revoked_before, NULL AS token_revoked FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+    }
+    $row = $stmt->fetch();
+    return $row ?: null;
 }
 
 /** Verifies the portal's `body.signature` HMAC token. Mirrors auth() in the portal API. */

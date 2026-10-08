@@ -97,13 +97,64 @@ function securityAssessConfig(array $config): array
             'Confirm each callback with the STK query API before marking a payment paid.')
         : securityCheck('mpesa', 'M-Pesa callback', 'pass', 'Instant payment is off, so the callback is not reachable in a way that matters.');
 
-    $uploads = (string)($config['upload_dir'] ?? '');
-    $out[] = ($uploads !== '' && strpos(realpath($uploads) ?: $uploads, realpath(__DIR__ . '/../') ?: '') !== 0)
-        ? securityCheck('uploads', 'Upload location', 'pass', 'Member uploads are stored outside the web root.')
-        : securityCheck('uploads', 'Upload location', 'warn',
-            'Uploads may be inside the web root, where they could be fetched directly.',
-            'Point upload_dir outside public/ and serve files through the API.');
+    $out[] = securityAssessUploads($config);
     return $out;
+}
+
+/**
+ * Whether a member's payment proof can be fetched straight off the web server.
+ *
+ * This used to compare upload_dir with the portal's public/ folder and pass because uploads
+ * sit outside it - but they sit inside the site's document root, which is what decides
+ * whether Apache will serve them. So: outside the document root is a pass; inside it is a
+ * pass only if a rule actually forbids the path, either a [F] rewrite in the root .htaccess
+ * or a deny-all .htaccess inside the uploads folder itself.
+ */
+function securityAssessUploads(array $config): array
+{
+    $norm = fn(string $p): string => rtrim(str_replace('\\', '/', $p), '/');
+    $uploads = (string)($config['upload_dir'] ?? '');
+    $uploadsReal = $uploads !== '' ? realpath($uploads) : false;
+    $docRoot = realpath((string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    if ($uploadsReal === false || $docRoot === false) {
+        return securityCheck('uploads', 'Upload location', 'warn',
+            'The upload folder or the site root could not be resolved, so whether uploads can be downloaded directly is unknown.',
+            'Check that upload_dir exists, then try opening a file under /resok-portal/uploads/ in a private window: it should be refused.');
+    }
+    $uploadsPath = $norm($uploadsReal);
+    $rootPath = $norm($docRoot);
+    if (stripos($uploadsPath . '/', $rootPath . '/') !== 0) {
+        return securityCheck('uploads', 'Upload location', 'pass', 'Member uploads are stored outside the web root.');
+    }
+
+    $relative = ltrim(substr($uploadsPath, strlen($rootPath)), '/');
+    $probe = $relative . '/Payment_Proof/proof-example.png';
+    $blockedBy = null;
+
+    $rootRules = @file_get_contents($docRoot . '/.htaccess');
+    if (is_string($rootRules)) {
+        foreach (preg_split('/\R/', $rootRules) as $line) {
+            if (!preg_match('/^\s*RewriteRule\s+(\S+)\s+-\s+\[[^\]]*\bF\b[^\]]*\]/i', $line, $m)) continue;
+            $pattern = '#' . str_replace('#', '\\#', $m[1]) . '#';
+            if (@preg_match($pattern, $probe) === 1) {
+                $blockedBy = 'a rule in the site .htaccess';
+                break;
+            }
+        }
+    }
+    if ($blockedBy === null) {
+        $localRules = @file_get_contents($uploadsReal . '/.htaccess');
+        if (is_string($localRules) && preg_match('/Require\s+all\s+denied|Deny\s+from\s+all/i', $localRules)) {
+            $blockedBy = 'a deny-all .htaccess in the upload folder';
+        }
+    }
+
+    return $blockedBy !== null
+        ? securityCheck('uploads', 'Upload location', 'pass',
+            "Uploads are inside the web root, but {$blockedBy} refuses every direct request, so files are only reachable through the API.")
+        : securityCheck('uploads', 'Upload location', 'fail',
+            "Uploads are inside the web root at /{$relative}/ and nothing blocks them. Anyone with a link can open a member's payment proof or photo without signing in.",
+            'Deploy the current .htaccess, which refuses /resok-portal/uploads/, then purge the host cache so copies it already holds are dropped.');
 }
 
 /**
@@ -124,6 +175,19 @@ function securityAssessControls(PDO $pdo, array $config): array
     } catch (Throwable $e) {
         $out[] = securityCheck('ratelimit', 'Login rate limiting', 'fail',
             'The auth_attempts table does not exist, so nothing is limiting password guessing. The API creates it on first use, which means the database user cannot.',
+            'Import resok-portal/server/schema-security.sql in phpMyAdmin.');
+    }
+
+    // Session revocation: logout, password reset and role changes end sessions on the
+    // server. Without its tables they still work in the browser, but a copied cookie lives on.
+    try {
+        $pdo->query('SELECT 1 FROM session_revocations LIMIT 1');
+        $pdo->query('SELECT 1 FROM revoked_tokens LIMIT 1');
+        $out[] = securityCheck('revocation', 'Session revocation', 'pass',
+            'Logging out, a password reset and a role change all end sessions on the server, not just in the browser.');
+    } catch (Throwable $e) {
+        $out[] = securityCheck('revocation', 'Session revocation', 'fail',
+            'The session revocation tables do not exist, so a logged-out or reset session keeps working until it times out. The API creates them on first use, which means the database user cannot.',
             'Import resok-portal/server/schema-security.sql in phpMyAdmin.');
     }
 
@@ -179,9 +243,39 @@ function securityAssessControls(PDO $pdo, array $config): array
     return $out;
 }
 
-function securityAssessAccounts(PDO $pdo): array
+function securityAssessAccounts(PDO $pdo, array $config): array
 {
     $out = [];
+
+    // Staff two-factor: required by default, so the useful questions are whether that is
+    // still switched on and who has not enrolled yet.
+    try {
+        $staffRoles = ['admin', 'content_manager', 'analytics_manager', 'ict'];
+        $marks = implode(',', array_fill(0, count($staffRoles), '?'));
+        $stmt = $pdo->prepare("SELECT email FROM users WHERE role IN ({$marks}) AND COALESCE(mfa_enabled, 0) = 0 ORDER BY email");
+        $stmt->execute($staffRoles);
+        $without = array_column($stmt->fetchAll(), 'email');
+        $enforced = !empty($config['require_staff_mfa']);
+        if (!$enforced) {
+            $out[] = securityCheck('staffmfa', 'Two-factor for staff', 'fail',
+                'require_staff_mfa is off, so a staff password alone opens member data.'
+                . ($without ? ' Not enrolled: ' . implode(', ', $without) . '.' : ''),
+                'Remove require_staff_mfa from config.local.php, or set it to true.');
+        } elseif ($without) {
+            $out[] = securityCheck('staffmfa', 'Two-factor for staff', 'warn',
+                count($without) . ' staff account(s) have not set it up: ' . implode(', ', $without)
+                . '. They are held at the setup page when they next sign in, and cannot reach member data until they finish.',
+                'Ask them to sign in and complete setup, or remove access they no longer need.');
+        } else {
+            $out[] = securityCheck('staffmfa', 'Two-factor for staff', 'pass',
+                'Required for every staff account, and every staff account has it on.');
+        }
+    } catch (Throwable $e) {
+        $out[] = securityCheck('staffmfa', 'Two-factor for staff', 'warn',
+            'The two-factor columns could not be read, so staff cannot enrol and the requirement is not enforced.',
+            'Import resok-portal/server/schema-security.sql.');
+    }
+
     try {
         $admins = (int)$pdo->query("SELECT COUNT(*) c FROM users WHERE role = 'admin'")->fetch()['c'];
         $out[] = $admins === 0
@@ -242,7 +336,7 @@ function securityAssessment(PDO $pdo, array $config): array
         securityAssessTransport($config),
         securityAssessConfig($config),
         securityAssessControls($pdo, $config),
-        securityAssessAccounts($pdo)
+        securityAssessAccounts($pdo, $config)
     );
 
     $counts = ['pass' => 0, 'warn' => 0, 'fail' => 0, 'info' => 0];

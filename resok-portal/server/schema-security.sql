@@ -36,6 +36,23 @@ CREATE TABLE IF NOT EXISTS security_events (
   KEY security_events_severity (severity, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Server-side session revocation (sessionLookup() in the API). Created at runtime too, if
+-- the database user may; import this if the Security page reports them missing.
+-- session_revocations: every session an account started at or before revoked_before is
+-- dead (password reset, role change). revoked_tokens: single sessions ended by logout,
+-- kept until they would have expired anyway.
+CREATE TABLE IF NOT EXISTS session_revocations (
+  user_id INT NOT NULL PRIMARY KEY,
+  revoked_before INT UNSIGNED NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+  jti CHAR(32) NOT NULL PRIMARY KEY,
+  expires_at INT UNSIGNED NOT NULL,
+  KEY idx_revoked_tokens_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Two-factor columns. Added at runtime by mfaEnsureColumns(), which needs ALTER; the same
 -- reasoning applies. MySQL has no ADD COLUMN IF NOT EXISTS, so a second run reports
 -- "duplicate column" - that error is safe to ignore.

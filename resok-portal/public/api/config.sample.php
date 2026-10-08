@@ -40,6 +40,9 @@ return [
 
     'allow_approve_without_payment' => false,
     'setup_key' => '',
+    // Staff must set up two-factor before reaching anything. Leave true; false is only the
+    // emergency way back in if every admin is locked out.
+    'require_staff_mfa' => true,
     // 32+ random characters. Back it up somewhere you will still have in five years: lose
     // it and every encrypted ID number becomes unreadable. Changing it has the same effect,
     // so treat it as permanent once members have registered.

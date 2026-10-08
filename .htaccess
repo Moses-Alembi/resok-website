@@ -87,6 +87,12 @@ DirectoryIndex index.html
   # database while the scanner source lists what is and is not checked for.
   RewriteRule ^(resok-portal/server|tools)/ - [F]
 
+  # Member uploads: payment proofs, profile photos and abstract figures. The API serves each
+  # one to the people allowed to see it, so nothing here ever needs a direct URL - and
+  # without this rule anyone holding a link could open a member's payment slip. The security
+  # assessment looks for this exact line, so keep the path in it if it is ever reworded.
+  RewriteRule ^resok-portal/uploads/ - [F]
+
   # Canonical URLs: /about.html -> /about and /folder/index.html -> /folder/
   RewriteCond %{THE_REQUEST} \s/+(.*/)?index\.html[\s?] [NC]
   RewriteRule ^(.*/)?index\.html$ /$1 [R=301,L]

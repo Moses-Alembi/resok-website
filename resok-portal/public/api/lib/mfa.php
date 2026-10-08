@@ -203,8 +203,11 @@ function mfaVerifyChallenge(array $config, string $token): ?int
     return (int)($payload['userId'] ?? 0) ?: null;
 }
 
-/** Roles that must not be reachable with a password alone. */
+/**
+ * Roles that must not be reachable with a password alone. ict is included because ICT
+ * officers hold the credential vault, which is as sensitive as the member register.
+ */
 function mfaRequiredForRole(string $role): bool
 {
-    return in_array($role, ['admin', 'content_manager', 'analytics_manager'], true);
+    return in_array($role, ['admin', 'content_manager', 'analytics_manager', 'ict'], true);
 }

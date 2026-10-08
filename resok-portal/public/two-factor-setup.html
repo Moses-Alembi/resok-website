@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Set Up Two-Factor - ReSoK Members' Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <!--
+    Where a staff account (admin, ICT, content or analytics manager) is held until it has
+    two-factor on. The API refuses every other route for such an account (auth() in
+    api/index.php), so this page uses only the enrolment routes and nothing else.
+  -->
+  <style>
+    :root{--brand-primary:#00932e;--brand-secondary:#bc0b22;--text-dark:#253141;--muted:#667085;--bg:#f5f7fa;--line:#e5e7eb;--shadow:0 2px 12px rgba(15,23,42,.07)}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text-dark);min-height:100vh}
+    .topbar{background:#fff;border-bottom:1px solid var(--line)}
+    .topbar-inner{max-width:720px;margin:0 auto;height:70px;padding:0 16px;display:flex;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:700;color:inherit;text-decoration:none}.brand img{height:42px}
+    .link-btn{background:none;border:0;color:var(--brand-secondary);font-weight:700;cursor:pointer;font-size:14px}
+    main{max-width:620px;margin:32px auto;padding:0 16px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:28px}
+    h1{font-size:22px;margin-bottom:10px}
+    p{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:14px}
+    ol{color:var(--muted);font-size:15px;line-height:1.7;margin:0 0 18px 20px}
+    .notice{display:none;margin-bottom:16px;border-radius:6px;padding:12px 14px;font-size:14px}
+    .notice.success{display:block;background:#eaf7ee;color:#166534;border:1px solid #bbebc8}
+    .notice.error{display:block;background:#fff1f2;color:#a10d23;border:1px solid #fecdd3}
+    .secret{font-family:Consolas,monospace;font-size:15px;letter-spacing:.12em;background:#f3f4f7;padding:12px;border-radius:6px;word-break:break-all;color:var(--text-dark)}
+    #qr{margin:16px 0}
+    label{display:block;font-weight:800;font-size:14px;margin:16px 0 7px}
+    input[type=text]{width:100%;max-width:240px;border:1px solid #d0d5dd;border-radius:6px;padding:12px;font-size:18px;letter-spacing:.3em}
+    input[type=text]:focus{outline:3px solid rgba(0,147,46,.12);border-color:var(--brand-primary)}
+    .btn{border:0;border-radius:6px;padding:12px 18px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font-size:15px;margin-top:16px}
+    .btn-primary{background:var(--brand-primary);color:#fff}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    pre{background:#f3f4f7;padding:16px;border-radius:6px;font-size:15px;line-height:1.9;letter-spacing:.06em;color:var(--text-dark)}
+    .confirm{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:14px;color:var(--text-dark);font-weight:600}
+    .confirm input{margin-top:3px}
+    [hidden]{display:none !important}
+    @media(max-width:640px){.brand span{display:none}.panel{padding:20px}}
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./"><img src="assets/img/logo.png" alt="ReSoK"><span>Members' Portal</span></a>
+      <button class="link-btn" id="logoutBtn" type="button"><i class="fas fa-sign-out-alt"></i> Log out</button>
+    </div>
+  </nav>
+
+  <main>
+    <section class="panel">
+      <div id="notice" class="notice"></div>
+
+      <div id="stepLoading"><p>Checking your account...</p></div>
+
+      <div id="stepIntro" hidden>
+        <h1>Set up two-factor authentication</h1>
+        <p>
+          Your account can open member records, so a password alone is not enough to sign in.
+          You will also need a 6-digit code from an app on your phone. This takes about two minutes.
+        </p>
+        <ol>
+          <li>Install Google Authenticator, Microsoft Authenticator or any authenticator app.</li>
+          <li>Scan the code this page shows you.</li>
+          <li>Type in the 6 digits the app shows, then save your recovery codes.</li>
+        </ol>
+        <button class="btn btn-primary" id="startBtn" type="button"><i class="fas fa-shield-halved"></i> Start setup</button>
+      </div>
+
+      <div id="stepScan" hidden>
+        <h1>Scan this code</h1>
+        <p>Open your authenticator app, add an account, and scan the code. If you cannot scan it, type in the key below instead.</p>
+        <div id="qr"></div>
+        <p class="secret" id="secret"></p>
+        <label for="code">Enter the 6-digit code from your app</label>
+        <input id="code" type="text" inputmode="numeric" maxlength="7" placeholder="000000" autocomplete="one-time-code" />
+        <div><button class="btn btn-primary" id="confirmBtn" type="button"><i class="fas fa-check"></i> Turn on two-factor</button></div>
+      </div>
+
+      <div id="stepCodes" hidden>
+        <h1>Save your recovery codes</h1>
+        <p>
+          Each code works once. They are the only way back in if you lose your phone, and this
+          page cannot show them again. Print them, or keep them in a password manager.
+        </p>
+        <pre id="codeList"></pre>
+        <label class="confirm"><input type="checkbox" id="savedCheck" /> I have saved these codes somewhere safe.</label>
+        <button class="btn btn-primary" id="continueBtn" type="button" disabled><i class="fas fa-arrow-right"></i> Continue to the portal</button>
+      </div>
+
+      <div id="stepDone" hidden>
+        <h1>Two-factor is already on</h1>
+        <p>Your account is protected. You can continue to the portal.</p>
+        <button class="btn btn-primary" id="doneBtn" type="button"><i class="fas fa-arrow-right"></i> Continue to the portal</button>
+      </div>
+
+      <div id="stepUnavailable" hidden>
+        <h1>Two-factor is unavailable</h1>
+        <p>
+          The server cannot store two-factor settings right now, so setup cannot start. Please
+          contact the ICT team. Nothing on your account has been changed.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="js/portal-state.js?v=20261008-sessions"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const steps = ["stepLoading", "stepIntro", "stepScan", "stepCodes", "stepDone", "stepUnavailable"];
+    function show(step) { steps.forEach((id) => { $(id).hidden = id !== step; }); }
+    function notice(message, type) {
+      $("notice").textContent = message || "";
+      $("notice").className = message ? `notice ${type || "success"}` : "notice";
+    }
+
+    // Where the account normally lands after login. The role here is only a hint for the
+    // destination; each of those pages checks access with the server itself.
+    function destination() {
+      const role = window.ResokPortal.getState().member?.role;
+      if (role === "admin") return "admin-review";
+      if (role === "ict") return "ict";
+      return "dashboard";
+    }
+
+    async function load() {
+      let status;
+      try {
+        status = await window.ResokPortal.mfaStatus();
+      } catch (error) {
+        // Decided by what the server answered, not by anything stored in the browser.
+        if (error.status === 401) { window.location.href = "login"; return; }
+        show("stepIntro");
+        $("startBtn").disabled = true;
+        notice(error.status ? (error.message || "Could not check your account.") : "Could not reach the server. Check your connection and reload the page.", "error");
+        return;
+      }
+      if (status.enabled) { show("stepDone"); return; }
+      if (status.available === false) { show("stepUnavailable"); return; }
+      show("stepIntro");
+    }
+
+    $("startBtn").addEventListener("click", async () => {
+      $("startBtn").disabled = true;
+      try {
+        const setup = await window.ResokPortal.mfaBeginSetup();
+        $("secret").textContent = setup.secret.replace(/(.{4})/g, "$1 ").trim();
+        $("qr").textContent = "";
+        // Drawn in the browser from the URI; the secret is never sent to a QR service.
+        if (window.QRCode) new window.QRCode($("qr"), { text: setup.uri, width: 180, height: 180 });
+        notice("");
+        show("stepScan");
+        $("code").focus();
+      } catch (error) {
+        notice(error.message || "Could not start setup.", "error");
+      } finally {
+        $("startBtn").disabled = false;
+      }
+    });
+
+    async function confirmCode() {
+      const code = $("code").value.replace(/\D/g, "");
+      if (code.length !== 6) { notice("Enter the 6 digits your app is showing.", "error"); return; }
+      $("confirmBtn").disabled = true;
+      try {
+        const result = await window.ResokPortal.mfaConfirmSetup(code);
+        $("codeList").textContent = (result.recoveryCodes || []).join("\n");
+        notice("Two-factor authentication is on.", "success");
+        show("stepCodes");
+      } catch (error) {
+        notice(error.message || "That code was not correct. Check your app and try again.", "error");
+      } finally {
+        $("confirmBtn").disabled = false;
+      }
+    }
+    $("confirmBtn").addEventListener("click", confirmCode);
+    $("code").addEventListener("keydown", (event) => { if (event.key === "Enter") confirmCode(); });
+
+    $("savedCheck").addEventListener("change", () => { $("continueBtn").disabled = !$("savedCheck").checked; });
+    $("continueBtn").addEventListener("click", () => { window.location.href = destination(); });
+    $("doneBtn").addEventListener("click", () => { window.location.href = destination(); });
+    $("logoutBtn").addEventListener("click", () => window.ResokPortal.logout());
+
+    load();
+  </script>
+</body>
+</html>

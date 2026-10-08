@@ -54,6 +54,11 @@ return [
 
     'allow_approve_without_payment' => filter_var(config_value($local, 'allow_approve_without_payment', 'RESOK_ALLOW_APPROVE_WITHOUT_PAYMENT', false), FILTER_VALIDATE_BOOLEAN),
     'setup_key' => config_value($local, 'setup_key', 'RESOK_SETUP_KEY', ''),
+    // Staff accounts (admin, ict, content and analytics managers) must set up two-factor
+    // before they can reach anything; until then a sign-in reaches only the setup page.
+    // On by default. Turning it off takes server access, which is the point: it is the
+    // way back in if every admin is somehow stuck, not a setting for everyday use.
+    'require_staff_mfa' => filter_var(config_value($local, 'require_staff_mfa', 'RESOK_REQUIRE_STAFF_MFA', true), FILTER_VALIDATE_BOOLEAN),
     // Encrypts ID numbers and two-factor secrets at rest. Deliberately NOT derived from
     // jwt_secret: rotating the session key is routine, and would otherwise destroy this
     // data permanently. Unset means nothing is encrypted - which is the safe default,

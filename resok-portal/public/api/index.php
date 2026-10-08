@@ -291,6 +291,11 @@ const RESOK_SESSION_REFRESH_INTERVAL = 60;
 function token(array $payload, string $secret, ?int $expiresAt = null): string {
     $payload['exp'] = $expiresAt ?? (time() + RESOK_SESSION_MAX_LIFETIME);
     $payload['seen'] = time();
+    // Set once, when a session is first minted, and carried unchanged through every refresh:
+    // iat is what "sign out everywhere" compares against, jti is what a single logout
+    // revokes. See sessionLookup().
+    $payload['iat'] = (int)($payload['iat'] ?? time());
+    $payload['jti'] = (string)($payload['jti'] ?? bin2hex(random_bytes(16)));
     $body = b64url(json_encode($payload));
     $sig = b64url(hash_hmac('sha256', $body, $secret, true));
     return $body . '.' . $sig;
@@ -372,12 +377,18 @@ function completeLogin(PDO $pdo, array $config, array $user): void
             'message' => 'Enter the 6-digit code from your authenticator app.',
         ]);
     }
+    // A staff account that has not enrolled gets a session, but one that reaches only the
+    // enrolment routes until two-factor is on (enforced in auth()). That keeps them able to
+    // fix it themselves, without the password alone opening any member data.
+    $mfaSetupRequired = sessionNeedsMfaSetup($pdo, $config, (int)$user['id'], (string)$user['role']);
     if (mfaRequiredForRole((string)$user['role'])) {
-        // Not a refusal: an admin who has not enrolled yet still gets in, but the portal
-        // is told to make them set it up. Locking them out of their own site would be a
-        // worse outcome than a short window where the control is pending.
+        // Logged whether or not the gate is on: with require_staff_mfa switched off this is
+        // the only trace that a staff password alone opened the admin panel.
         securityLog($pdo, $config, 'mfa_missing_privileged_login', 'warning', 'login',
-            'Privileged account signed in without two-factor enabled', (int)$user['id']);
+            $mfaSetupRequired
+                ? 'Staff account signed in without two-factor; held at enrolment'
+                : 'Staff account signed in without two-factor (require_staff_mfa is off)',
+            (int)$user['id']);
     }
     $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
     issueAuthCookie($loginToken);
@@ -397,6 +408,7 @@ function completeLogin(PDO $pdo, array $config, array $user): void
     }
     respond(200, [
         'token' => $loginToken,
+        'mfaSetupRequired' => $mfaSetupRequired,
         'user' => [
             'id' => (int)$user['id'],
             // A member account with no membership record is an Academy learner.
@@ -419,6 +431,153 @@ function clearAuthCookie(): void {
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
+}
+
+/**
+ * Server-side session control.
+ *
+ * The session token is signed, so the server can trust it without storing it. On its own
+ * that meant nothing the server did could end a session early: logging out only cleared the
+ * browser's copy, and a password reset or a demotion left every existing session working
+ * until it timed out - up to 7 days for one kept busy. These close that:
+ *
+ *   - role and email are read from the users table on every authenticated request, never
+ *     trusted from the token, so a demotion takes effect on the next click;
+ *   - session_revocations holds, per account, a moment before which every session is dead
+ *     ("sign out everywhere": password reset, role change);
+ *   - revoked_tokens holds the ids of single sessions ended by logout, until the moment
+ *     they would have expired anyway.
+ *
+ * Both tables are created on first use. If the database user cannot create them, the live
+ * role check still works, and the Security page reports revocation as missing - rather than
+ * login breaking over a control that was never there before.
+ */
+const RESOK_MFA_SETUP_ROUTES = ['auth/mfa/setup', 'auth/mfa/enable', 'auth/mfa/status', 'auth/logout'];
+
+function sessionTablesCreate(PDO $pdo): bool
+{
+    static $created = null;
+    if ($created !== null) return $created;
+    try {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS session_revocations (
+            user_id INT NOT NULL PRIMARY KEY,
+            revoked_before INT UNSIGNED NOT NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS revoked_tokens (
+            jti CHAR(32) NOT NULL PRIMARY KEY,
+            expires_at INT UNSIGNED NOT NULL,
+            KEY idx_revoked_tokens_expiry (expires_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+        $created = true;
+    } catch (Throwable $e) {
+        error_log('Session revocation unavailable - could not create its tables: ' . $e->getMessage());
+        $created = false;
+    }
+    return $created;
+}
+
+/** Ends every session the account has, on every device, as of now. Never fatal. */
+function sessionRevokeAll(PDO $pdo, int $userId): bool
+{
+    if ($userId <= 0 || !sessionTablesCreate($pdo)) return false;
+    try {
+        $pdo->prepare('INSERT INTO session_revocations (user_id, revoked_before) VALUES (?, ?)
+                       ON DUPLICATE KEY UPDATE revoked_before = VALUES(revoked_before)')
+            ->execute([$userId, time()]);
+        return true;
+    } catch (Throwable $e) {
+        error_log('Could not revoke sessions for user ' . $userId . ': ' . $e->getMessage());
+        return false;
+    }
+}
+
+/** Ends one session - the one a logout came from. Never fatal. */
+function sessionRevokeToken(PDO $pdo, string $jti, int $expiresAt): bool
+{
+    if (!preg_match('/^[a-f0-9]{32}$/', $jti) || !sessionTablesCreate($pdo)) return false;
+    try {
+        $pdo->prepare('INSERT IGNORE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)')
+            ->execute([$jti, $expiresAt]);
+        // A revoked id only matters until its session would have expired on its own.
+        $pdo->prepare('DELETE FROM revoked_tokens WHERE expires_at < ?')->execute([time()]);
+        return true;
+    } catch (Throwable $e) {
+        error_log('Could not revoke a session: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Whether this account must enrol in two-factor before it can do anything else.
+ *
+ * Only staff roles are asked (mfaRequiredForRole), and only while require_staff_mfa is on.
+ * Never when the mfa columns are missing: nobody could enrol then, and demanding it would
+ * lock every administrator out of their own site.
+ */
+function sessionNeedsMfaSetup(PDO $pdo, array $config, int $userId, string $role): bool
+{
+    if (empty($config['require_staff_mfa']) || !mfaRequiredForRole($role)) return false;
+    if (!mfaEnsureColumns($pdo)) return false;
+    try {
+        $stmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        return (int)($stmt->fetch()['mfa_enabled'] ?? 0) !== 1;
+    } catch (Throwable $e) {
+        error_log('Could not read two-factor state for the session check: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * The session as the database sees it right now, or null when it has been ended or the
+ * account no longer exists. Role and email are replaced with the live values, and
+ * mfaSetupRequired is added. Throws only when the database cannot be read at all.
+ */
+function sessionLookup(PDO $pdo, array $config, array $payload): ?array
+{
+    static $tablesUsable = null;
+    $userId = (int)($payload['userId'] ?? 0);
+    if ($userId <= 0) return null;
+
+    $sql = 'SELECT u.email, u.role, r.revoked_before,
+                   (SELECT 1 FROM revoked_tokens t WHERE t.jti = ? LIMIT 1) AS token_revoked
+              FROM users u LEFT JOIN session_revocations r ON r.user_id = u.id
+             WHERE u.id = ? LIMIT 1';
+    $params = [(string)($payload['jti'] ?? ''), $userId];
+    $row = null;
+    if ($tablesUsable !== false) {
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $row = $stmt->fetch();
+            $tablesUsable = true;
+        } catch (Throwable $e) {
+            // Most likely the tables do not exist yet. Build them and ask again.
+            $tablesUsable = sessionTablesCreate($pdo);
+            if ($tablesUsable) {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $row = $stmt->fetch();
+            }
+        }
+    }
+    if ($tablesUsable === false) {
+        $stmt = $pdo->prepare('SELECT email, role, NULL AS revoked_before, NULL AS token_revoked FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch();
+    }
+
+    if (!$row) return null;
+    if ((int)($row['token_revoked'] ?? 0) === 1) return null;
+    // A token minted in the same second as the revocation counts as before it. Tokens from
+    // before iat existed carry none, so they read as 0 and end with the first revocation.
+    if ($row['revoked_before'] !== null && (int)($payload['iat'] ?? 0) <= (int)$row['revoked_before']) return null;
+
+    $payload['email'] = (string)$row['email'];
+    $payload['role'] = (string)$row['role'];
+    $payload['mfaSetupRequired'] = sessionNeedsMfaSetup($pdo, $config, $userId, $payload['role']);
+    return $payload;
 }
 
 /**
@@ -503,6 +662,26 @@ function auth(array $config): array {
         ]);
     }
 
+    // Ask the database whether this session still stands, and who it belongs to now.
+    try {
+        $live = sessionLookup(db($config), $config, $payload);
+    } catch (Throwable $e) {
+        error_log('Session check failed: ' . $e->getMessage());
+        respond(503, ['error' => 'We could not check your session just now. Please try again in a moment.']);
+    }
+    if ($live === null) {
+        clearAuthCookie();
+        respond(401, ['error' => 'Your session has ended. Please log in again.', 'reason' => 'revoked']);
+    }
+    // A staff account without two-factor reaches the enrolment routes and nothing else. The
+    // password alone is no longer enough to open member data.
+    if (!empty($live['mfaSetupRequired']) && !in_array((string)($GLOBALS['route'] ?? ''), RESOK_MFA_SETUP_ROUTES, true)) {
+        respond(403, [
+            'error' => 'Your account can reach member data, so two-factor authentication has to be set up before you continue.',
+            'mfaSetupRequired' => true,
+        ]);
+    }
+
     // Slide the window forward. The original `exp` is carried over untouched, so an active
     // session still ends at the absolute cap rather than renewing itself forever. Header
     // callers have no cookie to refresh - they just re-authenticate.
@@ -512,7 +691,7 @@ function auth(array $config): array {
         issueAuthCookie(token($refreshed, $config['jwt_secret'], (int)$payload['exp']));
     }
 
-    return withSuperAdminFlag($payload, $config);
+    return withSuperAdminFlag($live, $config);
 }
 
 /**
@@ -540,7 +719,11 @@ function withSuperAdminFlag(array $payload, array $config): array {
  */
 function authOptional(array $config): ?array {
     $user = authOptionalToken($config) ?? localDevPayload($config);
-    return $user === null ? null : withSuperAdminFlag($user, $config);
+    if ($user === null) return null;
+    // A staff account that has not enrolled in two-factor reads as an ordinary member here,
+    // so nothing privileged is reachable through a public page either.
+    if (!empty($user['mfaSetupRequired'])) $user['role'] = 'member';
+    return withSuperAdminFlag($user, $config);
 }
 
 /** The signed-in session's payload, or null - authOptional() without the localhost fallback. */
@@ -566,7 +749,12 @@ function authOptionalToken(array $config): ?array {
     $seen = (int)($payload['seen'] ?? 0);
     if ($seen > 0 && (time() - $seen) > RESOK_SESSION_IDLE_TIMEOUT) return null;
 
-    return $payload;
+    try {
+        return sessionLookup(db($config), $config, $payload);
+    } catch (Throwable $e) {
+        error_log('Optional session check failed: ' . $e->getMessage());
+        return null;
+    }
 }
 
 function memberRow(PDO $pdo, int $userId): ?array {
@@ -1395,6 +1583,9 @@ Respiratory Society of Kenya");
         }
 
         $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $targetId]);
+        // The role is read live on every request anyway; this also ends their open sessions,
+        // so a changed account starts again from a fresh login (and two-factor, if now staff).
+        sessionRevokeAll($pdo, $targetId);
         // Target is null: that column holds a member_profile id, and this acts on a user
         // account, which is a different key entirely. The detail carries who was changed.
         logAdminAction($pdo, (int)$user['userId'], 'role_change', null,
@@ -1723,6 +1914,12 @@ Respiratory Society of Kenya");
     }
 
     if ($route === 'auth/logout' && $method === 'POST') {
+        // Ends this session on the server, not only in this browser, so a copy of the cookie
+        // taken from this device stops working too. Other devices stay signed in.
+        $current = authOptionalToken($config);
+        if ($current !== null && !empty($current['jti'])) {
+            sessionRevokeToken($pdo, (string)$current['jti'], (int)($current['exp'] ?? (time() + RESOK_SESSION_MAX_LIFETIME)));
+        }
         clearAuthCookie();
         respond(200, ['message' => 'Logged out']);
     }
@@ -2066,6 +2263,10 @@ Respiratory Society of Kenya");
         $pdo->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL,
                        email_verified = 1 WHERE id = ?')
             ->execute([password_hash($data['password'], PASSWORD_DEFAULT), (int)$user['id']]);
+        // Whoever knew the old password may already hold a session. A reset ends all of them.
+        if (sessionRevokeAll($pdo, (int)$user['id'])) {
+            securityLog($pdo, $config, 'sessions_revoked', 'info', 'password-reset', 'All sessions ended by a password reset', (int)$user['id']);
+        }
         respond(200, ['message' => 'Password updated. You can now log in.']);
     }
 
@@ -3380,6 +3581,7 @@ Respiratory Society of Kenya");
         }
 
         $pdo->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $targetId]);
+        sessionRevokeAll($pdo, $targetId);
         ictAudit($pdo, (int)$user['userId'], 'role_changed', 'user', (string)$targetId,
                  $targetRow['email'], ['role' => $targetRow['role']], ['role' => $role]);
         securityLog($pdo, $config, 'ict_role_changed', 'warning', 'ict',

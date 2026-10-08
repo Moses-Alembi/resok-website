@@ -570,9 +570,11 @@ function sessionLookup(PDO $pdo, array $config, array $payload): ?array
 
     if (!$row) return null;
     if ((int)($row['token_revoked'] ?? 0) === 1) return null;
-    // A token minted in the same second as the revocation counts as before it. Tokens from
-    // before iat existed carry none, so they read as 0 and end with the first revocation.
-    if ($row['revoked_before'] !== null && (int)($payload['iat'] ?? 0) <= (int)$row['revoked_before']) return null;
+    // Ended if started in an earlier second than the revocation. A login in the same second
+    // survives: a password reset is followed at once by a fresh login (the account-claim
+    // flow does exactly this), and refusing it signed the member straight back out. Tokens
+    // from before iat existed carry none, so they read as 0 and end with the first revocation.
+    if ($row['revoked_before'] !== null && (int)($payload['iat'] ?? 0) < (int)$row['revoked_before']) return null;
 
     $payload['email'] = (string)$row['email'];
     $payload['role'] = (string)$row['role'];
@@ -4243,6 +4245,8 @@ Respiratory Society of Kenya");
         header('Content-Length: ' . filesize($file));
         $downloadName = preg_replace('/[^A-Za-z0-9._ -]/', '_', (string)($payment['proof_original_name'] ?: $filename));
         header('Content-Disposition: inline; filename="' . addslashes($downloadName) . '"');
+        // A payment slip is personal financial data: no cache anywhere may keep a copy.
+        header('Cache-Control: private, no-store');
         readfile($file);
         exit;
     }

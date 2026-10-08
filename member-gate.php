@@ -93,7 +93,7 @@ function resok_gate_check(): array
         // database, not the token. Without the revocation tables, the role check alone.
         $account = resok_gate_live_account($pdo, $userId, (string)($payload['jti'] ?? ''));
         if ($account === null || (int)($account['token_revoked'] ?? 0) === 1
-            || ($account['revoked_before'] !== null && (int)($payload['iat'] ?? 0) <= (int)$account['revoked_before'])) {
+            || ($account['revoked_before'] !== null && (int)($payload['iat'] ?? 0) < (int)$account['revoked_before'])) {
             resok_gate_clear_cookie();
             return $anonymous;
         }

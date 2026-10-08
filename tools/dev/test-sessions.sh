@@ -74,13 +74,15 @@ echo
 echo "A password reset ends every session:"
 C=$(mktemp); login "$C" sess-member@resok.local >/dev/null
 check "second device signed in"                            '200' "$(code "$C" auth/mfa/status)"
-sleep 1   # a session minted in the same second as the reset counts as before it
+sleep 1   # sessions from an earlier second than the reset are ended; this makes C one
 $MYSQL -e "UPDATE users SET reset_token='sesstesttoken', reset_expires=DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE id=$MEMBER_ID;"
 RESET=$(curl -s -X POST "${API}auth/reset-password" -H 'Content-Type: application/json' \
         -d '{"token":"sesstesttoken","password":"NewPass456"}')
 check "the reset succeeds"                                 'Password updated' "$RESET"
 check "the session from before it is ended"                '"reason":"revoked"' "$(get "$B" auth/mfa/status)"
 check "so is the one on the other device"                  '"reason":"revoked"' "$(get "$C" auth/mfa/status)"
+QUICK=$(mktemp); login "$QUICK" sess-member@resok.local NewPass456 >/dev/null
+check "a login straight after the reset is kept"           '200' "$(code "$QUICK" auth/mfa/status)"
 sleep 1
 D=$(mktemp); login "$D" sess-member@resok.local NewPass456 >/dev/null
 check "logging in with the new password works"             '200' "$(code "$D" auth/mfa/status)"

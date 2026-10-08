@@ -45,6 +45,9 @@ const THROTTLE_RULES = [
     // Certificate checks are public. Only a code that matches nothing is counted, so an
     // employer checking a stack of genuine certificates is never refused.
     'certificate-verify' => [30, 30, 900, 900],
+    // The public contact form. Every send counts, not just failures: it mails info@resok.org,
+    // so an unlimited form is a way to bury the secretariat's inbox.
+    'contact'        => [3,  8,  3600, 3600],
 ];
 const THROTTLE_DEFAULT = [15, 40, 900, 900];
 

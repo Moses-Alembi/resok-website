@@ -122,16 +122,29 @@ function blogSanitizeHtml(string $html): string
         . '<a><img><figure><figcaption><table><thead><tbody><tr><th><td><hr><sup><sub><code><pre><span><div>';
     $html = strip_tags($html, $allowed);
 
-    // Event handlers survive strip_tags, so they are removed by hand - quoted, single
-    // quoted, and bare, in that order.
-    $html = preg_replace('/\son[a-z]+\s*=\s*"[^"]*"/i', '', $html) ?? $html;
-    $html = preg_replace("/\son[a-z]+\s*=\s*'[^']*'/i", '', $html) ?? $html;
-    $html = preg_replace('/\son[a-z]+\s*=\s*[^\s>]+/i', '', $html) ?? $html;
-
-    // style= is dropped entirely. It is not needed for editorial formatting, and it is a
-    // route to overlaying or hiding page furniture (clickjacking) that no allowlist of
-    // tags protects against.
-    $html = preg_replace('/\sstyle\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html) ?? $html;
+    // Event handlers and style= survive strip_tags, so each remaining tag is rebuilt from
+    // its attributes with those two dropped. Read attribute by attribute, the way a browser
+    // does: a quoted value is consumed whole, so text inside it ("one onerror=x" in an alt)
+    // is never mistaken for an attribute, and the next attribute starts wherever the last
+    // ended - including straight after a closing quote, <a href="x"onclick="...">, which
+    // the old whitespace-only patterns let through. Only tags are touched, never the
+    // article's text. style= goes because it is a route to overlaying or hiding page
+    // furniture (clickjacking) that no allowlist of tags prevents.
+    $html = preg_replace_callback(
+        '/<[a-z][^\s>\/]*(?:[^>"\']|"[^"]*"|\'[^\']*\')*>/i',
+        static function (array $tag): string {
+            if (!preg_match('/^<([a-z][^\s>\/]*)(.*?)(\/?)>$/is', $tag[0], $parts)) return $tag[0];
+            preg_match_all('/([^\s"\'>\/=]+)(?:\s*=\s*("[^"]*"|\'[^\']*\'|[^\s"\'>]+))?/', $parts[2], $attributes, PREG_SET_ORDER);
+            $kept = '';
+            foreach ($attributes as $attribute) {
+                $name = strtolower($attribute[1]);
+                if (strpos($name, 'on') === 0 || $name === 'style') continue;
+                $kept .= ' ' . $attribute[1] . (isset($attribute[2]) ? '=' . $attribute[2] : '');
+            }
+            return '<' . $parts[1] . $kept . $parts[3] . '>';
+        },
+        $html
+    ) ?? $html;
 
     // URLs are checked against an allowlist of schemes rather than a blocklist. Blocking
     // "javascript:" by name is bypassable in several ways browsers still honour -

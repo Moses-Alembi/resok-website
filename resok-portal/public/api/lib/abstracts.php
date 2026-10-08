@@ -796,7 +796,7 @@ function absProfile(PDO $pdo, int $userId): array
         $l->execute([$userId]);
         if ($learner = $l->fetch()) {
             $parts = preg_split('/\s+/u', trim((string)$learner['display_name']), 2) ?: [''];
-            return array_merge($prefill, ['firstName' => $parts[0] ?? '', 'lastName' => $parts[1] ?? '',
+            return array_merge($prefill, ['firstName' => $parts[0], 'lastName' => $parts[1] ?? '',
                 'country' => (string)($learner['country'] ?: 'Kenya')]);
         }
     } catch (Throwable $e) {

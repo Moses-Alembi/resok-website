@@ -60,7 +60,11 @@ function googleFetch(string $url): array
         return [$status === 200 && is_string($body) ? $body : null, $headers];
     }
     $body = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 8]]));
-    foreach ($http_response_header ?? [] as $line) {
+    // PHP creates $http_response_header only once a response arrives; on a DNS or connect
+    // failure it does not exist. Read through get_defined_vars() so that case is an empty
+    // list rather than a warning.
+    $responseHeaders = get_defined_vars()['http_response_header'] ?? [];
+    foreach ($responseHeaders as $line) {
         $parts = explode(':', $line, 2);
         if (count($parts) === 2) $headers[strtolower(trim($parts[0]))] = trim($parts[1]);
     }

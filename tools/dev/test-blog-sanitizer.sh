@@ -31,6 +31,10 @@ cat > "$PAYLOADS" <<'LIST'
 <img src="a.png" alt="one" onerror="x">
 <a href="x" title='it"s' onclick="a()">x</a>
 <A HREF="x" OnMouseOver="a()">x</A>
+<a title="x"href="javascript:alert(1)">x</a>
+<img alt="a"src="javascript:alert(1)">
+<a href="JaVaScRiPt:alert(1)">x</a>
+<a href="&#106;avascript:alert(1)">x</a>
 <p>Click here onion=fine to read</p>
 LIST
 /c/xampp/php/php.exe -r '

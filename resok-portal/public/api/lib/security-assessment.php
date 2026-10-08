@@ -35,8 +35,8 @@ function securityFetch(string $url): ?array
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_NOBODY => false,
         CURLOPT_FOLLOWLOCATION => false,
-        CURLOPT_CONNECTTIMEOUT => 4,
-        CURLOPT_TIMEOUT => 6,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 5,
         CURLOPT_USERAGENT => 'ReSoK-security-assessment',
         CURLOPT_HEADERFUNCTION => function ($handle, string $line) use (&$headers): int {
             $parts = explode(':', $line, 2);
@@ -49,6 +49,25 @@ function securityFetch(string $url): ?array
     curl_close($ch);
     if ($ok === false || $status === 0) return null;
     return ['status' => $status, 'headers' => $headers];
+}
+
+/**
+ * The portal's health route, fetched once per assessment and shared by every check that
+ * needs the live site. Null when portal_base_url is unset or the server cannot reach itself
+ * - and in that case nothing else is fetched, so a host that silently drops requests to
+ * itself costs one timeout, not one per check.
+ *
+ * @return array{status:int,headers:array<string,string>}|null
+ */
+function securityLiveHealth(array $config): ?array
+{
+    static $cache = [];
+    $base = rtrim((string)($config['portal_base_url'] ?? ''), '/');
+    if ($base === '') return null;
+    if (!array_key_exists($base, $cache)) {
+        $cache[$base] = securityFetch($base . '/api/index.php?route=health&' . securityCacheBuster());
+    }
+    return $cache[$base];
 }
 
 /** A query string no cache has seen, so the answer is the server's and not a cached copy. */
@@ -73,8 +92,7 @@ function securityAssessTransport(array $config): array
     // the ones PHP set itself - which is how HSTS was reported missing while being sent.
     // The PHP-side view is the fallback for a host that blocks requests to itself.
     $headers = [];
-    $base = rtrim((string)($config['portal_base_url'] ?? ''), '/');
-    $live = $base !== '' ? securityFetch($base . '/api/index.php?route=health&' . securityCacheBuster()) : null;
+    $live = securityLiveHealth($config);
     // Only a 200 from the health route proves the request reached this site.
     if ($live !== null && $live['status'] === 200) {
         $headers = $live['headers'];
@@ -174,7 +192,7 @@ function securityAssessUploads(array $config): array
     // The health route answering 200 first proves portal_base_url points at this site; a
     // 404 from some other server would otherwise read as an open folder.
     $self = ($base !== '' && $uploadsReal !== false && $defaultDir !== false && $norm($uploadsReal) === $norm($defaultDir))
-        ? securityFetch($base . '/api/index.php?route=health&' . securityCacheBuster()) : null;
+        ? securityLiveHealth($config) : null;
     if ($self !== null && $self['status'] === 200) {
         $probeUrl = dirname($base) . '/uploads/Payment_Proof/probe-' . bin2hex(random_bytes(8)) . '.png?' . securityCacheBuster();
         $live = securityFetch($probeUrl);

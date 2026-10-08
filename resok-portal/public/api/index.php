@@ -2108,9 +2108,43 @@ Respiratory Society of Kenya");
         requireModule('mfaGenerateSecret', 'lib/mfa.php');
         $user = auth($config);
         if (!mfaEnsureColumns($pdo)) respond(503, ['error' => 'Two-factor authentication is unavailable on this server: its columns are missing and could not be created. Import resok-portal/server/schema-security.sql.']);
-        $secret = mfaGenerateSecret();
-        $pdo->prepare('UPDATE users SET mfa_secret = ?, mfa_enabled = 0 WHERE id = ?')
-            ->execute([cryptoEncrypt($config, $secret), (int)$user['userId']]);
+        $userId = (int)$user['userId'];
+        $stmt = $pdo->prepare('SELECT mfa_enabled, mfa_secret FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $current = $stmt->fetch() ?: [];
+
+        // Setup used to set mfa_enabled = 0 unconditionally, so any session - a stolen one
+        // included - could switch two-factor off without the password that the disable
+        // route demands. Once it is on, the only way to start over is that route.
+        if ((int)($current['mfa_enabled'] ?? 0) === 1) {
+            respond(409, ['error' => 'Two-factor authentication is already on. To set it up again, turn it off first with your password.']);
+        }
+
+        // A second press of "Start" (or a reload) used to replace the secret, so the app the
+        // member had already scanned showed codes that could never match - which locked an
+        // administrator out on 8 Oct 2026. A pending secret is now reused until enrolment
+        // completes, so every scan of this setup shows the same codes.
+        $secret = null;
+        if (!empty($current['mfa_secret'])) {
+            $pending = cryptoDecrypt($config, (string)$current['mfa_secret']);
+            if (is_string($pending) && preg_match('/^[A-Z2-7]{16,}$/', $pending)) $secret = $pending;
+        }
+        if ($secret === null) {
+            $secret = mfaGenerateSecret();
+            $pdo->prepare('UPDATE users SET mfa_secret = ? WHERE id = ? AND mfa_enabled = 0')
+                ->execute([cryptoEncrypt($config, $secret), $userId]);
+
+            // Read it back before showing it. An encrypted secret is ~90 characters, and a
+            // column too narrow for it is truncated by MySQL without an error - after which no
+            // code can ever match. Better to refuse here than to let someone enrol into that.
+            $check = $pdo->prepare('SELECT mfa_secret FROM users WHERE id = ? LIMIT 1');
+            $check->execute([$userId]);
+            if (cryptoDecrypt($config, (string)($check->fetch()['mfa_secret'] ?? '')) !== $secret) {
+                $pdo->prepare('UPDATE users SET mfa_secret = NULL WHERE id = ? AND mfa_enabled = 0')->execute([$userId]);
+                securityLog($pdo, $config, 'mfa_secret_store_failed', 'critical', 'mfa', 'Secret did not survive storage - check users.mfa_secret width', $userId);
+                respond(500, ['error' => 'Two-factor could not be set up because the server could not store it correctly. Nothing has changed on your account. Please tell the ICT team: the users.mfa_secret column needs widening (schema-security.sql).']);
+            }
+        }
         respond(200, [
             'secret' => $secret,
             'uri' => mfaProvisioningUri($secret, (string)$user['email']),

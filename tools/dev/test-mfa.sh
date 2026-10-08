@@ -60,6 +60,8 @@ check "setup returns a secret"                 '"secret"'             "$SETUP"
 check "setup returns a provisioning URI"       'otpauth://totp/'      "$SETUP"
 SECRET=$(echo "$SETUP" | $PHP -r 'preg_match("/\"secret\":\"([A-Z2-7]+)\"/", stream_get_contents(STDIN), $m); echo $m[1] ?? "";')
 check "the secret is base32"                   "$SECRET"              "$SECRET"
+AGAIN=$(post 'auth/mfa/setup')
+check "starting again keeps the same secret"   "\"secret\":\"$SECRET\"" "$AGAIN"
 
 check "the secret is not stored in the clear"  'enc.v1.' \
       "$($MYSQL -N -e "SELECT mfa_secret FROM users WHERE id=$UID_;")"
@@ -72,6 +74,8 @@ check "a wrong code is refused"                'was not correct' \
 ENABLE=$(post 'auth/mfa/enable' "{\"code\":\"$(totp "$SECRET")\"}")
 check "a working code turns it on"             '"enabled":true'       "$ENABLE"
 check "recovery codes are issued"              '"recoveryCodes"'      "$ENABLE"
+check "setup cannot be restarted while it is on" 'already on' "$(post 'auth/mfa/setup')"
+check "  - so a session alone cannot switch it off" '1'       "$($MYSQL -N -e "SELECT mfa_enabled FROM users WHERE id=$UID_;")"
 RCODE=$(echo "$ENABLE" | $PHP -r 'preg_match("/\"recoveryCodes\":\[\"([^\"]+)\"/", stream_get_contents(STDIN), $m); echo $m[1] ?? "";')
 check "recovery codes are hashed, not stored"  'false' \
       "$($MYSQL -N -e "SELECT IF(mfa_recovery LIKE '%$RCODE%','true','false') FROM users WHERE id=$UID_;")"

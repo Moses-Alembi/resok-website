@@ -179,7 +179,7 @@
             <a class="btn btn-ghost" href="forgot-password">Forgot password</a>
           </div>
         </div>
-        <form id="tabRegister" hidden novalidate>
+        <form id="tabRegister" method="post" action="javascript:void(0)" hidden novalidate>
           <p class="lede" style="margin-top:0">You do not need to be a ReSoK member to submit. Your account stays yours for future conferences.</p>
           <div class="trap" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
           <div class="row" style="margin-top:16px">
@@ -205,7 +205,7 @@
     <section class="panel" id="vProfile" hidden>
       <h1>Your author details</h1>
       <p class="lede">These appear on your abstracts and are kept for future conferences. Please confirm them before you start.</p>
-      <form id="profileForm" novalidate style="margin-top:18px">
+      <form id="profileForm" method="post" action="javascript:void(0)" novalidate style="margin-top:18px">
         <div class="row">
           <div class="field" style="max-width:140px"><label for="pTitle">Title <span class="hint">optional</span></label><input type="text" id="pTitle" placeholder="Dr"></div>
           <div class="field"><label for="pFirst">First name</label><input type="text" id="pFirst"></div>
@@ -255,7 +255,7 @@
         <span class="save-state" id="saveState"></span>
       </div>
       <div id="edNote"></div>
-      <form id="edForm" novalidate style="margin-top:18px">
+      <form id="edForm" method="post" action="javascript:void(0)" novalidate style="margin-top:18px">
         <div class="field" data-f="title">
           <label for="fTitle">Title</label>
           <input type="text" id="fTitle" maxlength="400">

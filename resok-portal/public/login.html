@@ -4,6 +4,18 @@
   <meta charset="UTF-8" />
   <link rel="icon" href="favicon.jpg" type="image/jpeg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    // If a password ever reached the address bar (a form submitted before its script loaded),
+    // take it straight back out so it is not left on screen or bookmarked.
+    (function () {
+      var q = new URLSearchParams(window.location.search);
+      if (q.has("password") || q.has("email") || q.has("code")) {
+        ["password", "email", "code", "website"].forEach(function (k) { q.delete(k); });
+        var rest = q.toString();
+        history.replaceState(null, "", window.location.pathname + (rest ? "?" + rest : ""));
+      }
+    })();
+  </script>
   <title>Login - ReSoK Members' Portal</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
   <style>
@@ -202,7 +214,7 @@
 
       <div id="loginAlert" class="alert" role="alert"></div>
 
-      <form id="loginForm" novalidate>
+      <form id="loginForm" method="post" action="javascript:void(0)" novalidate>
         <!-- Screening. Positioned off-screen rather than hidden: a person never fills this,
              and a script that posts every field it finds does. The label stays so a screen
              reader can explain what it is skipping. -->
@@ -243,7 +255,7 @@
 
       <!-- Second factor. Shown only when the server says the account has it enabled; the
            challenge token it returns proves the password step already passed. -->
-      <form id="mfaForm" hidden>
+      <form id="mfaForm" method="post" action="javascript:void(0)" hidden>
         <p style="margin:0 0 18px;font-size:.92rem;line-height:1.5;">
           Enter the 6-digit code from your authenticator app. If you have lost your phone,
           enter one of your recovery codes instead.

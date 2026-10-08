@@ -894,17 +894,6 @@ function generateMembershipId(PDO $pdo): string {
     return 'RESOK' . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
 }
 
-function sendPortalMail(array $config, string $to, string $subject, string $message): bool {
-    $from = trim((string)($config['mail_from'] ?? ''));
-    if ($from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL)) return false;
-    $headers = [
-        'From: ReSoK Members Portal <' . $from . '>',
-        'Reply-To: ' . $from,
-        'Content-Type: text/plain; charset=UTF-8'
-    ];
-    return mail($to, $subject, $message, implode("\r\n", $headers));
-}
-
 function ensurePaymentProofColumns(PDO $pdo): void {
     $columns = [];
     foreach ($pdo->query('SHOW COLUMNS FROM payments')->fetchAll() as $column) {
@@ -2263,8 +2252,12 @@ Respiratory Society of Kenya");
         // reply is deliberately identical either way so it cannot be used to test emails.
         throttleCheck($pdo, $config, 'password-reset', (string)$data['email']);
         throttleFailure($pdo, $config, 'password-reset', (string)$data['email']);
+        // Trimmed: a phone keyboard or autofill often adds a trailing space, and an address
+        // that matches nothing gets the same "queued" reply as one that does - so the reset
+        // simply never came, with nothing to say why.
+        $resetEmail = trim((string)$data['email']);
         $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
-        $stmt->execute([$data['email']]);
+        $stmt->execute([$resetEmail]);
         $user = $stmt->fetch();
         if ($user) {
             $resetToken = bin2hex(random_bytes(32));
@@ -2273,15 +2266,20 @@ Respiratory Society of Kenya");
             $baseUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/');
             if ($baseUrl !== '') {
                 $resetUrl = $baseUrl . '/forgot-password?token=' . rawurlencode($resetToken);
-                $sent = sendPortalMail(
-                    $config,
-                    (string)$data['email'],
-                    'Reset your ReSoK members portal password',
-                    "Use this link to reset your ReSoK members portal password:\n\n{$resetUrl}\n\nThis link expires in 1 hour. If you did not request this, you can ignore this email."
-                );
-                if (!$sent) error_log('Password reset email could not be sent.');
+                requireModule('sendPasswordResetEmail', 'lib/portal-mail.php');
+                $mailError = null;
+                if (!sendPasswordResetEmail($config, $resetEmail, $resetUrl, $mailError)) {
+                    // The visitor still gets the neutral reply - it must not reveal whether
+                    // the address has an account - so the failure is recorded where an admin
+                    // will see it: the security log, shown on the Security page.
+                    error_log('Password reset email could not be sent: ' . $mailError);
+                    securityLog($pdo, $config, 'password_reset_mail_failed', 'warning', 'password-reset',
+                        substr('Reset email not sent: ' . (string)$mailError, 0, 300), (int)$user['id']);
+                }
             } else {
                 error_log('Password reset token generated, but portal_base_url is not configured.');
+                securityLog($pdo, $config, 'password_reset_mail_failed', 'warning', 'password-reset',
+                    'Reset email not sent: portal_base_url is not configured', (int)$user['id']);
             }
         }
         securityLog($pdo, $config, 'password_reset_requested', 'info', 'password-reset');

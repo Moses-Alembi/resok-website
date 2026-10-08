@@ -279,6 +279,32 @@ function sendVerificationEmail(array $config, string $email, string $token): boo
     return $mailer->send($email, 'Verify your ReSoK membership account', $text, [], $html);
 }
 
+/**
+ * The password reset link. Sent through SimpleMailer like every other portal email - it used
+ * to be the one message that went through bare mail(), skipping the SMTP login the others
+ * use, and on this host those resets did not arrive. $error is filled in on failure with
+ * the mail server's own reason.
+ */
+function sendPasswordResetEmail(array $config, string $email, string $url, ?string &$error = null): bool
+{
+    $error = null;
+    $text = "We received a request to reset the password for your ReSoK Members' Portal account.\n\n"
+        . "Use this link to choose a new password:\n{$url}\n\n"
+        . "The link expires in 1 hour and works once. If you did not ask for this, you can ignore this email: your password has not changed.\n\n"
+        . "Respiratory Society of Kenya";
+    $html = brandedEmailHtml(
+        'Reset your password',
+        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">We received a request to reset the password for your ReSoK Members&#39; Portal account. Use the button below to choose a new one.</p>'
+        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">The link expires in 1 hour and works once. If you did not ask for this, you can safely ignore this email: your password has not changed.</p>',
+        'Choose a New Password',
+        $url
+    );
+    $mailer = new SimpleMailer($config);
+    $sent = $mailer->send($email, 'Reset your ReSoK members portal password', $text, [], $html);
+    if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';
+    return $sent;
+}
+
 // $error is filled in on failure so a caller can say why, rather than only that it did
 // not work. An administrator waiting at a screen cannot read the server's error log.
 function sendWelcomePacketEmail(array $config, array $member, ?string &$error = null): bool

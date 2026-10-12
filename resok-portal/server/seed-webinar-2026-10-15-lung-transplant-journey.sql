@@ -41,12 +41,12 @@ INSERT INTO cpd_events
 VALUES
   ('lung-transplant-journey-when-to-refer-and-outcomes',
    'Lung Transplant Journey: When to Refer and Outcomes',
-   'When to refer patients for lung transplant and what outcomes to expect, presented by Prof. Said Isse of Lerner College of Medicine. Accredited CPD webinar on Zoom.',
-   'A ReSoK webinar on the lung transplant journey: when to refer a patient for lung transplantation, and the outcomes that follow.\n\nPresented by Prof. Said Isse, Associate Professor at Lerner College of Medicine, and moderated by Dr. Jumaa Bwika, Consultant Physician and Pulmonologist.',
+   'When to refer patients for lung transplant and what outcomes to expect, presented by Prof. Said Isse, Associate Professor at Lerner College of Medicine and pulmonologist at Cleveland, UAE. Accredited CPD webinar on Zoom.',
+   'A ReSoK webinar on the lung transplant journey: when to refer a patient for lung transplantation, and the outcomes that follow.\n\nPresented by Prof. Said Isse, Associate Professor at Lerner College of Medicine and pulmonologist at Cleveland, UAE, and moderated by Dr. Jumaa Bwika, Consultant Physician and Pulmonologist.',
    'Webinar', 'online', '2026-10-15 19:00:00', NULL, 'Zoom',
    'https://us06web.zoom.us/webinar/register/WN_Ja7gCVVxRJ-AEqXUF8DDLA',
    0, 0, 'KES', 'KMPDC', 'published',
-   'assets/img/events/2026-10-15-lung-transplant-journey/poster.jpg')
+   'assets/img/events/2026-10-15-lung-transplant-journey/poster-v2.jpg')
 ON DUPLICATE KEY UPDATE
   title = VALUES(title), summary = VALUES(summary), description = VALUES(description),
   event_type = VALUES(event_type), format = VALUES(format), starts_at = VALUES(starts_at),
@@ -60,7 +60,7 @@ DELETE FROM cpd_event_speakers WHERE event_id = @event_id;
 
 INSERT INTO cpd_event_speakers (event_id, sort_order, role, name, headline, bio, photo) VALUES
 (@event_id, 1, 'Presenter', 'Prof. Said Isse',
- 'Associate Professor, Lerner College of Medicine',
+ 'Associate Professor, Lerner College of Medicine; Pulmonologist at Cleveland, UAE',
  NULL,
  'assets/img/events/2026-10-15-lung-transplant-journey/said-isse.jpg'),
 (@event_id, 2, 'Moderator', 'Dr. Jumaa Bwika',

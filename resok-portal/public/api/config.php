@@ -69,6 +69,8 @@ return [
     // access to change, and so it needs no schema migration. Comma-separated in the env var.
     'super_admins' => config_list($local, 'super_admins', 'RESOK_SUPER_ADMINS'),
     'cron_secret' => config_value($local, 'cron_secret', 'RESOK_CRON_SECRET', ''),
+    // Abstract emails sent per hour (lib/abstracts.php). Keep it under the host's own limit.
+    'abstracts_mail_hourly_limit' => (int)config_value($local, 'abstracts_mail_hourly_limit', 'RESOK_ABSTRACTS_MAIL_HOURLY_LIMIT', 150),
     // "Continue with Google" (lib/google-signin.php). The OAuth client ID of a Web application
     // in Google Cloud Console; empty keeps the button hidden everywhere.
     'google_client_id' => config_value($local, 'google_client_id', 'RESOK_GOOGLE_CLIENT_ID', ''),

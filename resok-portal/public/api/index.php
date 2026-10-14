@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'google-signin', 'mdt', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'google-signin', 'mdt', 'careers', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -4533,6 +4533,12 @@ Respiratory Society of Kenya");
     // National ILD MDT case submission. Patient data: everything lives in lib/mdt.php, which
     // explains the rules it follows. Off until mdt_enabled is set, except for its staff.
     // ---------------------------------------------------------------------------------
+    // Staff recruitment: public vacancies and applications, and the recruiters' side.
+    if (strpos($route, 'careers/') === 0) {
+        requireModule('careersHandle', 'lib/careers.php');
+        careersHandle($pdo, $config, $route, $method);
+    }
+
     if ($route === 'mdt' || strpos($route, 'mdt/') === 0) {
         requireModule('mdtHandle', 'lib/mdt.php');
         mdtHandle($pdo, $config, $route, $method);

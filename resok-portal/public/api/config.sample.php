@@ -68,6 +68,8 @@ return [
     // first - case content and files are encrypted with it.
     'mdt_enabled' => false,
     'mdt_retention_months' => 24,
+    // Months after a vacancy closes before unsuccessful candidates' CVs and details are deleted.
+    'careers_retention_months' => 6,
     'portal_base_url' => 'https://www.resok.org/resok-portal/public',
     'mail_from' => 'no-reply@example.org',
 

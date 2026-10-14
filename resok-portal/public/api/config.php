@@ -73,6 +73,9 @@ return [
     // National ILD MDT case submission (lib/mdt.php): off until launch; case files are kept
     // this many months after a case closes.
     'mdt_enabled' => filter_var(config_value($local, 'mdt_enabled', 'RESOK_MDT_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+    // Staff recruitment (lib/careers.php): unsuccessful candidates' data is deleted this many
+    // months after a vacancy closes.
+    'careers_retention_months' => (int)config_value($local, 'careers_retention_months', 'RESOK_CAREERS_RETENTION_MONTHS', 6),
     'mdt_retention_months' => (int)config_value($local, 'mdt_retention_months', 'RESOK_MDT_RETENTION_MONTHS', 24),
     'abstracts_mail_hourly_limit' => (int)config_value($local, 'abstracts_mail_hourly_limit', 'RESOK_ABSTRACTS_MAIL_HOURLY_LIMIT', 150),
     // "Continue with Google" (lib/google-signin.php). The OAuth client ID of a Web application

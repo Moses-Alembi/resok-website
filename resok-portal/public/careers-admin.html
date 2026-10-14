@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recruitment - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1100px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
+    .top img{height:38px;display:block}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top .who{margin-left:auto;font-size:13.5px;color:var(--muted);display:flex;gap:14px;align-items:center}
+    .top .who button{background:none;border:0;color:var(--red);font:inherit;font-weight:600;cursor:pointer}
+    main{max-width:1100px;margin:0 auto;padding:22px 18px 60px;display:flex;flex-direction:column;gap:18px}
+    .panel{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+    h1{font-size:22px}
+    h2{font-size:17px;margin-bottom:6px}
+    h3{font-size:14.5px;margin:18px 0 8px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:80ch}
+    label{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}
+    .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+    input[type=text],input[type=email],input[type=datetime-local],textarea,select{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+    textarea{resize:vertical;min-height:90px}
+    input:focus,textarea:focus,select:focus{outline:2px solid rgba(8,117,57,.25);border-color:var(--green)}
+    .field{margin-bottom:14px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1;min-width:170px}
+    .btn{border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff}.btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}.btn-ghost:hover{border-color:var(--green);color:var(--green)}
+    .btn-danger{background:#fff;border:1px solid #f1b9c1;color:var(--red)}
+    .btn-sm{padding:6px 10px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    .note{border-radius:9px;padding:12px 14px;font-size:14px;margin-top:12px}
+    .note.info{background:#eff8ff;color:#175cd3}.note.ok{background:#ecfdf3;color:#05603a}
+    .note.warn{background:#fff8e6;color:#93370d}.note.bad{background:#fef3f2;color:#b42318}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-top:16px}
+    .tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+    .tabs button.on{color:var(--green);border-color:var(--green)}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap;background:#f2f4f7;color:#475467}
+    .p-published,.p-hired{background:#ecfdf3;color:#05603a}.p-draft{background:#f2f4f7;color:#475467}.p-closed,.p-unsuccessful,.p-withdrawn{background:#fef3f2;color:#b42318}
+    .p-new{background:#eff8ff;color:#175cd3}.p-shortlisted{background:#f4f3ff;color:#5925dc}.p-interview{background:#fff8e6;color:#93370d}.p-offered{background:#e0f2fe;color:#026aa2}
+    table{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    tr.click{cursor:pointer}tr.click:hover td{background:#f9fafb}
+    .empty{color:var(--muted);font-size:14px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px;margin-top:12px}
+    .box{border:1px solid var(--line);border-radius:10px;padding:16px}
+    .grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;margin-top:14px}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}
+    .sec{margin-top:12px}
+    .sec b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
+    .sec p{white-space:pre-wrap;font-size:14.5px}
+    .q{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    .q input[type=text]{flex:1}
+    .q select{width:auto}
+    .q label{margin:0;font-weight:500;display:flex;gap:4px;align-items:center;white-space:nowrap}
+    .scores{display:flex;gap:6px}
+    .scores label{margin:0;cursor:pointer}
+    .scores input{position:absolute;opacity:0}
+    .scores span{display:grid;place-items:center;width:34px;height:34px;border:1px solid #d0d5dd;border-radius:8px;font-weight:700}
+    .scores input:checked + span{background:var(--green);border-color:var(--green);color:#fff}
+    .noteitem{border-left:3px solid #7a5af8;background:#faf9ff;padding:6px 12px;margin-top:8px;font-size:13.5px}
+    .noteitem small{display:block;color:var(--muted);font-size:12px}
+    .noteitem p{white-space:pre-wrap}
+    .log{list-style:none;font-size:12.5px;color:#475467;max-height:240px;overflow:auto}
+    .log li{padding:4px 0;border-bottom:1px dashed #eef0f3}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="admin-home"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <span class="title">Recruitment</span>
+      <div class="who" id="who"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="vLoading"><div class="empty">Loading&hellip;</div></section>
+    <section class="panel" id="vDenied" hidden><h1>Recruitment</h1><p class="lede" id="deniedMsg">This page is for ReSoK recruiters.</p></section>
+
+    <section class="panel" id="vMain" hidden>
+      <h1>Recruitment</h1>
+      <p class="lede" id="lede"></p>
+      <div class="tabs" id="tabs">
+        <button type="button" data-tab="jobs" class="on">Vacancies</button>
+        <button type="button" data-tab="edit">New vacancy</button>
+        <button type="button" data-tab="roles" data-super>Recruiters</button>
+      </div>
+
+      <div data-pane="jobs"><div id="jobTable"></div></div>
+
+      <div data-pane="edit" hidden>
+        <input type="hidden" id="jId">
+        <h3 id="editHeading">New vacancy</h3>
+        <div class="row">
+          <div class="field"><label for="jTitle">Job title</label><input type="text" id="jTitle"></div>
+          <div class="field"><label for="jDept">Department</label><input type="text" id="jDept" placeholder="Secretariat"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="jLocation">Location</label><input type="text" id="jLocation" placeholder="Nairobi"></div>
+          <div class="field"><label for="jType">Type</label><select id="jType"></select></div>
+          <div class="field"><label for="jSalary">Salary <span class="hint">(optional)</span></label><input type="text" id="jSalary" placeholder="e.g. KES 80,000 - 100,000 per month"></div>
+        </div>
+        <div class="field"><label for="jSummary">Summary <span class="hint">(one or two sentences for the vacancy list)</span></label><input type="text" id="jSummary"></div>
+        <div class="field"><label for="jDesc">About the role</label><textarea id="jDesc" style="min-height:180px"></textarea></div>
+        <div class="field"><label for="jReq">Requirements</label><textarea id="jReq" style="min-height:140px"></textarea></div>
+        <div class="field">
+          <label>Screening questions <span class="hint">(optional, up to 8)</span></label>
+          <div id="qList"></div>
+          <button class="btn btn-ghost btn-sm" type="button" id="qAdd"><i class="fas fa-plus"></i> Add a question</button>
+        </div>
+        <div class="row">
+          <div class="field"><label for="jCloses">Closing date and time (Nairobi)</label><input type="datetime-local" id="jCloses"></div>
+          <div class="field"><label for="jStatus">Status</label><select id="jStatus"><option value="draft">Draft (not public)</option><option value="published">Published</option><option value="closed">Closed</option></select></div>
+        </div>
+        <div class="actions"><button class="btn btn-primary" type="button" id="jSave">Save vacancy</button><a class="btn btn-ghost" id="jPreview" target="_blank" rel="noopener" hidden><i class="fas fa-eye"></i> View public page</a></div>
+        <div id="jNote"></div>
+      </div>
+
+      <div data-pane="roles" hidden>
+        <p class="lede">Recruiters can post vacancies and see every application. Super administrators are recruiters automatically.</p>
+        <div class="row" style="margin-top:12px;align-items:flex-end">
+          <div class="field"><label for="rEmail">Portal account email</label><input type="email" id="rEmail"></div>
+          <div class="field" style="flex:0"><button class="btn btn-primary" type="button" id="rGrant">Appoint recruiter</button></div>
+        </div>
+        <div id="rNote"></div>
+        <div id="roleTable"></div>
+      </div>
+    </section>
+
+    <!-- Applicants for one vacancy -->
+    <section class="panel" id="vApps" hidden>
+      <div class="actions" style="margin-top:0"><button class="btn btn-ghost btn-sm" type="button" data-back="Main"><i class="fas fa-arrow-left"></i> Vacancies</button></div>
+      <h1 id="appsTitle" style="margin-top:10px"></h1>
+      <p class="lede" id="appsMeta"></p>
+      <div class="row" style="margin-top:12px;align-items:flex-end">
+        <div style="max-width:260px"><label for="aFilter">Show</label><select id="aFilter"><option value="">Everyone</option></select></div>
+        <div class="actions" style="justify-content:flex-end">
+          <a class="btn btn-ghost btn-sm" id="exportBtn"><i class="fas fa-file-csv"></i> Export to Excel (CSV)</a>
+        </div>
+      </div>
+      <div id="appTable"></div>
+      <div class="box" style="margin-top:16px">
+        <h2>Email the selected candidates</h2>
+        <p class="hint">Each candidate gets their own copy. <code>{{name}}</code>, <code>{{fullName}}</code>, <code>{{position}}</code> and <code>{{reference}}</code> are filled in for each person.</p>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><label for="mTemplate">Start from</label><select id="mTemplate"><option value="">A blank message</option><option value="interview">Interview invitation</option><option value="regret">Regret letter</option><option value="offer">Offer</option></select></div>
+          <div class="field"><label for="mStatus">Then set their status to</label><select id="mStatus"><option value="">Leave unchanged</option></select></div>
+        </div>
+        <div class="field"><label for="mSubject">Subject</label><input type="text" id="mSubject"></div>
+        <div class="field"><label for="mBody">Message</label><textarea id="mBody" style="min-height:180px"></textarea></div>
+        <div class="actions" style="margin-top:0"><button class="btn btn-primary" type="button" id="mSend"><i class="fas fa-paper-plane"></i> Send to <span id="mCount">0</span> selected</button></div>
+        <div id="mNote"></div>
+      </div>
+    </section>
+
+    <!-- One applicant -->
+    <section class="panel" id="vApp" hidden>
+      <div class="actions" style="margin-top:0"><button class="btn btn-ghost btn-sm" type="button" data-back="Apps"><i class="fas fa-arrow-left"></i> Applicants</button></div>
+      <h1 id="pName" style="margin-top:10px"></h1>
+      <p class="lede" id="pMeta"></p>
+      <div id="pNote"></div>
+      <div class="grid">
+        <div class="box" id="pBody"></div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="box">
+            <h2>Status</h2>
+            <div class="row" style="align-items:flex-end"><div><select id="pStatus"></select></div><div style="flex:0"><button class="btn btn-primary btn-sm" type="button" id="pStatusSave">Update</button></div></div>
+            <p class="hint" style="margin-top:8px">Changing the status here does not email the candidate. Use the email box on the applicants list for that.</p>
+          </div>
+          <div class="box">
+            <h2>Panel notes and scores</h2>
+            <div id="pNotes"></div>
+            <label style="margin-top:12px">Your score <span class="hint">(optional, 1 = weak, 5 = excellent)</span></label>
+            <div class="scores" id="pScores"></div>
+            <div class="field" style="margin-top:10px"><textarea id="pNoteBody" placeholder="Notes, visible to recruiters only"></textarea></div>
+            <div class="actions" style="margin-top:0"><button class="btn btn-ghost btn-sm" type="button" id="pNoteAdd">Add note</button></div>
+          </div>
+          <div class="box"><h2>Activity</h2><ul class="log" id="pAudit"></ul></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20261008-sessions"></script>
+  <script>
+  /**
+   * Recruiters' side: vacancies, applicants, notes and scores, group emails, and (for super
+   * administrators) who the recruiters are. The server decides who may see what; text is
+   * written with textContent only.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+    const note = (id, msg, kind) => { const b = el(id); b.textContent = ''; if (msg) b.appendChild(make('div', 'note ' + (kind || 'info'), msg)); };
+    const fmt = (iso, withTime) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString('en-GB', Object.assign({ day: 'numeric', month: 'short', year: 'numeric' }, withTime ? { hour: '2-digit', minute: '2-digit' } : {})); };
+    const VIEWS = ['Loading', 'Denied', 'Main', 'Apps', 'App'];
+    const show = (v) => { VIEWS.forEach((x) => { el('v' + x).hidden = x !== v; }); window.scrollTo(0, 0); };
+    const JOB_STATUS = { draft: 'Draft', published: 'Published', closed: 'Closed' };
+    const ACTIONS = { applied: 'Applied', viewed: 'Opened', cv_downloaded: 'CV downloaded', letter_downloaded: 'Cover letter downloaded',
+      status_changed: 'Status changed', note_added: 'Note added', emailed: 'Emailed', email_failed: 'Email failed', purged: 'Removed under retention' };
+    const TEMPLATES = {
+      interview: { subject: 'Interview invitation: {{position}}', status: 'interview',
+        body: 'Dear {{name}},\n\nThank you for your application for the position of {{position}} (reference {{reference}}). We are pleased to invite you to an interview.\n\nDate: \nTime: \nVenue: \n\nPlease reply to confirm that you can attend, and bring copies of your academic and professional certificates and your national ID.\n\nWe look forward to meeting you.' },
+      regret: { subject: 'Your application for {{position}}', status: 'unsuccessful',
+        body: 'Dear {{name}},\n\nThank you for your interest in the position of {{position}} at the Respiratory Society of Kenya, and for the time you took to apply.\n\nAfter careful consideration, we regret to inform you that your application (reference {{reference}}) was not successful on this occasion. We received many strong applications and the decision was a difficult one.\n\nWe wish you every success in your career and encourage you to apply for future vacancies.' },
+      offer: { subject: 'Offer of employment: {{position}}', status: 'offered',
+        body: 'Dear {{name}},\n\nFollowing your interview, we are delighted to offer you the position of {{position}} at the Respiratory Society of Kenya.\n\nA formal letter setting out the terms of the offer will follow. Please reply to confirm that you accept, and when you would be able to start.\n\nCongratulations, and welcome to ReSoK.' },
+    };
+    let base = null, apps = null, currentJob = null, current = null;
+
+    function renderWho(email) {
+      const who = el('who'); who.textContent = '';
+      who.appendChild(make('span', null, email));
+      const out = make('button', null, 'Sign out'); out.type = 'button';
+      out.addEventListener('click', () => window.ResokPortal.logout());
+      who.appendChild(out);
+    }
+    document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', async () => {
+      if (b.dataset.back === 'Main') { await load(); show('Main'); } else { await openJob(currentJob.id); }
+    }));
+
+    // ------------------------------------------------------------- vacancies
+    async function load() {
+      try { base = await api('careers/admin'); }
+      catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/careers-admin'); return; }
+        show('Denied'); if (error.status !== 404) el('deniedMsg').textContent = error.message; return;
+      }
+      renderWho(base.email);
+      document.querySelectorAll('[data-super]').forEach((n) => { n.hidden = !base.superAdmin; });
+      el('lede').textContent = 'Post vacancies on resok.org/careers and review the applications. Unsuccessful candidates\' CVs and details are deleted '
+        + base.retentionMonths + ' months after a vacancy closes; hired candidates are kept.';
+      const t = el('jType'); if (!t.length) Object.entries(base.types).forEach(([k, v]) => t.appendChild(new Option(v, k)));
+      const f = el('aFilter'), s = el('mStatus'), p = el('pStatus');
+      if (f.length === 1) Object.entries(base.statuses).forEach(([k, v]) => { f.appendChild(new Option(v, k)); s.appendChild(new Option(v, k)); p.appendChild(new Option(v, k)); });
+      renderJobs();
+      if (base.superAdmin) loadRoles();
+    }
+
+    document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
+      document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== b.dataset.tab; });
+      if (b.dataset.tab === 'edit' && !el('jId').value) clearEditor();
+    }));
+    const goTab = (name) => document.querySelector('#tabs [data-tab=' + name + ']').click();
+
+    function renderJobs() {
+      const box = el('jobTable'); box.textContent = '';
+      if (!base.jobs.length) { box.appendChild(make('div', 'empty', 'No vacancies yet. Use "New vacancy" to post one.')); return; }
+      const t = make('table'), head = make('tr');
+      ['Vacancy', 'Status', 'Closes', 'Applications', ''].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      base.jobs.forEach((j) => {
+        const tr = make('tr');
+        const name = make('td'); name.appendChild(make('b', null, j.title)); name.appendChild(make('div', 'hint', [j.typeLabel, j.location].filter(Boolean).join(' · '))); tr.appendChild(name);
+        const st = make('td'); const lapsed = j.status === 'published' && !j.open;
+        st.appendChild(make('span', 'pill p-' + (lapsed ? 'closed' : j.status), lapsed ? 'Closed (date passed)' : JOB_STATUS[j.status])); tr.appendChild(st);
+        tr.appendChild(make('td', null, fmt(j.closesAt, true)));
+        const counts = make('td'); counts.appendChild(make('b', null, String(j.applications)));
+        if (j.byStatus.new) counts.appendChild(make('span', 'hint', ' · ' + j.byStatus.new + ' new'));
+        tr.appendChild(counts);
+        const act = make('td');
+        const view = make('button', 'btn btn-primary btn-sm', 'Applicants'); view.type = 'button'; view.addEventListener('click', () => openJob(j.id));
+        const edit = make('button', 'btn btn-ghost btn-sm', 'Edit'); edit.type = 'button'; edit.style.marginLeft = '6px'; edit.addEventListener('click', () => { fillEditor(j); goTab('edit'); });
+        act.append(view, edit); tr.appendChild(act);
+        t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+
+    function addQuestion(q) {
+      if (el('qList').children.length >= 8) return;
+      const row = make('div', 'q');
+      const text = make('input'); text.type = 'text'; text.placeholder = 'e.g. Are you registered with the Nursing Council of Kenya?'; text.value = q ? q.label : '';
+      const type = make('select'); type.appendChild(new Option('Written answer', 'text')); type.appendChild(new Option('Yes / No', 'yesno')); type.value = q ? q.type : 'text';
+      const req = make('label'); const cb = make('input'); cb.type = 'checkbox'; cb.checked = q ? q.required : true; req.append(cb, document.createTextNode('Required'));
+      const rm = make('button', 'btn btn-danger btn-sm', '×'); rm.type = 'button'; rm.addEventListener('click', () => row.remove());
+      row.append(text, type, req, rm);
+      el('qList').appendChild(row);
+    }
+    el('qAdd').addEventListener('click', () => addQuestion(null));
+
+    function clearEditor() {
+      ['jId', 'jTitle', 'jDept', 'jLocation', 'jSalary', 'jSummary', 'jDesc', 'jReq', 'jCloses'].forEach((id) => { el(id).value = ''; });
+      el('jType').value = 'full_time'; el('jStatus').value = 'draft'; el('qList').textContent = '';
+      el('editHeading').textContent = 'New vacancy'; el('jPreview').hidden = true; note('jNote', '');
+    }
+    function fillEditor(j) {
+      clearEditor();
+      el('jId').value = j.id; el('jTitle').value = j.title; el('jDept').value = j.department || ''; el('jLocation').value = j.location || '';
+      el('jType').value = j.type; el('jSalary').value = j.salary || ''; el('jSummary').value = j.summary || ''; el('jDesc').value = j.description || '';
+      el('jReq').value = j.requirements || ''; el('jCloses').value = (j.closesAtLocal || '').slice(0, 16).replace(' ', 'T'); el('jStatus').value = j.status;
+      j.questions.forEach(addQuestion);
+      el('editHeading').textContent = 'Edit: ' + j.title;
+      el('jPreview').hidden = j.status === 'draft'; el('jPreview').href = '../../careers.html?job=' + encodeURIComponent(j.slug);
+    }
+    el('jSave').addEventListener('click', async () => {
+      const questions = [...el('qList').children].map((row) => ({ label: row.children[0].value, type: row.children[1].value, required: row.children[2].querySelector('input').checked }));
+      try {
+        const res = await post('careers/admin/jobs', { id: el('jId').value || null, title: el('jTitle').value, department: el('jDept').value, location: el('jLocation').value,
+          type: el('jType').value, salary: el('jSalary').value, summary: el('jSummary').value, description: el('jDesc').value, requirements: el('jReq').value,
+          closesAt: el('jCloses').value, status: el('jStatus').value, questions });
+        await load(); fillEditor(res.job);
+        note('jNote', res.job.status === 'published' ? 'Saved and published on the careers page.' : 'Saved.', 'ok');
+      } catch (error) { note('jNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- applicants
+    async function openJob(id) {
+      try { apps = await api('careers/admin/jobs/' + id + '/applications'); } catch (error) { note('jNote', error.message, 'bad'); return; }
+      currentJob = apps.job;
+      el('appsTitle').textContent = currentJob.title;
+      el('appsMeta').textContent = [JOB_STATUS[currentJob.status], currentJob.closesAt ? 'closes ' + fmt(currentJob.closesAt, true) : null, apps.applications.length + ' application(s)'].filter(Boolean).join(' · ');
+      el('exportBtn').href = 'api/index.php?route=careers/admin/jobs/' + currentJob.id + '/export';
+      renderApps(); note('mNote', '');
+      show('Apps');
+    }
+    el('aFilter').addEventListener('change', renderApps);
+
+    function renderApps() {
+      const box = el('appTable'); box.textContent = '';
+      const filter = el('aFilter').value;
+      const rows = apps.applications.filter((a) => !filter || a.status === filter);
+      if (!rows.length) { box.appendChild(make('div', 'empty', 'No applications here.')); updateCount(); return; }
+      const t = make('table'), head = make('tr');
+      const all = make('input'); all.type = 'checkbox'; all.title = 'Select all';
+      const th = make('th'); th.appendChild(all); head.appendChild(th);
+      ['Candidate', 'County', 'Status', 'Score', 'Applied'].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      rows.forEach((a) => {
+        const tr = make('tr', 'click');
+        const cbCell = make('td'); const cb = make('input'); cb.type = 'checkbox'; cb.value = a.id; cb.disabled = a.purged; cb.className = 'pick';
+        cb.addEventListener('click', (e) => { e.stopPropagation(); updateCount(); }); cbCell.appendChild(cb); tr.appendChild(cbCell);
+        const name = make('td'); name.appendChild(make('b', null, a.name)); name.appendChild(make('div', 'hint', a.reference + (a.email ? ' · ' + a.email : ''))); tr.appendChild(name);
+        tr.appendChild(make('td', null, a.county || ''));
+        const st = make('td'); st.appendChild(make('span', 'pill p-' + a.status, a.statusLabel)); tr.appendChild(st);
+        tr.appendChild(make('td', null, a.score != null ? a.score + ' (' + a.scores + ')' : ''));
+        tr.appendChild(make('td', null, fmt(a.appliedAt)));
+        tr.addEventListener('click', () => openApp(a.id));
+        t.appendChild(tr);
+      });
+      all.addEventListener('change', () => { t.querySelectorAll('.pick:not(:disabled)').forEach((c) => { c.checked = all.checked; }); updateCount(); });
+      box.appendChild(t); updateCount();
+    }
+    const picked = () => [...document.querySelectorAll('#appTable .pick:checked')].map((c) => Number(c.value));
+    const updateCount = () => { el('mCount').textContent = String(picked().length); };
+
+    el('mTemplate').addEventListener('change', () => {
+      const tpl = TEMPLATES[el('mTemplate').value];
+      if (!tpl) return;
+      el('mSubject').value = tpl.subject; el('mBody').value = tpl.body; el('mStatus').value = tpl.status;
+    });
+    el('mSend').addEventListener('click', async () => {
+      const ids = picked();
+      if (!ids.length) { note('mNote', 'Tick the candidates to email first.', 'warn'); return; }
+      if (!confirm('Send this email to ' + ids.length + ' candidate(s)?')) return;
+      el('mSend').disabled = true;
+      try {
+        const res = await post('careers/admin/jobs/' + currentJob.id + '/email', { ids, subject: el('mSubject').value, body: el('mBody').value, setStatus: el('mStatus').value });
+        await openJob(currentJob.id);
+        note('mNote', res.sent + ' sent' + (res.failed ? ', ' + res.failed + ' could not be sent (their status was left unchanged; check the mail settings and retry)' : '') + '.', res.failed ? 'warn' : 'ok');
+      } catch (error) { note('mNote', error.message, 'bad'); }
+      finally { el('mSend').disabled = false; }
+    });
+
+    // ------------------------------------------------------------- one applicant
+    async function openApp(id) {
+      try { current = (await api('careers/admin/applications/' + id)).application; } catch (error) { note('mNote', error.message, 'bad'); return; }
+      renderApp(); show('App');
+    }
+    function renderApp() {
+      const a = current;
+      el('pName').textContent = a.name;
+      el('pMeta').textContent = [a.reference, currentJob.title, 'applied ' + fmt(a.appliedAt, true)].join(' · ');
+      note('pNote', a.purged ? 'This application was removed under the retention policy: only the reference and status remain.' : '', 'warn');
+      const body = el('pBody'); body.textContent = '';
+      const add = (label, value) => { if (!value) return; const s = make('div', 'sec'); s.appendChild(make('b', null, label)); s.appendChild(make('p', null, value)); body.appendChild(s); };
+      add('Email', a.email); add('Phone', a.phone); add('County', a.county);
+      const files = make('div', 'actions');
+      [['cv', 'CV'], ['letter', 'Cover letter']].forEach(([k, label]) => {
+        if (!a[k]) return;
+        const link = make('a', 'btn btn-ghost btn-sm'); link.href = a[k].url;
+        link.append(make('i', 'fas fa-download'), document.createTextNode(' ' + label + ' (' + a[k].type + ', ' + Math.max(1, Math.round(a[k].bytes / 1024)) + ' KB)'));
+        files.appendChild(link);
+      });
+      if (files.childNodes.length) body.appendChild(files);
+      a.answers.forEach((q) => add(q.label, q.type === 'yesno' ? (q.answer === 'yes' ? 'Yes' : q.answer === 'no' ? 'No' : '') : q.answer));
+      add('Anything else', a.coverNote);
+      el('pStatus').value = a.status; el('pStatusSave').disabled = a.purged;
+
+      const notes = el('pNotes'); notes.textContent = '';
+      if (!a.notes.length) notes.appendChild(make('div', 'hint', 'No notes yet.'));
+      a.notes.forEach((n) => {
+        const d = make('div', 'noteitem');
+        d.appendChild(make('small', null, (n.by || '') + ' · ' + fmt(n.at, true) + (n.score ? ' · scored ' + n.score + '/5' : '')));
+        if (n.body) d.appendChild(make('p', null, n.body));
+        notes.appendChild(d);
+      });
+      const scores = el('pScores'); scores.textContent = '';
+      [1, 2, 3, 4, 5].forEach((v) => { const l = make('label'); const r = make('input'); r.type = 'radio'; r.name = 'score'; r.value = v; l.append(r, make('span', null, String(v))); scores.appendChild(l); });
+      const log = el('pAudit'); log.textContent = '';
+      a.audit.forEach((e) => log.appendChild(make('li', null, fmt(e.at, true) + ' · ' + (ACTIONS[e.action] || e.action)
+        + (e.action === 'status_changed' && e.detail ? ': ' + (base.statuses[e.detail.to] || e.detail.to) : '') + (e.by ? ' · ' + e.by : ''))));
+    }
+    el('pStatusSave').addEventListener('click', async () => {
+      try { current = (await post('careers/admin/applications/' + current.id + '/status', { status: el('pStatus').value })).application; renderApp(); note('pNote', 'Status updated.', 'ok'); }
+      catch (error) { note('pNote', error.message, 'bad'); }
+    });
+    el('pNoteAdd').addEventListener('click', async () => {
+      const score = document.querySelector('#pScores input:checked');
+      try { current = (await post('careers/admin/applications/' + current.id + '/notes', { body: el('pNoteBody').value, score: score ? score.value : null })).application; el('pNoteBody').value = ''; renderApp(); }
+      catch (error) { note('pNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- recruiters
+    async function loadRoles() { try { renderRoles((await api('careers/admin/roles')).roles); } catch (error) { note('rNote', error.message, 'bad'); } }
+    function renderRoles(roles) {
+      const box = el('roleTable'); box.textContent = '';
+      if (!roles.length) { box.appendChild(make('div', 'empty', 'No recruiters appointed yet. Super administrators can already recruit.')); return; }
+      const t = make('table'), head = make('tr');
+      ['Account', 'Since', ''].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      roles.forEach((r) => {
+        const tr = make('tr');
+        tr.appendChild(make('td', null, r.email)); tr.appendChild(make('td', null, fmt(r.since)));
+        const td = make('td'), b = make('button', 'btn btn-danger btn-sm', 'Remove'); b.type = 'button';
+        b.addEventListener('click', async () => { if (!confirm('Remove ' + r.email + ' as a recruiter?')) return; try { renderRoles((await post('careers/admin/roles/' + r.id + '/revoke')).roles); } catch (error) { note('rNote', error.message, 'bad'); } });
+        td.appendChild(b); tr.appendChild(td); t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+    el('rGrant').addEventListener('click', async () => {
+      try { renderRoles((await post('careers/admin/roles', { email: el('rEmail').value })).roles); el('rEmail').value = ''; note('rNote', 'Appointed.', 'ok'); }
+      catch (error) { note('rNote', error.message, 'bad'); }
+    });
+
+    load().then(() => { if (base) show('Main'); });
+  })();
+  </script>
+</body>
+</html>

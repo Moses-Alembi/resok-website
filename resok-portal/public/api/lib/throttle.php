@@ -33,6 +33,8 @@ const THROTTLE_RULES = [
     'password-reset' => [5,  15, 3600, 1800],
     'payment'        => [10, 30, 3600, 900],
     'upload'         => [20, 60, 3600, 900],
+    // Job applications. Every submission counts, so one browser cannot flood a vacancy.
+    'careers-apply'  => [5,  20, 3600, 1800],
     // Token collection. The client limit is the one that matters: a delegate list is public
     // enough that the attack is one browser working through many addresses, not many
     // attempts at one. Generous per address, because a real attendee whose code expires

@@ -150,14 +150,14 @@ check "withdrawing a draft deletes it"             '"deleted":true'        "$(po
 
 echo "Retention:"
 $MYSQL -e "UPDATE mdt_cases SET purge_after = CURDATE() - INTERVAL 1 DAY WHERE id=$CID" 2>/dev/null
-OUT=$($PHP "$(dirname "$0")/../../resok-portal/public/api/cron/mdt-retention.php" 2>&1)
-check "the retention job purges the due case"      'Cases purged: 1'       "$OUT"
+OUT=$($PHP "$(dirname "$0")/../../resok-portal/public/api/cron/data-retention.php" 2>&1)
+check "the retention job purges the due case"      'MDT cases purged: 1'       "$OUT"
 check "its clinical text is gone"                  'NULL'                  "$($MYSQL -e "SELECT content FROM mdt_cases WHERE id=$CID")"
 check "its files are gone from disk"               '0'                     "$(ls "$UPLOADS"/mdt-*.bin 2>/dev/null | wc -l)"
 check "its messages are gone"                      '0'                     "$($MYSQL -N -e "SELECT COUNT(*) FROM mdt_messages WHERE case_id=$CID")"
 check "the anonymous outline is kept"              'Idiopathic pulmonary fibrosis' "$($MYSQL -N -e "SELECT diagnosis FROM mdt_recommendations WHERE case_id=$CID")"
 check "the recommendation's free text is gone"     'NULL'                  "$($MYSQL -e "SELECT content FROM mdt_recommendations WHERE case_id=$CID")"
-check "the cron URL needs the secret"              'Forbidden'             "$(curl -s "http://localhost:8081/resok-portal/public/api/cron/mdt-retention.php")"
+check "the cron URL needs the secret"              'Forbidden'             "$(curl -s "http://localhost:8081/resok-portal/public/api/cron/data-retention.php")"
 
 rm -f "$IMG" "$PDF" "$TXT" "$SUPER" "$CLIN" "$PANEL" "$COORD" "$OTHER"
 echo

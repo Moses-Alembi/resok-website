@@ -33,6 +33,9 @@ const THROTTLE_RULES = [
     'password-reset' => [5,  15, 3600, 1800],
     'payment'        => [10, 30, 3600, 900],
     'upload'         => [20, 60, 3600, 900],
+    // Find a Specialist contact reveals. Generous for a person comparing a few clinicians;
+    // the client limit stops a script collecting every member's phone number.
+    'directory-contact' => [20, 40, 3600, 1800],
     // Job applications. Every submission counts, so one browser cannot flood a vacancy.
     'careers-apply'  => [5,  20, 3600, 1800],
     // Token collection. The client limit is the one that matters: a delegate list is public

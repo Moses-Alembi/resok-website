@@ -74,6 +74,46 @@
         </form>
       </section>
 
+      <!-- Find a Specialist. Opt-in: nothing is published until the member switches it on and
+           confirms consent. Only what is entered here is public, never the profile above. -->
+      <style>.dir-loc{grid-template-columns:2fr 1fr 1fr;margin-bottom:10px}@media(max-width:640px){.dir-loc{grid-template-columns:1fr;gap:8px;margin-bottom:16px}}</style>
+      <section class="panel" style="margin-top:20px" id="dirPanel" hidden>
+        <h2 style="font-size:18px;margin-bottom:6px">Find a Specialist listing</h2>
+        <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
+          Appear in ReSoK's public <a href="../../find-a-specialist.html" target="_blank" rel="noopener" style="color:var(--brand-primary);font-weight:700">Find a Specialist</a>
+          directory so patients and colleagues can find you. Only the details in this section are published, together with your title and name.
+          Your listing is shown while your membership is active, and you can switch it off at any time.
+        </p>
+        <div id="dirNotice" class="notice"></div>
+        <label style="display:flex;gap:10px;align-items:center;font-weight:800;margin-bottom:16px;cursor:pointer">
+          <input type="checkbox" id="dirListed" style="width:18px;height:18px"> List me in the directory
+        </label>
+        <div class="form-grid">
+          <div class="field"><label for="dirCategory">List me as</label><select id="dirCategory"><option value="">Choose</option></select></div>
+          <div class="field"><label for="dirLanguages">Languages</label><input id="dirLanguages" placeholder="e.g. English, Kiswahili" /></div>
+          <div class="field" style="grid-column:1/-1"><label for="dirSpecialties">Conditions and services</label><input id="dirSpecialties" placeholder="e.g. Asthma, COPD, bronchoscopy, sleep studies" /></div>
+        </div>
+        <h3 style="font-size:15px;margin:18px 0 8px">Where you practise <span style="font-weight:400;color:var(--muted);font-size:13px">(up to 3)</span></h3>
+        <div id="dirLocations"></div>
+        <h3 style="font-size:15px;margin:18px 0 8px">Public contact details <span style="font-weight:400;color:var(--muted);font-size:13px">(optional; use your clinic's, not your personal ones)</span></h3>
+        <div class="form-grid">
+          <div class="field"><label for="dirPhone">Clinic phone</label><input id="dirPhone" type="tel" /></div>
+          <div class="field"><label for="dirEmail">Clinic email</label><input id="dirEmail" type="email" /></div>
+          <div class="field" style="grid-column:1/-1"><label for="dirWebsite">Website or booking link</label><input id="dirWebsite" placeholder="https://" /></div>
+          <div class="field" style="grid-column:1/-1"><label for="dirBio">A short introduction</label>
+            <textarea id="dirBio" maxlength="800" style="width:100%;border:1px solid #d0d5dd;border-radius:6px;padding:12px;font:inherit;font-size:15px;min-height:90px;resize:vertical"></textarea></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;font-size:14px">
+          <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="dirReferrals"> I am accepting referrals</label>
+          <label style="display:flex;gap:8px;align-items:center;cursor:pointer" id="dirPhotoRow"><input type="checkbox" id="dirPhoto"> Show my membership card photo</label>
+          <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="dirConsent" style="margin-top:3px"> I agree to these details, with my title and name, being published on resok.org.</label>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="dirSave" type="button"><i class="fas fa-save"></i> Save listing</button>
+          <a class="btn btn-secondary" href="../../find-a-specialist.html" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> View the directory</a>
+        </div>
+      </section>
+
       <!-- Two-factor authentication. Enrolment is only activated once a code proves the app
            really holds the secret; otherwise a mistyped setup locks a member out. -->
       <section class="panel" style="margin-top:20px">
@@ -274,6 +314,91 @@
     });
 
     renderMfa();
+
+    /* ---------------- Find a Specialist listing ---------------- */
+    const dir = (id) => document.getElementById(id);
+    const COUNTIES = ["Baringo","Bomet","Bungoma","Busia","Elgeyo-Marakwet","Embu","Garissa","Homa Bay","Isiolo","Kajiado","Kakamega","Kericho","Kiambu","Kilifi","Kirinyaga","Kisii","Kisumu","Kitui","Kwale","Laikipia","Lamu","Machakos","Makueni","Mandera","Marsabit","Meru","Migori","Mombasa","Murang'a","Nairobi","Nakuru","Nandi","Narok","Nyamira","Nyandarua","Nyeri","Samburu","Siaya","Taita-Taveta","Tana River","Tharaka-Nithi","Trans Nzoia","Turkana","Uasin Gishu","Vihiga","Wajir","West Pokot"];
+
+    function dirNotice(message, type = "success") {
+      const box = dir("dirNotice");
+      box.textContent = message;
+      box.className = message ? `notice ${type}` : "notice";
+    }
+
+    function dirLocationRows(locations) {
+      const box = dir("dirLocations");
+      box.textContent = "";
+      for (let i = 0; i < 3; i++) {
+        const l = locations[i] || {};
+        const row = document.createElement("div");
+        row.className = "form-grid dir-loc";
+        const facility = Object.assign(document.createElement("input"), { placeholder: i === 0 ? "Hospital or clinic" : "Another hospital or clinic (optional)", value: l.facility || "" });
+        const town = Object.assign(document.createElement("input"), { placeholder: "Town", value: l.town || "" });
+        const county = document.createElement("select");
+        county.appendChild(new Option("County", ""));
+        COUNTIES.forEach((c) => county.appendChild(new Option(c, c)));
+        county.value = l.county || "";
+        [facility, town, county].forEach((input) => {
+          const wrap = document.createElement("div");
+          wrap.className = "field";
+          wrap.appendChild(input);
+          row.appendChild(wrap);
+        });
+        box.appendChild(row);
+      }
+    }
+
+    async function renderDirectory() {
+      let data;
+      try { data = await window.ResokPortal.api("directory/me"); }
+      catch (error) { return; }   // not a member, or the directory is not deployed: no panel
+      dir("dirPanel").hidden = false;
+      const cat = dir("dirCategory");
+      if (cat.length === 1) Object.entries(data.categories).forEach(([k, v]) => cat.appendChild(new Option(v, k)));
+      const l = data.listing;
+      dir("dirListed").checked = !!(l && l.listed);
+      cat.value = (l && l.category) || "";
+      dir("dirSpecialties").value = l ? (l.specialties || "") : (data.suggest.specialties || "");
+      dir("dirLanguages").value = (l && l.languages) || "";
+      dir("dirPhone").value = (l && l.publicPhone) || "";
+      dir("dirEmail").value = (l && l.publicEmail) || "";
+      dir("dirWebsite").value = (l && l.website) || "";
+      dir("dirBio").value = (l && l.bio) || "";
+      dir("dirReferrals").checked = l ? l.acceptingReferrals : true;
+      dir("dirPhoto").checked = !!(l && l.showPhoto);
+      dir("dirPhotoRow").hidden = !data.hasPhoto;
+      dir("dirConsent").checked = !!(l && l.listed);
+      dirLocationRows(l && l.locations.length ? l.locations : [{ facility: data.suggest.facility || "", county: COUNTIES.includes(data.suggest.county) ? data.suggest.county : "" }]);
+      if (l && l.hidden) dirNotice("An administrator has hidden your listing: " + (l.hiddenReason || "") + " Update it and contact the secretariat to have it shown again.", "error");
+      else if (!data.membershipActive) dirNotice("Your listing can only be shown while your membership is active.", "error");
+      else if (l && l.listed) dirNotice("Your listing is live in the directory.");
+      else dirNotice("");
+    }
+
+    dir("dirSave").addEventListener("click", async () => {
+      const btn = dir("dirSave");
+      const locations = [...document.querySelectorAll("#dirLocations .dir-loc")].map((row) => {
+        const [facility, town, county] = row.querySelectorAll("input, select");
+        return { facility: facility.value, town: town.value, county: county.value };
+      });
+      btn.disabled = true;
+      try {
+        await window.ResokPortal.api("directory/me", { method: "POST", body: JSON.stringify({
+          listed: dir("dirListed").checked, category: dir("dirCategory").value, specialties: dir("dirSpecialties").value,
+          languages: dir("dirLanguages").value, locations, publicPhone: dir("dirPhone").value, publicEmail: dir("dirEmail").value,
+          website: dir("dirWebsite").value, bio: dir("dirBio").value, acceptingReferrals: dir("dirReferrals").checked,
+          showPhoto: dir("dirPhoto").checked, consent: dir("dirConsent").checked,
+        }) });
+        await renderDirectory();
+        if (!dir("dirListed").checked) dirNotice("Saved. You are not listed in the directory.");
+      } catch (error) {
+        dirNotice(error.message || "Could not save your listing.", "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    renderDirectory();
   </script>
 </body>
 </html>

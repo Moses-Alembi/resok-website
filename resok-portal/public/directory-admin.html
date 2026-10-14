@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Specialist Directory - ReSoK Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee}
+    .top-inner{max-width:1100px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
+    .top img{height:38px}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top a.back{margin-left:auto;font-size:13.5px;color:var(--green);font-weight:700;text-decoration:none}
+    main{max-width:1100px;margin:0 auto;padding:22px 18px 60px}
+    .panel{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 12px rgba(16,24,40,.06)}
+    h1{font-size:22px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:80ch}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+    input[type=search],select{border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+    table{width:100%;border-collapse:collapse;font-size:14px;margin-top:14px}
+    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    .hint{color:var(--muted);font-size:12.5px}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+    .live{background:#ecfdf3;color:#05603a}.hidden{background:#fef3f2;color:#b42318}.lapsed{background:#fff8e6;color:#93370d}
+    .btn{border:1px solid #d0d5dd;background:#fff;border-radius:8px;padding:6px 10px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+    .btn.danger{border-color:#f1b9c1;color:var(--red)}
+    .empty{color:var(--muted);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px;margin-top:14px}
+    .note{border-radius:9px;padding:12px 14px;font-size:14px;margin-top:12px}
+    .note.ok{background:#ecfdf3;color:#05603a}.note.bad{background:#fef3f2;color:#b42318}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="top-inner">
+    <a href="admin-review"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+    <span class="title">Find a Specialist · Directory</span>
+    <a class="back" href="admin-review"><i class="fas fa-arrow-left"></i> Registered members</a>
+  </div></header>
+  <main>
+    <section class="panel">
+      <h1>Specialist directory</h1>
+      <p class="lede">Members who have listed themselves in the public <a href="../../find-a-specialist.html" target="_blank" rel="noopener">Find a Specialist</a> directory. Members write their own listings; hide one that is wrong or inappropriate, and the member sees your reason on their profile. A listing also drops out by itself when the membership lapses.</p>
+      <div class="row">
+        <input type="search" id="q" placeholder="Search name, service or place" style="flex:1;min-width:220px">
+        <select id="show"><option value="">All listings</option><option value="live">Live</option><option value="hidden">Hidden</option><option value="lapsed">Membership lapsed</option></select>
+      </div>
+      <div id="note"></div>
+      <div id="table"><div class="empty">Loading&hellip;</div></div>
+    </section>
+  </main>
+  <script src="js/portal-state.js?v=20261008-sessions"></script>
+  <script>
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const note = (msg, kind) => { el('note').textContent = ''; if (msg) el('note').appendChild(make('div', 'note ' + kind, msg)); };
+    let rows = [];
+    const state = (r) => r.hidden ? 'hidden' : (!r.membershipActive ? 'lapsed' : 'live');
+    const LABEL = { live: 'Live', hidden: 'Hidden', lapsed: 'Membership lapsed' };
+
+    async function load() {
+      try { rows = (await api('directory/admin')).listings; render(); }
+      catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/directory-admin'); return; }
+        el('table').textContent = ''; note(error.message, 'bad');
+      }
+    }
+
+    function render() {
+      const q = el('q').value.trim().toLowerCase(), show = el('show').value;
+      const list = rows.filter((r) => (!show || state(r) === show)
+        && (!q || [r.name, r.specialties, r.categoryLabel, ...r.locations.map((l) => [l.facility, l.town, l.county].join(' '))].join(' ').toLowerCase().includes(q)));
+      const box = el('table'); box.textContent = '';
+      if (!list.length) { box.appendChild(make('div', 'empty', rows.length ? 'No listings match.' : 'No member has listed themselves yet.')); return; }
+      const t = make('table'), head = make('tr');
+      ['Member', 'Listed as', 'Practises at', 'Public contact', 'Status', ''].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      list.forEach((r) => {
+        const tr = make('tr');
+        const who = make('td'); who.appendChild(make('b', null, r.name)); who.appendChild(make('div', 'hint', [r.membershipId, r.accountEmail].filter(Boolean).join(' · '))); tr.appendChild(who);
+        const what = make('td'); what.appendChild(make('div', null, r.categoryLabel || '')); if (r.specialties) what.appendChild(make('div', 'hint', r.specialties)); tr.appendChild(what);
+        tr.appendChild(make('td', null, r.locations.map((l) => [l.facility, l.town, l.county].filter(Boolean).join(', ')).join(' / ')));
+        tr.appendChild(make('td', null, [r.publicPhone, r.publicEmail, r.website].filter(Boolean).join(' · ')));
+        const st = make('td'); const s = state(r); st.appendChild(make('span', 'pill ' + s, LABEL[s])); if (r.hidden && r.hiddenReason) st.appendChild(make('div', 'hint', r.hiddenReason)); tr.appendChild(st);
+        const act = make('td'); const b = make('button', 'btn' + (r.hidden ? '' : ' danger'), r.hidden ? 'Show again' : 'Hide'); b.type = 'button';
+        b.addEventListener('click', async () => {
+          let reason = '';
+          if (!r.hidden) { reason = prompt('Why is this listing being hidden? The member will see this.'); if (!reason) return; }
+          try { await api('directory/admin/' + r.id + '/hide', { method: 'POST', body: JSON.stringify({ hidden: !r.hidden, reason }) }); note(r.hidden ? 'Listing shown again.' : 'Listing hidden.', 'ok'); await load(); }
+          catch (error) { note(error.message, 'bad'); }
+        });
+        act.appendChild(b); tr.appendChild(act);
+        t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+    el('q').addEventListener('input', render);
+    el('show').addEventListener('change', render);
+    load();
+  })();
+  </script>
+</body>
+</html>

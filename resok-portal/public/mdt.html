@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ILD MDT Cases - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1000px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
+    .top img{height:38px;display:block}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top .who{margin-left:auto;font-size:13.5px;color:var(--muted);display:flex;gap:14px;align-items:center}
+    .top .who button{background:none;border:0;color:var(--red);font:inherit;font-weight:600;cursor:pointer}
+    main{max-width:1000px;margin:0 auto;padding:22px 18px 60px;display:flex;flex-direction:column;gap:18px}
+    .panel{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+    h1{font-size:22px}
+    h2{font-size:17px;margin-bottom:4px}
+    h3{font-size:14.5px;margin:20px 0 10px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:72ch}
+    label{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}
+    .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+    input[type=text],input[type=number],input[type=date],input[type=url],textarea,select{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+    textarea{resize:vertical;min-height:90px}
+    input:focus,textarea:focus,select:focus{outline:2px solid rgba(8,117,57,.25);border-color:var(--green)}
+    .field{margin-bottom:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1;min-width:170px}
+    .btn{border:0;border-radius:8px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+    .btn-danger{background:#fff;border:1px solid #f1b9c1;color:var(--red)}
+    .btn-sm{padding:6px 10px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+    .note{border-radius:9px;padding:12px 14px;font-size:14px;margin-top:14px}
+    .note ul{margin:6px 0 0 18px}
+    .note.info{background:#eff8ff;color:#175cd3}.note.ok{background:#ecfdf3;color:#05603a}
+    .note.warn{background:#fff8e6;color:#93370d}.note.bad{background:#fef3f2;color:#b42318}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+    .s-draft{background:#f2f4f7;color:#475467}.s-submitted{background:#eff8ff;color:#175cd3}
+    .s-info_requested{background:#fff8e6;color:#93370d}.s-scheduled{background:#f4f3ff;color:#5925dc}
+    .s-completed{background:#ecfdf3;color:#05603a}.s-declined,.s-withdrawn{background:#fef3f2;color:#b42318}
+    .urgent{background:#fef3f2;color:#b42318}
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+    .item{border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;cursor:pointer}
+    .item:hover{border-color:var(--green)}
+    .item .t{font-weight:700;font-size:15px}
+    .item .m{color:var(--muted);font-size:13px}
+    .item .go{margin-left:auto;color:var(--green);font-weight:700;font-size:13px}
+    .empty{color:var(--muted);font-size:14px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+    .shield{display:flex;gap:12px;align-items:flex-start;background:#f0f9f4;border:1px solid #cfe9da;border-radius:10px;padding:14px 16px;font-size:13.5px;color:#05603a}
+    .shield i{font-size:18px;margin-top:2px}
+    .radio{display:flex;gap:10px;flex-wrap:wrap}
+    .radio label,.tick{border:1px solid #d0d5dd;border-radius:8px;padding:9px 14px;display:flex;gap:8px;align-items:flex-start;font-weight:500;cursor:pointer;margin:0}
+    .tick{margin-top:10px}
+    .files{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .file{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13.5px}
+    .file img{width:56px;height:42px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+    .file .cap{flex:1}
+    .sec{margin-top:14px}
+    .sec b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
+    .sec p{white-space:pre-wrap;font-size:14.5px}
+    .msg{border-left:3px solid var(--line);padding:6px 12px;margin-top:10px;font-size:14px}
+    .msg.info_request{border-color:#f79009}.msg.reply{border-color:var(--green)}
+    .msg small{display:block;color:var(--muted);font-size:12px}
+    .msg p{white-space:pre-wrap}
+    .rec{border:1px solid #cfe9da;background:#f6fbf8;border-radius:10px;padding:18px;margin-top:14px}
+    .steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+    .steps span{font-size:12px;padding:4px 10px;border-radius:999px;background:#f2f4f7;color:#475467}
+    .steps span.on{background:var(--green);color:#fff}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="dashboard"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <span class="title">National ILD MDT</span>
+      <div class="who" id="who"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="vLoading"><div class="empty">Loading&hellip;</div></section>
+
+    <section class="panel" id="vClosed" hidden>
+      <h1>ILD MDT case submission</h1>
+      <p class="lede" id="closedMsg">Case submission to the National ILD MDT is not open yet.</p>
+    </section>
+
+    <!-- My cases -->
+    <section class="panel" id="vList" hidden>
+      <h1>My MDT cases</h1>
+      <p class="lede">Submit an interstitial lung disease case to the National ILD multidisciplinary team. A coordinator places it on a meeting agenda, the panel discusses it, and you receive the panel's recommendation here.</p>
+      <div id="previewNote"></div>
+      <div class="actions">
+        <button class="btn btn-primary" type="button" id="newCase"><i class="fas fa-plus"></i> Submit a new case</button>
+        <a class="btn btn-ghost" href="mdt-admin" id="staffLink" hidden><i class="fas fa-users-gear"></i> MDT coordination</a>
+      </div>
+      <div class="list" id="caseList"></div>
+    </section>
+
+    <!-- Case form -->
+    <section class="panel" id="vEdit" hidden>
+      <div class="actions" style="margin-top:0"><button class="btn btn-ghost btn-sm" type="button" data-back><i class="fas fa-arrow-left"></i> My cases</button></div>
+      <h1 id="editTitle" style="margin-top:12px">New MDT case</h1>
+      <div id="requestBox"></div>
+      <div class="shield" style="margin-top:14px"><i class="fas fa-user-shield"></i>
+        <div><b>Do not include patient identifiers.</b> No names, ID numbers, phone numbers or hospital numbers, anywhere in the text or in the images. Keep your own record of which patient this is. The case is encrypted and seen only by the MDT coordinators and panel.</div>
+      </div>
+      <form id="caseForm" novalidate>
+        <h3>The patient</h3>
+        <div class="row">
+          <div class="field"><label for="fAge">Age (years)</label><input type="number" id="fAge" min="0" max="120"></div>
+          <div class="field"><label for="fSex">Sex</label><select id="fSex"><option value="">Choose</option><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option></select></div>
+          <div class="field"><label for="fCounty">County of residence</label><select id="fCounty"><option value="">Choose</option></select></div>
+        </div>
+
+        <h3>Presentation</h3>
+        <div class="field"><label for="fSymptoms">Symptoms and duration</label><textarea id="fSymptoms" placeholder="e.g. Progressive exertional dyspnoea for 18 months, dry cough"></textarea></div>
+        <div class="field"><label for="fHistory">Clinical history <span class="hint">(required)</span></label><textarea id="fHistory"></textarea></div>
+        <div class="row">
+          <div class="field"><label for="fExposures">Occupational and environmental exposures</label><textarea id="fExposures" placeholder="Dusts, birds, mould, biomass smoke, drugs, radiation"></textarea></div>
+          <div class="field"><label for="fCtd">Connective tissue disease features</label><textarea id="fCtd" placeholder="Raynaud's, arthralgia, rash, sicca, muscle weakness"></textarea></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fSmoking">Smoking</label><input type="text" id="fSmoking" placeholder="e.g. Ex-smoker, 20 pack-years"></div>
+          <div class="field"><label for="fFamily">Family history</label><input type="text" id="fFamily"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fComorb">Comorbidities</label><textarea id="fComorb"></textarea></div>
+          <div class="field"><label for="fMeds">Medications</label><textarea id="fMeds"></textarea></div>
+        </div>
+        <div class="field"><label for="fExam">Examination</label><textarea id="fExam" placeholder="Crackles, clubbing, SpO2 at rest and on exertion"></textarea></div>
+
+        <h3>Investigations</h3>
+        <div class="row">
+          <div class="field"><label for="fPft">Lung function <span class="hint">(spirometry, DLCO)</span></label><textarea id="fPft"></textarea></div>
+          <div class="field"><label for="fSixMwt">6-minute walk test</label><textarea id="fSixMwt"></textarea></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fLabs">Bloods and autoimmune panel</label><textarea id="fLabs"></textarea></div>
+          <div class="field"><label for="fEcho">Echocardiogram</label><textarea id="fEcho"></textarea></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fBronch">Bronchoscopy / BAL</label><textarea id="fBronch"></textarea></div>
+          <div class="field"><label for="fBiopsy">Biopsy / histology</label><textarea id="fBiopsy"></textarea></div>
+        </div>
+        <div class="field"><label for="fOtherInv">Other investigations</label><textarea id="fOtherInv"></textarea></div>
+
+        <h3>Imaging</h3>
+        <div class="row">
+          <div class="field" style="max-width:220px"><label for="fHrctDate">HRCT date</label><input type="date" id="fHrctDate"></div>
+          <div class="field"><label for="fPacs">Link to the images <span class="hint">(optional, your PACS or viewer, https)</span></label><input type="url" id="fPacs" placeholder="https://"></div>
+        </div>
+        <div class="field"><label for="fHrct">HRCT findings <span class="hint">(required)</span></label><textarea id="fHrct"></textarea></div>
+        <div class="field">
+          <label>Key images and reports <span class="hint">(up to 8: JPG or PNG images up to 3 MB, PDF reports up to 5 MB. Crop out any name or number burned into the image first.)</span></label>
+          <div class="row" style="align-items:flex-end">
+            <div><input type="file" id="fFile" accept="image/jpeg,image/png,application/pdf"></div>
+            <div><input type="text" id="fCaption" placeholder="Caption, e.g. Axial HRCT, lower zones"></div>
+            <div style="flex:0"><button class="btn btn-ghost" type="button" id="uploadBtn"><i class="fas fa-upload"></i> Upload</button></div>
+          </div>
+          <div id="fileNote"></div>
+          <div class="files" id="fileList"></div>
+        </div>
+
+        <h3>For the panel</h3>
+        <div class="field"><label for="fManagement">Management so far</label><textarea id="fManagement"></textarea></div>
+        <div class="field"><label for="fQuestion">Your question for the panel <span class="hint">(required)</span></label><textarea id="fQuestion" placeholder="e.g. Is this a UIP pattern? Would you start antifibrotic therapy?"></textarea></div>
+        <div class="row">
+          <div class="field"><label for="fUrgency">Urgency</label><select id="fUrgency"><option value="routine">Routine</option><option value="urgent">Urgent</option></select></div>
+          <div class="field"><label for="fMeeting">Preferred meeting</label><select id="fMeeting"><option value="">Next available</option></select></div>
+        </div>
+
+        <h3>You, the presenting clinician</h3>
+        <div class="row">
+          <div class="field"><label for="fName">Your name</label><input type="text" id="fName"></div>
+          <div class="field"><label for="fFacility">Facility</label><input type="text" id="fFacility"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fCouncil">Regulatory council</label><select id="fCouncil"><option value="">Choose</option><option>KMPDC</option><option>Clinical Officers Council</option><option>Nursing Council of Kenya</option><option>Physiotherapy Council of Kenya</option><option>Other</option></select></div>
+          <div class="field"><label for="fRegNo">Registration number</label><input type="text" id="fRegNo"></div>
+        </div>
+
+        <h3>Declarations</h3>
+        <label>Basis for sharing this case</label>
+        <div class="radio">
+          <label><input type="radio" name="basis" value="consent"> The patient has consented to discussion at the MDT</label>
+          <label><input type="radio" name="basis" value="other_lawful"> Another lawful basis under the Data Protection Act (e.g. the patient's care requires it)</label>
+        </div>
+        <label class="tick"><input type="checkbox" id="fConsent"> I confirm the basis above applies to this patient.</label>
+        <label class="tick"><input type="checkbox" id="fNoIds"> I confirm this case, including its images and reports, contains no names or other direct identifiers.</label>
+
+        <div id="formNote"></div>
+        <div class="actions">
+          <button class="btn btn-ghost" type="button" id="saveBtn"><i class="fas fa-floppy-disk"></i> Save draft</button>
+          <button class="btn btn-primary" type="button" id="submitBtn"><i class="fas fa-paper-plane"></i> Submit to the MDT</button>
+          <button class="btn btn-danger" type="button" id="deleteBtn">Delete draft</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Case view -->
+    <section class="panel" id="vView" hidden>
+      <div class="actions" style="margin-top:0"><button class="btn btn-ghost btn-sm" type="button" data-back><i class="fas fa-arrow-left"></i> My cases</button></div>
+      <h1 id="viewTitle" style="margin-top:12px"></h1>
+      <div class="steps" id="viewSteps"></div>
+      <div id="viewNote"></div>
+      <div id="viewRec"></div>
+      <div id="viewMsgs"></div>
+      <div id="viewBody"></div>
+      <div class="actions" id="viewActions"></div>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20261008-sessions"></script>
+  <script>
+  /**
+   * The clinician's side of the ILD MDT: drafting a case, uploading key images, submitting,
+   * answering a coordinator's request and reading the panel's recommendation. Text from the
+   * server is written with textContent only.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+    const note = (id, msg, kind, list) => {
+      const b = el(id); b.textContent = '';
+      if (!msg) return;
+      const n = make('div', 'note ' + (kind || 'info'), msg);
+      if (list && list.length) { const ul = make('ul'); list.forEach((t) => ul.appendChild(make('li', null, t))); n.appendChild(ul); }
+      b.appendChild(n);
+    };
+    const fmt = (iso, withTime) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString('en-GB', Object.assign({ day: 'numeric', month: 'long', year: 'numeric' }, withTime ? { hour: '2-digit', minute: '2-digit' } : {})); };
+    const STATUS = { draft: 'Draft', submitted: 'Submitted', info_requested: 'More information needed', scheduled: 'On the agenda', completed: 'Recommendation issued', declined: 'Not accepted', withdrawn: 'Withdrawn' };
+    const VIEWS = ['Loading', 'Closed', 'List', 'Edit', 'View'];
+    const show = (v) => { VIEWS.forEach((x) => { el('v' + x).hidden = x !== v; }); window.scrollTo(0, 0); };
+    const COUNTIES = ['Baringo','Bomet','Bungoma','Busia','Elgeyo-Marakwet','Embu','Garissa','Homa Bay','Isiolo','Kajiado','Kakamega','Kericho','Kiambu','Kilifi','Kirinyaga','Kisii','Kisumu','Kitui','Kwale','Laikipia','Lamu','Machakos','Makueni','Mandera','Marsabit','Meru','Migori','Mombasa',"Murang'a",'Nairobi','Nakuru','Nandi','Narok','Nyamira','Nyandarua','Nyeri','Samburu','Siaya','Taita-Taveta','Tana River','Tharaka-Nithi','Trans Nzoia','Turkana','Uasin Gishu','Vihiga','Wajir','West Pokot','Outside Kenya'];
+    // Form element id -> API field
+    const FIELDS = { fAge: 'ageYears', fSex: 'sex', fCounty: 'county', fUrgency: 'urgency', fMeeting: 'preferredMeetingId',
+      fName: 'clinicianName', fCouncil: 'clinicianCouncil', fRegNo: 'clinicianRegNo', fFacility: 'facility' };
+    const CONTENT = { fSymptoms: 'symptoms', fHistory: 'history', fExposures: 'exposures', fSmoking: 'smoking', fComorb: 'comorbidities',
+      fMeds: 'medications', fCtd: 'ctdFeatures', fFamily: 'familyHistory', fExam: 'examination', fPft: 'pft', fSixMwt: 'sixMwt',
+      fLabs: 'labs', fEcho: 'echo', fBronch: 'bronchoscopy', fBiopsy: 'biopsy', fOtherInv: 'otherInvestigations',
+      fHrctDate: 'hrctDate', fHrct: 'hrctFindings', fPacs: 'pacsLink', fManagement: 'managementSoFar', fQuestion: 'question' };
+    const LABELS = { symptoms: 'Symptoms', history: 'Clinical history', exposures: 'Exposures', smoking: 'Smoking', comorbidities: 'Comorbidities',
+      medications: 'Medications', ctdFeatures: 'Connective tissue disease features', familyHistory: 'Family history', examination: 'Examination',
+      pft: 'Lung function', sixMwt: '6-minute walk test', labs: 'Bloods and autoimmune panel', echo: 'Echocardiogram',
+      bronchoscopy: 'Bronchoscopy / BAL', biopsy: 'Biopsy / histology', otherInvestigations: 'Other investigations',
+      hrctDate: 'HRCT date', hrctFindings: 'HRCT findings', pacsLink: 'Link to the images', managementSoFar: 'Management so far', question: 'Question for the panel' };
+    let me = null, current = null, dirty = false;
+
+    COUNTIES.forEach((c) => el('fCounty').appendChild(new Option(c, c)));
+
+    function renderWho(email) {
+      const who = el('who'); who.textContent = '';
+      if (!email) return;
+      who.appendChild(make('span', null, email));
+      const out = make('button', null, 'Sign out'); out.type = 'button';
+      out.addEventListener('click', () => window.ResokPortal.logout());
+      who.appendChild(out);
+    }
+
+    // ------------------------------------------------------------- list
+    async function load() {
+      try { me = await api('mdt/me'); }
+      catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/mdt'); return; }
+        show('Closed');
+        if (error.status !== 404) el('closedMsg').textContent = error.message;
+        return;
+      }
+      renderWho(me.email);
+      el('staffLink').hidden = !me.access.staff;
+      note('previewNote', me.enabled ? '' : 'Preview: case submission is not open to clinicians yet. You can use it because you hold an MDT role.', 'warn');
+      const sel = el('fMeeting');
+      sel.length = 1;
+      me.meetings.forEach((m) => sel.appendChild(new Option(m.title + ' - ' + fmt(m.meetsAt, true), String(m.id))));
+      renderList();
+      const open = new URLSearchParams(window.location.search).get('case');
+      if (open) openCase(Number(open)); else show('List');
+    }
+
+    function renderList() {
+      const list = el('caseList'); list.textContent = '';
+      if (!me.cases.length) { list.appendChild(make('div', 'empty', 'You have not submitted any cases yet.')); return; }
+      me.cases.forEach((c) => {
+        const item = make('div', 'item');
+        const left = make('div');
+        left.appendChild(make('div', 't', (c.reference || 'Draft') + ' · ' + [c.ageYears != null ? c.ageYears + ' y' : null, c.sex, c.county].filter(Boolean).join(', ')));
+        left.appendChild(make('div', 'm', c.meeting ? c.meeting.title + ', ' + fmt(c.meeting.meetsAt, true) : (c.submittedAt ? 'Submitted ' + fmt(c.submittedAt) : 'Last saved ' + fmt(c.updatedAt, true))));
+        item.appendChild(left);
+        item.appendChild(make('span', 'pill s-' + c.status, STATUS[c.status] || c.status));
+        if (c.urgency === 'urgent') item.appendChild(make('span', 'pill urgent', 'Urgent'));
+        item.appendChild(make('span', 'go', 'Open ›'));
+        item.addEventListener('click', () => openCase(c.id));
+        list.appendChild(item);
+      });
+    }
+
+    el('newCase').addEventListener('click', async () => {
+      try { const res = await post('mdt/cases'); me.cases.unshift(res.case); renderList(); fillForm(res.case); }
+      catch (error) { note('previewNote', error.message, 'bad'); }
+    });
+
+    async function openCase(id) {
+      try {
+        const res = await api('mdt/cases/' + id);
+        if (res.case.editable) fillForm(res.case); else renderView(res.case);
+      } catch (error) { show('List'); note('previewNote', error.message, 'bad'); }
+    }
+
+    document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', async () => {
+      if (dirty && !confirm('You have unsaved changes. Leave without saving?')) return;
+      dirty = false;
+      history.replaceState(null, '', 'mdt');
+      await load();
+    }));
+
+    // ------------------------------------------------------------- form
+    function fillForm(c) {
+      current = c; dirty = false;
+      history.replaceState(null, '', 'mdt?case=' + c.id);
+      el('editTitle').textContent = c.reference ? 'Update ' + c.reference : 'New MDT case';
+      el('fAge').value = c.ageYears != null ? c.ageYears : '';
+      el('fSex').value = c.sex || '';
+      el('fCounty').value = c.county || '';
+      el('fUrgency').value = c.urgency || 'routine';
+      el('fMeeting').value = c.preferredMeeting ? String(c.preferredMeeting.id) : '';
+      el('fName').value = c.clinicianName || '';
+      el('fCouncil').value = c.clinicianCouncil || '';
+      el('fRegNo').value = c.clinicianRegNo || '';
+      el('fFacility').value = c.facility || '';
+      Object.entries(CONTENT).forEach(([id, key]) => { el(id).value = c.content[key] || ''; });
+      document.querySelectorAll('input[name=basis]').forEach((r) => { r.checked = r.value === c.consentBasis; });
+      el('fConsent').checked = c.consentConfirmed;
+      el('fNoIds').checked = c.noIdentifiersConfirmed;
+      el('deleteBtn').hidden = c.status !== 'draft';
+      el('submitBtn').innerHTML = '';
+      el('submitBtn').append(make('i', 'fas fa-paper-plane'), document.createTextNode(c.status === 'info_requested' ? ' Resubmit to the MDT' : ' Submit to the MDT'));
+      const box = el('requestBox'); box.textContent = '';
+      const requests = (c.messages || []).filter((m) => m.kind === 'info_request');
+      if (c.status === 'info_requested' && requests.length) {
+        const n = make('div', 'note warn');
+        n.appendChild(make('b', null, 'The coordinator asked for more information: '));
+        n.appendChild(document.createTextNode(requests[requests.length - 1].body));
+        n.appendChild(make('div', null, 'Update the case below and resubmit it.'));
+        box.appendChild(n);
+      }
+      renderFiles(c.files || []);
+      note('formNote', ''); note('fileNote', '');
+      show('Edit');
+    }
+
+    function collect() {
+      const body = {};
+      Object.entries(FIELDS).forEach(([id, key]) => { body[key] = el(id).value; });
+      Object.entries(CONTENT).forEach(([id, key]) => { body[key] = el(id).value; });
+      const basis = document.querySelector('input[name=basis]:checked');
+      body.consentBasis = basis ? basis.value : '';
+      body.consentConfirmed = el('fConsent').checked;
+      body.noIdentifiersConfirmed = el('fNoIds').checked;
+      return body;
+    }
+
+    el('caseForm').addEventListener('input', () => { dirty = true; });
+
+    async function save(quiet) {
+      const res = await post('mdt/cases/' + current.id, collect());
+      current = res.case; dirty = false;
+      if (res.identifierWarnings && res.identifierWarnings.length) {
+        note('formNote', 'Saved, but the text appears to contain:', 'warn', res.identifierWarnings.map((w) => w + ' - remove it before submitting.'));
+      } else if (!quiet) {
+        note('formNote', 'Draft saved.', 'ok');
+      }
+      return res;
+    }
+
+    el('saveBtn').addEventListener('click', async () => {
+      try { await save(false); } catch (error) { note('formNote', error.message, 'bad'); }
+    });
+
+    el('submitBtn').addEventListener('click', async () => {
+      const btn = el('submitBtn'); btn.disabled = true;
+      try {
+        await save(true);
+        const res = await post('mdt/cases/' + current.id + '/submit');
+        dirty = false;
+        renderView(res.case, 'Submitted. A coordinator will review the case and tell you which meeting it is on.');
+      } catch (error) {
+        note('formNote', error.message, 'bad', error.payload && error.payload.problems);
+      } finally { btn.disabled = false; }
+    });
+
+    el('deleteBtn').addEventListener('click', async () => {
+      if (!confirm('Delete this draft and its files? This cannot be undone.')) return;
+      try { await post('mdt/cases/' + current.id + '/withdraw'); dirty = false; history.replaceState(null, '', 'mdt'); await load(); }
+      catch (error) { note('formNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- files
+    function renderFiles(files, list = el('fileList'), editable = current && current.editable) {
+      list.textContent = '';
+      files.forEach((f) => {
+        const row = make('div', 'file');
+        if (f.kind === 'image') { const img = make('img'); img.src = f.url; img.alt = ''; row.appendChild(img); }
+        else row.appendChild(make('i', 'fas fa-file-pdf'));
+        row.appendChild(make('span', 'cap', f.caption || (f.kind === 'pdf' ? 'PDF report' : 'Image')));
+        row.appendChild(make('span', 'hint', Math.max(1, Math.round(f.bytes / 1024)) + ' KB'));
+        if (editable) {
+          const rm = make('button', 'btn btn-danger btn-sm', 'Remove'); rm.type = 'button';
+          rm.addEventListener('click', async () => {
+            try { const res = await post('mdt/files/' + f.id + '/delete'); current.files = res.files; renderFiles(res.files); }
+            catch (error) { note('fileNote', error.message, 'bad'); }
+          });
+          row.appendChild(rm);
+        }
+        list.appendChild(row);
+      });
+    }
+
+    el('uploadBtn').addEventListener('click', async () => {
+      const file = el('fFile').files[0];
+      if (!file) { note('fileNote', 'Choose a file first.', 'warn'); return; }
+      const form = new FormData();
+      form.append('file', file);
+      form.append('caption', el('fCaption').value);
+      el('uploadBtn').disabled = true;
+      try {
+        const res = await api('mdt/cases/' + current.id + '/files', { method: 'POST', body: form });
+        current.files = res.files; renderFiles(res.files);
+        el('fFile').value = ''; el('fCaption').value = '';
+        note('fileNote', 'Uploaded. Hidden details in images (camera, scanner, dates) were removed.', 'ok');
+      } catch (error) { note('fileNote', error.message, 'bad'); }
+      finally { el('uploadBtn').disabled = false; }
+    });
+
+    // ------------------------------------------------------------- view
+    function renderView(c, message) {
+      current = c;
+      history.replaceState(null, '', 'mdt?case=' + c.id);
+      el('viewTitle').textContent = (c.reference || 'Case') + ' · ' + [c.ageYears != null ? c.ageYears + ' years' : null, c.sex, c.county].filter(Boolean).join(', ');
+      const steps = el('viewSteps'); steps.textContent = '';
+      ['submitted', 'scheduled', 'completed'].forEach((s) => {
+        const order = { submitted: 1, info_requested: 1, scheduled: 2, completed: 3 };
+        steps.appendChild(make('span', (order[c.status] || 0) >= order[s] ? 'on' : '', STATUS[s]));
+      });
+      let text = message || '';
+      if (!text) {
+        if (c.status === 'submitted') text = 'Submitted ' + fmt(c.submittedAt) + '. A coordinator will review it.';
+        if (c.status === 'scheduled' && c.meeting) text = 'On the agenda for ' + c.meeting.title + ', ' + fmt(c.meeting.meetsAt, true) + (c.meeting.venue ? ' (' + c.meeting.venue + ')' : '') + '. Please be ready to present the case.';
+        if (c.status === 'declined') text = 'The coordinator could not accept this case: ' + (c.declineReason || '');
+        if (c.status === 'withdrawn') text = 'You withdrew this case.';
+        if (c.purged) text = 'This case has passed its retention period. Its clinical details and files have been deleted.';
+      }
+      note('viewNote', text, c.status === 'declined' ? 'bad' : (message ? 'ok' : 'info'));
+
+      const recBox = el('viewRec'); recBox.textContent = '';
+      if (c.recommendation) {
+        const r = c.recommendation, box = make('div', 'rec');
+        box.appendChild(make('h2', null, 'The panel\'s recommendation'));
+        box.appendChild(make('div', 'hint', 'Issued ' + fmt(r.issuedAt)));
+        const add = (label, value) => { if (!value) return; const s = make('div', 'sec'); s.appendChild(make('b', null, label)); s.appendChild(make('p', null, value)); box.appendChild(s); };
+        add('Working diagnosis', r.diagnosis + (r.confidenceLabel ? ' (' + r.confidenceLabel + ')' : ''));
+        add('Radiological pattern', r.patternLabel);
+        add('Discussion', r.summary);
+        add('Further investigations', r.investigations);
+        add('Treatment', r.treatment);
+        add('Follow-up', r.followUp);
+        const a = make('a', 'btn btn-primary', ''); a.href = 'mdt-letter?case=' + c.id; a.target = '_blank'; a.rel = 'noopener';
+        a.append(make('i', 'fas fa-print'), document.createTextNode(' Print or save the letter'));
+        const act = make('div', 'actions'); act.appendChild(a); box.appendChild(act);
+        recBox.appendChild(box);
+      }
+
+      const msgs = el('viewMsgs'); msgs.textContent = '';
+      (c.messages || []).forEach((m) => {
+        const d = make('div', 'msg ' + m.kind);
+        d.appendChild(make('small', null, (m.kind === 'info_request' ? 'Coordinator' : 'You') + ' · ' + fmt(m.at, true)));
+        d.appendChild(make('p', null, m.body));
+        msgs.appendChild(d);
+      });
+
+      const body = el('viewBody'); body.textContent = '';
+      if (!c.purged) {
+        body.appendChild(make('h3', null, 'The case as submitted'));
+        Object.entries(LABELS).forEach(([key, label]) => {
+          const v = c.content[key]; if (!v) return;
+          const s = make('div', 'sec'); s.appendChild(make('b', null, label)); s.appendChild(make('p', null, v)); body.appendChild(s);
+        });
+        if (c.files.length) {
+          body.appendChild(make('h3', null, 'Images and reports'));
+          const fl = make('div', 'files'); body.appendChild(fl);
+          renderFiles(c.files, fl, false);
+        }
+      }
+
+      const acts = el('viewActions'); acts.textContent = '';
+      if (['submitted', 'scheduled'].includes(c.status)) {
+        const w = make('button', 'btn btn-danger', 'Withdraw this case'); w.type = 'button';
+        w.addEventListener('click', async () => {
+          const reason = prompt('Why are you withdrawing the case? (optional)');
+          if (reason === null) return;
+          try { const res = await post('mdt/cases/' + c.id + '/withdraw', { reason }); renderView(res.case); }
+          catch (error) { note('viewNote', error.message, 'bad'); }
+        });
+        acts.appendChild(w);
+      }
+      show('View');
+    }
+
+    window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+    load();
+  })();
+  </script>
+</body>
+</html>

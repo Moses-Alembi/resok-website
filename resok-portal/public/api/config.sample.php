@@ -63,6 +63,11 @@ return [
     // Abstract emails sent per hour at most (the queue holds the rest). Set it a little under
     // the host's own outgoing-mail limit, which cPanel shows or the host can confirm.
     'abstracts_mail_hourly_limit' => 150,
+    // National ILD MDT case submission. Stays off for clinicians until true; super admins and
+    // MDT coordinators/panellists can use it before then to set it up. Set data_encryption_key
+    // first - case content and files are encrypted with it.
+    'mdt_enabled' => false,
+    'mdt_retention_months' => 24,
     'portal_base_url' => 'https://www.resok.org/resok-portal/public',
     'mail_from' => 'no-reply@example.org',
 

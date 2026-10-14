@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ILD MDT Coordination - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1100px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
+    .top img{height:38px;display:block}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top .who{margin-left:auto;font-size:13.5px;color:var(--muted);display:flex;gap:14px;align-items:center}
+    .top .who button{background:none;border:0;color:var(--red);font:inherit;font-weight:600;cursor:pointer}
+    main{max-width:1100px;margin:0 auto;padding:22px 18px 60px;display:flex;flex-direction:column;gap:18px}
+    .panel{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+    h1{font-size:22px}
+    h2{font-size:17px;margin-bottom:6px}
+    h3{font-size:14.5px;margin:20px 0 10px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:80ch}
+    label{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}
+    .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+    input[type=text],input[type=email],input[type=datetime-local],textarea,select{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+    textarea{resize:vertical;min-height:80px}
+    input:focus,textarea:focus,select:focus{outline:2px solid rgba(8,117,57,.25);border-color:var(--green)}
+    .field{margin-bottom:14px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1;min-width:170px}
+    .btn{border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+    .btn-danger{background:#fff;border:1px solid #f1b9c1;color:var(--red)}
+    .btn-sm{padding:6px 10px;font-size:12.5px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    .note{border-radius:9px;padding:12px 14px;font-size:14px;margin-top:12px}
+    .note.info{background:#eff8ff;color:#175cd3}.note.ok{background:#ecfdf3;color:#05603a}
+    .note.warn{background:#fff8e6;color:#93370d}.note.bad{background:#fef3f2;color:#b42318}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-top:16px}
+    .tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+    .tabs button.on{color:var(--green);border-color:var(--green)}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+    .s-submitted{background:#eff8ff;color:#175cd3}.s-info_requested{background:#fff8e6;color:#93370d}
+    .s-scheduled{background:#f4f3ff;color:#5925dc}.s-completed{background:#ecfdf3;color:#05603a}
+    .s-declined,.s-withdrawn{background:#fef3f2;color:#b42318}.urgent{background:#fef3f2;color:#b42318}
+    table{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    tr.click{cursor:pointer}tr.click:hover td{background:#f9fafb}
+    .empty{color:var(--muted);font-size:14px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px;margin-top:12px}
+    .sec{margin-top:12px}
+    .sec b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
+    .sec p{white-space:pre-wrap;font-size:14.5px}
+    .grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}
+    .box{border:1px solid var(--line);border-radius:10px;padding:16px}
+    .files{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+    .files a{display:flex;flex-direction:column;gap:4px;width:150px;font-size:12.5px;text-decoration:none;color:var(--ink)}
+    .files img{width:150px;height:110px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+    .files .pdf{width:150px;height:110px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;font-size:30px;color:var(--red)}
+    .msg{border-left:3px solid var(--line);padding:6px 12px;margin-top:8px;font-size:13.5px}
+    .msg.info_request{border-color:#f79009}.msg.reply{border-color:var(--green)}.msg.note{border-color:#7a5af8;background:#faf9ff}
+    .msg small{display:block;color:var(--muted);font-size:12px}
+    .msg p{white-space:pre-wrap}
+    .log{list-style:none;font-size:12.5px;color:#475467;max-height:260px;overflow:auto}
+    .log li{padding:4px 0;border-bottom:1px dashed #eef0f3}
+    .stat{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px solid #f0f2f5}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:12px}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="admin-home"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+      <span class="title">National ILD MDT · Coordination</span>
+      <div class="who" id="who"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="vLoading"><div class="empty">Loading&hellip;</div></section>
+    <section class="panel" id="vDenied" hidden><h1>ILD MDT coordination</h1><p class="lede" id="deniedMsg">This page is for MDT coordinators and panellists.</p></section>
+
+    <section class="panel" id="vMain" hidden>
+      <h1>ILD MDT coordination</h1>
+      <p class="lede" id="mainLede"></p>
+      <div id="mainNote"></div>
+      <div class="tabs" id="tabs">
+        <button type="button" data-tab="cases" class="on">Cases</button>
+        <button type="button" data-tab="meetings">Meetings</button>
+        <button type="button" data-tab="stats" data-coord>Statistics</button>
+        <button type="button" data-tab="roles" data-super>Roles</button>
+      </div>
+
+      <div data-pane="cases">
+        <div class="row" style="margin-top:14px">
+          <div><label for="fStatus">Status</label><select id="fStatus">
+            <option value="">All open and closed</option><option value="submitted">To triage</option><option value="info_requested">Waiting for clinician</option>
+            <option value="scheduled">On an agenda</option><option value="completed">Recommendation issued</option><option value="declined">Declined</option><option value="withdrawn">Withdrawn</option></select></div>
+          <div><label for="fMeetingFilter">Meeting</label><select id="fMeetingFilter"><option value="">Any meeting</option></select></div>
+        </div>
+        <div id="caseTable"></div>
+      </div>
+
+      <div data-pane="meetings" hidden>
+        <div class="box" style="margin-top:14px" data-coord>
+          <h2 id="meetingFormTitle">Add a meeting</h2>
+          <input type="hidden" id="mId">
+          <div class="row">
+            <div class="field"><label for="mTitle">Title</label><input type="text" id="mTitle" placeholder="National ILD MDT Meeting (2)"></div>
+            <div class="field"><label for="mWhen">Date and time (Nairobi)</label><input type="datetime-local" id="mWhen"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="mVenue">Venue</label><input type="text" id="mVenue" placeholder="Zoom"></div>
+            <div class="field"><label for="mChair">Chair <span class="hint">(signs the letters; blank signs as the MDT)</span></label><input type="text" id="mChair"></div>
+            <div class="field"><label for="mStatus">Status</label><select id="mStatus"><option value="planned">Planned</option><option value="held">Held</option><option value="cancelled">Cancelled</option></select></div>
+          </div>
+          <div class="actions"><button class="btn btn-primary" type="button" id="mSave">Save meeting</button><button class="btn btn-ghost" type="button" id="mClear">Clear</button></div>
+          <div id="mNote"></div>
+        </div>
+        <div id="meetingTable"></div>
+      </div>
+
+      <div data-pane="stats" hidden><div class="cards" id="statCards"></div></div>
+
+      <div data-pane="roles" hidden>
+        <p class="lede">Coordinators triage every submitted case and run meetings. Panellists see the cases on meeting agendas and record recommendations. Super administrators are coordinators automatically.</p>
+        <div class="row" style="margin-top:12px;align-items:flex-end">
+          <div class="field"><label for="rEmail">Portal account email</label><input type="email" id="rEmail"></div>
+          <div class="field"><label for="rRole">Role</label><select id="rRole"><option value="panellist">Panellist</option><option value="coordinator">Coordinator</option></select></div>
+          <div class="field" style="flex:0"><button class="btn btn-primary" type="button" id="rGrant">Appoint</button></div>
+        </div>
+        <div id="rNote"></div>
+        <div id="roleTable"></div>
+      </div>
+    </section>
+
+    <!-- One case -->
+    <section class="panel" id="vCase" hidden>
+      <div class="actions" style="margin-top:0"><button class="btn btn-ghost btn-sm" type="button" id="backBtn"><i class="fas fa-arrow-left"></i> All cases</button></div>
+      <h1 id="cTitle" style="margin-top:10px"></h1>
+      <p class="lede" id="cMeta"></p>
+      <div id="cNote"></div>
+      <div class="grid" style="margin-top:14px">
+        <div>
+          <div class="box" id="cBody"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="box" id="cTriage" hidden>
+            <h2>Triage</h2>
+            <div class="field"><label for="tMeeting">Put on the agenda for</label><select id="tMeeting"></select></div>
+            <div class="actions" style="margin-top:0"><button class="btn btn-primary btn-sm" type="button" id="tAccept">Schedule</button></div>
+            <div class="field" style="margin-top:14px"><label for="tText">Request information, or reason for declining</label><textarea id="tText"></textarea></div>
+            <div class="actions" style="margin-top:0">
+              <button class="btn btn-ghost btn-sm" type="button" id="tRequest">Ask the clinician</button>
+              <button class="btn btn-danger btn-sm" type="button" id="tDecline">Decline the case</button>
+            </div>
+            <div id="tNote"></div>
+          </div>
+          <div class="box" id="cRec" hidden>
+            <h2>Panel recommendation</h2>
+            <p class="hint" id="recState"></p>
+            <div class="field"><label for="rDiag">Working diagnosis</label><input type="text" id="rDiag"></div>
+            <div class="field"><label for="rConf">Diagnostic confidence</label><select id="rConf"><option value="">Choose</option>
+              <option value="confident">Confident diagnosis</option><option value="provisional_high">Provisional, high confidence</option>
+              <option value="provisional_low">Provisional, low confidence</option><option value="unclassifiable">Unclassifiable ILD</option></select></div>
+            <div class="field"><label for="rPattern">Radiological pattern</label><select id="rPattern"><option value="">Choose</option>
+              <option value="uip">UIP</option><option value="probable_uip">Probable UIP</option><option value="indeterminate">Indeterminate for UIP</option>
+              <option value="alternative">Alternative diagnosis</option><option value="not_applicable">Not applicable</option></select></div>
+            <div class="field"><label for="rSummary">Discussion</label><textarea id="rSummary"></textarea></div>
+            <div class="field"><label for="rInv">Further investigations</label><textarea id="rInv"></textarea></div>
+            <div class="field"><label for="rTreat">Treatment</label><textarea id="rTreat"></textarea></div>
+            <div class="field"><label for="rFollow">Follow-up</label><textarea id="rFollow"></textarea></div>
+            <div class="field"><label for="rPanel">Disciplines present</label><input type="text" id="rPanel" placeholder="Pulmonology, radiology, pathology, rheumatology"></div>
+            <div class="actions" style="margin-top:0">
+              <button class="btn btn-ghost btn-sm" type="button" id="rSaveBtn">Save draft</button>
+              <button class="btn btn-primary btn-sm" type="button" id="rIssueBtn">Issue to the clinician</button>
+              <a class="btn btn-ghost btn-sm" id="rLetter" target="_blank" rel="noopener" hidden><i class="fas fa-print"></i> Letter</a>
+            </div>
+            <div id="rRecNote"></div>
+          </div>
+          <div class="box">
+            <h2>Messages and notes</h2>
+            <div id="cMsgs"></div>
+            <div class="field" style="margin-top:10px"><label for="nBody">Internal note <span class="hint">(staff only)</span></label><textarea id="nBody"></textarea></div>
+            <div class="actions" style="margin-top:0"><button class="btn btn-ghost btn-sm" type="button" id="nAdd">Add note</button></div>
+          </div>
+          <div class="box" id="cAuditBox" hidden><h2>Activity</h2><ul class="log" id="cAudit"></ul></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20261008-sessions"></script>
+  <script>
+  /**
+   * The MDT staff side: the case queue, triage, meetings, the panel's recommendation and,
+   * for super administrators, the roles. The server decides what each person may see and do;
+   * this page only hides controls that would be refused anyway. Text is written with
+   * textContent only.
+   */
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+    const note = (id, msg, kind) => { const b = el(id); b.textContent = ''; if (msg) b.appendChild(make('div', 'note ' + (kind || 'info'), msg)); };
+    const fmt = (iso, withTime) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString('en-GB', Object.assign({ day: 'numeric', month: 'short', year: 'numeric' }, withTime ? { hour: '2-digit', minute: '2-digit' } : {})); };
+    const STATUS = { submitted: 'To triage', info_requested: 'Waiting for clinician', scheduled: 'On the agenda', completed: 'Issued', declined: 'Declined', withdrawn: 'Withdrawn' };
+    const ACTIONS = { created: 'Draft started', submitted: 'Submitted', resubmitted: 'Resubmitted', viewed: 'Viewed', file_added: 'File added', file_removed: 'File removed',
+      file_viewed: 'File opened', scheduled: 'Scheduled', rescheduled: 'Moved to another meeting', info_requested: 'Information requested', declined: 'Declined',
+      withdrawn: 'Withdrawn', note_added: 'Note added', reply_added: 'Clinician replied', recommendation_saved: 'Recommendation draft saved',
+      recommendation_issued: 'Recommendation issued', recommendation_amended: 'Recommendation amended', purged: 'Purged under retention' };
+    const LABELS = { symptoms: 'Symptoms', history: 'Clinical history', exposures: 'Exposures', smoking: 'Smoking', comorbidities: 'Comorbidities',
+      medications: 'Medications', ctdFeatures: 'Connective tissue disease features', familyHistory: 'Family history', examination: 'Examination',
+      pft: 'Lung function', sixMwt: '6-minute walk test', labs: 'Bloods and autoimmune panel', echo: 'Echocardiogram', bronchoscopy: 'Bronchoscopy / BAL',
+      biopsy: 'Biopsy / histology', otherInvestigations: 'Other investigations', hrctDate: 'HRCT date', hrctFindings: 'HRCT findings',
+      pacsLink: 'Link to the images', managementSoFar: 'Management so far', question: 'Question for the panel' };
+    let data = null, current = null;
+
+    const show = (v) => { ['Loading', 'Denied', 'Main', 'Case'].forEach((x) => { el('v' + x).hidden = x !== v; }); window.scrollTo(0, 0); };
+
+    function renderWho(email) {
+      const who = el('who'); who.textContent = '';
+      who.appendChild(make('span', null, email));
+      const out = make('button', null, 'Sign out'); out.type = 'button';
+      out.addEventListener('click', () => window.ResokPortal.logout());
+      who.appendChild(out);
+    }
+
+    // ------------------------------------------------------------- load
+    async function load() {
+      const q = new URLSearchParams();
+      if (el('fStatus').value) q.set('status', el('fStatus').value);
+      if (el('fMeetingFilter').value) q.set('meeting', el('fMeetingFilter').value);
+      try { data = await api('mdt/admin/cases' + (q.toString() ? '?' + q : '')); }
+      catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/mdt-admin'); return; }
+        show('Denied'); if (error.status !== 404) el('deniedMsg').textContent = error.message; return;
+      }
+      renderWho(data.email);
+      const a = data.access;
+      document.querySelectorAll('[data-coord]').forEach((n) => { n.hidden = !a.coordinator; });
+      document.querySelectorAll('[data-super]').forEach((n) => { n.hidden = !a.superAdmin; });
+      el('mainLede').textContent = a.coordinator
+        ? 'You are a coordinator: you triage submitted cases, run meetings and can record recommendations.'
+        : 'You are a panellist: you see the cases on meeting agendas and record the panel\'s recommendations.';
+      note('mainNote', data.enabled ? '' : 'Case submission is not open to clinicians yet (mdt_enabled is off). Staff can set up meetings and roles, and try the clinician page.', 'warn');
+      const mf = el('fMeetingFilter'), keep = mf.value; mf.length = 1;
+      data.meetings.forEach((m) => mf.appendChild(new Option(m.title + ' · ' + fmt(m.meetsAt), String(m.id))));
+      mf.value = keep;
+      renderCases(); renderMeetings(); renderStats();
+      if (a.superAdmin) loadRoles();
+    }
+
+    document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
+      document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== b.dataset.tab; });
+    }));
+    el('fStatus').addEventListener('change', load);
+    el('fMeetingFilter').addEventListener('change', load);
+
+    function renderCases() {
+      const box = el('caseTable'); box.textContent = '';
+      if (!data.cases.length) { box.appendChild(make('div', 'empty', 'No cases here.')); return; }
+      const t = make('table'), head = make('tr');
+      ['Case', 'Patient', 'Clinician', 'Status', 'Meeting', 'Submitted'].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      data.cases.forEach((c) => {
+        const tr = make('tr', 'click');
+        const ref = make('td'); ref.appendChild(make('b', null, c.reference || '-'));
+        if (c.urgency === 'urgent') { ref.appendChild(document.createTextNode(' ')); ref.appendChild(make('span', 'pill urgent', 'Urgent')); }
+        tr.appendChild(ref);
+        tr.appendChild(make('td', null, [c.ageYears != null ? c.ageYears + ' y' : null, c.sex, c.county].filter(Boolean).join(', ')));
+        tr.appendChild(make('td', null, [c.clinicianName, c.facility].filter(Boolean).join(', ')));
+        const st = make('td'); st.appendChild(make('span', 'pill s-' + c.status, STATUS[c.status] || c.status)); tr.appendChild(st);
+        tr.appendChild(make('td', null, c.meeting ? c.meeting.title + ', ' + fmt(c.meeting.meetsAt) : ''));
+        tr.appendChild(make('td', null, fmt(c.submittedAt)));
+        tr.addEventListener('click', () => openCase(c.id));
+        t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+
+    // ------------------------------------------------------------- meetings
+    function renderMeetings() {
+      const box = el('meetingTable'); box.textContent = '';
+      if (!data.meetings.length) { box.appendChild(make('div', 'empty', 'No meetings yet.')); return; }
+      const t = make('table'), head = make('tr');
+      ['Meeting', 'When', 'Venue', 'Chair', 'Status', 'Cases', ''].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      data.meetings.forEach((m) => {
+        const tr = make('tr');
+        [m.title, fmt(m.meetsAt, true), m.venue || '', m.chairName || '', m.status, String(m.cases)].forEach((v) => tr.appendChild(make('td', null, v)));
+        const act = make('td');
+        const agenda = make('button', 'btn btn-ghost btn-sm', 'Agenda'); agenda.type = 'button';
+        agenda.addEventListener('click', () => { el('fMeetingFilter').value = String(m.id); el('fStatus').value = ''; document.querySelector('[data-tab=cases]').click(); load(); });
+        act.appendChild(agenda);
+        if (data.access.coordinator) {
+          const edit = make('button', 'btn btn-ghost btn-sm', 'Edit'); edit.type = 'button'; edit.style.marginLeft = '6px';
+          edit.addEventListener('click', () => {
+            el('mId').value = m.id; el('mTitle').value = m.title; el('mWhen').value = (m.meetsAtLocal || '').slice(0, 16).replace(' ', 'T');
+            el('mVenue').value = m.venue || ''; el('mChair').value = m.chairName || ''; el('mStatus').value = m.status;
+            el('meetingFormTitle').textContent = 'Edit ' + m.title;
+          });
+          act.appendChild(edit);
+        }
+        tr.appendChild(act);
+        t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+
+    const clearMeeting = () => { ['mId', 'mTitle', 'mWhen', 'mVenue', 'mChair'].forEach((id) => { el(id).value = ''; }); el('mStatus').value = 'planned'; el('meetingFormTitle').textContent = 'Add a meeting'; };
+    el('mClear').addEventListener('click', clearMeeting);
+    el('mSave').addEventListener('click', async () => {
+      try {
+        await post('mdt/meetings', { id: el('mId').value || null, title: el('mTitle').value, meetsAt: el('mWhen').value, venue: el('mVenue').value, chairName: el('mChair').value, status: el('mStatus').value });
+        clearMeeting(); note('mNote', 'Meeting saved.', 'ok'); await load();
+      } catch (error) { note('mNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- stats
+    function renderStats() {
+      const box = el('statCards'); box.textContent = '';
+      if (!data.stats) return;
+      const STAT_LABELS = Object.assign({}, STATUS, { completed: 'Recommendation issued' });
+      [['Cases by status', data.stats.byStatus, STAT_LABELS], ['Issued, by pattern', data.stats.byPattern, null], ['Cases by county', data.stats.byCounty, null]].forEach(([title, rows, map]) => {
+        const c = make('div', 'box'); c.appendChild(make('h2', null, title));
+        if (!rows.length) c.appendChild(make('div', 'hint', 'Nothing yet.'));
+        rows.forEach((r) => { const s = make('div', 'stat'); s.appendChild(make('span', null, map ? (map[r.label] || r.label) : r.label)); s.appendChild(make('b', null, String(r.count))); c.appendChild(s); });
+        box.appendChild(c);
+      });
+      const r = make('div', 'box'); r.appendChild(make('h2', null, 'Retention'));
+      r.appendChild(make('p', 'hint', 'Clinical details and files are deleted ' + data.retentionMonths + ' months after a case closes. The diagnosis, pattern, age, sex and county are kept for audit.'));
+      box.appendChild(r);
+    }
+
+    // ------------------------------------------------------------- roles
+    async function loadRoles() {
+      try { renderRoles((await api('mdt/roles')).roles); } catch (error) { note('rNote', error.message, 'bad'); }
+    }
+    function renderRoles(roles) {
+      const box = el('roleTable'); box.textContent = '';
+      if (!roles.length) { box.appendChild(make('div', 'empty', 'No one has been appointed yet.')); return; }
+      const t = make('table'), head = make('tr');
+      ['Account', 'Role', 'Since', ''].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      roles.forEach((r) => {
+        const tr = make('tr');
+        [r.email, r.role === 'coordinator' ? 'Coordinator' : 'Panellist', fmt(r.since)].forEach((v) => tr.appendChild(make('td', null, v)));
+        const td = make('td'), b = make('button', 'btn btn-danger btn-sm', 'Remove'); b.type = 'button';
+        b.addEventListener('click', async () => {
+          if (!confirm('Remove ' + r.email + ' as ' + r.role + '?')) return;
+          try { renderRoles((await post('mdt/roles/' + r.id + '/revoke')).roles); } catch (error) { note('rNote', error.message, 'bad'); }
+        });
+        td.appendChild(b); tr.appendChild(td); t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+    el('rGrant').addEventListener('click', async () => {
+      try { renderRoles((await post('mdt/roles', { email: el('rEmail').value, role: el('rRole').value })).roles); el('rEmail').value = ''; note('rNote', 'Appointed.', 'ok'); }
+      catch (error) { note('rNote', error.message, 'bad'); }
+    });
+
+    // ------------------------------------------------------------- one case
+    async function openCase(id) {
+      try { const res = await api('mdt/cases/' + id + '?staff=1'); renderCase(res); show('Case'); }
+      catch (error) { note('mainNote', error.message, 'bad'); }
+    }
+    el('backBtn').addEventListener('click', async () => { show('Main'); await load(); });
+
+    function renderCase(res) {
+      const c = res.case, a = res.access;
+      current = c;
+      el('cTitle').textContent = (c.reference || 'Case') + ' · ' + [c.ageYears != null ? c.ageYears + ' years' : null, c.sex, c.county].filter(Boolean).join(', ');
+      el('cMeta').textContent = [c.clinicianName, c.clinicianCouncil && c.clinicianRegNo ? c.clinicianCouncil + ' ' + c.clinicianRegNo : null, c.facility].filter(Boolean).join(' · ')
+        + ' · ' + (STATUS[c.status] || c.status) + (c.urgency === 'urgent' ? ' · URGENT' : '')
+        + (c.meeting ? ' · ' + c.meeting.title + ', ' + fmt(c.meeting.meetsAt, true) : (c.preferredMeeting ? ' · Prefers ' + c.preferredMeeting.title : ''));
+      note('cNote', c.purged ? 'Purged under the retention policy: only the outline remains.' : (c.status === 'declined' ? 'Declined: ' + (c.declineReason || '') : ''), c.purged ? 'warn' : 'bad');
+
+      const body = el('cBody'); body.textContent = '';
+      Object.entries(LABELS).forEach(([key, label]) => {
+        const v = c.content[key]; if (!v) return;
+        const s = make('div', 'sec'); s.appendChild(make('b', null, label));
+        if (key === 'pacsLink') { const p = make('p'); const l = make('a', null, v); l.href = v; l.target = '_blank'; l.rel = 'noopener noreferrer'; p.appendChild(l); s.appendChild(p); }
+        else s.appendChild(make('p', null, v));
+        body.appendChild(s);
+      });
+      if (c.files.length) {
+        body.appendChild(make('h3', null, 'Images and reports'));
+        const fl = make('div', 'files');
+        c.files.forEach((f) => {
+          const link = make('a'); link.href = f.url; link.target = '_blank'; link.rel = 'noopener';
+          if (f.kind === 'image') { const img = make('img'); img.src = f.url; img.alt = f.caption || ''; link.appendChild(img); }
+          else link.appendChild(make('div', 'pdf', '')).appendChild(make('i', 'fas fa-file-pdf'));
+          link.appendChild(make('span', null, f.caption || (f.kind === 'pdf' ? 'PDF report' : 'Image')));
+          fl.appendChild(link);
+        });
+        body.appendChild(fl);
+      }
+      if (!body.childNodes.length) body.appendChild(make('div', 'hint', 'No clinical details.'));
+      const consent = make('p', 'hint', 'Basis for sharing: ' + (c.consentBasis === 'consent' ? 'patient consent' : 'another lawful basis') + '. No identifiers confirmed by the clinician.');
+      consent.style.marginTop = '14px'; body.appendChild(consent);
+
+      // Triage
+      const canTriage = a.coordinator && ['submitted', 'scheduled', 'info_requested'].includes(c.status);
+      el('cTriage').hidden = !canTriage;
+      if (canTriage) {
+        const sel = el('tMeeting'); sel.length = 0;
+        (res.meetings || []).forEach((m) => sel.appendChild(new Option(m.title + ' · ' + fmt(m.meetsAt, true), String(m.id))));
+        if (c.meeting) sel.value = String(c.meeting.id); else if (c.preferredMeeting) sel.value = String(c.preferredMeeting.id);
+        el('tAccept').disabled = !sel.length || c.status === 'info_requested';
+        el('tRequest').disabled = c.status === 'info_requested';
+        el('tAccept').textContent = c.status === 'scheduled' ? 'Move to this meeting' : 'Schedule';
+        el('tText').value = '';
+        note('tNote', !sel.length ? 'Add a planned meeting first (Meetings tab).' : (c.status === 'info_requested' ? 'Waiting for the clinician to update and resubmit.' : ''), 'warn');
+      }
+
+      // Recommendation
+      const canRec = ['scheduled', 'completed'].includes(c.status) && !c.purged;
+      el('cRec').hidden = !canRec;
+      if (canRec) {
+        const r = c.recommendation || {};
+        el('rDiag').value = r.diagnosis || ''; el('rConf').value = r.confidence || ''; el('rPattern').value = r.pattern || '';
+        el('rSummary').value = r.summary || ''; el('rInv').value = r.investigations || ''; el('rTreat').value = r.treatment || '';
+        el('rFollow').value = r.followUp || ''; el('rPanel').value = r.panel || '';
+        el('recState').textContent = r.issued ? 'Issued ' + fmt(r.issuedAt, true) + '. Saving and issuing again sends an amended recommendation.' : (c.recommendation ? 'Draft, not yet seen by the clinician.' : 'Not started.');
+        el('rIssueBtn').textContent = r.issued ? 'Issue amendment' : 'Issue to the clinician';
+        el('rLetter').hidden = !r.issued; el('rLetter').href = 'mdt-letter?case=' + c.id;
+        note('rRecNote', '');
+      }
+
+      // Messages
+      const msgs = el('cMsgs'); msgs.textContent = '';
+      if (!c.messages.length) msgs.appendChild(make('div', 'hint', 'No messages.'));
+      const WHO = { info_request: 'Information requested', reply: 'Clinician replied', note: 'Internal note' };
+      c.messages.forEach((m) => {
+        const d = make('div', 'msg ' + m.kind);
+        d.appendChild(make('small', null, WHO[m.kind] + ' · ' + (m.from || '') + ' · ' + fmt(m.at, true)));
+        d.appendChild(make('p', null, m.body));
+        msgs.appendChild(d);
+      });
+
+      // Activity
+      el('cAuditBox').hidden = !res.audit;
+      const log = el('cAudit'); log.textContent = '';
+      (res.audit || []).forEach((e) => log.appendChild(make('li', null, fmt(e.at, true) + ' · ' + (ACTIONS[e.action] || e.action) + (e.by ? ' · ' + e.by : ''))));
+    }
+
+    const triage = async (body) => {
+      try { const res = await post('mdt/cases/' + current.id + '/triage', body); await openCase(res.case.id); note('cNote', 'Done. The clinician has been emailed.', 'ok'); }
+      catch (error) { note('tNote', error.message, 'bad'); }
+    };
+    el('tAccept').addEventListener('click', () => triage({ action: 'accept', meetingId: el('tMeeting').value }));
+    el('tRequest').addEventListener('click', () => triage({ action: 'request_info', message: el('tText').value }));
+    el('tDecline').addEventListener('click', () => { if (confirm('Decline this case? The clinician will be told and can read your reason.')) triage({ action: 'decline', reason: el('tText').value }); });
+
+    const recBody = (issue) => ({ diagnosis: el('rDiag').value, confidence: el('rConf').value, pattern: el('rPattern').value, summary: el('rSummary').value,
+      investigations: el('rInv').value, treatment: el('rTreat').value, followUp: el('rFollow').value, panel: el('rPanel').value, issue });
+    el('rSaveBtn').addEventListener('click', async () => {
+      try { await post('mdt/cases/' + current.id + '/recommendation', recBody(false)); await openCase(current.id); note('rRecNote', 'Draft saved.', 'ok'); }
+      catch (error) { note('rRecNote', error.message, 'bad'); }
+    });
+    el('rIssueBtn').addEventListener('click', async () => {
+      if (!confirm('Issue this recommendation to the clinician? They will be emailed to sign in and read it.')) return;
+      try { await post('mdt/cases/' + current.id + '/recommendation', recBody(true)); await openCase(current.id); note('cNote', 'Recommendation issued. The clinician has been emailed.', 'ok'); }
+      catch (error) { note('rRecNote', error.message, 'bad'); }
+    });
+    el('nAdd').addEventListener('click', async () => {
+      try { await post('mdt/cases/' + current.id + '/messages', { body: el('nBody').value, note: true }); el('nBody').value = ''; await openCase(current.id); }
+      catch (error) { note('cNote', error.message, 'bad'); }
+    });
+
+    load().then(() => { if (data) show('Main'); });
+  })();
+  </script>
+</body>
+</html>

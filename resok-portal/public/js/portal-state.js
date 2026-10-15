@@ -843,9 +843,10 @@
   // election-admin, which are not affected.
   // On localhost nothing is locked, so every feature can be reviewed before launch.
   // The Virtual Academy launched 28 Sep 2026; events and elections are still to come.
-  // The membership card was locked on 15 Oct 2026; its sidebar link on every page is
-  // greyed out by lockSidebarLinks() below, so no page needs editing to launch it.
-  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card"];
+  // The membership card and payment receipts were locked on 15 Oct 2026 (receipts are
+  // being redesigned). Their sidebar links on every page are greyed out by
+  // lockSidebarLinks() below, so no page needs editing to launch them.
+  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card", "receipts"];
   if (LOCKED_FEATURES.includes(pageName())) {
     window.location.replace("dashboard");
   }
@@ -853,7 +854,7 @@
 
   function lockSidebarLinks() {
     LOCKED_FEATURES.forEach((name) => {
-      document.querySelectorAll(`.sidebar a[href="${name}"]`).forEach((link) => {
+      document.querySelectorAll(`.sidebar a[href="${name}"], .sidebar a[href$="#${name}"]`).forEach((link) => {
         const item = document.createElement("span");
         item.className = "nav-locked";
         item.setAttribute("aria-disabled", "true");

@@ -67,7 +67,7 @@
               <p>Download individual payment receipts from your submitted payment history.</p>
             </div>
           </div>
-          <a class="btn btn-muted" href="#receipts"><i class="fas fa-list"></i> View Receipts</a>
+          <a class="btn btn-muted" href="#receipts" id="viewReceipts"><i class="fas fa-list"></i> View Receipts</a>
         </article>
       </section>
 
@@ -78,7 +78,7 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js?v=20261015-card-soon"></script>
+  <script src="js/portal-state.js?v=20261015-receipts-soon"></script>
   <script>
     let statementAmount = 5000;
 
@@ -258,6 +258,15 @@
       const note = document.getElementById("pendingNote");
       note.textContent = awaiting > 0 ? money(awaiting) + " awaiting confirmation" : "";
       note.hidden = awaiting <= 0;
+
+      if (window.ResokPortal.isFeatureLocked("receipts")) {
+        const view = document.getElementById("viewReceipts");
+        view.removeAttribute("href");
+        view.style.cursor = "not-allowed";
+        view.innerHTML = '<i class="fas fa-clock"></i> Coming soon';
+        document.getElementById("receiptRows").innerHTML = '<div class="empty"><strong>Coming soon.</strong> Downloadable payment receipts will be available here shortly.</div>';
+        return;
+      }
 
       document.getElementById("receiptRows").innerHTML = state.payments.length ? state.payments.map((payment, index) => `
         <div class="receipt-row">

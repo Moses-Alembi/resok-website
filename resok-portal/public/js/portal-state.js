@@ -848,7 +848,8 @@
   // every page are greyed out by lockSidebarLinks() below, so no page needs editing to
   // launch them. "statement" locks only the download button: the Financials page and
   // its Fee Statement link stay open for the balance summary.
-  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card", "receipts", "statement"];
+  // "directory" greys out the Find a Specialist listing panel on the profile page (15 Oct 2026).
+  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card", "receipts", "statement", "directory"];
   if (LOCKED_FEATURES.includes(pageName())) {
     window.location.replace("dashboard");
   }

@@ -76,7 +76,7 @@
 
       <!-- Find a Specialist. Opt-in: nothing is published until the member switches it on and
            confirms consent. Only what is entered here is public, never the profile above. -->
-      <style>.dir-loc{grid-template-columns:2fr 1fr 1fr;margin-bottom:10px}@media(max-width:640px){.dir-loc{grid-template-columns:1fr;gap:8px;margin-bottom:16px}}</style>
+      <style>#dirPanel .notice.info{display:block;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}.dir-loc{grid-template-columns:2fr 1fr 1fr;margin-bottom:10px}@media(max-width:640px){.dir-loc{grid-template-columns:1fr;gap:8px;margin-bottom:16px}}</style>
       <section class="panel" style="margin-top:20px" id="dirPanel" hidden>
         <h2 style="font-size:18px;margin-bottom:6px">Find a Specialist listing</h2>
         <p style="color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px">
@@ -167,7 +167,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/cropper.js"></script>
-  <script src="js/portal-state.js?v=20261015-statement-soon"></script>
+  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
   <script>
     document.getElementById("logoutLink").addEventListener("click", (event) => {
       event.preventDefault();
@@ -373,6 +373,21 @@
       else if (!data.membershipActive) dirNotice("Your listing can only be shown while your membership is active.", "error");
       else if (l && l.listed) dirNotice("Your listing is live in the directory.");
       else dirNotice("");
+      if (window.ResokPortal.isFeatureLocked("directory")) lockDirectoryPanel();
+    }
+
+    // Shown but not usable until the directory launches (LOCKED_FEATURES in portal-state.js).
+    function lockDirectoryPanel() {
+      const panel = dir("dirPanel");
+      panel.querySelectorAll("input, select, textarea, button").forEach((el) => { el.disabled = true; });
+      panel.querySelectorAll("a").forEach((a) => { a.removeAttribute("href"); a.style.pointerEvents = "none"; });
+      panel.querySelectorAll("label").forEach((label) => { label.style.cursor = "not-allowed"; });
+      panel.querySelectorAll(".form-grid, #dirLocations, h3, label, .actions, p").forEach((el) => { el.style.opacity = ".5"; });
+      const heading = panel.querySelector("h2");
+      if (!heading.querySelector(".soon")) {
+        heading.insertAdjacentHTML("beforeend", ' <span class="soon" style="margin-left:6px;padding:2px 8px;border-radius:999px;background:#eef2f7;color:#667085;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;vertical-align:middle">Coming soon</span>');
+      }
+      dirNotice("The Find a Specialist directory is coming soon. You will be able to set up your listing here once it opens.", "info");
     }
 
     dir("dirSave").addEventListener("click", async () => {

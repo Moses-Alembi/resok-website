@@ -888,9 +888,9 @@
         if (approved && approved.welcomeEmailSent === false) {
           showNote("Member approved, but the welcome email did NOT send"
             + (approved.welcomeEmailError ? ": " + approved.welcomeEmailError : "")
-            + ". Their letter and card have not been delivered.", "error");
+            + ". Their welcome letter has not been delivered.", "error");
         } else {
-          showNote("Member approved. Welcome email sent with their letter and card.");
+          showNote("Member approved. Welcome email sent with their welcome letter.");
         }
         await loadMembers();
       } catch (error) {
@@ -907,7 +907,7 @@
         return;
       }
       const to = selectedMember.email || "this member";
-      if (!confirm(`Send the welcome letter and membership card to ${to}?`)) return;
+      if (!confirm(`Send the welcome letter to ${to}?`)) return;
       const btn = document.getElementById("welcomePacketBtn");
       const label = btn.innerHTML;
       btn.disabled = true;
@@ -920,7 +920,7 @@
         const ok = `Welcome packet SENT to ${result.sentTo}.
 
 The mail server accepted it. If it does not arrive, the problem is after the handoff - check cPanel > Track Delivery.`;
-        showNote(`Welcome packet sent to ${result.sentTo}. Letter and card attached.`);
+        showNote(`Welcome packet sent to ${result.sentTo}. Welcome letter attached.`);
         alert(ok);
       } catch (error) {
         const why = error.message || "the server gave no reason";

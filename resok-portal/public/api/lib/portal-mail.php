@@ -93,7 +93,10 @@ function buildPlainWelcomeLetterPdf(array $member): string
     $pdf->text(48, $y, 'Dear ' . $name . ',', 13, true);
     $y += 30;
 
-    $body = "On behalf of the Respiratory Society of Kenya, welcome to our community of clinicians, researchers, and respiratory health advocates.\n\nYour membership journey begins here. We look forward to supporting your professional growth, CPD learning, and contribution to healthier lungs for all people in Kenya and beyond.\n\nYour membership number and digital membership card are attached to this email. Please keep your membership number for reference in all correspondence with the Society.";
+    $body = "On behalf of the Respiratory Society of Kenya, welcome to our community of clinicians, researchers, and respiratory health advocates.\n\nYour membership journey begins here. We look forward to supporting your professional growth, CPD learning, and contribution to healthier lungs for all people in Kenya and beyond.\n\n"
+        . (WELCOME_PACKET_INCLUDES_CARD
+            ? "Your membership number and digital membership card are attached to this email. Please keep your membership number for reference in all correspondence with the Society."
+            : "Your membership number is shown below. Please keep it for reference in all correspondence with the Society.");
     $y = $pdf->multilineText(48, $y, 500, $body, 12, 18);
 
     $y += 14;
@@ -305,10 +308,16 @@ function sendPasswordResetEmail(array $config, string $email, string $url, ?stri
     return $sent;
 }
 
+// The membership card is held back from the welcome packet until its design is finished
+// (Moses, 15 Oct 2026). Set this to true to attach it again; the letter and email wording
+// follow it.
+const WELCOME_PACKET_INCLUDES_CARD = false;
+
 // $error is filled in on failure so a caller can say why, rather than only that it did
 // not work. An administrator waiting at a screen cannot read the server's error log.
 function sendWelcomePacketEmail(array $config, array $member, ?string &$error = null): bool
 {
+    $withCard = WELCOME_PACKET_INCLUDES_CARD;
     $error = null;
     $email = (string)($member['email'] ?? '');
     if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
@@ -319,16 +328,18 @@ function sendWelcomePacketEmail(array $config, array $member, ?string &$error = 
     }
 
     $greeting = portalGreetingName($member);
-    $text = "Dear {$greeting},\n\nWelcome to the Respiratory Society of Kenya (ReSoK)!\n\nWe are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter and Membership Card for your records.\n\nWe are delighted to have you join the ReSoK membership community and look forward to your engagement in advancing lung health in Kenya and beyond.\n\nWelcome to ReSoK!\n\nBest regards,\nReSoK Secretariat\nRespiratory Society of Kenya (ReSoK)";
+    $text = "Dear {$greeting},\n\nWelcome to the Respiratory Society of Kenya (ReSoK)!\n\nWe are pleased to confirm that your ReSoK membership has been successfully processed. Please find attached your official ReSoK Welcome Letter" . ($withCard ? " and Membership Card" : "") . " for your records.\n\nWe are delighted to have you join the ReSoK membership community and look forward to your engagement in advancing lung health in Kenya and beyond.\n\nWelcome to ReSoK!\n\nBest regards,\nReSoK Secretariat\nRespiratory Society of Kenya (ReSoK)";
 
     $attachments = [
-        ['filename' => 'ReSoK-Welcome-Letter.pdf', 'content' => buildWelcomeLetterPdf($member), 'mime' => 'application/pdf'],
-        ['filename' => 'ReSoK-Membership-Card.pdf', 'content' => buildMembershipCardPdf($member), 'mime' => 'application/pdf']
+        ['filename' => 'ReSoK-Welcome-Letter.pdf', 'content' => buildWelcomeLetterPdf($member), 'mime' => 'application/pdf']
     ];
+    if ($withCard) {
+        $attachments[] = ['filename' => 'ReSoK-Membership-Card.pdf', 'content' => buildMembershipCardPdf($member), 'mime' => 'application/pdf'];
+    }
 
     $mailer = new SimpleMailer($config);
     // No HTML part. A plain-text message is what a letter of transmittal looks like in an
-    // inbox, and it puts the two attachments immediately below the words rather than
+    // inbox, and it puts the attachments immediately below the words rather than
     // below a branded banner, heading and footer.
     $sent = $mailer->send($email, 'Welcome to ReSoK – Membership Confirmation', $text, $attachments);
     if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';

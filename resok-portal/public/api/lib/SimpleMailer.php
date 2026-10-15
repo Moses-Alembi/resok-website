@@ -14,6 +14,33 @@ class SimpleMailer
     /** Why the last send failed, in words fit to show an administrator. Null after a success. */
     public ?string $lastError = null;
 
+    /**
+     * Every message is also sent, invisibly, to the Society's archive inbox (Moses,
+     * 15 Oct 2026). It is an extra SMTP recipient with no Cc or Bcc header, so the member
+     * cannot see it. 'mail_archive_bcc' in config overrides the address, and '' turns it off.
+     */
+    private const DEFAULT_ARCHIVE_BCC = 'respiratorysockenya@gmail.com';
+
+    private bool $archiveCopy = true;
+
+    /**
+     * For a message whose link sets an account's password (resets, account-claim invites):
+     * a copy in a shared inbox would let whoever reads it take over the account.
+     */
+    public function withoutArchiveCopy(): self
+    {
+        $this->archiveCopy = false;
+        return $this;
+    }
+
+    private function archiveBcc(string $to): ?string
+    {
+        if (!$this->archiveCopy) return null;
+        $bcc = trim((string)($this->config['mail_archive_bcc'] ?? self::DEFAULT_ARCHIVE_BCC));
+        if ($bcc === '' || filter_var($bcc, FILTER_VALIDATE_EMAIL) === false) return null;
+        return strcasecmp($bcc, trim($to)) === 0 ? null : $bcc;
+    }
+
     public function __construct(array $config)
     {
         $this->config = $config;
@@ -103,15 +130,18 @@ class SimpleMailer
     private function sendPhpMail(string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null, ?string $replyTo = null): bool
     {
         $from = $this->fromAddress();
+        // sendmail removes the Bcc header before delivery, so the recipient never sees it.
+        $bcc = $this->archiveBcc($to);
+        $bccHeader = $bcc !== null ? "\r\nBcc: {$bcc}" : '';
         if (!$attachments && $htmlBody === null) {
             $headers = "From: Respiratory Society of Kenya <{$from}>\r\nContent-Type: text/plain; charset=UTF-8";
             if ($replyTo !== null && $replyTo !== '') $headers .= "\r\nReply-To: {$replyTo}";
-            return @mail($to, $subject, $textBody, $headers);
+            return @mail($to, $subject, $textBody, $headers . $bccHeader);
         }
         $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody, $replyTo);
         [$headerBlock, $bodyBlock] = explode("\r\n\r\n", $message, 2);
         $extraHeaders = trim((string)preg_replace('/^(To|Subject):.*$/mi', '', $headerBlock));
-        return @mail($to, $subject, $bodyBlock, $extraHeaders);
+        return @mail($to, $subject, $bodyBlock, $extraHeaders . $bccHeader);
     }
 
     private function expect(mixed $socket, int $code, string $stage): bool
@@ -188,6 +218,16 @@ class SimpleMailer
 
         if ($ok) { $send('MAIL FROM:<' . $from . '>'); $ok = $this->expect($socket, 250, 'MAIL FROM'); }
         if ($ok) { $send('RCPT TO:<' . $to . '>'); $ok = $this->expect($socket, 250, 'RCPT TO'); }
+        // The archive copy is a second envelope recipient only; nothing in the headers names
+        // it. If the server refuses it, the member's message still goes.
+        $bcc = $ok ? $this->archiveBcc($to) : null;
+        if ($bcc !== null) {
+            $send('RCPT TO:<' . $bcc . '>');
+            if (!$this->expect($socket, 250, 'RCPT TO (archive copy)')) {
+                $this->lastError = null;
+                error_log("SMTP archive copy to {$bcc} refused; sending to {$to} without it");
+            }
+        }
         if ($ok) { $send('DATA'); $ok = $this->expect($socket, 354, 'DATA'); }
 
         if ($ok) {

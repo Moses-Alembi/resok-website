@@ -72,6 +72,9 @@ return [
     'careers_retention_months' => 6,
     'portal_base_url' => 'https://www.resok.org/resok-portal/public',
     'mail_from' => 'no-reply@example.org',
+    // Every email is also sent, hidden, to this inbox (except password-setting links).
+    // Leave it out to use respiratorysockenya@gmail.com; set '' to turn the copies off.
+    // 'mail_archive_bcc' => 'respiratorysockenya@gmail.com',
 
     'paybill_number' => '303030',
     'paybill_account' => '2038334878',

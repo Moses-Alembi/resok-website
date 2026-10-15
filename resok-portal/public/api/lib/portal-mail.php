@@ -302,7 +302,7 @@ function sendPasswordResetEmail(array $config, string $email, string $url, ?stri
         'Choose a New Password',
         $url
     );
-    $mailer = new SimpleMailer($config);
+    $mailer = (new SimpleMailer($config))->withoutArchiveCopy();
     $sent = $mailer->send($email, 'Reset your ReSoK members portal password', $text, [], $html);
     if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';
     return $sent;

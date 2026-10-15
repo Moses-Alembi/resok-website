@@ -129,7 +129,8 @@ function inviteSend(PDO $pdo, array $config, array $invite): bool
                 'Claim my account',
                 $link
             );
-            $sent = (new SimpleMailer($config))->send((string)$invite['email'],
+            // No archive copy: the link sets the account's password.
+            $sent = (new SimpleMailer($config))->withoutArchiveCopy()->send((string)$invite['email'],
                 'Your ReSoK portal account is ready', $text, [], $html);
         }
     } catch (Throwable $e) {
@@ -325,7 +326,8 @@ function claimSend(PDO $pdo, array $config, array $member, ?string &$error = nul
             'Choose my password',
             $link
         );
-        $sent = (new SimpleMailer($config))->send($email, 'Your ReSoK portal account is ready', $text, [], $html);
+        // No archive copy: the link sets the account's password.
+        $sent = (new SimpleMailer($config))->withoutArchiveCopy()->send($email, 'Your ReSoK portal account is ready', $text, [], $html);
         if (!$sent) $error = 'The mail server did not accept the message.';
     } catch (Throwable $e) {
         $error = mb_substr($e->getMessage(), 0, 255);

@@ -125,7 +125,7 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js?v=20261008-sessions"></script>
+  <script src="js/portal-state.js?v=20261015-card-soon"></script>
   <script>
     document.getElementById("logoutLink").addEventListener("click", (event) => {
       event.preventDefault();
@@ -161,7 +161,11 @@
       document.getElementById("factRenewal").textContent = member.renewalDue || "Pending";
 
       const cardMount = document.getElementById("cardMount");
-      if (member.membershipId) {
+      if (window.ResokPortal.isFeatureLocked("card")) {
+        cardMount.className = "empty-card";
+        cardMount.innerHTML = "<strong>Coming soon.</strong><br>Your digital membership card will be available here shortly.";
+        document.getElementById("downloadCard").style.display = "none";
+      } else if (member.membershipId) {
         const assets = await window.ResokPortal.membershipCardImageAssets(member);
         cardMount.className = "card-preview";
         cardMount.innerHTML = window.ResokPortal.membershipCardSvg(member, assets);

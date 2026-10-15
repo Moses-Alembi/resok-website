@@ -843,9 +843,32 @@
   // election-admin, which are not affected.
   // On localhost nothing is locked, so every feature can be reviewed before launch.
   // The Virtual Academy launched 28 Sep 2026; events and elections are still to come.
-  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections"];
+  // The membership card was locked on 15 Oct 2026; its sidebar link on every page is
+  // greyed out by lockSidebarLinks() below, so no page needs editing to launch it.
+  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card"];
   if (LOCKED_FEATURES.includes(pageName())) {
     window.location.replace("dashboard");
+  }
+  window.ResokPortal.isFeatureLocked = (name) => LOCKED_FEATURES.includes(name);
+
+  function lockSidebarLinks() {
+    LOCKED_FEATURES.forEach((name) => {
+      document.querySelectorAll(`.sidebar a[href="${name}"]`).forEach((link) => {
+        const item = document.createElement("span");
+        item.className = "nav-locked";
+        item.setAttribute("aria-disabled", "true");
+        item.title = "Coming soon";
+        item.style.cssText = "display:flex;align-items:center;gap:10px;padding:12px;border-radius:6px;color:#98a2b3;font-weight:600;font-size:14px;cursor:not-allowed;user-select:none;white-space:nowrap";
+        item.innerHTML = `${link.innerHTML} <span class="soon" style="margin-left:auto;padding:2px 7px;border-radius:999px;background:#eef2f7;color:#667085;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em">Soon</span>`;
+        link.replaceWith(item);
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", lockSidebarLinks);
+  } else {
+    lockSidebarLinks();
   }
 
   // Start the watch on any portal page that already believes it has a session. Protected

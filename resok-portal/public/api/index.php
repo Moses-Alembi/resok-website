@@ -873,11 +873,14 @@ function uploadedMime(array $file): string {
     return (string)($file['type'] ?? '');
 }
 
+// Membership IDs are issued as ReSoK0001, ReSoK0002, ... (Moses, 15 Oct 2026). Older IDs
+// were issued as RESOK0001; the numbering is shared across both spellings, so matching and
+// the uniqueness check ignore case and a new ID never reuses an old number.
 function generateMembershipId(PDO $pdo): string {
     $stmt = $pdo->query(
         "SELECT membership_id
          FROM member_profiles
-         WHERE membership_id REGEXP '^RESOK[0-9]+$'
+         WHERE UPPER(membership_id) REGEXP '^RESOK[0-9]+$'
          ORDER BY CAST(SUBSTRING(membership_id, 6) AS UNSIGNED) DESC
          LIMIT 1"
     );
@@ -885,13 +888,13 @@ function generateMembershipId(PDO $pdo): string {
     $next = $latest ? ((int)substr((string)$latest, 5) + 1) : 1;
 
     for ($i = 0; $i < 20; $i++, $next++) {
-        $candidate = 'RESOK' . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
-        $stmt = $pdo->prepare('SELECT id FROM member_profiles WHERE membership_id = ? LIMIT 1');
+        $candidate = 'ReSoK' . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
+        $stmt = $pdo->prepare('SELECT id FROM member_profiles WHERE UPPER(membership_id) = UPPER(?) LIMIT 1');
         $stmt->execute([$candidate]);
         if (!$stmt->fetch()) return $candidate;
     }
 
-    return 'RESOK' . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
+    return 'ReSoK' . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
 }
 
 function ensurePaymentProofColumns(PDO $pdo): void {

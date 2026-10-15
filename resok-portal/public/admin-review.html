@@ -558,7 +558,7 @@
           division: "COAST",
           category: "Medical Practitioner",
           membershipStatus: "active",
-          membershipId: "RESOK0002",
+          membershipId: "ReSoK0002",
           renewalDue: "31 Dec 2026",
           paidTotal: 5000
         }
@@ -871,7 +871,7 @@
       if (!selectedMember) return;
       if (useLocalPreviewData()) {
         selectedMember.membershipStatus = "active";
-        selectedMember.membershipId = selectedMember.membershipId || `RESOK${String(selectedMember.id).padStart(4, "0")}`;
+        selectedMember.membershipId = selectedMember.membershipId || `ReSoK${String(selectedMember.id).padStart(4, "0")}`;
         selectedMember.renewalDue = "31 Dec 2026";
         members = members.map((member) => member.id === selectedMember.id ? selectedMember : member);
         showNote("Local preview: member approved.");

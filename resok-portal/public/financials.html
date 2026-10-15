@@ -78,7 +78,7 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js?v=20261015-receipts-soon"></script>
+  <script src="js/portal-state.js?v=20261015-statement-soon"></script>
   <script>
     let statementAmount = 5000;
 
@@ -291,9 +291,17 @@
       });
     }
 
-    document.getElementById("downloadStatement").addEventListener("click", () => {
-      downloadFeeStatement();
-    });
+    const statementButton = document.getElementById("downloadStatement");
+    if (window.ResokPortal.isFeatureLocked("statement")) {
+      statementButton.disabled = true;
+      statementButton.className = "btn btn-muted";
+      statementButton.style.cursor = "not-allowed";
+      statementButton.innerHTML = '<i class="fas fa-clock"></i> Coming soon';
+    } else {
+      statementButton.addEventListener("click", () => {
+        downloadFeeStatement();
+      });
+    }
 
     document.addEventListener("DOMContentLoaded", async () => {
       if (!(await window.ResokPortal.requireAuthForProtectedPage())) return;

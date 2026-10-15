@@ -843,10 +843,12 @@
   // election-admin, which are not affected.
   // On localhost nothing is locked, so every feature can be reviewed before launch.
   // The Virtual Academy launched 28 Sep 2026; events and elections are still to come.
-  // The membership card and payment receipts were locked on 15 Oct 2026 (receipts are
-  // being redesigned). Their sidebar links on every page are greyed out by
-  // lockSidebarLinks() below, so no page needs editing to launch them.
-  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card", "receipts"];
+  // The membership card, payment receipts and fee statement download were locked on
+  // 15 Oct 2026 (receipts and statement are being redesigned). Their sidebar links on
+  // every page are greyed out by lockSidebarLinks() below, so no page needs editing to
+  // launch them. "statement" locks only the download button: the Financials page and
+  // its Fee Statement link stay open for the balance summary.
+  const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card", "receipts", "statement"];
   if (LOCKED_FEATURES.includes(pageName())) {
     window.location.replace("dashboard");
   }

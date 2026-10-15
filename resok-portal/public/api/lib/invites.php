@@ -121,7 +121,7 @@ function inviteSend(PDO $pdo, array $config, array $invite): bool
                 'Your ReSoK portal account is ready',
                 '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">' . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
                 . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">The Respiratory Society of Kenya members&rsquo; '
-                . 'portal is now open. Your membership card, receipts and renewals all live there.</p>'
+                . 'portal is now open. Your membership record, payments and renewals all live there.</p>'
                 . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Claim your account below. You will set your own '
                 . 'password and confirm your details, so everything on your record is right from the start.</p>'
                 . '<p style="margin:0;font-size:13px;color:#667085;">This link is unique to you and expires in '
@@ -162,13 +162,15 @@ function inviteByToken(PDO $pdo, string $token): ?array
 }
 
 /** Marks an invitation used. Never throws: a registration that succeeded must not be undone
- *  because the bookkeeping around it failed. */
-function inviteMarkClaimed(PDO $pdo, string $token, int $userId): void
+ *  because the bookkeeping around it failed. Only a registration under the invited address
+ *  counts, so a forwarded link cannot mark someone else's invitation as taken up. */
+function inviteMarkClaimed(PDO $pdo, string $token, int $userId, string $email): void
 {
     try {
         if (!invitesEnsureTable($pdo)) return;
         $pdo->prepare('UPDATE member_invites SET claimed_at = NOW(), claimed_user_id = ?
-                        WHERE token = ? AND claimed_at IS NULL')->execute([$userId, $token]);
+                        WHERE token = ? AND claimed_at IS NULL AND email = ?')
+            ->execute([$userId, $token, strtolower(trim($email))]);
     } catch (Throwable $e) {
         error_log('Could not mark invite claimed: ' . $e->getMessage());
     }

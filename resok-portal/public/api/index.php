@@ -1816,7 +1816,7 @@ Respiratory Society of Kenya");
         // never fatal - the account exists at this point, and losing the bookkeeping must
         // not undo a registration that succeeded.
         if (!empty($data['inviteToken']) && function_exists('inviteMarkClaimed')) {
-            inviteMarkClaimed($pdo, (string)$data['inviteToken'], $userId);
+            inviteMarkClaimed($pdo, (string)$data['inviteToken'], $userId, (string)$data['email']);
         }
 
         $payload = ['message' => $verified ? 'Registration successful.' : 'Registration successful! Please check your email to verify your account before logging in.', 'userId' => $userId, 'requiresVerification' => !$verified];

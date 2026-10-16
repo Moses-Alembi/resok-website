@@ -327,14 +327,18 @@ function confSaveSettings(PDO $pdo, int $eventId, array $data, int $by): ?string
         }
         return 'bad';
     };
-    $opens = $parse($data['opensAt'] ?? '');
-    $closes = $parse($data['closesAt'] ?? '');
+    // Only the fields sent are changed: a call that switches registration on must not wipe
+    // the payment instructions or the dates.
+    $current = confSettings($pdo, $eventId);
+    $opens = array_key_exists('opensAt', $data) ? $parse($data['opensAt']) : $current['opensAt'];
+    $closes = array_key_exists('closesAt', $data) ? $parse($data['closesAt']) : $current['closesAt'];
     if ($opens === 'bad' || $closes === 'bad') return 'Dates and times must look like 2027-02-01 09:00.';
     if ($opens && $closes && $closes <= $opens) return 'Registration must close after it opens.';
     $pdo->prepare('INSERT INTO conf_settings (event_id, open, opens_at, closes_at, notes) VALUES (?, ?, ?, ?, ?)
                    ON DUPLICATE KEY UPDATE open = VALUES(open), opens_at = VALUES(opens_at), closes_at = VALUES(closes_at), notes = VALUES(notes)')
-        ->execute([$eventId, !empty($data['open']) ? 1 : 0, $opens, $closes, mb_substr(trim((string)($data['notes'] ?? '')), 0, 4000)]);
-    confAudit($pdo, $eventId, null, $by, 'settings_saved', ['open' => !empty($data['open'])]);
+        ->execute([$eventId, array_key_exists('open', $data) ? (!empty($data['open']) ? 1 : 0) : ($current['open'] ? 1 : 0), $opens, $closes,
+                   array_key_exists('notes', $data) ? mb_substr(trim((string)$data['notes']), 0, 4000) : $current['notes']]);
+    confAudit($pdo, $eventId, null, $by, 'settings_saved', ['open' => array_key_exists('open', $data) ? !empty($data['open']) : $current['open']]);
     return null;
 }
 
@@ -570,6 +574,8 @@ function confShape(PDO $pdo, array $reg, bool $forStaff = false): array
             'hasProof' => $p['proof_file'] !== null, 'submittedAt' => $p['created_at'], 'reviewedAt' => $p['reviewed_at']], $payments->fetchAll()),
         'balance' => confBalance($pdo, $reg),
         'badge' => $badge ? ['code' => $badge['code'], 'printed' => $badge['printed_at'] !== null] : null,
+        'group' => ($g = function_exists('confGroupOf') ? confGroupOf($pdo, (int)$reg['id']) : null)
+            ? ['id' => (int)$g['id'], 'name' => $g['name'], 'invoiceRef' => $g['invoice_ref'], 'status' => $g['status']] : null,
         'checkedInDays' => $days->fetchAll(PDO::FETCH_COLUMN),
         'createdAt' => $reg['created_at'], 'confirmedAt' => $reg['confirmed_at'],
     ];
@@ -658,6 +664,14 @@ function confRegister(PDO $pdo, array $config, array $event, array $user, array 
     }
     if (count($chosen) !== count($addonIds)) return [null, 'One of the add-ons you chose is not available.'];
 
+    // Paid by an institution: the group code is checked before anything is saved.
+    $group = null;
+    $groupCode = trim((string)($data['groupCode'] ?? ''));
+    if ($groupCode !== '') {
+        $group = function_exists('confGroupByCode') ? confGroupByCode($pdo, $eventId, $groupCode) : null;
+        if (!$group) return [null, 'That group code is not recognised, or the group has already been invoiced and paid. Check it with your institution.'];
+    }
+
     $amount = $price['price'] + $addonTotal;
     $pdo->beginTransaction();
     try {
@@ -681,6 +695,10 @@ function confRegister(PDO $pdo, array $config, array $event, array $user, array 
     }
     confAudit($pdo, $eventId, $regId, $userId, 'registered', ['category' => $cat['name'], 'fee' => $price['label'], 'amount' => $amount]);
     $reg = confRegistrationRow($pdo, $regId);
+    if ($group && $amount > 0) {
+        $joinError = confGroupAdd($pdo, $event, $group, $reg, $userId);
+        if ($joinError) error_log("Registration {$reg['ref']} could not join group {$group['id']}: {$joinError}");
+    }
     // A free category needs no payment step (schematic: complimentary goes straight to Confirmed).
     if ($amount <= 0 && !$cat['needsProof']) {
         confConfirm($pdo, $config, $event, $reg, null, 'free_category');
@@ -710,6 +728,9 @@ function confSubmitPayment(PDO $pdo, array $config, array $event, array $reg, in
     $bal = confBalance($pdo, $reg);
     if ($bal['due'] <= 0) return 'Nothing is owed on this registration.';
     if ($bal['pending'] > 0) return 'A payment is already waiting to be confirmed. You will hear from us once finance has checked it.';
+    if (function_exists('confGroupOf') && ($g = confGroupOf($pdo, (int)$reg['id']))) {
+        return 'Your place is being paid for by ' . $g['name'] . ' on invoice ' . $g['invoice_ref'] . '. You do not need to pay yourself.';
+    }
 
     $method = (string)($data['method'] ?? '');
     $reference = strtoupper(trim((string)($data['reference'] ?? '')));
@@ -1356,13 +1377,16 @@ function confCertificatePdf(PDO $pdo, array $event, array $reg): ?string
 function confSendPaymentReminders(PDO $pdo, array $config): int
 {
     $sent = 0;
+    $groupsReady = function_exists('confGroupsEnsureTables') && confGroupsEnsureTables($pdo);
     $events = $pdo->query("SELECT * FROM abs_events WHERE status = 'published'")->fetchAll();
     foreach ($events as $event) {
         if (confRegistrationState($event, confSettings($pdo, (int)$event['id'])) !== 'open') continue;
         $stmt = $pdo->prepare("SELECT r.*, DATEDIFF(NOW(), r.created_at) AS age FROM conf_registrations r
                                WHERE r.event_id = ? AND r.status = 'awaiting_payment' AND r.amount_due > 0
                                  AND NOT EXISTS (SELECT 1 FROM conf_payments p WHERE p.registration_id = r.id AND p.status IN ('pending','confirmed'))
-                                 AND r.created_at <= (NOW() - INTERVAL 3 DAY)");
+                                 AND r.created_at <= (NOW() - INTERVAL 3 DAY)"
+                               // An institution paying on an invoice is chased by finance, not each delegate.
+                               . ($groupsReady ? ' AND NOT EXISTS (SELECT 1 FROM conf_group_members gm WHERE gm.registration_id = r.id)' : ''));
         $stmt->execute([(int)$event['id']]);
         foreach ($stmt->fetchAll() as $reg) {
             $stage = (int)$reg['age'] >= 10 ? 2 : 1;

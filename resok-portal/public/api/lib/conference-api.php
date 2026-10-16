@@ -42,6 +42,53 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         return (bool)$stmt->fetch();
     };
 
+    // ------------------------------------------------------------------ groups
+    $groupsReady = function_exists('confGroupsEnsureTables') && confGroupsEnsureTables($pdo);
+    if (strpos($route, 'conference/admin/groups') === 0) {
+        if (!$groupsReady) respond(503, ['error' => 'Group registration is not available on this server.']);
+        $user = auth($config);
+        $event = $eventFor($user);
+        $eventId = (int)$event['id'];
+        if (!confHasRole($pdo, $user, $config, $eventId, 'finance') && !confHasRole($pdo, $user, $config, $eventId, 'admin')) {
+            respond(403, ['error' => 'Only finance and conference administrators manage group invoices.']);
+        }
+        $by = (int)$user['userId'];
+        $list = fn(array $extra = []) => respond(200, ['groups' => confGroups($pdo, $eventId)] + $extra);
+        if ($route === 'conference/admin/groups' && $method === 'GET') $list();
+        if (preg_match('#^conference/admin/groups/(\d+)/invoice$#', $route, $m) && $method === 'GET') {
+            $g = confGroupRow($pdo, $eventId, (int)$m[1]);
+            if (!$g) respond(404, ['error' => 'No such group.']);
+            confSendPdf(confGroupInvoicePdf($event, $g, confGroupMembers($pdo, (int)$g['id']), confSettings($pdo, $eventId)['notes']),
+                        'Invoice-' . $g['invoice_ref'] . '.pdf');
+        }
+        if ($method !== 'POST') respond(405, ['error' => 'Method not allowed']);
+        $data = input();
+        if ($route === 'conference/admin/groups') {
+            [, $e] = confSaveGroup($pdo, $event, $data, $by);
+            if ($e) respond(400, ['error' => $e]);
+            $list();
+        }
+        if (preg_match('#^conference/admin/groups/(\d+)/(add|remove|paid)$#', $route, $m)) {
+            $g = confGroupRow($pdo, $eventId, (int)$m[1]);
+            if (!$g) respond(404, ['error' => 'No such group.']);
+            $extra = [];
+            if ($m[2] === 'add') {
+                $stmt = $pdo->prepare('SELECT * FROM conf_registrations WHERE event_id = ? AND ref = ?');
+                $stmt->execute([$eventId, strtoupper(trim((string)($data['ref'] ?? '')))]);
+                $reg = $stmt->fetch();
+                $e = $reg ? confGroupAdd($pdo, $event, $g, $reg, $by) : 'No registration has that reference.';
+            } elseif ($m[2] === 'remove') {
+                $e = confGroupRemove($pdo, $event, $g, (int)($data['registrationId'] ?? 0), $by);
+            } else {
+                [$result, $e] = confGroupPaid($pdo, $config, $event, $g, (string)($data['reference'] ?? ''), $by);
+                $extra = ['result' => $result];
+            }
+            if ($e) respond(400, ['error' => $e]);
+            $list($extra);
+        }
+        respond(404, ['error' => 'Unknown route.']);
+    }
+
     // ------------------------------------------------------------------ sponsors
     $sponsorsReady = function_exists('confSponsorsEnsureTables') && confSponsorsEnsureTables($pdo);
     if ($route === 'conference/sponsors' && $method === 'GET') {

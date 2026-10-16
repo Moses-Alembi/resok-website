@@ -97,6 +97,7 @@
         <button role="tab" aria-selected="true" data-tab="overview">Overview</button>
         <button role="tab" aria-selected="false" data-tab="regs">Registrations</button>
         <button role="tab" aria-selected="false" data-tab="fees" data-need="admin">Fees and extras</button>
+        <button role="tab" aria-selected="false" data-tab="groups" data-need="finance">Group invoices</button>
         <button role="tab" aria-selected="false" data-tab="sponsors" data-need="admin">Sponsors</button>
         <button role="tab" aria-selected="false" data-tab="settings" data-need="admin">Settings and staff</button>
       </nav>
@@ -140,6 +141,21 @@
           <h2>Workshops and extras</h2>
           <div id="addonList"></div>
           <button class="btn btn-ghost" type="button" id="addAddon"><i class="fas fa-plus"></i> Add an extra</button>
+        </div>
+      </section>
+
+      <section data-pane="groups" hidden>
+        <div class="panel">
+          <h2>Group invoices</h2>
+          <p class="hint" style="margin-bottom:12px">For an institution paying for several delegates. Create the group and send its join code to the institution: delegates enter it when they register, and are not asked to pay. You can also add an existing registration by its reference. Download the invoice for the institution; when it pays, record the payment once and every member is confirmed with their own QR code.</p>
+          <div id="grMsg" class="notice" hidden></div>
+          <div class="row" style="align-items:end">
+            <div class="field"><label>Institution</label><input type="text" id="grName" placeholder="Kenyatta National Hospital"></div>
+            <div class="field"><label>Contact name</label><input type="text" id="grContact"></div>
+            <div class="field"><label>Contact email</label><input type="email" id="grEmail"></div>
+            <div class="field" style="flex:0"><button class="btn btn-primary" type="button" id="grCreate">Create group</button></div>
+          </div>
+          <div id="grList"></div>
         </div>
       </section>
 
@@ -201,6 +217,7 @@
       document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== b.dataset.tab; });
       if (b.dataset.tab === 'regs') loadRegs();
       if (b.dataset.tab === 'sponsors') loadSponsors();
+      if (b.dataset.tab === 'groups') loadGroups();
     }));
 
     async function loadOverview() {
@@ -402,6 +419,43 @@
     }
     function renderAddons() { $('addonList').innerHTML = ov.addons.map(addonForm).join('') || '<p class="hint" style="margin-bottom:10px">No extras yet.</p>'; bindAddons($('addonList')); }
     $('addAddon').onclick = () => { $('addonList').insertAdjacentHTML('beforeend', addonForm()); bindAddons($('addonList')); };
+
+    // ---------------- group invoices ----------------
+    async function grCall(path, opts, okText) {
+      try {
+        const r = await api(path, opts);
+        renderGroups(r.groups);
+        if (okText) note($('grMsg'), 'ok', typeof okText === 'function' ? okText(r) : okText);
+        return true;
+      } catch (e) { note($('grMsg'), 'error', e.message); return false; }
+    }
+    function renderGroups(groups) {
+      $('grList').innerHTML = groups.map((g) => `<details ${g.status === 'open' ? 'open' : ''} data-gr="${g.id}" style="margin-top:12px"><summary>${esc(g.name)}
+          <span class="hint">${esc(g.invoiceRef)} · code <strong>${esc(g.code)}</strong> · ${g.members.length} delegate(s) · ${Object.entries(g.totals).map(([c, v]) => money(v, c)).join(', ') || 'nothing due'} · ${g.status === 'paid' ? 'paid ' + esc(g.paidReference || '') : g.status}</span></summary>
+        <div style="margin-top:10px">
+          <div class="tbl"><table><tbody>${g.members.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.ref)}</td><td>${esc(m.category)}</td><td><span class="chip ${m.status}">${statusLabel[m.status]}</span></td>
+            <td class="num">${money(m.amount, m.currency)}</td><td class="num">${g.status === 'open' ? `<button class="btn btn-danger" style="padding:2px 8px" data-grrm="${m.id}">Remove</button>` : ''}</td></tr>`).join('') || '<tr><td class="hint">No delegates yet.</td></tr>'}</tbody></table></div>
+          <div class="actions">
+            <a class="btn btn-ghost" href="api/index.php?route=conference/admin/groups/${g.id}/invoice"><i class="fas fa-file-invoice"></i> Invoice PDF</a>
+            ${g.status === 'open' ? `<input type="text" placeholder="Add by registration reference" data-gradd style="max-width:240px"><button class="btn btn-ghost" data-graddbtn>Add</button>
+              <input type="text" placeholder="Institution's payment reference" data-grref style="max-width:240px"><button class="btn btn-primary" data-grpaid>Record payment and confirm all</button>` : ''}
+          </div></div></details>`).join('') || '<p class="hint" style="margin-top:12px">No groups yet.</p>';
+      $('grList').querySelectorAll('details').forEach((det) => {
+        const id = det.dataset.gr;
+        det.querySelectorAll('[data-grrm]').forEach((b) => b.onclick = () => grCall(`conference/admin/groups/${id}/remove`, { method: 'POST', body: JSON.stringify({ registrationId: Number(b.dataset.grrm) }) }));
+        const addBtn = det.querySelector('[data-graddbtn]');
+        if (addBtn) addBtn.onclick = () => grCall(`conference/admin/groups/${id}/add`, { method: 'POST', body: JSON.stringify({ ref: det.querySelector('[data-gradd]').value }) }, 'Added.');
+        const paid = det.querySelector('[data-grpaid]');
+        if (paid) paid.onclick = () => grCall(`conference/admin/groups/${id}/paid`, { method: 'POST', body: JSON.stringify({ reference: det.querySelector('[data-grref]').value }) },
+          (r) => `Payment recorded. ${r.result.confirmed} delegate(s) confirmed and emailed.`);
+      });
+    }
+    async function loadGroups() { await grCall('conference/admin/groups'); }
+    $('grCreate').onclick = async () => {
+      if (await grCall('conference/admin/groups', { method: 'POST', body: JSON.stringify({ name: $('grName').value, contactName: $('grContact').value, contactEmail: $('grEmail').value }) }, 'Group created. Send its code to the institution.')) {
+        $('grName').value = ''; $('grContact').value = ''; $('grEmail').value = '';
+      }
+    };
 
     // ---------------- sponsors ----------------
     let tiers = {};

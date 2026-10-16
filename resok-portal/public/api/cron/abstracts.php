@@ -34,7 +34,9 @@ foreach (['SimpleMailer', 'portal-mail', 'abstracts', 'abstracts-review', 'abstr
     require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 // Conference registration reminders ride on the same job and the same mail queue.
-if (is_file(__DIR__ . '/../lib/conference.php')) require_once __DIR__ . '/../lib/conference.php';
+foreach (['conference', 'conference-groups'] as $module) {
+    if (is_file(__DIR__ . '/../lib/' . $module . '.php')) require_once __DIR__ . '/../lib/' . $module . '.php';
+}
 
 $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $config['db_host'], (int)($config['db_port'] ?? 3306), $config['db_name']);
 $pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], [

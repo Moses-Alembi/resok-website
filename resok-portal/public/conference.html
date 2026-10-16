@@ -220,6 +220,7 @@
             <div class="field"><label for="rDiet">Dietary needs <span class="hint">optional</span></label><input type="text" id="rDiet" maxlength="200"></div>
           </div>
           <div class="field"><label for="rAccess">Accessibility needs <span class="hint">optional</span></label><input type="text" id="rAccess" maxlength="300"></div>
+          <div class="field"><label for="rGroup">Group code <span class="hint">only if your institution is paying for you and gave you a code</span></label><input type="text" id="rGroup" maxlength="12" autocomplete="off" style="text-transform:uppercase;max-width:220px"></div>
           <label style="font-weight:400;display:flex;gap:10px;align-items:flex-start"><input type="checkbox" id="rShare" style="margin-top:4px">
             <span>Exhibitors may receive my name, institution and email if I let them scan my badge at their stand. <span class="hint">If unticked, they receive your name and institution only.</span></span></label>
         </fieldset>
@@ -358,7 +359,7 @@
           addons: [...document.querySelectorAll('input[name=addon]:checked')].map((cb) => Number(cb.value)),
           badgeName: $('rBadge').value, institution: $('rInst').value, country: $('rCountry').value,
           profession: $('rProf').value, phone: $('rPhone').value, dietary: $('rDiet').value,
-          accessibility: $('rAccess').value, shareContact: $('rShare').checked,
+          accessibility: $('rAccess').value, shareContact: $('rShare').checked, groupCode: $('rGroup').value.trim(),
         }) });
         await load();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -376,6 +377,12 @@
         <dt>Category</dt><dd>${esc(reg.category ? reg.category.name : '')} (${esc(reg.feeLabel || '')})</dd>
         ${reg.addons.length ? `<dt>Extras</dt><dd>${reg.addons.map((a) => esc(a.name)).join(', ')}</dd>` : ''}
         <dt>Amount due</dt><dd><strong>${money(reg.balance.due, reg.currency)}</strong></dd>`;
+      if (reg.group) {
+        $('payState').innerHTML = `<div class="notice info"><strong>Your institution is paying.</strong> Your place is on ${esc(reg.group.name)}'s invoice ${esc(reg.group.invoiceRef)}. You do not need to pay yourself; your QR code appears here, and you get an email, once the invoice is paid.</div>`;
+        $('payForm').hidden = true;
+        $('payInstructions').hidden = true;
+        return;
+      }
       const pending = reg.payments.find((p) => p.status === 'pending');
       const lastRejected = [...reg.payments].reverse().find((p) => p.status === 'rejected');
       const state = $('payState');

@@ -71,6 +71,9 @@ r=$(post "$GUEST" conference/admin/settings '{"open":true}')
 check "a delegate cannot change settings"                       'do not have access' "$r"
 r=$(post "$ADMIN" conference/admin/settings '{"open":true,"opensAt":"","closesAt":""}')
 check "an administrator opens registration"                     '"state":"open"' "$r"
+post "$ADMIN" conference/admin/settings '{"notes":"TEST pay instructions"}' >/dev/null
+r=$(post "$ADMIN" conference/admin/settings '{"open":true}')
+check "switching registration on keeps the payment instructions" 'TEST pay instructions' "$r"
 post "$ADMIN" conference/admin/categories "{\"name\":\"TEST Member\",\"currency\":\"KES\",\"memberRate\":true,\"windows\":[{\"label\":\"Early bird\",\"price\":15000,\"endsOn\":\"2000-01-01\"},{\"label\":\"Standard\",\"price\":18000,\"endsOn\":\"$FAR\"}]}" >/dev/null
 post "$ADMIN" conference/admin/categories "{\"name\":\"TEST Non-member\",\"currency\":\"KES\",\"windows\":[{\"label\":\"Standard\",\"price\":20000,\"endsOn\":\"$FAR\"}]}" >/dev/null
 r=$(post "$ADMIN" conference/admin/categories '{"name":"TEST Faculty","currency":"KES","adminOnly":true,"windows":[{"label":"Complimentary","price":0}]}')

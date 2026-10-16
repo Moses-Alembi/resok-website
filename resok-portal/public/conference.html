@@ -151,6 +151,42 @@
       </form>
     </section>
 
+    <!-- Speaker profile -->
+    <section class="panel" id="speaker" hidden>
+      <h2>Your speaker profile</h2>
+      <p class="lede" style="margin:0 0 16px">Thank you for speaking. Your photo, title, position and bio appear on the conference website once the programme team publishes your profile. Your travel details are seen only by the organisers, who use them to arrange your accommodation and airport pick-up.</p>
+      <div id="spkSessions"></div>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <div id="spkPhoto" style="width:88px;height:88px;border-radius:50%;overflow:hidden;background:#f2f4f7;display:flex;align-items:center;justify-content:center;color:var(--muted)"><i class="fas fa-user fa-2x"></i></div>
+        <div><label class="btn btn-ghost" style="margin:0;cursor:pointer"><i class="fas fa-camera"></i> Upload a photo<input type="file" id="spkPhotoFile" accept="image/jpeg,image/png" hidden></label>
+          <div class="hint" style="margin-top:6px">A head-and-shoulders photo, JPG or PNG, up to 2 MB. Location data is removed.</div></div>
+      </div>
+      <form id="spkForm" novalidate>
+        <div class="row">
+          <div class="field" style="max-width:140px;flex:0 0 140px"><label for="spkHon">Title</label><input type="text" id="spkHon" maxlength="30" placeholder="Prof"></div>
+          <div class="field"><label for="spkName">Name as it should appear</label><input type="text" id="spkName" maxlength="120" required></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="spkPos">Position</label><input type="text" id="spkPos" maxlength="160" placeholder="e.g. Consultant Pulmonologist"></div>
+          <div class="field"><label for="spkInst">Institution</label><input type="text" id="spkInst" maxlength="200"></div>
+          <div class="field"><label for="spkCountry">Country</label><input type="text" id="spkCountry" maxlength="60"></div>
+        </div>
+        <div class="field"><label for="spkBio">Short bio <span class="hint">about 100 to 150 words</span></label><textarea id="spkBio" rows="6" maxlength="3000"></textarea></div>
+        <h3 style="margin:8px 0 10px">Travel <span class="hint">seen only by the organisers</span></h3>
+        <div class="row">
+          <div class="field"><label for="spkArr">Arriving</label><input type="datetime-local" id="spkArr"></div>
+          <div class="field"><label for="spkDep">Leaving</label><input type="datetime-local" id="spkDep"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="spkFlight">Flight or travel details</label><input type="text" id="spkFlight" maxlength="200" placeholder="e.g. KQ 101, lands JKIA 14:30"></div>
+          <div class="field"><label for="spkAcc">Accommodation</label><select id="spkAcc"></select></div>
+        </div>
+        <div class="field"><label for="spkNotes">Anything else we should know <span class="hint">optional</span></label><textarea id="spkNotes" rows="2" maxlength="2000" placeholder="Dietary needs, accessibility, a companion travelling with you"></textarea></div>
+        <div id="spkMsg" class="notice" hidden></div>
+        <button class="btn btn-primary" type="submit" id="spkSave"><i class="fas fa-check"></i> Save my profile</button>
+      </form>
+    </section>
+
     <!-- Evaluation -->
     <section class="panel" id="survey" hidden>
       <h2>How was the conference?</h2>
@@ -469,6 +505,50 @@
           <dt>Certificate</dt><dd><a href="api/index.php?route=conference/certificate"><i class="fas fa-file-pdf"></i> Download your certificate of attendance</a></dd>` : ''}`;
     }
 
+    // ---------- speaker profile ----------
+    function renderSpeaker(r) {
+      const x = r.speaker, t = x.travel || {};
+      show('speaker');
+      $('spkSessions').innerHTML = x.sessions.length ? `<div class="notice info"><b>Your sessions</b><br>${x.sessions.map((s) =>
+        `${esc(s.roleLabel)}: ${esc(s.title)} · ${esc(fmtDate(s.day))}, ${esc(s.startsAt)}–${esc(s.endsAt)}${s.room ? ' · ' + esc(s.room) : ''}`).join('<br>')}</div>` : '';
+      $('spkPhoto').innerHTML = x.photoUrl ? `<img src="${esc(x.photoUrl)}" alt="Your photo" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-user fa-2x"></i>';
+      $('spkHon').value = x.honorific || ''; $('spkName').value = x.name || ''; $('spkPos').value = x.position || '';
+      $('spkInst').value = x.institution || ''; $('spkCountry').value = x.country || ''; $('spkBio').value = x.bio || '';
+      $('spkArr').value = (t.arrivalAt || '').replace(' ', 'T'); $('spkDep').value = (t.departureAt || '').replace(' ', 'T');
+      $('spkFlight').value = t.flight || ''; $('spkNotes').value = t.notes || '';
+      $('spkAcc').innerHTML = Object.entries(r.accommodationOptions).map(([k, v]) => `<option value="${esc(k)}">${esc(k ? v : 'Choose one')}</option>`).join('');
+      $('spkAcc').value = t.accommodation || '';
+    }
+    async function loadSpeaker() {
+      try { renderSpeaker(await api('conference/speaker/me')); } catch (e) { show('speaker', false); }
+    }
+    $('spkForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const btn = $('spkSave');
+      btn.disabled = true;
+      try {
+        renderSpeaker(await api('conference/speaker/me', { method: 'POST', body: JSON.stringify({
+          honorific: $('spkHon').value, name: $('spkName').value, position: $('spkPos').value, institution: $('spkInst').value,
+          country: $('spkCountry').value, bio: $('spkBio').value,
+          travel: { arrivalAt: $('spkArr').value, departureAt: $('spkDep').value, flight: $('spkFlight').value, accommodation: $('spkAcc').value, notes: $('spkNotes').value },
+        }) }));
+        notice($('spkMsg'), 'ok', 'Saved. Thank you.');
+      } catch (e) {
+        notice($('spkMsg'), 'error', e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    $('spkPhotoFile').addEventListener('change', async () => {
+      const f = $('spkPhotoFile').files[0];
+      if (!f) return;
+      const fd = new FormData();
+      fd.append('photo', f);
+      try { renderSpeaker(await api('conference/speaker/me/photo', { method: 'POST', body: fd })); notice($('spkMsg'), 'ok', 'Photo saved.'); }
+      catch (e) { notice($('spkMsg'), 'error', e.message); }
+      $('spkPhotoFile').value = '';
+    });
+
     // ---------- evaluation ----------
     let surveyQs = [];
     function renderSurvey(sv) {
@@ -557,12 +637,13 @@
         $('loading').innerHTML = `<p>${esc(e.status === 404 ? 'There is no conference open for registration at the moment.' : e.message)}</p>`;
         return;
       }
-      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register', 'visa', 'survey'].forEach((id) => show(id, false));
+      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register', 'visa', 'survey', 'speaker'].forEach((id) => show(id, false));
       show('intro');
       renderHeader();
       renderWho();
       renderFees();
       const reg = data.me && data.me.registration;
+      if (data.me) loadSpeaker().then(() => { if (location.hash === '#speaker' && !$('speaker').hidden) $('speaker').scrollIntoView(); });
       if (!data.me) {
         $('signinLink').href = 'login?next=' + encodeURIComponent(location.pathname);
         show('auth');

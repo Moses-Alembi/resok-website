@@ -42,6 +42,105 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         return (bool)$stmt->fetch();
     };
 
+    // ------------------------------------------------------------------ speakers
+    $speakersReady = function_exists('confSpeakersEnsureTables') && confSpeakersEnsureTables($pdo);
+    if (strpos($route, 'conference/speaker') === 0 || strpos($route, 'conference/admin/speakers') === 0) {
+        if (!$speakersReady) respond(503, ['error' => 'Speaker profiles are not available on this server.']);
+    }
+    if ($route === 'conference/speakers' && $method === 'GET') {
+        $event = $eventFor(authOptional($config));
+        $published = $programmeReady && confProgrammePublished($pdo, (int)$event['id']);
+        respond(200, ['speakers' => confSpeakers($pdo, (int)$event['id'], 'public', $published)]);
+    }
+    if (preg_match('#^conference/speakers/(\d+)/photo$#', $route, $m) && $method === 'GET') {
+        // Published photos are public. An unpublished one only for the programme team and
+        // the speaker, so a profile being prepared is not visible by guessing its number.
+        $viewer = authOptional($config);
+        $event = $eventFor($viewer);
+        $row = confSpeakerRow($pdo, (int)$event['id'], (int)$m[1]);
+        $allowed = $row && ($row['published'] || ($viewer && ($canEditProgramme($viewer, (int)$event['id'])
+                            || (int)$row['user_id'] === (int)$viewer['userId'])));
+        $path = $allowed && $row['photo_file'] ? confSpeakerPhotoDir($config) . '/' . basename((string)$row['photo_file']) : '';
+        if (!$path || !is_file($path)) respond(404, ['error' => 'No photo.']);
+        header_remove('Content-Type');
+        header('Content-Type: ' . ($row['photo_mime'] === 'image/png' ? 'image/png' : 'image/jpeg'));
+        header('X-Content-Type-Options: nosniff');
+        header("Content-Security-Policy: default-src 'none'; img-src 'self'; sandbox");
+        header('Cache-Control: ' . ($row['published'] ? 'public, max-age=3600' : 'private, no-store'));
+        readfile($path);
+        exit;
+    }
+    if (strpos($route, 'conference/speaker/me') === 0) {
+        $user = auth($config);
+        $event = $eventFor($user);
+        $me = confSpeakerForUser($pdo, (int)$event['id'], $user);
+        if (!$me) respond(404, ['error' => 'You are not listed as a speaker.']);
+        $self = function () use ($pdo, $event, $user): void {
+            $row = confSpeakerForUser($pdo, (int)$event['id'], $user);
+            $sessions = confSpeakerSessions($pdo, [(int)$row['id']]);
+            respond(200, ['speaker' => confSpeakerShape($row, $sessions[(int)$row['id']] ?? [], 'self'),
+                          'accommodationOptions' => CONF_SPEAKER_ACCOMMODATION]);
+        };
+        if ($route === 'conference/speaker/me' && $method === 'GET') $self();
+        if ($route === 'conference/speaker/me' && $method === 'POST') {
+            if ($e = confSpeakerSaveOwn($pdo, $me, input())) respond(400, ['error' => $e]);
+            $self();
+        }
+        if ($route === 'conference/speaker/me/photo' && $method === 'POST') {
+            if ($e = confSpeakerPhoto($pdo, $config, $me, $_FILES['photo'] ?? null)) respond(400, ['error' => $e]);
+            $self();
+        }
+        respond(404, ['error' => 'Unknown route.']);
+    }
+    if (strpos($route, 'conference/admin/speakers') === 0) {
+        $user = auth($config);
+        $event = $eventFor($user);
+        $eventId = (int)$event['id'];
+        if (!$canEditProgramme($user, $eventId)) respond(403, ['error' => 'Only the programme chair and conference administrators manage speakers.']);
+        confRequireStaffMfa($pdo, $config, $user, confRoles($pdo, $user, $config, $eventId));
+        // Travel is for the people booking rooms and pick-ups: conference administrators.
+        $isAdmin = confHasRole($pdo, $user, $config, $eventId, 'admin');
+        $by = (int)$user['userId'];
+        $list = fn(array $extra = []) => respond(200, ['speakers' => confSpeakers($pdo, $eventId, $isAdmin ? 'admin' : 'staff'), 'canSeeTravel' => $isAdmin,
+                                                       'roles' => CONF_SPEAKER_ROLES, 'accommodationOptions' => CONF_SPEAKER_ACCOMMODATION] + $extra);
+        if ($route === 'conference/admin/speakers' && $method === 'GET') $list();
+        if ($route === 'conference/admin/speakers/travel' && $method === 'GET') {
+            if (!$isAdmin) respond(403, ['error' => 'Only conference administrators see travel details.']);
+            $rows = [['Speaker', 'Institution', 'Country', 'Email', 'Arrives', 'Departs', 'Flight', 'Accommodation', 'Notes']];
+            foreach (confSpeakers($pdo, $eventId, 'admin') as $s) {
+                $t = $s['travel'];
+                $rows[] = [trim(($s['honorific'] ? $s['honorific'] . ' ' : '') . $s['name']), $s['institution'], $s['country'], $s['email'],
+                           $t['arrivalAt'], $t['departureAt'], $t['flight'], $t['accommodationLabel'], $t['notes']];
+            }
+            header_remove('Content-Type');
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="speaker-travel-' . date('Ymd') . '.csv"');
+            header('Cache-Control: private, no-store');
+            echo absCsv($rows);
+            exit;
+        }
+        if ($method !== 'POST') respond(405, ['error' => 'Method not allowed']);
+        $e = null;
+        if ($route === 'conference/admin/speakers') {
+            $data = input();
+            [$id, $e] = confSaveSpeaker($pdo, $eventId, $data, $by);
+            if (!$e && $isAdmin && is_array($data['travel'] ?? null)) $e = confSpeakerSaveTravel($pdo, (int)$id, $data['travel']);
+        } elseif (preg_match('#^conference/admin/speakers/(\d+)/(photo|delete|invite)$#', $route, $m)) {
+            $row = confSpeakerRow($pdo, $eventId, (int)$m[1]);
+            if (!$row) respond(404, ['error' => 'No such speaker.']);
+            if ($m[2] === 'photo') $e = confSpeakerPhoto($pdo, $config, $row, $_FILES['photo'] ?? null);
+            if ($m[2] === 'delete') $e = confSpeakerDelete($pdo, $config, $eventId, (int)$row['id'], $by);
+            if ($m[2] === 'invite') {
+                $e = confSpeakerInvite($pdo, $config, $event, (int)$row['id']);
+                if (!$e) $list(['message' => 'Invitation sent to ' . $row['email'] . '.']);
+            }
+        } else {
+            respond(404, ['error' => 'Unknown route.']);
+        }
+        if ($e) respond(400, ['error' => $e]);
+        $list();
+    }
+
     // ------------------------------------------------------------------ evaluation survey
     if (strpos($route, 'conference/survey') === 0 || strpos($route, 'conference/admin/survey') === 0) {
         if (!function_exists('confSurveyEnsureTables') || !confSurveyEnsureTables($pdo)) {

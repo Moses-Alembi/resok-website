@@ -47,6 +47,15 @@
     details{margin-top:8px} summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--green)}
     .unplaced li{padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;list-style:none}
     .switch{display:flex;gap:8px;align-items:center;font-weight:600}
+    .spk{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+    .spk img,.spk .ph{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#f2f4f7;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+    .spk-form{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px;background:#fcfcfd}
+    .spk-sess{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+    .spk-sess label{display:flex;gap:8px;align-items:center;font-weight:400;font-size:13px;margin:4px 0}
+    .spk-sess input[type=checkbox]{width:auto}
+    .spk-sess select{width:auto;padding:2px 6px;font-size:12px;margin-left:auto}
+    .check{display:flex;gap:8px;align-items:center;font-weight:400;font-size:13.5px}
+    .check input{width:auto}
   </style>
 </head>
 <body>
@@ -64,6 +73,16 @@
       <div id="msg" class="notice" hidden></div>
       <div id="boot" class="panel">Loading&hellip;</div>
       <div id="days"></div>
+      <section class="panel" id="speakers" hidden>
+        <h2 style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">Speakers
+          <span style="margin-left:auto;display:flex;gap:6px">
+            <a class="btn btn-ghost btn-sm" id="spkTravel" href="api/index.php?route=conference/admin/speakers/travel" hidden><i class="fas fa-plane"></i> Travel sheet</a>
+            <button class="btn btn-primary btn-sm" type="button" id="spkAdd"><i class="fas fa-plus"></i> Add a speaker</button></span></h2>
+        <p class="muted">Add invited speakers with the email they use and link them to their sessions. Send them the invitation: they sign in with that email to add their own photo, bio and travel. Only published profiles appear on the conference site, without email or travel.</p>
+        <div id="spkMsg" class="notice" hidden></div>
+        <div id="spkNew"></div>
+        <div id="spkList"></div>
+      </section>
     </div>
     <aside>
       <div class="panel">
@@ -185,8 +204,97 @@
     $('published').onchange = () => call('conference/admin/programme/publish', { published: $('published').checked })
       .then((ok) => ok && msg('ok', $('published').checked ? 'The programme is now visible to delegates.' : 'The programme is hidden from delegates.'));
 
+    // ---------------- speakers ----------------
+    let sp = null;
+    function spkMsg(type, text) { const m = $('spkMsg'); m.className = `notice ${type}`; m.textContent = text; m.hidden = !text; }
+    async function spkCall(path, opts, okText) {
+      try {
+        sp = await api(path, opts);
+        renderSpeakers();
+        if (okText || sp.message) spkMsg('ok', sp.message || okText);
+        return true;
+      } catch (e) { spkMsg('error', e.message); return false; }
+    }
+    function spkForm(x) {
+      x = x || { id: '', sessions: [], travel: {} };
+      const mine = new Map((x.sessions || []).map((s) => [s.sessionId, s.role]));
+      const sessions = st ? st.days.flatMap((d) => d.sessions.filter((s) => s.kind !== 'break').map((s) => ({ ...s, day: d.day }))) : [];
+      const roleSel = (id) => `<select data-role="${id}">${Object.entries(sp.roles).map(([k, v]) => `<option value="${k}" ${mine.get(id) === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+      const t = x.travel || {};
+      return `<form class="spk-form" data-spk="${x.id}">
+        <div class="row"><div class="field" style="max-width:100px"><label>Title</label><input name="honorific" maxlength="30" value="${esc(x.honorific)}" placeholder="Prof"></div>
+          <div class="field" style="flex:3"><label>Name</label><input name="name" maxlength="120" required value="${esc(x.name)}"></div></div>
+        <div class="row"><div class="field"><label>Email <span class="muted">private; they sign in with it</span></label><input type="email" name="email" maxlength="190" value="${esc(x.email)}"></div>
+          <div class="field"><label>Position</label><input name="position" maxlength="160" value="${esc(x.position)}"></div></div>
+        <div class="row"><div class="field"><label>Institution</label><input name="institution" maxlength="200" value="${esc(x.institution)}"></div>
+          <div class="field"><label>Country</label><input name="country" maxlength="60" value="${esc(x.country)}"></div></div>
+        <div class="field"><label>Bio</label><textarea name="bio" rows="4" maxlength="3000">${esc(x.bio)}</textarea></div>
+        <div class="field"><label>Sessions</label><div class="spk-sess">${sessions.map((s) => `<label><input type="checkbox" data-sess="${s.id}" ${mine.has(s.id) ? 'checked' : ''}>
+          <span>${esc(s.day.slice(5))} ${esc(s.startsAt)} · ${esc(s.title)}</span>${roleSel(s.id)}</label>`).join('') || '<span class="muted">No sessions yet.</span>'}</div></div>
+        ${sp.canSeeTravel ? `<details ${t.arrivalAt || t.flight ? 'open' : ''}><summary>Travel <span class="muted">(administrators only)</span></summary><div style="margin-top:8px">
+          <div class="row"><div class="field"><label>Arrives</label><input type="datetime-local" name="arrivalAt" value="${esc((t.arrivalAt || '').replace(' ', 'T'))}"></div>
+            <div class="field"><label>Departs</label><input type="datetime-local" name="departureAt" value="${esc((t.departureAt || '').replace(' ', 'T'))}"></div></div>
+          <div class="row"><div class="field"><label>Flight</label><input name="flight" maxlength="200" value="${esc(t.flight)}" placeholder="KQ 101, arrives JKIA 14:30"></div>
+            <div class="field"><label>Accommodation</label><select name="accommodation">${Object.entries(sp.accommodationOptions).map(([k, v]) => `<option value="${k}" ${t.accommodation === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div></div>
+          <div class="field"><label>Notes</label><textarea name="travelNotes" rows="2" maxlength="2000">${esc(t.notes)}</textarea></div></div></details>` : ''}
+        <div class="row" style="align-items:center;margin-top:8px">
+          <label class="check"><input type="checkbox" name="featured" ${x.featured ? 'checked' : ''}> Keynote / featured</label>
+          <label class="check"><input type="checkbox" name="published" ${x.published ? 'checked' : ''}> Published on the conference site</label>
+          <span style="flex:0;display:flex;gap:6px"><button class="btn btn-primary" type="submit">Save</button>${x.id ? '' : '<button class="btn btn-ghost" type="button" data-cancel>Cancel</button>'}</span></div>
+      </form>`;
+    }
+    function renderSpeakers() {
+      $('speakers').hidden = false;
+      $('spkTravel').hidden = !sp.canSeeTravel;
+      $('spkList').innerHTML = sp.speakers.map((x) => `<div class="spk" data-row="${x.id}">
+        ${x.photoUrl ? `<img src="${esc(x.photoUrl)}" alt="">` : '<div class="ph"><i class="fas fa-user"></i></div>'}
+        <div><strong>${esc([x.honorific, x.name].filter(Boolean).join(' '))}</strong>
+          ${x.featured ? '<span class="chip ok">featured</span>' : ''}${x.published ? '<span class="chip ok">published</span>' : '<span class="chip wait">draft</span>'}
+          ${x.email ? (x.linked ? '<span class="chip ok">signed in</span>' : '<span class="chip wait">not signed in yet</span>') : '<span class="chip no">no email</span>'}
+          <div class="muted">${esc([x.position, x.institution, x.country].filter(Boolean).join(' · '))}</div>
+          <div class="muted">${x.sessions.map((s) => `${esc(s.roleLabel)}: ${esc(s.title)}`).join(' · ') || 'No sessions linked'}</div>
+          ${sp.canSeeTravel && x.travel && (x.travel.arrivalAt || x.travel.flight) ? `<div class="muted"><i class="fas fa-plane"></i> ${esc(x.travel.arrivalAt || '')}${x.travel.flight ? ' · ' + esc(x.travel.flight) : ''}${x.travel.accommodation ? ' · ' + esc(x.travel.accommodationLabel) : ''}</div>` : ''}
+          <div class="row" style="margin-top:6px;flex-wrap:wrap">
+            <span style="flex:0;display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-ghost btn-sm" type="button" data-toggle="${x.id}">Edit</button>
+              <label class="btn btn-ghost btn-sm" style="margin:0">Photo<input type="file" accept="image/jpeg,image/png" data-photo="${x.id}" hidden></label>
+              ${x.email ? `<button class="btn btn-ghost btn-sm" type="button" data-invite="${x.id}">Email invitation</button>` : ''}
+              <button class="btn btn-danger btn-sm" type="button" data-sdel="${x.id}">Delete</button></span></div>
+          <div data-formhost="${x.id}" hidden></div></div></div>`).join('') || '<p class="muted" style="margin-top:10px">No speakers yet.</p>';
+      document.querySelectorAll('[data-toggle]').forEach((b) => b.onclick = () => {
+        const host = document.querySelector(`[data-formhost="${b.dataset.toggle}"]`);
+        if (host.hidden) { host.innerHTML = spkForm(sp.speakers.find((x) => x.id === Number(b.dataset.toggle))); bindForm(host.querySelector('form')); }
+        host.hidden = !host.hidden;
+      });
+      document.querySelectorAll('[data-photo]').forEach((i) => i.onchange = () => {
+        if (!i.files[0]) return;
+        const fd = new FormData(); fd.append('photo', i.files[0]);
+        spkCall(`conference/admin/speakers/${i.dataset.photo}/photo`, { method: 'POST', body: fd }, 'Photo saved.');
+      });
+      document.querySelectorAll('[data-invite]').forEach((b) => b.onclick = () => spkCall(`conference/admin/speakers/${b.dataset.invite}/invite`, { method: 'POST', body: '{}' }));
+      document.querySelectorAll('[data-sdel]').forEach((b) => b.onclick = () => {
+        if (confirm('Delete this speaker profile and photo?')) spkCall(`conference/admin/speakers/${b.dataset.sdel}/delete`, { method: 'POST', body: '{}' }, 'Deleted.');
+      });
+    }
+    function bindForm(f) {
+      const cancel = f.querySelector('[data-cancel]');
+      if (cancel) cancel.onclick = () => { $('spkNew').innerHTML = ''; };
+      f.onsubmit = async (e) => {
+        e.preventDefault();
+        const v = (n) => f.elements[n] ? f.elements[n].value : undefined;
+        const body = { id: f.dataset.spk || undefined, honorific: v('honorific'), name: v('name'), email: v('email'), position: v('position'),
+          institution: v('institution'), country: v('country'), bio: v('bio'), featured: f.elements.featured.checked, published: f.elements.published.checked,
+          sessions: [...f.querySelectorAll('[data-sess]:checked')].map((c) => ({ sessionId: Number(c.dataset.sess), role: f.querySelector(`[data-role="${c.dataset.sess}"]`).value })) };
+        if (sp.canSeeTravel && f.elements.accommodation) {
+          body.travel = { arrivalAt: v('arrivalAt'), departureAt: v('departureAt'), flight: v('flight'), accommodation: v('accommodation'), notes: v('travelNotes') };
+        }
+        if (await spkCall('conference/admin/speakers', { method: 'POST', body: JSON.stringify(body) }, 'Speaker saved.')) $('spkNew').innerHTML = '';
+      };
+    }
+    $('spkAdd').onclick = () => { $('spkNew').innerHTML = spkForm(); bindForm($('spkNew').querySelector('form')); $('spkNew').querySelector('input[name=name]').focus(); };
+
     (async function boot() {
-      try { st = await api('conference/admin/programme'); render(); }
+      try { st = await api('conference/admin/programme'); render(); spkCall('conference/admin/speakers'); }
       catch (e) {
         $('boot').innerHTML = e.status === 401 ? `Sign in first. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>` : esc(e.message);
       }

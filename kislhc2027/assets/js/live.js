@@ -6,6 +6,7 @@
  *  - When registration is open, "Registration" links go straight to the portal's registration.
  *  - When the programme is published, the programme section links to it.
  *  - When sponsors are listed, a "KISLHC 2027 sponsors" block appears above the partners.
+ *  - Published speaker profiles appear after the programme section.
  */
 (function () {
   var PORTAL = '../resok-portal/public/';
@@ -44,6 +45,30 @@
       box.innerHTML = '<p><i class="fas fa-calendar-check"></i> <strong>The KISLHC 2027 programme is published.</strong></p>'
         + '<p style="margin-top:12px"><a class="btn btn-primary" href="' + PORTAL + 'conference-programme">View the programme</a></p>';
     }
+  }).catch(function () {});
+
+  // Published speaker profiles, keynotes first, after the programme section.
+  get('conference/speakers').then(function (d) {
+    var list = d.speakers || [];
+    var program = document.getElementById('program');
+    if (!list.length || !program) return;
+    var html = '<section class="section" id="speakers"><div class="card"><h2 class="section-title"><i class="fas fa-microphone"></i> Speakers</h2>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:22px;margin-top:16px">'
+      + list.map(function (s) {
+        var name = [s.honorific, s.name].filter(Boolean).join(' ');
+        var photo = s.photoUrl
+          ? '<img src="' + esc(PORTAL + s.photoUrl) + '" alt="' + esc(name) + '" loading="lazy" style="width:120px;height:120px;border-radius:50%;object-fit:cover">'
+          : '<div style="width:120px;height:120px;border-radius:50%;background:#e8f3ec;display:flex;align-items:center;justify-content:center;color:#087539"><i class="fas fa-user fa-2x"></i></div>';
+        var sessions = (s.sessions || []).map(function (x) { return esc(x.roleLabel) + ': ' + esc(x.title); }).join('<br>');
+        return '<div style="text-align:center">' + '<div style="display:flex;justify-content:center">' + photo + '</div>'
+          + '<h3 style="margin:12px 0 2px;font-size:17px">' + esc(name) + '</h3>'
+          + (s.featured ? '<div style="color:#087539;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em">Keynote</div>' : '')
+          + '<div style="color:#667085;font-size:14px">' + esc([s.position, s.institution, s.country].filter(Boolean).join(', ')) + '</div>'
+          + (sessions ? '<div style="font-size:13px;margin-top:6px">' + sessions + '</div>' : '')
+          + (s.bio ? '<details style="margin-top:8px;text-align:left"><summary style="cursor:pointer;color:#087539;font-weight:600;text-align:center">Biography</summary><p style="margin-top:8px;font-size:14px;white-space:pre-line">' + esc(s.bio) + '</p></details>' : '')
+          + '</div>';
+      }).join('') + '</div></div></section>';
+    program.insertAdjacentHTML('afterend', html);
   }).catch(function () {});
 
   get('conference/sponsors').then(function (d) {

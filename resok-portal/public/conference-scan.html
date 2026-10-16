@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#087539" />
+  <title>Badge Scanner - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root{--green:#087539;--amber:#c26b00;--red:#bc0b22;--grey:#475467;--ink:#101828;--muted:#667085;--bg:#0f1512}
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:#fff;display:flex;flex-direction:column;
+      padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+    [hidden]{display:none!important}
+    header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#16201a;flex-wrap:wrap}
+    header strong{font-size:15px;flex:1 1 100%;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#24342a}
+    .pill.off{background:#5c1320}
+    .pill.warn{background:#5c3a07}
+    header .right{margin-left:auto;display:flex;gap:8px;align-items:center;min-width:0}
+    select,input,button{font:inherit}
+    #gate{background:#24342a;color:#fff;border:1px solid #33463a;border-radius:8px;padding:6px 8px;font-size:13px;width:150px;max-width:42vw}
+    .stage{position:relative;flex:1;min-height:0;background:#000;overflow:hidden}
+    video{width:100%;height:100%;object-fit:cover;display:block}
+    .frame{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+    .frame div{width:min(62vw,62vh);aspect-ratio:1;border:3px solid rgba(255,255,255,.8);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}
+    .result{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:10px}
+    .result.ok{background:var(--green)}
+    .result.dup{background:var(--amber)}
+    .result.bad{background:var(--red)}
+    .result.off{background:var(--grey)}
+    .result .big{font-size:clamp(28px,8vw,48px);font-weight:800;line-height:1.1}
+    .result .name{font-size:clamp(22px,6vw,34px);font-weight:700}
+    .result .sub{font-size:16px;opacity:.92;max-width:40ch}
+    .start{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+    .start p{color:#cfd8d2;max-width:36ch}
+    .btn{border:0;border-radius:10px;padding:14px 22px;font-weight:700;font-size:16px;cursor:pointer;background:var(--green);color:#fff}
+    .btn.ghost{background:#24342a}
+    footer{background:#16201a;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    footer form{display:flex;gap:8px;flex:1 1 100%;min-width:0}
+    footer input{flex:1;background:#24342a;color:#fff;border:1px solid #33463a;border-radius:8px;padding:10px;text-transform:uppercase;min-width:0}
+    .stats{font-size:13px;color:#cfd8d2;display:flex;gap:14px;flex-wrap:wrap}
+    .stats b{color:#fff}
+    .log{position:absolute;left:10px;right:10px;bottom:10px;font-size:13px;background:rgba(15,21,18,.85);border-radius:10px;padding:8px 10px;max-height:30%;overflow:auto}
+    .log div{padding:2px 0}
+    .msg{padding:30px 20px;text-align:center;color:#cfd8d2}
+    .msg a{color:#7fd6a3}
+  </style>
+</head>
+<body>
+  <header>
+    <strong id="eventName">Badge scanner</strong>
+    <span class="pill" id="net">Online</span>
+    <span class="pill" id="queuePill" hidden></span>
+    <div class="right">
+      <label for="gate" class="pill" style="background:none;padding:0">Door</label>
+      <input id="gate" type="text" placeholder="e.g. Plenary hall" maxlength="60" />
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted hidden></video>
+    <div class="frame" id="frame" hidden><div></div></div>
+    <div class="start" id="start">
+      <p id="startText">Loading the delegate list&hellip;</p>
+      <button class="btn" id="startBtn" type="button" hidden>Start scanning</button>
+    </div>
+    <div class="result" id="result" hidden aria-live="assertive"></div>
+    <div class="log" id="log" hidden></div>
+  </div>
+
+  <footer>
+    <form id="manual" autocomplete="off">
+      <input id="manualCode" type="text" placeholder="Type a badge code, e.g. RSK-..." aria-label="Badge code" />
+      <button class="btn ghost" type="submit">Check</button>
+    </form>
+    <div class="stats"><span>In today: <b id="inCount">0</b></span><span>Badges: <b id="rosterCount">0</b></span><span id="syncedAt"></span></div>
+  </footer>
+
+  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
+  <script src="js/vendor/jsqr-1.4.0.js"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const api = (p, o) => window.ResokPortal.api(p, o);
+    const store = {
+      get(k, d) { try { const v = localStorage.getItem('confScan:' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+      set(k, v) { try { localStorage.setItem('confScan:' + k, JSON.stringify(v)); } catch { /* storage full or blocked */ } },
+    };
+
+    // The roster lives on the phone, so every decision is made here, instantly, even with
+    // no network. The server re-decides each scan when it syncs and catches a badge let in
+    // at two doors while both phones were offline.
+    let roster = store.get('roster', null);        // { day, badges: [...], cancelled: [...] }
+    let queue = store.get('queue', []);            // scans not yet uploaded
+    let byCode = new Map();
+    let cancelled = new Set();
+    let inToday = new Map();                       // code -> time first let in today
+    let lastCode = '';
+    let lastAt = 0;
+    let busy = false;
+
+    $('gate').value = store.get('gate', '');
+    $('gate').addEventListener('change', () => store.set('gate', $('gate').value.trim()));
+
+    function today() {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
+    }
+    function indexRoster() {
+      byCode = new Map((roster?.badges || []).map((b) => [b.code, b]));
+      cancelled = new Set(roster?.cancelled || []);
+      // Keep local knowledge of who is in today across a roster refresh from the server.
+      const localIn = store.get('inToday', {});
+      inToday = new Map();
+      if (localIn.day === today()) Object.entries(localIn.codes || {}).forEach(([c, t]) => inToday.set(c, t));
+      (roster?.badges || []).forEach((b) => { if (b.inTodayAt && roster.day === today() && !inToday.has(b.code)) inToday.set(b.code, b.inTodayAt); });
+      saveInToday();
+      $('rosterCount').textContent = byCode.size;
+    }
+    function saveInToday() {
+      store.set('inToday', { day: today(), codes: Object.fromEntries(inToday) });
+      $('inCount').textContent = inToday.size;
+    }
+    function uuid() {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      return 'x-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function clock(t) { try { return new Date(String(t).replace(' ', 'T')).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } }
+
+    function updateNet() {
+      const online = navigator.onLine;
+      $('net').textContent = online ? 'Online' : 'Offline: still scanning';
+      $('net').classList.toggle('off', !online);
+      $('queuePill').hidden = !queue.length;
+      $('queuePill').textContent = `${queue.length} to upload`;
+      $('queuePill').classList.toggle('warn', queue.length > 0);
+    }
+
+    function showResult(kind, html) {
+      const r = $('result');
+      r.className = 'result ' + kind;
+      r.innerHTML = html;
+      r.hidden = false;
+      if (navigator.vibrate) navigator.vibrate(kind === 'ok' ? 80 : [120, 80, 120]);
+      clearTimeout(showResult.t);
+      showResult.t = setTimeout(() => { r.hidden = true; }, kind === 'ok' ? 1800 : 3200);
+    }
+
+    // Schematic: green registered, orange already in today, red not recognised, grey cancelled.
+    function decide(raw) {
+      const code = String(raw || '').trim().toUpperCase();
+      if (!code) return;
+      const now = Date.now();
+      if (code === lastCode && now - lastAt < 3000) return;  // the same badge held in front of the camera
+      lastCode = code; lastAt = now;
+      const scannedAt = new Date().toISOString();
+      queue.push({ clientId: uuid(), code, gate: $('gate').value.trim(), scannedAt });
+      store.set('queue', queue);
+      updateNet();
+
+      const b = byCode.get(code);
+      if (b) {
+        if (inToday.has(code)) {
+          showResult('dup', `<div class="big">Already in today</div><div class="name">${esc(b.name)}</div>
+            <div class="sub">First scanned at ${esc(clock(inToday.get(code)))}. Check this is the badge's owner before letting them in.</div>`);
+        } else {
+          inToday.set(code, scannedAt);
+          saveInToday();
+          showResult('ok', `<div class="big">&#10003; Registered</div><div class="name">${esc(b.name)}</div>
+            <div class="sub">${esc(b.category)}${b.institution ? ' · ' + esc(b.institution) : ''}</div>`);
+        }
+      } else if (cancelled.has(code)) {
+        showResult('off', '<div class="big">Badge cancelled</div><div class="sub">This badge was replaced by a reprint or the registration was cancelled. Send them to the help desk.</div>');
+      } else {
+        showResult('bad', '<div class="big">Not recognised</div><div class="sub">This is not a badge for this conference. Send them to the help desk.</div>');
+      }
+      sync();
+    }
+
+    async function sync() {
+      if (busy || !navigator.onLine) return;
+      busy = true;
+      const sending = queue.slice(0, 200);
+      try {
+        const r = await api('conference/scan/sync', { method: 'POST', body: JSON.stringify({ scans: sending }) });
+        const sent = new Set(sending.map((s) => s.clientId));
+        queue = queue.filter((s) => !sent.has(s.clientId));
+        store.set('queue', queue);
+        // The server is the final word: a badge another phone let in first comes back as a duplicate.
+        const flagged = (r.results || []).filter((x) => x.result === 'duplicate');
+        if (flagged.length) logLine(`${flagged.length} scan(s) were already in at another door.`);
+        roster = { day: r.day, badges: r.badges, cancelled: r.cancelled };
+        store.set('roster', roster);
+        indexRoster();
+        $('syncedAt').textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        if (e.status === 401 || e.status === 403) logLine('Your sign-in has expired. Sign in again to keep uploading; scanning still works.');
+      } finally {
+        busy = false;
+        updateNet();
+      }
+    }
+    function logLine(text) {
+      const log = $('log');
+      log.hidden = false;
+      log.insertAdjacentHTML('afterbegin', `<div>${esc(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))} · ${esc(text)}</div>`);
+    }
+
+    // ---------- camera ----------
+    let detector = null;
+    let canvas = null;
+    async function startCamera() {
+      const video = $('video');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
+        video.srcObject = stream;
+        await video.play();
+      } catch (e) {
+        $('startText').textContent = 'The camera could not be opened. Allow camera access for this site, or type badge codes below.';
+        return;
+      }
+      if ('BarcodeDetector' in window) {
+        try { detector = new window.BarcodeDetector({ formats: ['qr_code'] }); } catch { detector = null; }
+      }
+      canvas = document.createElement('canvas');
+      $('start').hidden = true;
+      video.hidden = false;
+      $('frame').hidden = false;
+      try { await navigator.wakeLock?.request('screen'); } catch { /* not granted; fine */ }
+      loop();
+    }
+    async function loop() {
+      const video = $('video');
+      if (video.readyState >= 2) {
+        try {
+          if (detector) {
+            const codes = await detector.detect(video);
+            if (codes[0]) decide(codes[0].rawValue);
+          } else if (window.jsQR) {
+            const w = 640;
+            const h = Math.round(video.videoHeight * (w / video.videoWidth)) || 480;
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(video, 0, 0, w, h);
+            const img = ctx.getImageData(0, 0, w, h);
+            const hit = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+            if (hit) decide(hit.data);
+          }
+        } catch { /* a frame that cannot be read is simply skipped */ }
+      }
+      setTimeout(loop, 150);
+    }
+
+    $('manual').addEventListener('submit', (e) => {
+      e.preventDefault();
+      decide($('manualCode').value);
+      $('manualCode').value = '';
+    });
+    $('startBtn').addEventListener('click', startCamera);
+    window.addEventListener('online', () => { updateNet(); sync(); });
+    window.addEventListener('offline', updateNet);
+    setInterval(() => { if (queue.length) sync(); }, 10000);
+    setInterval(() => { if (!queue.length) refresh(); }, 60000);
+
+    async function refresh() {
+      try {
+        const r = await api('conference/scan/roster');
+        $('eventName').textContent = r.event?.name || 'Badge scanner';
+        roster = { day: r.day, badges: r.badges, cancelled: r.cancelled };
+        store.set('roster', roster);
+        store.set('event', r.event?.name || '');
+        indexRoster();
+        $('syncedAt').textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        return true;
+      } catch (e) {
+        if (e.status === 401) {
+          $('startText').innerHTML = `Sign in with your staff account to scan. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>`;
+          return false;
+        }
+        if (e.status === 403) {
+          $('startText').textContent = 'This account has not been given scanner access. Ask the registration administrator to add you.';
+          return false;
+        }
+        return roster !== null; // offline: carry on with the copy already on this phone
+      }
+    }
+
+    (async function boot() {
+      indexRoster();
+      updateNet();
+      const ok = await refresh();
+      if (!ok) return;
+      $('eventName').textContent = $('eventName').textContent === 'Badge scanner' ? (store.get('event', '') || 'Badge scanner') : $('eventName').textContent;
+      $('startText').textContent = `${byCode.size} badge(s) loaded on this phone. Scanning keeps working if the internet drops; scans upload when it returns.`;
+      $('startBtn').hidden = false;
+      if (queue.length) sync();
+    })();
+  })();
+  </script>
+</body>
+</html>

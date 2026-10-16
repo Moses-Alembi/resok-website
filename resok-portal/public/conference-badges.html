@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Print Badges - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    /* Four A6 badges (105 x 148 mm, standard lanyard size) to an A4 sheet, cut on the lines. */
+    :root{--green:#087539;--red:#bc0b22;--ink:#16202c;--muted:#667085}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;color:var(--ink);background:#eef1f4}
+    [hidden]{display:none!important}
+    .bar{background:#fff;border-bottom:1px solid #ddd;padding:12px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+    .bar h1{font-size:16px}
+    .bar .sp{flex:1}
+    .bar label{font-size:14px;display:flex;gap:6px;align-items:center}
+    .btn{border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer;background:var(--green);color:#fff}
+    .btn.ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .msg{padding:10px 18px;font-size:14px;color:var(--muted)}
+    .sheet{width:210mm;height:297mm;background:#fff;margin:14px auto;display:grid;grid-template-columns:105mm 105mm;grid-template-rows:148.5mm 148.5mm;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+    .badge{position:relative;border:0.2mm dashed #c9ced6;display:flex;flex-direction:column;overflow:hidden}
+    .badge .head{display:flex;align-items:center;gap:3mm;padding:5mm 6mm 3mm}
+    .badge .head img{height:9mm}
+    .badge .head .ev{font-size:2.9mm;font-weight:700;line-height:1.25;color:#344054}
+    .badge .name{font-size:7.6mm;font-weight:800;line-height:1.1;padding:4mm 6mm 1mm;text-align:center;word-break:break-word}
+    .badge .inst{font-size:3.6mm;text-align:center;padding:0 6mm;color:#344054}
+    .badge .country{font-size:3.2mm;text-align:center;color:var(--muted);margin-top:.8mm}
+    .badge .qr{width:38mm;height:38mm;margin:4mm auto 2mm}
+    .badge .qr svg{width:100%;height:100%;display:block}
+    .badge .code{text-align:center;font-family:Consolas,monospace;font-size:2.6mm;color:var(--muted);letter-spacing:.05em}
+    .badge .band{margin-top:auto;color:#fff;text-align:center;font-weight:800;font-size:5mm;letter-spacing:.06em;text-transform:uppercase;padding:4mm 3mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @media print{
+      body{background:#fff}
+      .bar,.msg{display:none!important}
+      .sheet{margin:0;box-shadow:none;page-break-after:always;break-after:page}
+      @page{size:A4;margin:0}
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <h1 id="title">Print badges</h1>
+    <span class="sp"></span>
+    <label><input type="checkbox" id="onlyNew" checked> Only badges not printed yet</label>
+    <button class="btn ghost" type="button" id="reload">Refresh</button>
+    <button class="btn" type="button" id="print">Print</button>
+    <button class="btn ghost" type="button" id="mark" disabled>Mark these as printed</button>
+  </div>
+  <div class="msg" id="msg">Loading&hellip;</div>
+  <div id="sheets"></div>
+
+  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
+  <script src="js/vendor/qrcode-1.4.4.js"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const api = (p, o) => window.ResokPortal.api(p, o);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    // A fixed colour per category, so the same category always prints the same band.
+    const palette = ['#087539', '#bc0b22', '#1d4f91', '#7a3db8', '#b54708', '#0e7490', '#475467', '#a21caf'];
+    const colourFor = (name) => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return palette[h % palette.length]; };
+    let badges = [];
+    const ids = new URLSearchParams(location.search).get('ids') || '';
+
+    function qrSvg(code) {
+      const qr = window.qrcode(0, 'M');
+      qr.addData(code);
+      qr.make();
+      return qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    }
+
+    async function load() {
+      $('msg').textContent = 'Loading…';
+      $('sheets').innerHTML = '';
+      try {
+        const q = new URLSearchParams();
+        if ($('onlyNew').checked) q.set('unprinted', '1');
+        if (ids) q.set('ids', ids);
+        const r = await api('conference/admin/badges&' + q.toString());
+        badges = r.badges;
+        $('title').textContent = `Print badges · ${r.event.name}`;
+        const evName = r.event.name.replace(/\s*\(.*\)\s*$/, '');
+        const pages = [];
+        for (let i = 0; i < badges.length; i += 4) pages.push(badges.slice(i, i + 4));
+        $('sheets').innerHTML = pages.map((page) => `<div class="sheet">${page.map((b) => `
+          <div class="badge">
+            <div class="head"><img src="assets/img/logo.png" alt=""><div class="ev">${esc(evName)}</div></div>
+            <div class="name">${esc(b.name)}</div>
+            <div class="inst">${esc(b.institution || '')}</div>
+            <div class="country">${esc(b.country || '')}</div>
+            <div class="qr">${qrSvg(b.code)}</div>
+            <div class="code">${esc(b.code)}</div>
+            <div class="band" style="background:${colourFor(b.category)}">${esc(b.category)}</div>
+          </div>`).join('')}</div>`).join('');
+        $('msg').textContent = badges.length
+          ? `${badges.length} badge(s) on ${pages.length} A4 sheet(s), sorted by surname. Print at 100% scale (not "fit to page"), then cut on the dashed lines.`
+          : 'No badges to print. Badges appear here once a registration is confirmed.';
+        $('mark').disabled = !badges.length;
+      } catch (e) {
+        $('msg').innerHTML = e.status === 401 ? `Sign in with a registration desk account. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>` : esc(e.message);
+      }
+    }
+    $('onlyNew').addEventListener('change', load);
+    $('reload').addEventListener('click', load);
+    $('print').addEventListener('click', () => window.print());
+    $('mark').addEventListener('click', async () => {
+      const r = await api('conference/admin/badges/printed', { method: 'POST', body: JSON.stringify({ badgeIds: badges.map((b) => b.badgeId) }) });
+      $('msg').textContent = `${r.marked} badge(s) marked as printed.`;
+      $('mark').disabled = true;
+    });
+    load();
+  })();
+  </script>
+</body>
+</html>

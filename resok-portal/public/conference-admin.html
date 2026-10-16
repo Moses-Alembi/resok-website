@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registration Desk - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06);--amber:#b54708;--amber-soft:#fff6e5}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:14.5px}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1200px;margin:0 auto;padding:0 18px;min-height:62px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .top img{height:34px;display:block}
+    .top h1{font-size:17px}
+    .top .links{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+    main{max-width:1200px;margin:0 auto;padding:20px 18px 60px}
+    .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+    .tabs button{background:none;border:0;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+    .tabs button[aria-selected=true]{color:var(--green);border-bottom-color:var(--green)}
+    .panel{background:#fff;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+    h2{font-size:16px;margin-bottom:12px}
+    h3{font-size:14.5px;margin:16px 0 8px}
+    .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+    .tile{background:#fff;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);border-left:4px solid var(--line)}
+    .tile b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+    .tile span{color:var(--muted);font-size:13px}
+    .tile.ok{border-left-color:var(--green)} .tile.wait{border-left-color:var(--amber)} .tile.act{border-left-color:var(--red)}
+    table{width:100%;border-collapse:collapse}
+    th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    tbody tr.click{cursor:pointer}
+    tbody tr.click:hover{background:#f6faf7}
+    .tbl{overflow-x:auto}
+    .chip{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+    .chip.confirmed{background:#e8f3ec;color:var(--green)}
+    .chip.awaiting_payment{background:var(--amber-soft);color:var(--amber)}
+    .chip.cancelled{background:#f2f4f7;color:var(--muted)}
+    .chip.pending{background:#fdecee;color:var(--red)}
+    .chip.rejected{background:#f2f4f7;color:var(--muted)}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .filters > *{flex:0 1 auto}
+    input[type=text],input[type=email],input[type=number],input[type=date],input[type=datetime-local],select,textarea{border:1px solid #d0d5dd;border-radius:8px;padding:9px 11px;font:inherit;font-size:14px;background:#fff;color:var(--ink);width:100%}
+    .filters input{min-width:260px}
+    label{display:block;font-weight:600;font-size:13px;margin-bottom:5px}
+    .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+    .field{margin-bottom:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > *{flex:1;min-width:150px}
+    .check{display:flex;gap:8px;align-items:center;font-weight:400;font-size:14px}
+    .btn{border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;text-decoration:none;white-space:nowrap}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn-danger{background:#fff;border:1px solid #f1b9c1;color:var(--red)}
+    .btn:disabled{opacity:.6;cursor:wait}
+    .notice{border-radius:10px;padding:11px 14px;font-size:14px;margin-bottom:12px}
+    .notice.error{background:#fdecee;color:var(--red)} .notice.ok{background:#e8f3ec;color:var(--green)} .notice.info{background:#eef6ff;color:#1d4f91}
+    .drawer{position:fixed;inset:0;background:rgba(16,24,40,.45);display:flex;justify-content:flex-end;z-index:100}
+    .drawer > div{background:#fff;width:min(620px,100%);height:100%;overflow:auto;padding:22px}
+    .drawer header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .drawer header button{margin-left:auto}
+    dl{display:grid;grid-template-columns:max-content 1fr;gap:5px 14px;font-size:14px}
+    dt{color:var(--muted)}
+    .pay{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+    summary{cursor:pointer;font-weight:700}
+    .win{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end}
+    .hist{font-size:12.5px;color:var(--muted)}
+    @media (max-width:640px){.win{grid-template-columns:1fr 1fr}.filters input{min-width:0}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <img src="assets/img/logo.png" alt="ReSoK">
+      <h1 id="title">Registration desk</h1>
+      <div class="links">
+        <a class="btn btn-ghost" href="conference-scan" id="lnkScan"><i class="fas fa-qrcode"></i> Scanner</a>
+        <a class="btn btn-ghost" href="conference-badges" id="lnkBadges" hidden><i class="fas fa-id-badge"></i> Print badges</a>
+        <a class="btn btn-ghost" id="lnkExport" hidden><i class="fas fa-file-csv"></i> Export</a>
+        <a class="btn btn-ghost" href="conference"><i class="fas fa-eye"></i> Delegate view</a>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div id="boot" class="panel">Loading&hellip;</div>
+    <div id="app" hidden>
+      <nav class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="overview">Overview</button>
+        <button role="tab" aria-selected="false" data-tab="regs">Registrations</button>
+        <button role="tab" aria-selected="false" data-tab="fees" data-need="admin">Fees and extras</button>
+        <button role="tab" aria-selected="false" data-tab="settings" data-need="admin">Settings and staff</button>
+      </nav>
+
+      <section data-pane="overview">
+        <div class="tiles" id="tiles"></div>
+        <div class="panel"><h2>By category</h2><div class="tbl"><table><thead><tr><th>Category</th><th class="num">Confirmed</th><th class="num">Awaiting payment</th></tr></thead><tbody id="catStats"></tbody></table></div></div>
+        <div class="panel"><h2>Money</h2><div class="tbl"><table><thead><tr><th>Currency</th><th class="num">Confirmed</th><th class="num">Waiting to be checked</th><th class="num">Rejected</th></tr></thead><tbody id="moneyStats"></tbody></table></div></div>
+        <div class="panel"><h2>Attendance</h2><div id="attendance"></div></div>
+      </section>
+
+      <section data-pane="regs" hidden>
+        <div class="panel">
+          <div class="filters">
+            <select id="fStatus" aria-label="Show">
+              <option value="">Everyone</option>
+              <option value="pending_payment">Payments to check</option>
+              <option value="awaiting_payment">Awaiting payment</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <input type="text" id="fSearch" placeholder="Search name, email, reference, institution or phone" aria-label="Search">
+          </div>
+          <div class="tbl"><table>
+            <thead><tr><th>Reference</th><th>Name</th><th>Category</th><th>Status</th><th class="num">Amount</th><th class="num">Days in</th></tr></thead>
+            <tbody id="regRows"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <section data-pane="fees" hidden>
+        <div class="panel">
+          <h2>Registration categories</h2>
+          <p class="hint" style="margin-bottom:12px">Each category has one or more fees by date, for example Early bird until 30 June, then Standard, then Onsite. The fee that applies on the day a delegate registers is what they pay. Leave a start or end date empty for "from the beginning" or "until the end".</p>
+          <div id="catList"></div>
+          <button class="btn btn-ghost" type="button" id="addCat"><i class="fas fa-plus"></i> Add a category</button>
+        </div>
+        <div class="panel">
+          <h2>Workshops and extras</h2>
+          <div id="addonList"></div>
+          <button class="btn btn-ghost" type="button" id="addAddon"><i class="fas fa-plus"></i> Add an extra</button>
+        </div>
+      </section>
+
+      <section data-pane="settings" hidden>
+        <div class="panel">
+          <h2>Registration</h2>
+          <div id="setMsg" class="notice" hidden></div>
+          <label class="check" style="margin-bottom:12px"><input type="checkbox" id="sOpen"> Registration is switched on</label>
+          <div class="row">
+            <div class="field"><label for="sOpens">Opens <span class="hint">optional</span></label><input type="datetime-local" id="sOpens"></div>
+            <div class="field"><label for="sCloses">Closes <span class="hint">optional</span></label><input type="datetime-local" id="sCloses"></div>
+          </div>
+          <div class="field"><label for="sNotes">How to pay <span class="hint">shown to delegates who owe money: paybill and account, bank details</span></label><textarea id="sNotes" rows="5"></textarea></div>
+          <button class="btn btn-primary" type="button" id="saveSettings">Save</button>
+        </div>
+        <div class="panel">
+          <h2>Staff</h2>
+          <p class="hint" style="margin-bottom:10px"><strong>Finance</strong> confirms payments and exports. <strong>Registration</strong> runs the desk: settles at the desk, reprints, transfers, prints badges, and can scan. <strong>Scanner</strong> can only scan badges. They need a portal account first.</p>
+          <div id="staffMsg" class="notice" hidden></div>
+          <div class="row" style="align-items:end">
+            <div class="field"><label for="stEmail">Email</label><input type="email" id="stEmail"></div>
+            <div class="field"><label for="stRole">Role</label><select id="stRole"><option value="scanner">Scanner</option><option value="registration">Registration desk</option><option value="finance">Finance</option></select></div>
+            <div class="field" style="flex:0"><button class="btn btn-primary" type="button" id="addStaff">Add</button></div>
+          </div>
+          <div class="tbl"><table><thead><tr><th>Email</th><th>Role</th><th></th></tr></thead><tbody id="staffRows"></tbody></table></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="drawer" id="drawer" hidden><div id="drawerBody"></div></div>
+
+  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const api = (p, o) => window.ResokPortal.api(p, o);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const money = (n, cur) => `${cur} ${Number(n || 0).toLocaleString('en-KE', { maximumFractionDigits: 2 })}`;
+    const fmtDate = (d) => d ? new Date(String(d).replace(' ', 'T')).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const statusLabel = { awaiting_payment: 'Awaiting payment', confirmed: 'Confirmed', cancelled: 'Cancelled', pending: 'To check', rejected: 'Rejected' };
+    let ov = null;
+    const has = (r) => ov && ov.roles.includes(r);
+
+    function note(el, type, text) { el.className = `notice ${type}`; el.textContent = text; el.hidden = !text; }
+
+    document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== b.dataset.tab; });
+      if (b.dataset.tab === 'regs') loadRegs();
+    }));
+
+    async function loadOverview() {
+      ov = await api('conference/admin/overview');
+      $('title').textContent = `Registration desk · ${ov.event.name}`;
+      document.querySelectorAll('[data-need]').forEach((b) => { b.hidden = !has(b.dataset.need); });
+      $('lnkBadges').hidden = !has('registration');
+      $('lnkExport').hidden = !(has('finance') || has('admin'));
+      $('lnkExport').href = 'api/index.php?route=conference/admin/export';
+      const s = ov.stats.byStatus || {};
+      const pendingPay = (ov.stats.money || []).filter((m) => m.status === 'pending').reduce((a, m) => a + Number(m.n), 0);
+      const stateText = { open: 'Open', closed: 'Closed', not_open: 'Not open' }[ov.state];
+      $('tiles').innerHTML = [
+        ['ok', s.confirmed || 0, 'Confirmed'],
+        ['wait', s.awaiting_payment || 0, 'Awaiting payment'],
+        ['act', pendingPay, 'Payments to check'],
+        ['', `${ov.stats.badges.printed}/${ov.stats.badges.total}`, 'Badges printed'],
+        ['', stateText, 'Registration'],
+      ].map(([k, v, l]) => `<div class="tile ${k}"><b>${esc(v)}</b><span>${l}</span></div>`).join('');
+      const cats = {};
+      (ov.stats.byCategory || []).forEach((r) => { cats[r.name] = cats[r.name] || {}; cats[r.name][r.status] = r.n; });
+      $('catStats').innerHTML = Object.entries(cats).map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${v.confirmed || 0}</td><td class="num">${v.awaiting_payment || 0}</td></tr>`).join('') || '<tr><td colspan="3" class="hint">No registrations yet.</td></tr>';
+      const cur = {};
+      (ov.stats.money || []).forEach((m) => { cur[m.currency] = cur[m.currency] || {}; cur[m.currency][m.status] = m.total; });
+      $('moneyStats').innerHTML = Object.entries(cur).map(([c, v]) => `<tr><td>${c}</td><td class="num">${money(v.confirmed, c)}</td><td class="num">${money(v.pending, c)}</td><td class="num">${money(v.rejected, c)}</td></tr>`).join('') || '<tr><td colspan="4" class="hint">No payments yet.</td></tr>';
+      $('attendance').innerHTML = (ov.stats.checkinsByDay || []).length
+        ? `<table><tbody>${ov.stats.checkinsByDay.map((d) => `<tr><td>${esc(fmtDate(d.scan_day))}</td><td class="num">${d.people} people</td></tr>`).join('')}</tbody></table>`
+        : '<p class="hint">Attendance appears here once badges are scanned at the venue.</p>';
+      if (has('admin')) { renderCats(); renderAddons(); renderSettings(); renderStaff(ov.staff || []); }
+    }
+
+    // ---------------- registrations ----------------
+    let searchTimer = null;
+    $('fStatus').addEventListener('change', loadRegs);
+    $('fSearch').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadRegs, 300); });
+    async function loadRegs() {
+      const q = new URLSearchParams({ status: $('fStatus').value, q: $('fSearch').value.trim() });
+      const r = await api('conference/admin/registrations&' + q.toString());
+      $('regRows').innerHTML = r.registrations.map((x) => `<tr class="click" data-id="${x.id}">
+        <td>${esc(x.ref)}</td><td><strong>${esc(x.name)}</strong><div class="hint">${esc(x.email)}</div></td><td>${esc(x.category)}</td>
+        <td><span class="chip ${x.status}">${statusLabel[x.status]}</span>${x.pendingPayments ? ' <span class="chip pending">Payment to check</span>' : ''}</td>
+        <td class="num">${money(x.amountDue, x.currency)}</td><td class="num">${x.daysIn}</td></tr>`).join('') || '<tr><td colspan="6" class="hint">Nobody matches.</td></tr>';
+      document.querySelectorAll('#regRows tr.click').forEach((tr) => tr.addEventListener('click', () => openReg(tr.dataset.id)));
+    }
+
+    async function openReg(id) {
+      const { registration: r } = await api(`conference/admin/registrations/${id}`);
+      const d = $('drawerBody');
+      const pays = r.payments.map((p) => `<div class="pay">
+          <div><strong>${p.method === 'mpesa' ? 'M-Pesa' : p.method === 'bank' ? 'Bank' : p.method === 'waiver' ? 'Fee waived' : p.method === 'onsite' ? 'Paid at desk' : esc(p.method)}</strong>
+            ${esc(p.reference || '')} · ${money(p.amount, p.currency)} <span class="chip ${p.status}">${statusLabel[p.status] || esc(p.status)}</span></div>
+          <div class="hint">${esc(fmtDate(p.submittedAt))}${p.note ? ' · ' + esc(p.note) : ''}</div>
+          ${p.hasProof ? `<a href="api/index.php?route=conference/payments/${p.id}/proof" target="_blank" rel="noopener">Open the proof</a>` : ''}
+          ${p.status === 'pending' && has('finance') ? `<div class="actions"><button class="btn btn-primary" data-review="${p.id}" data-d="confirm">Confirm payment</button>
+             <input type="text" placeholder="Reason, if rejecting" id="rej-${p.id}" style="flex:1;min-width:160px"><button class="btn btn-danger" data-review="${p.id}" data-d="reject">Reject</button></div>` : ''}
+        </div>`).join('') || '<p class="hint">No payments yet.</p>';
+      const awaiting = r.status === 'awaiting_payment';
+      d.innerHTML = `<header><h2 style="margin:0">${esc(r.badgeName)}</h2><span class="chip ${r.status}">${statusLabel[r.status]}</span><button class="btn btn-ghost" id="closeDrawer">Close</button></header>
+        <div id="drawerMsg" class="notice" hidden></div>
+        <dl><dt>Reference</dt><dd>${esc(r.ref)}</dd><dt>Email</dt><dd>${esc(r.email)}</dd><dt>Category</dt><dd>${esc(r.category?.name)} (${esc(r.feeLabel || '')})</dd>
+          ${r.addons.length ? `<dt>Extras</dt><dd>${r.addons.map((a) => esc(a.name)).join(', ')}</dd>` : ''}
+          <dt>Amount due</dt><dd>${money(r.amountDue, r.currency)} · paid ${money(r.balance.paid, r.currency)} · owing ${money(r.balance.due, r.currency)}</dd>
+          <dt>Institution</dt><dd>${esc(r.institution)}</dd><dt>Country</dt><dd>${esc(r.country)}</dd>
+          ${r.phone ? `<dt>Phone</dt><dd>${esc(r.phone)}</dd>` : ''}${r.profession ? `<dt>Profession</dt><dd>${esc(r.profession)}</dd>` : ''}
+          ${r.dietary ? `<dt>Dietary</dt><dd>${esc(r.dietary)}</dd>` : ''}${r.accessibility ? `<dt>Accessibility</dt><dd>${esc(r.accessibility)}</dd>` : ''}
+          <dt>Badge</dt><dd>${r.badge ? `${esc(r.badge.code)} · ${r.badge.printed ? 'printed' : 'not printed'}` : 'None yet'}</dd>
+          <dt>Attended</dt><dd>${r.checkedInDays.length ? r.checkedInDays.map(fmtDate).join(', ') : 'Not yet'}</dd>
+          ${r.cancelReason ? `<dt>Cancelled</dt><dd>${esc(r.cancelReason)}</dd>` : ''}</dl>
+        <h3>Payments</h3>${pays}
+        ${awaiting && (has('finance') || has('registration')) ? `<details><summary>Take payment at the desk, or waive the fee</summary>
+          <div class="row" style="margin-top:10px"><div class="field"><label>How</label><select id="stMethod"><option value="onsite">Cash or card at the desk</option><option value="mpesa">M-Pesa (checked on the till)</option><option value="bank">Bank (checked on the statement)</option><option value="waiver">Waive the fee (complimentary)</option></select></div>
+          <div class="field"><label>Receipt or reference</label><input type="text" id="stRef"></div></div>
+          <div class="field"><label>Note <span class="hint">required for a waiver, e.g. "Faculty"</span></label><input type="text" id="stNote"></div>
+          <button class="btn btn-primary" id="doSettle">Record and confirm</button></details>` : ''}
+        ${has('registration') && r.status !== 'cancelled' ? `
+          ${r.status === 'confirmed' ? '<details><summary>Reprint the badge</summary><p class="hint" style="margin:8px 0">Issues a new code. The old badge stops working at once, and the delegate gets an email.</p><button class="btn btn-primary" id="doReprint">Issue a new badge</button></details>' : ''}
+          <details><summary>Change badge details</summary><div style="margin-top:10px">
+            <div class="field"><label>Name on badge</label><input type="text" id="edBadge" value="${esc(r.badgeName)}"></div>
+            <div class="row"><div class="field"><label>Institution</label><input type="text" id="edInst" value="${esc(r.institution || '')}"></div><div class="field"><label>Country</label><input type="text" id="edCountry" value="${esc(r.country || '')}"></div></div>
+            <div class="field"><label>Phone</label><input type="text" id="edPhone" value="${esc(r.phone || '')}"></div>
+            <button class="btn btn-primary" id="doDetails">Save details</button></div></details>
+          <details><summary>Transfer to a colleague</summary><div style="margin-top:10px">
+            <div class="row"><div class="field"><label>Colleague's portal email</label><input type="email" id="trEmail"></div><div class="field"><label>Name on their badge</label><input type="text" id="trName"></div></div>
+            <button class="btn btn-primary" id="doTransfer">Transfer</button></div></details>` : ''}
+        ${(has('registration') || has('admin')) && r.status !== 'cancelled' ? `<details><summary>Cancel the registration</summary><div style="margin-top:10px">
+            <div class="field"><label>Reason</label><input type="text" id="cnReason"></div><button class="btn btn-danger" id="doCancel">Cancel registration</button></div></details>` : ''}
+        <h3>History</h3><div class="hist">${(r.history || []).map((h) => `<div>${esc(fmtDate(h.at))} · ${esc(h.action.replace(/_/g, ' '))}${h.by ? ' · ' + esc(h.by) : ''}</div>`).join('')}</div>`;
+      $('drawer').hidden = false;
+      $('closeDrawer').onclick = () => { $('drawer').hidden = true; };
+      const act = async (path, body) => {
+        try {
+          await api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+          await Promise.all([openReg(id), loadRegs(), loadOverview()]);
+        } catch (e) { note($('drawerMsg'), 'error', e.message); }
+      };
+      d.querySelectorAll('[data-review]').forEach((b) => b.addEventListener('click', () =>
+        act(`conference/admin/payments/${b.dataset.review}/review`, { decision: b.dataset.d, note: (document.getElementById('rej-' + b.dataset.review) || {}).value || '' })));
+      const on = (bid, fn) => { const el = document.getElementById(bid); if (el) el.addEventListener('click', fn); };
+      on('doSettle', () => act(`conference/admin/registrations/${id}/settle`, { method: $('stMethod').value, reference: $('stRef').value, note: $('stNote').value }));
+      on('doReprint', () => act(`conference/admin/registrations/${id}/reprint`));
+      on('doDetails', () => act(`conference/admin/registrations/${id}/details`, { badgeName: $('edBadge').value, institution: $('edInst').value, country: $('edCountry').value, phone: $('edPhone').value }));
+      on('doTransfer', () => act(`conference/admin/registrations/${id}/transfer`, { email: $('trEmail').value, badgeName: $('trName').value }));
+      on('doCancel', () => act(`conference/admin/registrations/${id}/cancel`, { reason: $('cnReason').value }));
+    }
+    $('drawer').addEventListener('click', (e) => { if (e.target === $('drawer')) $('drawer').hidden = true; });
+
+    // ---------------- fees ----------------
+    function winRow(w = {}) {
+      return `<div class="win"><div><label>Fee name</label><input type="text" data-k="label" value="${esc(w.label || '')}" placeholder="Early bird"></div>
+        <div><label>Price</label><input type="number" min="0" step="0.01" data-k="price" value="${w.price ?? ''}"></div>
+        <div><label>From</label><input type="date" data-k="startsOn" value="${esc(w.startsOn || '')}"></div>
+        <div><label>Until</label><input type="date" data-k="endsOn" value="${esc(w.endsOn || '')}"></div>
+        <button class="btn btn-ghost" type="button" data-rmwin title="Remove">&times;</button></div>`;
+    }
+    function catForm(c = {}) {
+      const id = c.id || 'new';
+      return `<details ${c.id ? '' : 'open'} data-cat="${id}"><summary>${c.id ? esc(c.name) + ` <span class="hint">${c.windows.map((w) => esc(w.label) + ' ' + money(w.price, c.currency)).join(' · ')}${c.active ? '' : ' · hidden'}${c.adminOnly ? ' · staff only' : ''}</span>` : 'New category'}</summary>
+        <div style="margin-top:10px" class="catf"><div class="row"><div class="field"><label>Name</label><input type="text" data-f="name" value="${esc(c.name || '')}" placeholder="ReSoK member"></div>
+          <div class="field" style="max-width:120px"><label>Currency</label><input type="text" data-f="currency" value="${esc(c.currency || 'KES')}" maxlength="3"></div>
+          <div class="field" style="max-width:130px"><label>Seats <span class="hint">empty = no limit</span></label><input type="number" min="0" data-f="capacity" value="${c.capacity ?? ''}"></div>
+          <div class="field" style="max-width:100px"><label>Order</label><input type="number" min="0" data-f="sortOrder" value="${c.sortOrder ?? 0}"></div></div>
+          <div class="field"><label>Description <span class="hint">optional</span></label><input type="text" data-f="description" value="${esc(c.description || '')}"></div>
+          <div class="row" style="margin-bottom:10px"><label class="check"><input type="checkbox" data-f="memberRate" ${c.memberRate ? 'checked' : ''}> Member rate (active members only)</label>
+            <label class="check"><input type="checkbox" data-f="adminOnly" ${c.adminOnly ? 'checked' : ''}> Staff place people here (faculty, sponsors)</label>
+            <label class="check"><input type="checkbox" data-f="needsProof" ${c.needsProof ? 'checked' : ''}> Needs proof (e.g. student ID)</label>
+            <label class="check"><input type="checkbox" data-f="active" ${c.active === false ? '' : 'checked'}> On sale</label></div>
+          <div class="wins">${(c.windows && c.windows.length ? c.windows : [{}]).map(winRow).join('')}</div>
+          <div class="actions"><button class="btn btn-ghost" type="button" data-addwin>Add a fee</button><button class="btn btn-primary" type="button" data-savecat>Save category</button></div>
+          <div class="notice" hidden data-msg></div></div></details>`;
+    }
+    function bindCatForms(root) {
+      root.querySelectorAll('[data-addwin]').forEach((b) => b.onclick = () => b.closest('.catf').querySelector('.wins').insertAdjacentHTML('beforeend', winRow()));
+      root.addEventListener('click', (e) => { if (e.target.matches('[data-rmwin]')) e.target.closest('.win').remove(); });
+      root.querySelectorAll('[data-savecat]').forEach((b) => b.onclick = async () => {
+        const det = b.closest('details');
+        const f = (k) => det.querySelector(`[data-f="${k}"]`);
+        const body = { name: f('name').value, currency: f('currency').value, capacity: f('capacity').value, sortOrder: f('sortOrder').value,
+          description: f('description').value, memberRate: f('memberRate').checked, adminOnly: f('adminOnly').checked,
+          needsProof: f('needsProof').checked, active: f('active').checked,
+          windows: [...det.querySelectorAll('.win')].map((w) => Object.fromEntries([...w.querySelectorAll('[data-k]')].map((i) => [i.dataset.k, i.value]))) };
+        if (det.dataset.cat !== 'new') body.id = Number(det.dataset.cat);
+        try { await api('conference/admin/categories', { method: 'POST', body: JSON.stringify(body) }); await loadOverview(); }
+        catch (e) { note(det.querySelector('[data-msg]'), 'error', e.message); }
+      });
+    }
+    function renderCats() {
+      $('catList').innerHTML = ov.categories.map(catForm).join('') || '<p class="hint" style="margin-bottom:10px">No categories yet.</p>';
+      bindCatForms($('catList'));
+    }
+    $('addCat').onclick = () => { $('catList').insertAdjacentHTML('beforeend', catForm()); bindCatForms($('catList')); };
+
+    function addonForm(a = {}) {
+      const id = a.id || 'new';
+      return `<details ${a.id ? '' : 'open'} data-addon="${id}"><summary>${a.id ? esc(a.name) + ` <span class="hint">${money(a.price, a.currency)}${a.capacity != null ? ` · ${a.taken}/${a.capacity} seats` : ''}${a.active ? '' : ' · hidden'}</span>` : 'New extra'}</summary>
+        <div style="margin-top:10px" class="addf"><div class="row"><div class="field"><label>Name</label><input type="text" data-f="name" value="${esc(a.name || '')}" placeholder="Pre-conference workshop: Spirometry"></div>
+          <div class="field" style="max-width:130px"><label>Price</label><input type="number" min="0" step="0.01" data-f="price" value="${a.price ?? ''}"></div>
+          <div class="field" style="max-width:110px"><label>Currency</label><input type="text" data-f="currency" value="${esc(a.currency || 'KES')}" maxlength="3"></div>
+          <div class="field" style="max-width:130px"><label>Seats</label><input type="number" min="0" data-f="capacity" value="${a.capacity ?? ''}"></div></div>
+          <div class="field"><label>Description <span class="hint">optional</span></label><input type="text" data-f="description" value="${esc(a.description || '')}"></div>
+          <label class="check" style="margin-bottom:10px"><input type="checkbox" data-f="active" ${a.active === false ? '' : 'checked'}> On sale</label>
+          <button class="btn btn-primary" type="button" data-saveaddon>Save extra</button><div class="notice" hidden data-msg></div></div></details>`;
+    }
+    function bindAddons(root) {
+      root.querySelectorAll('[data-saveaddon]').forEach((b) => b.onclick = async () => {
+        const det = b.closest('details');
+        const f = (k) => det.querySelector(`[data-f="${k}"]`);
+        const body = { name: f('name').value, price: f('price').value, currency: f('currency').value, capacity: f('capacity').value,
+          description: f('description').value, active: f('active').checked };
+        if (det.dataset.addon !== 'new') body.id = Number(det.dataset.addon);
+        try { await api('conference/admin/addons', { method: 'POST', body: JSON.stringify(body) }); await loadOverview(); }
+        catch (e) { note(det.querySelector('[data-msg]'), 'error', e.message); }
+      });
+    }
+    function renderAddons() { $('addonList').innerHTML = ov.addons.map(addonForm).join('') || '<p class="hint" style="margin-bottom:10px">No extras yet.</p>'; bindAddons($('addonList')); }
+    $('addAddon').onclick = () => { $('addonList').insertAdjacentHTML('beforeend', addonForm()); bindAddons($('addonList')); };
+
+    // ---------------- settings and staff ----------------
+    const toLocal = (v) => v ? String(v).replace(' ', 'T').slice(0, 16) : '';
+    function renderSettings() {
+      $('sOpen').checked = ov.settings.open;
+      $('sOpens').value = toLocal(ov.settings.opensAt);
+      $('sCloses').value = toLocal(ov.settings.closesAt);
+      $('sNotes').value = ov.settings.notes || '';
+    }
+    $('saveSettings').onclick = async () => {
+      try {
+        await api('conference/admin/settings', { method: 'POST', body: JSON.stringify({ open: $('sOpen').checked, opensAt: $('sOpens').value, closesAt: $('sCloses').value, notes: $('sNotes').value }) });
+        note($('setMsg'), 'ok', 'Saved.');
+        await loadOverview();
+      } catch (e) { note($('setMsg'), 'error', e.message); }
+    };
+    function renderStaff(list) {
+      const names = { finance: 'Finance', registration: 'Registration desk', scanner: 'Scanner' };
+      $('staffRows').innerHTML = list.map((s) => `<tr><td>${esc(s.email)}</td><td>${names[s.role]}</td><td class="num"><button class="btn btn-danger" data-revoke="${s.id}">Remove</button></td></tr>`).join('') || '<tr><td colspan="3" class="hint">Only administrators so far.</td></tr>';
+      document.querySelectorAll('[data-revoke]').forEach((b) => b.onclick = async () => {
+        const r = await api(`conference/admin/staff/${b.dataset.revoke}/revoke`, { method: 'POST', body: '{}' });
+        renderStaff(r.staff);
+      });
+    }
+    $('addStaff').onclick = async () => {
+      try {
+        const r = await api('conference/admin/staff', { method: 'POST', body: JSON.stringify({ email: $('stEmail').value, role: $('stRole').value }) });
+        renderStaff(r.staff);
+        $('stEmail').value = '';
+        note($('staffMsg'), 'ok', 'Added.');
+      } catch (e) { note($('staffMsg'), 'error', e.message); }
+    };
+
+    (async function boot() {
+      try {
+        await loadOverview();
+        $('boot').hidden = true;
+        $('app').hidden = false;
+        if (has('finance') && !has('admin')) document.querySelector('[data-tab=regs]').click();
+      } catch (e) {
+        $('boot').innerHTML = e.status === 401
+          ? `Sign in with your staff account. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>`
+          : esc(e.message);
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

@@ -162,6 +162,9 @@ check "the original holder's badge stops working"               '"result":"cance
 r=$(get "$OTHER" conference/current)
 check "the colleague now holds the registration"                '"badgeName":"Ms Colleague"' "$r"
 r=$(get "$ADMIN" "conference/admin/badges&unprinted=1")
+check "filters after & reach the server (raw)"                  '"badges":[' "$r"
+r=$(curl -s -b "$ADMIN" "${API}conference%2Fadmin%2Fbadges%26unprinted%3D1")
+check "and when the page's helper encodes them"                 'Ms Colleague' "$r"
 check "unprinted badges are listed for printing"                'Ms Colleague' "$r"
 
 echo "Closing:"

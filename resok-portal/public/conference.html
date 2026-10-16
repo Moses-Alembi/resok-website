@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conference Registration - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06);--amber:#b54708;--amber-soft:#fff6e5}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1000px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:16px}
+    .top img{height:38px;display:block}
+    .top .who{margin-left:auto;font-size:13.5px;color:var(--muted);display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+    .top .who button{background:none;border:0;color:var(--red);font:inherit;font-weight:600;cursor:pointer}
+    .banner{background:var(--green);color:#fff;font-size:13.5px}
+    .banner.closed{background:#475467}
+    .banner-inner{max-width:1000px;margin:0 auto;padding:9px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    main{max-width:1000px;margin:0 auto;padding:24px 18px 60px;display:flex;flex-direction:column;gap:20px}
+    .panel{background:#fff;border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+    h1{font-size:23px;letter-spacing:-.01em}
+    h2{font-size:17px;margin-bottom:12px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:72ch}
+    .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:18px}
+    .fact{background:#f6faf7;border:1px solid #dcebe1;border-radius:10px;padding:12px 14px}
+    .fact b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--green)}
+    .fact span{font-weight:600;font-size:14px}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .tbl{overflow-x:auto}
+    .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#e8f3ec;color:var(--green);margin-left:6px}
+    .tag.grey{background:#f2f4f7;color:var(--muted)}
+    .tag.red{background:#fdecee;color:var(--red)}
+    .windows{font-size:12.5px;color:var(--muted);margin-top:3px}
+    label{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}
+    .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+    input[type=text],input[type=email],input[type=password],input[type=tel],select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;
+      padding:10px 12px;font:inherit;font-size:14.5px;background:#fff;color:var(--ink)}
+    input:focus,select:focus,textarea:focus{outline:2px solid rgba(8,117,57,.25);border-color:var(--green)}
+    .field{margin-bottom:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1;min-width:180px}
+    .choice{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+    .choice:hover{border-color:var(--green)}
+    .choice input{margin-top:4px}
+    .choice.disabled{opacity:.55;cursor:not-allowed}
+    .choice .price{margin-left:auto;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .choice small{display:block;color:var(--muted);font-weight:400}
+    .total{display:flex;justify-content:space-between;align-items:center;background:#f6faf7;border:1px solid #dcebe1;border-radius:10px;padding:12px 16px;font-weight:700;margin:6px 0 16px}
+    .btn{border:0;border-radius:8px;padding:11px 18px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn:disabled{opacity:.6;cursor:wait}
+    .notice{border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+    .notice.info{background:#eef6ff;color:#1d4f91}
+    .notice.warn{background:var(--amber-soft);color:var(--amber)}
+    .notice.error{background:#fdecee;color:var(--red)}
+    .notice.ok{background:#e8f3ec;color:var(--green)}
+    .status{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;padding:6px 12px;border-radius:999px}
+    .status.wait{background:var(--amber-soft);color:var(--amber)}
+    .status.ok{background:#e8f3ec;color:var(--green)}
+    .qr-wrap{display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center}
+    .qr{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;width:min(300px,80vw)}
+    .qr svg{display:block;width:100%;height:auto}
+    .code{font-family:Consolas,monospace;font-size:15px;letter-spacing:.06em;background:#f2f4f7;padding:4px 10px;border-radius:6px;display:inline-block;margin-top:6px}
+    dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:14px;margin-top:12px}
+    dt{color:var(--muted)}
+    .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:18px}
+    .tabs button{background:none;border:0;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+    .tabs button[aria-selected=true]{color:var(--green);border-bottom-color:var(--green)}
+    @media (max-width:640px){.qr-wrap{grid-template-columns:1fr;justify-items:center;text-align:center}.panel{padding:20px}dl{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="../../index.html"><img src="assets/img/logo.png" alt="ReSoK"></a>
+      <div class="who" id="who"></div>
+    </div>
+  </header>
+  <div class="banner" id="banner" hidden><div class="banner-inner" id="bannerText"></div></div>
+
+  <main>
+    <section class="panel" id="loading"><p>Loading&hellip;</p></section>
+
+    <section class="panel" id="intro" hidden>
+      <h1 id="eventName"></h1>
+      <p class="lede">Register for the conference here. You need a ReSoK account: members use their portal login, and anyone else can create a free account in a minute. Abstract authors use the same login.</p>
+      <div class="facts" id="facts"></div>
+    </section>
+
+    <!-- Confirmed: the QR code -->
+    <section class="panel" id="confirmed" hidden>
+      <span class="status ok"><i class="fas fa-check-circle"></i> Registration confirmed</span>
+      <div class="qr-wrap" style="margin-top:18px">
+        <div class="qr" id="qr" role="img" aria-label="Your personal QR code"></div>
+        <div>
+          <h2 style="margin-bottom:6px">Your conference QR code</h2>
+          <p class="lede">Show this at the badge desk to collect your badge. The same code is printed on your badge and scanned at each session, which records your attendance for CPD points. Keep it to yourself: it is your entry pass.</p>
+          <span class="code" id="codeText"></span>
+          <dl id="confirmedFacts"></dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- Awaiting payment -->
+    <section class="panel" id="awaiting" hidden>
+      <span class="status wait"><i class="fas fa-hourglass-half"></i> Waiting for payment</span>
+      <dl id="awaitFacts"></dl>
+      <div id="payState" style="margin-top:18px"></div>
+      <div id="payInstructions" class="notice info" hidden></div>
+      <form id="payForm" hidden>
+        <h2>Tell us about your payment</h2>
+        <div class="field">
+          <label for="payMethod">How did you pay?</label>
+          <select id="payMethod">
+            <option value="mpesa">M-Pesa</option>
+            <option value="bank">Bank transfer or deposit</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="payRef" id="payRefLabel">M-Pesa transaction code <span class="hint">the 10 characters at the start of the confirmation SMS</span></label>
+          <input type="text" id="payRef" autocomplete="off" maxlength="80" />
+        </div>
+        <div class="field">
+          <label for="payProof">Proof <span class="hint" id="proofHint">optional for M-Pesa; required for bank payments. PDF, JPG or PNG, up to 5 MB</span></label>
+          <input type="file" id="payProof" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
+        </div>
+        <div id="payError" class="notice error" hidden></div>
+        <button class="btn btn-primary" type="submit" id="payBtn"><i class="fas fa-paper-plane"></i> Submit payment</button>
+      </form>
+    </section>
+
+    <!-- Fees -->
+    <section class="panel" id="fees" hidden>
+      <h2>Registration fees</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Category</th><th class="num">Fee today</th></tr></thead>
+        <tbody id="feeRows"></tbody>
+      </table></div>
+      <div id="addonFees" style="margin-top:18px"></div>
+    </section>
+
+    <!-- Not signed in -->
+    <section class="panel" id="auth" hidden>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-tab="signin">I have a ReSoK account</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="create">Create an account</button>
+      </div>
+      <div data-pane="signin">
+        <p class="lede" style="margin:0 0 16px">Members, Academy learners and abstract authors all use the same login.</p>
+        <a class="btn btn-primary" id="signinLink" href="login"><i class="fas fa-right-to-bracket"></i> Sign in to register</a>
+      </div>
+      <form data-pane="create" id="createForm" hidden>
+        <div class="row">
+          <div class="field"><label for="cFirst">First name</label><input type="text" id="cFirst" autocomplete="given-name" required></div>
+          <div class="field"><label for="cLast">Last name</label><input type="text" id="cLast" autocomplete="family-name" required></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="cAff">Institution or organisation</label><input type="text" id="cAff" autocomplete="organization" required></div>
+          <div class="field"><label for="cCountry">Country</label><input type="text" id="cCountry" value="Kenya" autocomplete="country-name" required></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="cEmail">Email</label><input type="email" id="cEmail" autocomplete="email" required></div>
+          <div class="field"><label for="cPass">Password <span class="hint">8+ characters with upper and lower case and a number</span></label><input type="password" id="cPass" autocomplete="new-password" required></div>
+        </div>
+        <input type="text" name="website" id="cWebsite" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+        <div id="createMsg" class="notice" hidden></div>
+        <button class="btn btn-primary" type="submit" id="createBtn"><i class="fas fa-user-plus"></i> Create my account</button>
+      </form>
+    </section>
+
+    <!-- Register -->
+    <section class="panel" id="register" hidden>
+      <h2>Register</h2>
+      <div id="regClosed" class="notice warn" hidden></div>
+      <form id="regForm">
+        <fieldset style="border:0">
+          <legend style="font-weight:700;margin-bottom:10px">1. Your category</legend>
+          <div id="catChoices"></div>
+        </fieldset>
+        <fieldset style="border:0;margin-top:10px" id="addonSet" hidden>
+          <legend style="font-weight:700;margin-bottom:10px">2. Workshops and extras <span class="hint">optional</span></legend>
+          <div id="addonChoices"></div>
+        </fieldset>
+        <fieldset style="border:0;margin-top:10px">
+          <legend style="font-weight:700;margin-bottom:10px" id="detailsLegend">3. Your badge and details</legend>
+          <div class="row">
+            <div class="field"><label for="rBadge">Name on your badge <span class="hint">as you want delegates to see it, e.g. Dr Jane Mwangi</span></label><input type="text" id="rBadge" maxlength="60" required></div>
+            <div class="field"><label for="rInst">Institution or organisation</label><input type="text" id="rInst" maxlength="200" required></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="rCountry">Country</label><input type="text" id="rCountry" maxlength="60" required></div>
+            <div class="field"><label for="rProf">Profession or cadre <span class="hint">optional</span></label><input type="text" id="rProf" maxlength="120" placeholder="e.g. Clinical officer, Nurse, Researcher"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="rPhone">Phone <span class="hint">optional, for conference updates</span></label><input type="tel" id="rPhone" maxlength="30" placeholder="+254 712 345 678"></div>
+            <div class="field"><label for="rDiet">Dietary needs <span class="hint">optional</span></label><input type="text" id="rDiet" maxlength="200"></div>
+          </div>
+          <div class="field"><label for="rAccess">Accessibility needs <span class="hint">optional</span></label><input type="text" id="rAccess" maxlength="300"></div>
+          <label style="font-weight:400;display:flex;gap:10px;align-items:flex-start"><input type="checkbox" id="rShare" style="margin-top:4px">
+            <span>Exhibitors may receive my name, institution and email if I let them scan my badge at their stand. <span class="hint">If unticked, they receive your name and institution only.</span></span></label>
+        </fieldset>
+        <div class="total"><span>Total to pay</span><span id="total">&mdash;</span></div>
+        <div id="regError" class="notice error" hidden></div>
+        <button class="btn btn-primary" type="submit" id="regBtn"><i class="fas fa-check"></i> Register</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
+  <script src="js/vendor/qrcode-1.4.4.js"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const api = (p, o) => window.ResokPortal.api(p, o);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const money = (n, cur) => `${cur} ${Number(n).toLocaleString('en-KE', { maximumFractionDigits: 2 })}`;
+    const fmtDate = (d) => d ? new Date(d.replace(' ', 'T')).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    let data = null;
+    const formLoadedAt = Date.now();
+
+    function show(id, on = true) { $(id).hidden = !on; }
+    function notice(el, type, text) { el.className = `notice ${type}`; el.textContent = text; el.hidden = !text; }
+
+    function windowsText(c) {
+      if (c.windows.length < 2) return '';
+      return c.windows.map((w) => `${esc(w.label)}: ${money(w.price, c.currency)}${w.endsOn ? ` until ${fmtDate(w.endsOn)}` : ''}`).join(' · ');
+    }
+
+    function renderHeader() {
+      const e = data.event;
+      $('eventName').textContent = e.name;
+      document.title = `Register: ${e.name} - ReSoK`;
+      const facts = [];
+      if (e.startsOn) facts.push(['Dates', `${fmtDate(e.startsOn)}${e.endsOn && e.endsOn !== e.startsOn ? ' – ' + fmtDate(e.endsOn) : ''}`]);
+      else facts.push(['Dates', 'To be announced']);
+      facts.push(['Venue', e.venue || 'To be announced']);
+      const st = data.registration.state;
+      facts.push(['Registration', st === 'open' ? (data.registration.closesAt ? `Open until ${fmtDate(data.registration.closesAt)}` : 'Open') : st === 'closed' ? 'Closed' : 'Not open yet']);
+      $('facts').innerHTML = facts.map(([k, v]) => `<div class="fact"><b>${k}</b><span>${esc(v)}</span></div>`).join('');
+      const banner = $('banner');
+      banner.hidden = false;
+      banner.classList.toggle('closed', st !== 'open');
+      $('bannerText').innerHTML = st === 'open'
+        ? `<strong>Registration is open.</strong>${data.registration.closesAt ? ` It closes on ${esc(fmtDate(data.registration.closesAt))}.` : ''}`
+        : st === 'closed' ? '<strong>Registration has closed.</strong> Contact the secretariat if you still need to attend.'
+        : `<strong>Registration is not open yet.</strong>${data.registration.opensAt ? ` It opens on ${esc(fmtDate(data.registration.opensAt))}.` : ' Fees and categories below may still change.'}`;
+    }
+
+    function renderFees() {
+      const rows = data.categories.map((c) => `<tr><td><strong>${esc(c.name)}</strong>${c.memberRate ? '<span class="tag">ReSoK members</span>' : ''}${c.full ? '<span class="tag red">Full</span>' : ''}
+        ${c.description ? `<div class="windows">${esc(c.description)}</div>` : ''}${windowsText(c) ? `<div class="windows">${windowsText(c)}</div>` : ''}</td>
+        <td class="num">${c.today ? money(c.today.price, c.currency) + `<div class="windows">${esc(c.today.label)}</div>` : '<span class="tag grey">Not on sale today</span>'}</td></tr>`).join('');
+      $('feeRows').innerHTML = rows || '<tr><td colspan="2">Fees will be published here.</td></tr>';
+      $('addonFees').innerHTML = data.addons.length ? `<h2 style="font-size:15px">Workshops and extras</h2><div class="tbl"><table><tbody>${data.addons.map((a) =>
+        `<tr><td><strong>${esc(a.name)}</strong>${a.full ? '<span class="tag red">Full</span>' : ''}${a.description ? `<div class="windows">${esc(a.description)}</div>` : ''}</td><td class="num">${money(a.price, a.currency)}</td></tr>`).join('')}</tbody></table></div>` : '';
+      show('fees');
+    }
+
+    function renderWho() {
+      const who = $('who');
+      if (!data.me) { who.innerHTML = ''; return; }
+      const staff = (data.me.staffRoles || []).length ? '<a href="conference-admin">Registration desk</a>' : '';
+      who.innerHTML = `${staff}<span>${esc(data.me.email)}</span><button type="button" id="signOut">Sign out</button>`;
+      $('signOut').addEventListener('click', () => window.ResokPortal.logout());
+    }
+
+    // ---------- registration form ----------
+    function selectedCategory() {
+      const r = document.querySelector('input[name=cat]:checked');
+      return r ? data.categories.find((c) => String(c.id) === r.value) : null;
+    }
+    function updateTotal() {
+      const c = selectedCategory();
+      if (!c || !c.today) { $('total').textContent = '—'; return; }
+      let sum = c.today.price;
+      document.querySelectorAll('input[name=addon]:checked').forEach((cb) => {
+        const a = data.addons.find((x) => String(x.id) === cb.value);
+        if (a) sum += a.price;
+      });
+      $('total').textContent = money(sum, c.currency);
+      document.querySelectorAll('input[name=addon]').forEach((cb) => {
+        const a = data.addons.find((x) => String(x.id) === cb.value);
+        const wrong = a && a.currency !== c.currency;
+        cb.disabled = a.full || wrong;
+        if (cb.disabled) cb.checked = false;
+      });
+    }
+
+    function renderRegister() {
+      const st = data.registration.state;
+      show('register');
+      const closed = $('regClosed');
+      if (st !== 'open') {
+        notice(closed, 'warn', st === 'closed' ? 'Registration has closed.' : 'Registration is not open yet. You will be able to register here once it opens.');
+        $('regForm').hidden = true;
+        return;
+      }
+      closed.hidden = true;
+      $('regForm').hidden = false;
+      const isMember = data.me.isMemberInGoodStanding;
+      $('catChoices').innerHTML = data.categories.map((c) => {
+        const blocked = c.full || !c.today || (c.memberRate && !isMember);
+        const why = c.full ? 'Full' : !c.today ? 'Not on sale today' : (c.memberRate && !isMember) ? 'For ReSoK members whose membership is active' : '';
+        return `<label class="choice${blocked ? ' disabled' : ''}"><input type="radio" name="cat" value="${c.id}" ${blocked ? 'disabled' : ''} required>
+          <span><strong>${esc(c.name)}</strong>${c.description ? `<small>${esc(c.description)}</small>` : ''}${why ? `<small>${esc(why)}</small>` : ''}${c.needsProof ? '<small>You will be asked for proof of eligibility with your payment.</small>' : ''}</span>
+          <span class="price">${c.today ? money(c.today.price, c.currency) : ''}</span></label>`;
+      }).join('') || '<p class="lede">No categories are on sale yet.</p>';
+      if (!isMember && data.categories.some((c) => c.memberRate)) {
+        $('catChoices').insertAdjacentHTML('beforeend', '<p class="hint" style="margin-top:-2px">A member rate needs an active ReSoK membership. <a href="payment">Renew or join</a>, then come back.</p>');
+      }
+      $('addonSet').hidden = !data.addons.length;
+      $('detailsLegend').textContent = `${data.addons.length ? '3' : '2'}. Your badge and details`;
+      $('addonChoices').innerHTML = data.addons.map((a) => `<label class="choice${a.full ? ' disabled' : ''}"><input type="checkbox" name="addon" value="${a.id}" ${a.full ? 'disabled' : ''}>
+        <span><strong>${esc(a.name)}</strong>${a.description ? `<small>${esc(a.description)}</small>` : ''}${a.full ? '<small>Full</small>' : ''}</span><span class="price">${money(a.price, a.currency)}</span></label>`).join('');
+      const p = data.me.profile || {};
+      $('rBadge').value = [p.title, p.firstName, p.lastName].filter(Boolean).join(' ');
+      $('rInst').value = p.affiliation || '';
+      $('rCountry').value = p.country || 'Kenya';
+      document.querySelectorAll('input[name=cat], input[name=addon]').forEach((el) => el.addEventListener('change', updateTotal));
+      updateTotal();
+    }
+
+    $('regForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const c = selectedCategory();
+      const err = $('regError');
+      if (!c) { notice(err, 'error', 'Choose your category.'); return; }
+      const btn = $('regBtn');
+      btn.disabled = true;
+      err.hidden = true;
+      try {
+        await api('conference/register', { method: 'POST', body: JSON.stringify({
+          categoryId: c.id,
+          addons: [...document.querySelectorAll('input[name=addon]:checked')].map((cb) => Number(cb.value)),
+          badgeName: $('rBadge').value, institution: $('rInst').value, country: $('rCountry').value,
+          profession: $('rProf').value, phone: $('rPhone').value, dietary: $('rDiet').value,
+          accessibility: $('rAccess').value, shareContact: $('rShare').checked,
+        }) });
+        await load();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        notice(err, 'error', e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---------- payment ----------
+    function renderAwaiting(reg) {
+      show('awaiting');
+      $('awaitFacts').innerHTML = `<dt>Reference</dt><dd><strong>${esc(reg.ref)}</strong></dd>
+        <dt>Category</dt><dd>${esc(reg.category ? reg.category.name : '')} (${esc(reg.feeLabel || '')})</dd>
+        ${reg.addons.length ? `<dt>Extras</dt><dd>${reg.addons.map((a) => esc(a.name)).join(', ')}</dd>` : ''}
+        <dt>Amount due</dt><dd><strong>${money(reg.balance.due, reg.currency)}</strong></dd>`;
+      const pending = reg.payments.find((p) => p.status === 'pending');
+      const lastRejected = [...reg.payments].reverse().find((p) => p.status === 'rejected');
+      const state = $('payState');
+      if (pending) {
+        state.innerHTML = `<div class="notice info"><strong>Payment received, waiting for confirmation.</strong> You told us about a ${pending.method === 'mpesa' ? 'M-Pesa' : 'bank'} payment (${esc(pending.reference)}) of ${money(pending.amount, pending.currency)}. Finance checks it against the statement, usually within two working days. Your QR code appears here as soon as it is confirmed, and you will get an email.</div>`;
+        $('payForm').hidden = true;
+        $('payInstructions').hidden = true;
+        return;
+      }
+      state.innerHTML = lastRejected ? `<div class="notice error"><strong>Your last payment (${esc(lastRejected.reference)}) could not be confirmed.</strong> ${esc(lastRejected.note || '')} Please check it and submit again.</div>` : '';
+      const notes = (data.registration.notes || '').trim();
+      $('payInstructions').hidden = !notes;
+      $('payInstructions').innerHTML = notes ? `<strong>How to pay</strong><br>${esc(notes).replace(/\n/g, '<br>')}<br>Use <strong>${esc(reg.ref)}</strong> as the account number or reference.` : '';
+      $('payForm').hidden = false;
+      $('proofHint').textContent = reg.category && reg.category.needsProof
+        ? 'required: attach proof of eligibility (for example a student ID). PDF, JPG or PNG, up to 5 MB'
+        : 'optional for M-Pesa; required for bank payments. PDF, JPG or PNG, up to 5 MB';
+    }
+
+    $('payMethod').addEventListener('change', () => {
+      const m = $('payMethod').value;
+      $('payRefLabel').innerHTML = m === 'mpesa'
+        ? 'M-Pesa transaction code <span class="hint">the 10 characters at the start of the confirmation SMS</span>'
+        : 'Bank reference <span class="hint">the transaction number on your slip or transfer confirmation</span>';
+    });
+
+    $('payForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const fd = new FormData();
+      fd.append('method', $('payMethod').value);
+      fd.append('reference', $('payRef').value.trim());
+      if ($('payProof').files[0]) fd.append('proof', $('payProof').files[0]);
+      const btn = $('payBtn');
+      btn.disabled = true;
+      $('payError').hidden = true;
+      try {
+        await api('conference/payment', { method: 'POST', body: fd });
+        $('payForm').reset();
+        await load();
+      } catch (e) {
+        notice($('payError'), 'error', e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---------- confirmed ----------
+    function renderConfirmed(reg) {
+      show('confirmed');
+      const code = reg.badge ? reg.badge.code : '';
+      $('codeText').textContent = code;
+      if (code && window.qrcode) {
+        const qr = window.qrcode(0, 'M');
+        qr.addData(code);
+        qr.make();
+        $('qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+      }
+      $('confirmedFacts').innerHTML = `<dt>Name on badge</dt><dd>${esc(reg.badgeName)}</dd>
+        <dt>Reference</dt><dd>${esc(reg.ref)}</dd>
+        <dt>Category</dt><dd>${esc(reg.category ? reg.category.name : '')}</dd>
+        ${reg.addons.length ? `<dt>Extras</dt><dd>${reg.addons.map((a) => esc(a.name)).join(', ')}</dd>` : ''}
+        ${reg.checkedInDays.length ? `<dt>Attended</dt><dd>${reg.checkedInDays.map(fmtDate).join(', ')}</dd>` : ''}`;
+    }
+
+    // ---------- account ----------
+    document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== b.dataset.tab; });
+    }));
+    $('createForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const btn = $('createBtn');
+      btn.disabled = true;
+      const msg = $('createMsg');
+      try {
+        const r = await api('abstracts/register', { method: 'POST', body: JSON.stringify({
+          firstName: $('cFirst').value, lastName: $('cLast').value, affiliation: $('cAff').value,
+          country: $('cCountry').value, email: $('cEmail').value, password: $('cPass').value, website: $('cWebsite').value, formLoadedAt,
+        }) });
+        if (r && r.requiresVerification) {
+          notice(msg, 'ok', 'Account created. Check your email to confirm your address, then sign in here to register.');
+        } else {
+          await load();
+        }
+      } catch (e) {
+        notice(msg, 'error', e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    async function load() {
+      try {
+        data = await api('conference/current');
+      } catch (e) {
+        $('loading').innerHTML = `<p>${esc(e.status === 404 ? 'There is no conference open for registration at the moment.' : e.message)}</p>`;
+        return;
+      }
+      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register'].forEach((id) => show(id, false));
+      show('intro');
+      renderHeader();
+      renderWho();
+      renderFees();
+      const reg = data.me && data.me.registration;
+      if (!data.me) {
+        $('signinLink').href = 'login?next=' + encodeURIComponent(location.pathname);
+        show('auth');
+      } else if (!reg) {
+        renderRegister();
+      } else if (reg.status === 'confirmed') {
+        renderConfirmed(reg);
+        show('fees', false);
+      } else {
+        renderAwaiting(reg);
+      }
+    }
+    load();
+  })();
+  </script>
+</body>
+</html>

@@ -271,7 +271,8 @@ function cardEmailHtml(string $heading, string $greeting, string $bodyHtml, stri
         . '.c-text{color:#d5dbd7!important}'
         . '.c-muted{color:#9aa5a0!important}'
         . '.c-link{color:#5fd08f!important}'
-        . '.c-foot{color:#8fb39c!important}';
+        . '.c-foot{color:#8fb39c!important}'
+        . '.c-btn{background:#087539!important;color:#ffffff!important}';
     return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         . '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">'
         . '<style>:root{color-scheme:light dark;supported-color-schemes:light dark}'
@@ -288,8 +289,12 @@ function cardEmailHtml(string $heading, string $greeting, string $bodyHtml, stri
         . '<h1 class="c-head" style="margin:0 0 30px;font-size:36px;line-height:1.2;font-weight:800;color:#2b2b2b;' . $font . '">' . htmlspecialchars($heading, ENT_QUOTES) . '</h1>'
         . '<p class="c-head" style="margin:0 0 14px;font-size:21px;font-weight:700;color:#2b2b2b;">' . htmlspecialchars($greeting, ENT_QUOTES) . '</p>'
         . '<div style="margin:0 auto 32px;max-width:400px;">' . $bodyHtml . '</div>'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:#087539;border-radius:8px;">'
-        . '<a href="' . $url . '" style="display:inline-block;padding:15px 30px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;' . $font . '">' . htmlspecialchars($ctaText, ENT_QUOTES) . '</a>'
+        // The green is laid down twice, as a colour and as a one-colour gradient. Gmail's dark
+        // mode recolours background colours but leaves background images alone, so the
+        // gradient keeps the button ReSoK green (and its white text legible) when it would
+        // otherwise be washed out to a pale mint with black text.
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td class="c-btn" style="background:#087539;background-image:linear-gradient(#087539,#087539);border-radius:8px;">'
+        . '<a href="' . $url . '" class="c-btn" style="display:inline-block;padding:15px 30px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;background:#087539;background-image:linear-gradient(#087539,#087539);border-radius:8px;' . $font . '"><span style="color:#ffffff;">' . htmlspecialchars($ctaText, ENT_QUOTES) . '</span></a>'
         . '</td></tr></table>'
         . '<p class="c-muted" style="margin:34px 0 0;font-size:13px;line-height:1.6;color:#8a8f98;">Thanks,<br>ReSoK ICT</p>'
         . '<p class="c-muted" style="margin:22px auto 0;max-width:420px;font-size:11px;line-height:1.5;color:#a3a8b0;word-break:break-all;">Button not working? Paste this link into your browser:<br><a href="' . $url . '" class="c-link" style="color:#087539;">' . $url . '</a></p>'

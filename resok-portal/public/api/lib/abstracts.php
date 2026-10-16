@@ -1449,7 +1449,12 @@ function absMailPump(PDO $pdo, array $config, int $max = 20): array
         $pdo->exec("UPDATE abs_emails SET status = 'queued', sent_at = NULL
                     WHERE status = 'sending' AND sent_at < (NOW() - INTERVAL 10 MINUTE)");
         $used = (int)$pdo->query("SELECT COUNT(*) FROM abs_emails WHERE sent_at >= (NOW() - INTERVAL 1 HOUR)")->fetchColumn();
-        $budget = min($max, absMailHourlyLimit($config) - $used);
+        // Every message also goes to the archive inbox (SimpleMailer, 15 Oct 2026), and the
+        // host counts that copy against the same hourly limit. Counting each email once let
+        // the queue send twice what the limit allows, which is how claim emails ran into
+        // "450 Rate limit reached" on 16 Oct 2026.
+        $archiveOn = trim((string)($config['mail_archive_bcc'] ?? 'on')) !== '';
+        $budget = min($max, intdiv(absMailHourlyLimit($config), $archiveOn ? 2 : 1) - $used);
         if ($budget > 0) {
             $rows = $pdo->query("SELECT id FROM abs_emails WHERE status = 'queued'
                                  AND (next_attempt_at IS NULL OR next_attempt_at <= NOW()) ORDER BY id LIMIT " . (int)$budget)->fetchAll();

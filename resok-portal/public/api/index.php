@@ -2008,7 +2008,7 @@ Respiratory Society of Kenya");
             respond(404, ['error' => 'Google sign-in is not available.']);
         }
         $data = input();
-        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+        $ip = function_exists('clientIp') ? clientIp() : (string)($_SERVER['REMOTE_ADDR'] ?? '');
         throttleCheck($pdo, $config, 'google_login', $ip);
         $claims = googleVerifyIdToken($config, (string)($data['credential'] ?? ''), $why);
         if (!$claims) {

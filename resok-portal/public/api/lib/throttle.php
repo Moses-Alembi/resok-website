@@ -124,9 +124,58 @@ function throttleScopeKey(array $config, string $action, string $scope, string $
     return hash_hmac('sha256', $action . '|' . $scope . '|' . strtolower(trim($value)), (string)$config['jwt_secret']);
 }
 
+/**
+ * Cloudflare's published address ranges (https://www.cloudflare.com/ips/, checked 16 Oct 2026).
+ * Re-check that page if Cloudflare announces a change; 'trusted_proxy_ranges' in config adds
+ * more without a code change.
+ */
+const CLOUDFLARE_RANGES = [
+    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18',
+    '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+    '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+];
+
+function ipInRange(string $ip, string $cidr): bool
+{
+    [$net, $bits] = array_pad(explode('/', $cidr, 2), 2, null);
+    $ipBin = @inet_pton($ip);
+    $netBin = @inet_pton((string)$net);
+    if ($ipBin === false || $netBin === false || strlen($ipBin) !== strlen($netBin)) return false;
+    $bits = $bits === null ? strlen($ipBin) * 8 : (int)$bits;
+    $bytes = intdiv($bits, 8);
+    if (substr($ipBin, 0, $bytes) !== substr($netBin, 0, $bytes)) return false;
+    $rest = $bits % 8;
+    if ($rest === 0) return true;
+    $mask = chr((0xFF << (8 - $rest)) & 0xFF);
+    return (($ipBin[$bytes] & $mask) === ($netBin[$bytes] & $mask));
+}
+
+/**
+ * The visitor's real address. Behind Cloudflare every request arrives from a Cloudflare
+ * address, which would make every visitor look like one and let one abuser lock everyone
+ * out of a rate limit. Cloudflare passes the visitor's address in CF-Connecting-IP, but that
+ * header is believed only when the request really came from Cloudflare's network: from
+ * anywhere else, anyone could send it to choose their own address and dodge the limits.
+ */
+function clientIp(): string
+{
+    $remote = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $claimed = trim((string)($_SERVER['HTTP_CF_CONNECTING_IP'] ?? ''));
+    if ($claimed === '' || filter_var($claimed, FILTER_VALIDATE_IP) === false) return $remote;
+    // The settings already loaded by the entry script (index.php, the cron jobs). Loading the
+    // file again here would redeclare its helper functions and stop the request.
+    $extra = (array)(($GLOBALS['config'] ?? [])['trusted_proxy_ranges'] ?? []);
+    $ranges = array_merge(CLOUDFLARE_RANGES, $extra);
+    foreach ($ranges as $range) {
+        if (ipInRange($remote, (string)$range)) return $claimed;
+    }
+    return $remote;
+}
+
 function throttleClientFingerprint(): string
 {
-    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $ip = clientIp();
     $agent = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 120);
     return $ip . '|' . $agent;
 }

@@ -84,6 +84,12 @@ return [
     'portal_base_url' => rtrim((string)config_value($local, 'portal_base_url', 'RESOK_PORTAL_BASE_URL', ''), '/'),
     'mail_from' => config_value($local, 'mail_from', 'RESOK_MAIL_FROM', ''),
 
+    // Who receives the 8-hourly security report (cron/security-digest.php): an address or a
+    // list. Unset means the script's own default; '' stops the emails.
+    'security_digest_to' => config_value($local, 'security_digest_to', 'RESOK_SECURITY_DIGEST_TO', null),
+    // Proxy ranges, beyond Cloudflare's, whose forwarded visitor address may be believed.
+    'trusted_proxy_ranges' => config_list($local, 'trusted_proxy_ranges', 'RESOK_TRUSTED_PROXY_RANGES'),
+
     'paybill_number' => config_value($local, 'paybill_number', 'RESOK_PAYBILL_NUMBER', '303030'),
     'paybill_account' => config_value($local, 'paybill_account', 'RESOK_PAYBILL_ACCOUNT', '2038334878'),
     'membership_fee' => (int)config_value($local, 'membership_fee', 'RESOK_MEMBERSHIP_FEE', 5000),

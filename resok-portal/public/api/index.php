@@ -1803,7 +1803,7 @@ Respiratory Society of Kenya");
 
         if (!$verified && $verificationToken) {
             try {
-                if (!sendVerificationEmail($config, (string)$data['email'], $verificationToken)) {
+                if (!sendVerificationEmail($config, (string)$data['email'], $verificationToken, trim((string)$data['firstName']))) {
                     error_log('Verification email to ' . $data['email'] . ' returned false - see SMTP log lines above for the specific stage that failed.');
                 }
             } catch (Throwable $mailError) {

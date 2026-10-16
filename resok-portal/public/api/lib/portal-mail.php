@@ -245,6 +245,49 @@ function brandedEmailHtml(string $title, string $bodyHtml, ?string $ctaText = nu
         . '</div></div></body></html>';
 }
 
+/**
+ * The "confirm your email" layout: logo, envelope, big centred heading, one button, set on a
+ * pale green page with a dark footer band.
+ *
+ * Images are loaded from the live site whatever portal_base_url says. A mail client fetches
+ * them from wherever the reader is, so a localhost URL from the laptop would be a broken image.
+ * Everything is tables and inline styles because Outlook ignores most of anything else.
+ */
+function verificationEmailHtml(string $greeting, string $messageHtml, string $ctaText, string $ctaUrl): string
+{
+    $img = 'https://www.resok.org/resok-portal/public/assets/img/';
+    $font = "font-family:'Segoe UI',Helvetica,Arial,sans-serif;";
+    $url = htmlspecialchars($ctaUrl, ENT_QUOTES);
+    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+        . '<body style="margin:0;padding:0;background:#dff1e6;' . $font . '">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#dff1e6;"><tr><td align="center" style="padding:28px 12px;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">'
+        // White card
+        . '<tr><td align="center" style="background:#ffffff;border-radius:16px;padding:36px 28px 40px;">'
+        . '<img src="' . $img . 'logo.png" width="260" alt="ReSoK - Respiratory Society of Kenya" style="display:block;width:260px;max-width:80%;height:auto;border:0;margin:0 auto;">'
+        . '<img src="' . $img . 'email-verify.png" width="210" alt="" style="display:block;width:210px;height:auto;border:0;margin:34px auto 26px;">'
+        . '<h1 style="margin:0 0 30px;font-size:36px;line-height:1.2;font-weight:800;color:#2b2b2b;' . $font . '">Confirm your email</h1>'
+        . '<p style="margin:0 0 14px;font-size:21px;font-weight:700;color:#2b2b2b;">' . htmlspecialchars($greeting, ENT_QUOTES) . '</p>'
+        . '<p style="margin:0 auto 32px;max-width:380px;font-size:16px;line-height:1.7;color:#333333;">' . $messageHtml . '</p>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:#087539;border-radius:8px;">'
+        . '<a href="' . $url . '" style="display:inline-block;padding:15px 30px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;' . $font . '">' . htmlspecialchars($ctaText, ENT_QUOTES) . '</a>'
+        . '</td></tr></table>'
+        . '<p style="margin:34px 0 0;font-size:13px;line-height:1.6;color:#8a8f98;">Thanks,<br>The ReSoK Team</p>'
+        . '<p style="margin:22px auto 0;max-width:420px;font-size:11px;line-height:1.5;color:#a3a8b0;word-break:break-all;">Button not working? Paste this link into your browser:<br><a href="' . $url . '" style="color:#087539;">' . $url . '</a></p>'
+        . '</td></tr>'
+        . '<tr><td style="height:10px;line-height:10px;font-size:0;">&nbsp;</td></tr>'
+        // Dark footer band
+        . '<tr><td style="background:#1a1d1f;border-radius:16px;padding:24px 32px;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+        . '<td style="font-size:16px;font-weight:800;color:#ffffff;">ReSoK<span style="font-weight:400;color:#b8bec4;font-size:13px;"> &middot; Respiratory Society of Kenya</span></td>'
+        . '<td align="right" style="font-size:13px;"><a href="https://www.resok.org" style="color:#ffffff;text-decoration:none;font-weight:600;">www.resok.org</a></td>'
+        . '</tr></table>'
+        . '</td></tr>'
+        . '<tr><td align="center" style="padding:16px 0 0;font-size:12px;color:#6b8f78;">If you did not create this account, you can safely ignore this email.</td></tr>'
+        . '</table>'
+        . '</td></tr></table></body></html>';
+}
+
 /** The confirmation email for an Academy learner: Academy wording, not the membership application's. */
 function sendLearnerVerificationEmail(array $config, string $email, string $token, string $firstName = ''): bool
 {
@@ -254,28 +297,25 @@ function sendLearnerVerificationEmail(array $config, string $email, string $toke
     $text = "{$greeting},\n\nWelcome to the ReSoK Virtual Academy. Please confirm your email address to activate your account:\n{$url}\n\n"
         . "Once it is confirmed, sign in to start learning. Your progress and certificates are kept in your account.\n\n"
         . "If you did not create this account, you can ignore this email.\n\nRespiratory Society of Kenya";
-    $html = brandedEmailHtml(
-        'Confirm your email to start learning',
-        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">' . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
-        . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to the ReSoK Virtual Academy. Confirm your email address to activate your account, then sign in to start learning. Your progress and certificates are kept in your account.</p>'
-        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">If you did not create this account, you can safely ignore this email.</p>',
-        'Confirm My Email',
+    $html = verificationEmailHtml(
+        (trim($firstName) !== '' ? 'Hi ' . trim($firstName) : 'Hello') . '!',
+        'Thank you for joining the ReSoK Virtual Academy! Please confirm your email address by clicking the button below, then sign in to start learning.',
+        'Confirm email address',
         $url
     );
     $mailer = new SimpleMailer($config);
     return $mailer->send($email, 'Confirm your ReSoK Virtual Academy account', $text, [], $html);
 }
 
-function sendVerificationEmail(array $config, string $email, string $token): bool
+function sendVerificationEmail(array $config, string $email, string $token, string $firstName = ''): bool
 {
     $baseUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/');
     $url = $baseUrl !== '' ? $baseUrl . '/api/index.php?route=' . rawurlencode('auth/verify/' . $token) : '';
     $text = "Welcome to the ReSoK Members' Portal.\n\nPlease verify your email address to activate your account:\n{$url}\n\nIf you did not create this account, you can ignore this email.";
-    $html = brandedEmailHtml(
-        'Verify your email to activate your account',
-        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Welcome to the ReSoK Members\' Portal. Please confirm your email address to activate your account and continue your membership application.</p>'
-        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">If you did not create this account, you can safely ignore this email.</p>',
-        'Verify My Email',
+    $html = verificationEmailHtml(
+        (trim($firstName) !== '' ? 'Hi ' . trim($firstName) : 'Hello') . '!',
+        'Thank you for signing up with the Respiratory Society of Kenya! Please confirm your email address by clicking the button below to continue your membership application.',
+        'Confirm email address',
         $url
     );
     $mailer = new SimpleMailer($config);

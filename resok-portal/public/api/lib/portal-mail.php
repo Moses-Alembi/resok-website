@@ -316,6 +316,29 @@ function verificationEmailHtml(string $greeting, string $messageHtml, string $ct
         'If you did not create this account, you can safely ignore this email.');
 }
 
+/**
+ * The opening line of an account email: "Dear Dr Mwangi," when the member has a title, "Dear
+ * Anne," when they have only a name, "Dear member," when there is nothing to go on. Members are
+ * clinicians and are addressed as they would be in a letter (Moses, 16 Oct 2026). Names typed
+ * all in lower case are capitalised, as in portalGreetingName().
+ */
+function emailSalutation(?string $title, ?string $firstName, ?string $surname): string
+{
+    $tidy = static function (?string $value): string {
+        $value = trim((string)preg_replace('/\s+/u', ' ', (string)$value));
+        return implode(' ', array_map(static function (string $word): string {
+            return $word === mb_strtolower($word, 'UTF-8') ? mb_convert_case($word, MB_CASE_TITLE, 'UTF-8') : $word;
+        }, $value === '' ? [] : explode(' ', $value)));
+    };
+    $title = $tidy($title);
+    $firstName = $tidy($firstName);
+    $surname = $tidy($surname);
+    if ($title !== '' && $surname !== '') return "Dear {$title} {$surname},";
+    if ($title !== '' && $firstName !== '') return "Dear {$title} {$firstName},";
+    if ($firstName !== '') return "Dear {$firstName},";
+    return 'Dear member,';
+}
+
 /** The confirmation email for an Academy learner: Academy wording, not the membership application's. */
 function sendLearnerVerificationEmail(array $config, string $email, string $token, string $firstName = ''): bool
 {
@@ -326,7 +349,7 @@ function sendLearnerVerificationEmail(array $config, string $email, string $toke
         . "Once it is confirmed, sign in to start learning. Your progress and certificates are kept in your account.\n\n"
         . "If you did not create this account, you can ignore this email.\n\nRespiratory Society of Kenya";
     $html = verificationEmailHtml(
-        (trim($firstName) !== '' ? 'Hi ' . trim($firstName) : 'Hello') . '!',
+        emailSalutation(null, $firstName, null),
         'Thank you for joining the ReSoK Virtual Academy! Please confirm your email address by clicking the button below, then sign in to start learning.',
         'Confirm email address',
         $url
@@ -335,13 +358,13 @@ function sendLearnerVerificationEmail(array $config, string $email, string $toke
     return $mailer->send($email, 'Confirm your ReSoK Virtual Academy account', $text, [], $html);
 }
 
-function sendVerificationEmail(array $config, string $email, string $token, string $firstName = ''): bool
+function sendVerificationEmail(array $config, string $email, string $token, string $firstName = '', string $title = '', string $surname = ''): bool
 {
     $baseUrl = rtrim((string)($config['portal_base_url'] ?? ''), '/');
     $url = $baseUrl !== '' ? $baseUrl . '/api/index.php?route=' . rawurlencode('auth/verify/' . $token) : '';
     $text = "Welcome to the ReSoK Members' Portal.\n\nPlease verify your email address to activate your account:\n{$url}\n\nIf you did not create this account, you can ignore this email.";
     $html = verificationEmailHtml(
-        (trim($firstName) !== '' ? 'Hi ' . trim($firstName) : 'Hello') . '!',
+        emailSalutation($title, $firstName, $surname),
         'Thank you for signing up with the Respiratory Society of Kenya! Please confirm your email address by clicking the button below to continue your membership application.',
         'Confirm email address',
         $url

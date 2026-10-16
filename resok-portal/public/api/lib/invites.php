@@ -105,7 +105,7 @@ function inviteSend(PDO $pdo, array $config, array $invite): bool
 {
     $link = inviteLink($config, (string)$invite['token']);
     $name = trim((string)($invite['name'] ?? ''));
-    $greeting = $name !== '' ? 'Dear ' . $name : 'Hello';
+    $greeting = $name !== '' ? 'Dear ' . $name : 'Dear member';
 
     $text = "{$greeting},\n\n"
         . "The Respiratory Society of Kenya members' portal is now open, and your account is ready to claim.\n\n"
@@ -119,7 +119,9 @@ function inviteSend(PDO $pdo, array $config, array $invite): bool
         if (function_exists('cardEmailHtml') && class_exists('SimpleMailer')) {
             $html = cardEmailHtml(
                 'Your account is ready',
-                ($name !== '' ? 'Hi ' . $name : 'Hello') . '!',
+                // An invitation holds one name as typed by the admin, title included if they
+                // gave one, so it is used whole.
+                $name !== '' ? 'Dear ' . $name . ',' : 'Dear member,',
                 cardEmailParagraph('The Respiratory Society of Kenya members&rsquo; portal is now open. Your membership '
                     . 'record, payments and renewals all live there.')
                 . cardEmailParagraph('Claim your account below. You will set your own password and confirm your '
@@ -285,12 +287,7 @@ function claimSend(PDO $pdo, array $config, array $member, ?string &$error = nul
     $portal = rtrim((string)($config['portal_base_url'] ?? ''), '/') ?: 'https://www.resok.org/resok-portal/public';
     $link = $portal . '/forgot-password?claim=1&token=' . $token;
 
-    $name = trim(implode(' ', array_filter([
-        trim((string)($member['title'] ?? '')),
-        trim((string)($member['first_name'] ?? '')),
-        trim((string)($member['surname'] ?? '')),
-    ])));
-    $greeting = $name !== '' ? 'Dear ' . $name : 'Dear member';
+    $salutation = emailSalutation($member['title'] ?? null, $member['first_name'] ?? null, $member['surname'] ?? null);
     $number = trim((string)($member['membership_id'] ?? ''));
     $until = !empty($member['renewal_due']) ? date('j F Y', (int)strtotime((string)$member['renewal_due'])) : '';
 
@@ -298,7 +295,7 @@ function claimSend(PDO $pdo, array $config, array $member, ?string &$error = nul
         . ($number !== '' ? ', under membership number ' . $number : '') . '.';
     $untilLine = $until !== '' ? 'Your membership is active until ' . $until . '.' : '';
 
-    $text = "{$greeting},\n\n"
+    $text = "{$salutation}\n\n"
         . "The Respiratory Society of Kenya members' portal is now open. {$recordLine}"
         . ($untilLine !== '' ? " {$untilLine}" : '') . "\n\n"
         . "To start using it, choose your password here:\n{$link}\n\n"
@@ -313,10 +310,9 @@ function claimSend(PDO $pdo, array $config, array $member, ?string &$error = nul
         if (!function_exists('cardEmailHtml') || !class_exists('SimpleMailer')) {
             throw new RuntimeException('The mail helpers are not loaded on this server.');
         }
-        $firstName = trim((string)($member['first_name'] ?? ''));
         $html = cardEmailHtml(
             'Your account is ready',
-            ($firstName !== '' ? 'Hi ' . $firstName : 'Hello') . '!',
+            $salutation,
             cardEmailParagraph('The Respiratory Society of Kenya members&rsquo; portal is now open. '
                 . htmlspecialchars($recordLine . ($untilLine !== '' ? ' ' . $untilLine : ''), ENT_QUOTES))
             . cardEmailParagraph('Choose your password to start using it. Once you are signed in, please check '

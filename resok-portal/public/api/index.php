@@ -1803,7 +1803,7 @@ Respiratory Society of Kenya");
 
         if (!$verified && $verificationToken) {
             try {
-                if (!sendVerificationEmail($config, (string)$data['email'], $verificationToken, trim((string)$data['firstName']))) {
+                if (!sendVerificationEmail($config, (string)$data['email'], $verificationToken, (string)$data['firstName'], (string)($data['title'] ?? ''), (string)$data['surname'])) {
                     error_log('Verification email to ' . $data['email'] . ' returned false - see SMTP log lines above for the specific stage that failed.');
                 }
             } catch (Throwable $mailError) {
@@ -2233,7 +2233,12 @@ Respiratory Society of Kenya");
             $token = bin2hex(random_bytes(32));
             $pdo->prepare('UPDATE users SET verification_token = ? WHERE id = ?')->execute([$token, (int)$user['id']]);
             try {
-                if (function_exists('sendVerificationEmail')) sendVerificationEmail($config, $email, $token);
+                // The member's name and title, so the resent email greets them as the first did.
+                $who = $pdo->prepare('SELECT title, first_name, surname FROM member_profiles WHERE user_id = ? LIMIT 1');
+                $who->execute([(int)$user['id']]);
+                $who = $who->fetch() ?: [];
+                if (function_exists('sendVerificationEmail')) sendVerificationEmail($config, $email, $token,
+                    (string)($who['first_name'] ?? ''), (string)($who['title'] ?? ''), (string)($who['surname'] ?? ''));
             } catch (Throwable $e) {
                 error_log('Resend verification failed: ' . $e->getMessage());
             }

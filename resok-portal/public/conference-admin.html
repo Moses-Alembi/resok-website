@@ -84,6 +84,7 @@
       <div class="links">
         <a class="btn btn-ghost" href="conference-scan" id="lnkScan"><i class="fas fa-qrcode"></i> Scanner</a>
         <a class="btn btn-ghost" href="conference-badges" id="lnkBadges" hidden><i class="fas fa-id-badge"></i> Print badges</a>
+        <a class="btn btn-ghost" href="conference-programme-admin" id="lnkProgramme" hidden><i class="fas fa-calendar-days"></i> Programme</a>
         <a class="btn btn-ghost" id="lnkExport" hidden><i class="fas fa-file-csv"></i> Export</a>
         <a class="btn btn-ghost" href="conference"><i class="fas fa-eye"></i> Delegate view</a>
       </div>
@@ -195,6 +196,7 @@
       $('title').textContent = `Registration desk · ${ov.event.name}`;
       document.querySelectorAll('[data-need]').forEach((b) => { b.hidden = !has(b.dataset.need); });
       $('lnkBadges').hidden = !has('registration');
+      $('lnkProgramme').hidden = !has('admin');
       $('lnkExport').hidden = !(has('finance') || has('admin'));
       $('lnkExport').href = 'api/index.php?route=conference/admin/export';
       const s = ov.stats.byStatus || {};

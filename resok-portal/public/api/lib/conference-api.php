@@ -32,6 +32,63 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         'endsOn' => $e['ends_on'], 'venue' => $e['venue'], 'status' => $e['status'],
     ];
 
+    $programmeReady = function_exists('confProgrammeEnsureTables') && confProgrammeEnsureTables($pdo);
+    // The programme is edited by the conference's administrators and by the abstract
+    // system's programme chair, who decides the sessions anyway.
+    $canEditProgramme = function (array $user, int $eventId) use ($pdo, $config): bool {
+        if (confHasRole($pdo, $user, $config, $eventId, 'admin')) return true;
+        $stmt = $pdo->prepare("SELECT 1 FROM abs_roles WHERE event_id = ? AND user_id = ? AND role = 'programme_chair' LIMIT 1");
+        $stmt->execute([$eventId, (int)($user['userId'] ?? 0)]);
+        return (bool)$stmt->fetch();
+    };
+
+    // ------------------------------------------------------------------ programme
+    if ($route === 'conference/programme' && $method === 'GET') {
+        if (!$programmeReady) respond(503, ['error' => 'The programme is not available on this server.']);
+        $viewer = authOptional($config);
+        $event = $eventFor($viewer);
+        $preview = $viewer && $canEditProgramme($viewer, (int)$event['id']);
+        $published = confProgrammePublished($pdo, (int)$event['id']);
+        if (!$published && !$preview) {
+            respond(200, ['event' => $eventShape($event), 'published' => false, 'days' => []]);
+        }
+        respond(200, ['event' => $eventShape($event), 'published' => $published, 'preview' => !$published,
+                      'days' => confProgramme($pdo, (int)$event['id'])]);
+    }
+    if (strpos($route, 'conference/admin/programme') === 0) {
+        if (!$programmeReady) respond(503, ['error' => 'The programme is not available on this server.']);
+        $user = auth($config);
+        $event = $eventFor($user);
+        $eventId = (int)$event['id'];
+        if (!$canEditProgramme($user, $eventId)) respond(403, ['error' => 'Only the programme chair and conference administrators can edit the programme.']);
+        $data = $method === 'POST' ? input() : [];
+        $state = function () use ($pdo, $eventId, $event, $eventShape): array {
+            return ['event' => $eventShape($event), 'published' => confProgrammePublished($pdo, $eventId), 'rooms' => confRooms($pdo, $eventId),
+                    'days' => confProgramme($pdo, $eventId, true), 'unplaced' => confUnplacedAbstracts($pdo, $eventId),
+                    'kinds' => CONF_SESSION_KINDS];
+        };
+        $e = null;
+        if ($route === 'conference/admin/programme' && $method === 'GET') respond(200, $state());
+        if ($method !== 'POST') respond(405, ['error' => 'Method not allowed']);
+        if ($route === 'conference/admin/programme/publish') {
+            confProgrammeSetPublished($pdo, $eventId, !empty($data['published']), (int)$user['userId']);
+        } elseif ($route === 'conference/admin/programme/rooms') {
+            $e = confSaveRoom($pdo, $eventId, $data);
+        } elseif ($route === 'conference/admin/programme/sessions') {
+            [, $e] = confSaveSession($pdo, $eventId, $data);
+        } elseif (preg_match('#^conference/admin/programme/sessions/(\d+)/delete$#', $route, $m)) {
+            $e = confDeleteSession($pdo, $eventId, (int)$m[1]);
+        } elseif (preg_match('#^conference/admin/programme/sessions/(\d+)/items$#', $route, $m)) {
+            $e = confAddItem($pdo, $eventId, (int)$m[1], $data);
+        } elseif (preg_match('#^conference/admin/programme/items/(\d+)/remove$#', $route, $m)) {
+            $e = confRemoveItem($pdo, $eventId, (int)$m[1]);
+        } else {
+            respond(404, ['error' => 'Unknown programme route.']);
+        }
+        if ($e) respond(400, ['error' => $e]);
+        respond(200, $state());
+    }
+
     // ------------------------------------------------------------------ delegate
     if ($route === 'conference/current' && $method === 'GET') {
         $viewer = authOptional($config);

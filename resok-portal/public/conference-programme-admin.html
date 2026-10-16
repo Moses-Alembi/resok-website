@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Programme Builder - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06);--amber:#b54708;--amber-soft:#fff6e5}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:14.5px}
+    a{color:var(--green)} [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1240px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .top img{height:32px}
+    .top h1{font-size:17px}
+    .top .links{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    main{max-width:1240px;margin:0 auto;padding:20px 18px 60px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+    @media (max-width:980px){main{grid-template-columns:1fr}}
+    .panel{background:#fff;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+    h2{font-size:16px;margin-bottom:10px} h3{font-size:14.5px}
+    label{display:block;font-weight:600;font-size:12.5px;margin-bottom:4px}
+    input,select,textarea{border:1px solid #d0d5dd;border-radius:8px;padding:8px 10px;font:inherit;font-size:14px;width:100%;background:#fff;color:var(--ink)}
+    .row{display:flex;gap:8px;flex-wrap:wrap} .row > *{flex:1;min-width:120px}
+    .field{margin-bottom:10px}
+    .btn{border:0;border-radius:8px;padding:8px 13px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff} .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054} .btn-danger{background:#fff;border:1px solid #f1b9c1;color:var(--red)}
+    .btn-sm{padding:4px 9px;font-size:12px}
+    .notice{border-radius:10px;padding:10px 12px;font-size:13.5px;margin-bottom:10px}
+    .notice.error{background:#fdecee;color:var(--red)} .notice.ok{background:#e8f3ec;color:var(--green)} .notice.warn{background:var(--amber-soft);color:var(--amber)}
+    .day h2{margin:6px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--green)}
+    .session{border:1px solid var(--line);border-left:4px solid var(--green);border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}
+    .session.break{border-left-color:#d0d5dd;background:#fafbfc}
+    .session.poster{border-left-color:#7a3db8} .session.workshop{border-left-color:var(--amber)} .session.plenary{border-left-color:var(--red)}
+    .shead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+    .time{font-variant-numeric:tabular-nums;font-weight:700}
+    .kind{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:#f2f4f7;color:#475467}
+    .muted{color:var(--muted);font-size:13px}
+    .items{margin:8px 0 0;list-style:none}
+    .items li{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-top:1px dashed var(--line);font-size:13.5px}
+    .items li .grow{flex:1;min-width:0}
+    .ref{font-family:Consolas,monospace;font-size:12px;color:var(--muted)}
+    .chip{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:4px}
+    .chip.ok{background:#e8f3ec;color:var(--green)} .chip.no{background:#fdecee;color:var(--red)} .chip.wait{background:var(--amber-soft);color:var(--amber)}
+    details{margin-top:8px} summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--green)}
+    .unplaced li{padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;list-style:none}
+    .switch{display:flex;gap:8px;align-items:center;font-weight:600}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="top-inner">
+    <img src="assets/img/logo.png" alt="ReSoK">
+    <h1 id="title">Programme builder</h1>
+    <div class="links">
+      <label class="switch"><input type="checkbox" id="published" style="width:auto"> Published to delegates</label>
+      <a class="btn btn-ghost" href="conference-programme" target="_blank" rel="noopener"><i class="fas fa-eye"></i> View</a>
+      <a class="btn btn-ghost" href="conference-admin"><i class="fas fa-id-badge"></i> Registration desk</a>
+    </div>
+  </div></header>
+  <main>
+    <div>
+      <div id="msg" class="notice" hidden></div>
+      <div id="boot" class="panel">Loading&hellip;</div>
+      <div id="days"></div>
+    </div>
+    <aside>
+      <div class="panel">
+        <h2 id="formTitle">Add a session</h2>
+        <form id="sessionForm">
+          <input type="hidden" id="sId">
+          <div class="row"><div class="field"><label for="sDay">Day</label><input type="date" id="sDay" required></div>
+            <div class="field"><label for="sKind">Type</label><select id="sKind"></select></div></div>
+          <div class="row"><div class="field"><label for="sStart">Starts</label><input type="time" id="sStart" required></div>
+            <div class="field"><label for="sEnd">Ends</label><input type="time" id="sEnd" required></div></div>
+          <div class="field"><label for="sRoom">Room</label><select id="sRoom"></select></div>
+          <div class="field"><label for="sTitle">Title</label><input type="text" id="sTitle" maxlength="200" required placeholder="e.g. Oral abstracts: Tuberculosis"></div>
+          <div class="field"><label for="sChairs">Chairs <span class="muted">optional</span></label><input type="text" id="sChairs" maxlength="300"></div>
+          <div class="field"><label for="sDesc">Description <span class="muted">optional</span></label><textarea id="sDesc" rows="2"></textarea></div>
+          <div class="row" style="flex-wrap:nowrap"><button class="btn btn-primary" type="submit" id="sSave">Add session</button><button class="btn btn-ghost" type="button" id="sCancel" hidden>Cancel editing</button></div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Rooms</h2>
+        <div id="rooms" class="muted" style="margin-bottom:8px"></div>
+        <form id="roomForm" class="row" style="align-items:end">
+          <div class="field"><label for="rName">Room</label><input type="text" id="rName" maxlength="120" placeholder="Plenary hall"></div>
+          <div class="field" style="max-width:90px"><label for="rCap">Seats</label><input type="number" id="rCap" min="0"></div>
+          <div class="field" style="flex:0"><button class="btn btn-ghost" type="submit">Add</button></div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Accepted abstracts still to place <span id="unCount" class="muted"></span></h2>
+        <ul class="unplaced" id="unplaced"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const api = (p, o) => window.ResokPortal.api(p, o);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const fmtDay = (d) => new Date(d + 'T00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const regChip = (s) => s === 'confirmed' ? '<span class="chip ok">registered</span>' : s === 'awaiting_payment' ? '<span class="chip wait">registered, not paid</span>' : '<span class="chip no">not registered</span>';
+    let st = null;
+
+    function msg(type, text) { const m = $('msg'); m.className = `notice ${type}`; m.textContent = text; m.hidden = !text; if (text && type === 'ok') setTimeout(() => { m.hidden = true; }, 2500); }
+    async function call(path, body) {
+      try { st = await api(path, { method: 'POST', body: JSON.stringify(body || {}) }); render(); return true; }
+      catch (e) { msg('error', e.message); return false; }
+    }
+
+    function render() {
+      $('boot').hidden = true;
+      $('title').textContent = `Programme builder · ${st.event.name}`;
+      $('published').checked = st.published;
+      $('sKind').innerHTML = Object.entries(st.kinds).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+      $('sRoom').innerHTML = '<option value="">No room</option>' + st.rooms.map((r) => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+      $('rooms').innerHTML = st.rooms.length ? st.rooms.map((r) => `${esc(r.name)}${r.capacity ? ` (${r.capacity})` : ''}`).join(' · ') : 'No rooms yet.';
+      if (!$('sDay').value && st.event.startsOn) $('sDay').value = st.event.startsOn;
+
+      $('unCount').textContent = `(${st.unplaced.length})`;
+      $('unplaced').innerHTML = st.unplaced.map((a) => `<li><span class="ref">${esc(a.reference)}</span> ${esc(a.title)}
+        <div class="muted">${esc(a.type || 'type not set')}${a.track ? ' · ' + esc(a.track) : ''} · ${esc(a.presenter || 'no presenter')} ${regChip(a.presenterRegistration)}</div></li>`).join('')
+        || '<li class="muted">Every accepted abstract is placed.</li>';
+
+      const options = (kind) => st.unplaced
+        .slice().sort((x, y) => (y.type === kind) - (x.type === kind))
+        .map((a) => `<option value="${a.id}">${esc(a.reference)} · ${esc(a.title.slice(0, 70))}${a.type ? ' (' + esc(a.type) + ')' : ''}</option>`).join('');
+
+      $('days').innerHTML = st.days.map((d) => `<section class="panel day"><h2>${esc(fmtDay(d.day))}</h2>
+        ${d.sessions.map((s) => `<div class="session ${esc(s.kind)}" data-sid="${s.id}">
+          <div class="shead"><span class="time">${esc(s.startsAt)}–${esc(s.endsAt)}</span><span class="kind">${esc(s.kindLabel)}</span>
+            <strong>${esc(s.title)}</strong>${s.room ? `<span class="muted">${esc(s.room)}</span>` : ''}
+            <span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" data-edit="${s.id}">Edit</button><button class="btn btn-danger btn-sm" data-del="${s.id}">Delete</button></span></div>
+          ${s.chairs ? `<div class="muted">Chairs: ${esc(s.chairs)}</div>` : ''}
+          ${s.items.length ? `<ul class="items">${s.items.map((i) => `<li>${i.startsAt ? `<span class="time">${esc(i.startsAt)}</span>` : ''}${i.board ? `<span class="kind">Board ${esc(i.board)}</span>` : ''}
+            <span class="grow">${i.reference ? `<span class="ref">${esc(i.reference)}</span> ` : ''}${esc(i.title)}${i.speaker ? ` <span class="muted">· ${esc(i.speaker)}</span>` : ''}${i.withdrawn ? ' <span class="chip no">withdrawn</span>' : ''}</span>
+            <button class="btn btn-ghost btn-sm" data-rm="${i.id}" title="Remove">&times;</button></li>`).join('')}</ul>` : ''}
+          ${s.kind !== 'break' ? `<details><summary>Add to this session</summary><form class="row" data-add="${s.id}" style="margin-top:8px;align-items:end">
+            <div class="field" style="min-width:220px;flex:3"><label>Accepted abstract</label><select name="abstractId"><option value="">— or an invited talk below —</option>${options(s.kind)}</select></div>
+            ${s.kind === 'poster' ? '<div class="field" style="max-width:110px"><label>Board no.</label><input name="board" maxlength="12"></div>' : '<div class="field" style="max-width:110px"><label>Time</label><input type="time" name="startsAt"></div>'}
+            <div class="field" style="min-width:180px;flex:2"><label>Invited talk title</label><input name="title" maxlength="300"></div>
+            <div class="field" style="min-width:150px;flex:2"><label>Speaker</label><input name="speaker" maxlength="200"></div>
+            <div class="field" style="flex:0"><button class="btn btn-primary" type="submit">Add</button></div></form></details>` : ''}
+        </div>`).join('')}</section>`).join('') || '<div class="panel muted">No sessions yet. Add rooms, then add the first session on the right.</div>';
+
+      document.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => call(`conference/admin/programme/sessions/${b.dataset.del}/delete`));
+      document.querySelectorAll('[data-rm]').forEach((b) => b.onclick = () => call(`conference/admin/programme/items/${b.dataset.rm}/remove`));
+      document.querySelectorAll('[data-edit]').forEach((b) => b.onclick = () => editSession(Number(b.dataset.edit)));
+      document.querySelectorAll('form[data-add]').forEach((f) => f.onsubmit = async (e) => {
+        e.preventDefault();
+        const body = Object.fromEntries(new FormData(f).entries());
+        if (await call(`conference/admin/programme/sessions/${f.dataset.add}/items`, body)) msg('ok', 'Added.');
+      });
+    }
+
+    function editSession(id) {
+      const s = st.days.flatMap((d) => d.sessions).find((x) => x.id === id);
+      if (!s) return;
+      $('sId').value = s.id; $('sDay').value = s.day; $('sKind').value = s.kind; $('sStart').value = s.startsAt; $('sEnd').value = s.endsAt;
+      $('sRoom').value = s.roomId || ''; $('sTitle').value = s.title; $('sChairs').value = s.chairs || ''; $('sDesc').value = s.description || '';
+      $('formTitle').textContent = 'Edit session'; $('sSave').textContent = 'Save session'; $('sCancel').hidden = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function resetForm() {
+      const day = $('sDay').value;
+      $('sessionForm').reset(); $('sId').value = ''; $('sDay').value = day;
+      $('formTitle').textContent = 'Add a session'; $('sSave').textContent = 'Add session'; $('sCancel').hidden = true;
+    }
+    $('sCancel').onclick = resetForm;
+    $('sessionForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const ok = await call('conference/admin/programme/sessions', { id: $('sId').value || undefined, day: $('sDay').value, kind: $('sKind').value,
+        startsAt: $('sStart').value, endsAt: $('sEnd').value, roomId: $('sRoom').value, title: $('sTitle').value, chairs: $('sChairs').value, description: $('sDesc').value });
+      if (ok) { msg('ok', 'Saved.'); resetForm(); }
+    };
+    $('roomForm').onsubmit = async (e) => {
+      e.preventDefault();
+      if (await call('conference/admin/programme/rooms', { name: $('rName').value, capacity: $('rCap').value })) $('roomForm').reset();
+    };
+    $('published').onchange = () => call('conference/admin/programme/publish', { published: $('published').checked })
+      .then((ok) => ok && msg('ok', $('published').checked ? 'The programme is now visible to delegates.' : 'The programme is hidden from delegates.'));
+
+    (async function boot() {
+      try { st = await api('conference/admin/programme'); render(); }
+      catch (e) {
+        $('boot').innerHTML = e.status === 401 ? `Sign in first. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>` : esc(e.message);
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

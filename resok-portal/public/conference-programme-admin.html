@@ -134,7 +134,7 @@
       $('days').innerHTML = st.days.map((d) => `<section class="panel day"><h2>${esc(fmtDay(d.day))}</h2>
         ${d.sessions.map((s) => `<div class="session ${esc(s.kind)}" data-sid="${s.id}">
           <div class="shead"><span class="time">${esc(s.startsAt)}–${esc(s.endsAt)}</span><span class="kind">${esc(s.kindLabel)}</span>
-            <strong>${esc(s.title)}</strong>${s.room ? `<span class="muted">${esc(s.room)}</span>` : ''}
+            <strong>${esc(s.title)}</strong>${s.room ? `<span class="muted">${esc(s.room)}</span>` : ''}${s.attended ? `<span class="chip ok">${s.attended} attended</span>` : ''}
             <span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" data-edit="${s.id}">Edit</button><button class="btn btn-danger btn-sm" data-del="${s.id}">Delete</button></span></div>
           ${s.chairs ? `<div class="muted">Chairs: ${esc(s.chairs)}</div>` : ''}
           ${s.items.length ? `<ul class="items">${s.items.map((i) => `<li>${i.startsAt ? `<span class="time">${esc(i.startsAt)}</span>` : ''}${i.board ? `<span class="kind">Board ${esc(i.board)}</span>` : ''}

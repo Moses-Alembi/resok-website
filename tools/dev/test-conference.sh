@@ -32,6 +32,7 @@ cleanup() {
       DELETE FROM cpd_events WHERE slug = 'test-conf-cpd-day';
       DELETE s FROM conf_scans s JOIN conf_registrations r ON r.id = s.registration_id JOIN users u ON u.id = r.user_id WHERE u.email LIKE 'conf-%@resok.local';
       DELETE FROM conf_scans WHERE code LIKE 'RSK-TESTBOGUS%' OR client_id LIKE 't-%';
+      DELETE FROM conf_sessions WHERE title LIKE 'TEST Door %';
       DELETE FROM conf_payments WHERE reference LIKE 'TST%' OR reference = 'RCPT-001';
       DELETE FROM abs_emails WHERE to_email LIKE 'conf-%@resok.local';
       DELETE b FROM conf_badges b JOIN conf_registrations r ON r.id = b.registration_id JOIN conf_categories c ON c.id = r.category_id WHERE c.name LIKE 'TEST %';
@@ -168,6 +169,33 @@ check "the same badge again today scans orange"                 '"result":"dupli
 r=$(post "$SCAN" conference/scan/sync "{\"scans\":[{\"clientId\":\"t-3\",\"code\":\"RSK-TESTBOGUS0000\",\"scannedAt\":\"$NOW\"}]}")
 check "an unknown code scans red"                               '"result":"unknown"' "$r"
 check "attendance counts one person once"                       "1" "$(q "SELECT COUNT(DISTINCT registration_id) FROM conf_scans WHERE code='$GUEST_CODE' AND result='ok'")"
+
+echo "Session doors:"
+SEV=$(q "SELECT id FROM abs_events WHERE status='published' ORDER BY id DESC LIMIT 1")
+SDAY=$(q "SELECT DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00'))")
+q "INSERT INTO conf_sessions (event_id, day, starts_at, ends_at, kind, title) VALUES ($SEV, '$SDAY', '09:00', '10:00', 'oral', 'TEST Door session'),
+   ($SEV, '$SDAY', '10:30', '11:00', 'break', 'TEST Door tea'), ($SEV, '2000-01-01', '09:00', '10:00', 'oral', 'TEST Door other day')"
+SESS=$(q "SELECT id FROM conf_sessions WHERE title='TEST Door session'")
+OLDSESS=$(q "SELECT id FROM conf_sessions WHERE title='TEST Door other day'")
+r=$(get "$SCAN" conference/scan/roster)
+check "the roster lists today's sessions"                       'TEST Door session' "$r"
+[[ "$r" == *"TEST Door tea"* || "$r" == *"TEST Door other day"* ]] && check "breaks and other days are not offered" "absent" "present" || check "breaks and other days are not offered" "x" "x"
+r=$(post "$SCAN" conference/scan/sync "{\"scans\":[{\"clientId\":\"t-s1\",\"code\":\"$GUEST_CODE\",\"sessionId\":$SESS,\"scannedAt\":\"$NOW\"}]}")
+check "someone already in the building enters a session green"  '"result":"ok"' "$r"
+r=$(post "$SCAN" conference/scan/sync "{\"scans\":[{\"clientId\":\"t-s2\",\"code\":\"$GUEST_CODE\",\"sessionId\":$SESS,\"scannedAt\":\"$NOW\"}]}")
+check "the same badge at the same session scans orange"         '"result":"duplicate"' "$r"
+check "the session scan is recorded against the session"        "1" "$(q "SELECT COUNT(*) FROM conf_scans WHERE client_id='t-s1' AND session_id=$SESS")"
+post "$SCAN" conference/scan/sync "{\"scans\":[{\"clientId\":\"t-s3\",\"code\":\"$GUEST_CODE\",\"sessionId\":$OLDSESS,\"scannedAt\":\"$NOW\"}]}" >/dev/null
+check "a session from another day is not trusted"               "NULL" "$(q "SELECT IFNULL(session_id,'NULL') FROM conf_scans WHERE client_id='t-s3'")"
+r=$(post "$SCAN" conference/scan/sync "{\"scans\":[{\"clientId\":\"t-s4\",\"code\":\"$GUEST_CODE\",\"sessionId\":\"1 OR 1=1\",\"scannedAt\":\"$NOW\"}]}")
+check "a malformed session id does not break the upload"        '"result":' "$r"
+r=$(get "$SCAN" conference/scan/roster)
+check "the roster knows who is already in the session"           "\"sessionId\":$SESS" "$r"
+r=$(get "$ADMIN" conference/admin/programme)
+check "the programme builder shows the session's attendance"    '"attended":1' "$r"
+r=$(curl -s "${API}conference/programme")
+[[ "$r" == *'"attended"'* ]] && check "attendance is not shown to the public" "hidden" "shown" || check "attendance is not shown to the public" "x" "x"
+q "DELETE FROM conf_scans WHERE client_id LIKE 't-s%'; DELETE FROM conf_sessions WHERE title LIKE 'TEST Door %'"
 
 echo "Badges:"
 REG_GUEST=$(q "SELECT r.id FROM conf_registrations r JOIN users u ON u.id = r.user_id WHERE u.email='conf-guest@resok.local'")

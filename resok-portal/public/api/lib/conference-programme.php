@@ -154,6 +154,17 @@ function confProgramme(PDO $pdo, int $eventId, bool $forStaff = false): array
             ];
         }
     }
+    $attended = [];
+    if ($forStaff && $sessions) {
+        try {
+            $ids = implode(',', array_map(fn($x) => (int)$x['id'], $sessions));
+            foreach ($pdo->query("SELECT session_id, COUNT(DISTINCT registration_id) n FROM conf_scans WHERE session_id IN ($ids) AND result = 'ok' GROUP BY session_id")->fetchAll() as $a) {
+                $attended[(int)$a['session_id']] = (int)$a['n'];
+            }
+        } catch (Throwable $e) {
+            // Scans table missing: no counts.
+        }
+    }
     $days = [];
     foreach ($sessions as $x) {
         $days[$x['day']][] = [
@@ -161,7 +172,7 @@ function confProgramme(PDO $pdo, int $eventId, bool $forStaff = false): array
             'roomId' => $x['room_id'] !== null ? (int)$x['room_id'] : null, 'room' => $x['room_id'] !== null ? ($rooms[(int)$x['room_id']] ?? null) : null,
             'kind' => $x['kind'], 'kindLabel' => CONF_SESSION_KINDS[$x['kind']] ?? 'Other', 'title' => $x['title'],
             'chairs' => $x['chairs'], 'description' => $x['description'], 'items' => $items[(int)$x['id']] ?? [],
-        ];
+        ] + ($forStaff ? ['attended' => $attended[(int)$x['id']] ?? 0] : []);
     }
     $out = [];
     foreach ($days as $day => $list) $out[] = ['day' => $day, 'sessions' => $list];

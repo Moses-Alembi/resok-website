@@ -55,6 +55,9 @@
     <span class="pill" id="net">Online</span>
     <span class="pill" id="queuePill" hidden></span>
     <div class="right">
+      <select id="session" aria-label="What this door is for" style="background:#24342a;color:#fff;border:1px solid #33463a;border-radius:8px;padding:6px 8px;font-size:13px;max-width:46vw">
+        <option value="">Main entrance</option>
+      </select>
       <label for="gate" class="pill" style="background:none;padding:0">Door</label>
       <input id="gate" type="text" placeholder="e.g. Plenary hall" maxlength="60" />
     </div>
@@ -104,13 +107,16 @@
     let queue = store.get('queue', []);            // scans not yet uploaded
     let byCode = new Map();
     let cancelled = new Set();
-    let inToday = new Map();                       // code -> time first let in today
+    let inToday = new Map();                       // code -> time first let in today (main doors)
+    let inSession = new Set();                     // "sessionId|code" already in a session
+    const sessionNow = () => Number($('session').value) || null;
     let lastCode = '';
     let lastAt = 0;
     let busy = false;
 
     $('gate').value = store.get('gate', '');
     $('gate').addEventListener('change', () => store.set('gate', $('gate').value.trim()));
+    $('session').addEventListener('change', () => store.set('sessionChoice', $('session').value));
 
     function today() {
       return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
@@ -125,6 +131,12 @@
       (roster?.badges || []).forEach((b) => { if (b.inTodayAt && roster.day === today() && !inToday.has(b.code)) inToday.set(b.code, b.inTodayAt); });
       saveInToday();
       $('rosterCount').textContent = byCode.size;
+      inSession = new Set((roster?.sessionIns || []).map((x) => x.sessionId + '|' + x.code).concat(store.get('inSession', [])));
+      const sel = $('session');
+      const keep = store.get('sessionChoice', '');
+      sel.innerHTML = '<option value="">Main entrance</option>' + (roster?.sessions || []).map((x) =>
+        `<option value="${x.id}">${esc(x.startsAt)} ${esc(x.title)}${x.room ? ' · ' + esc(x.room) : ''}</option>`).join('');
+      if ([...sel.options].some((o) => o.value === String(keep))) sel.value = String(keep);
     }
     function saveInToday() {
       store.set('inToday', { day: today(), codes: Object.fromEntries(inToday) });
@@ -164,12 +176,23 @@
       if (code === lastCode && now - lastAt < 3000) return;  // the same badge held in front of the camera
       lastCode = code; lastAt = now;
       const scannedAt = new Date().toISOString();
-      queue.push({ clientId: uuid(), code, gate: $('gate').value.trim(), scannedAt });
+      const sid = sessionNow();
+      queue.push({ clientId: uuid(), code, gate: $('gate').value.trim(), sessionId: sid, scannedAt });
       store.set('queue', queue);
       updateNet();
 
       const b = byCode.get(code);
-      if (b) {
+      if (b && sid) {
+        const key = sid + '|' + code;
+        if (inSession.has(key)) {
+          showResult('dup', `<div class="big">Already in this session</div><div class="name">${esc(b.name)}</div><div class="sub">Check this is the badge's owner.</div>`);
+        } else {
+          inSession.add(key);
+          store.set('inSession', [...inSession]);
+          showResult('ok', `<div class="big">&#10003; Registered</div><div class="name">${esc(b.name)}</div>
+            <div class="sub">${esc(b.category)}${b.institution ? ' · ' + esc(b.institution) : ''}</div>`);
+        }
+      } else if (b) {
         if (inToday.has(code)) {
           showResult('dup', `<div class="big">Already in today</div><div class="name">${esc(b.name)}</div>
             <div class="sub">First scanned at ${esc(clock(inToday.get(code)))}. Check this is the badge's owner before letting them in.</div>`);
@@ -199,7 +222,7 @@
         // The server is the final word: a badge another phone let in first comes back as a duplicate.
         const flagged = (r.results || []).filter((x) => x.result === 'duplicate');
         if (flagged.length) logLine(`${flagged.length} scan(s) were already in at another door.`);
-        roster = { day: r.day, badges: r.badges, cancelled: r.cancelled };
+        roster = { day: r.day, badges: r.badges, cancelled: r.cancelled, sessions: r.sessions || [], sessionIns: r.sessionIns || [] };
         store.set('roster', roster); store.set('savedAt', Date.now());
         indexRoster();
         $('syncedAt').textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -284,7 +307,7 @@
       try {
         const r = await api('conference/scan/roster');
         $('eventName').textContent = r.event?.name || 'Badge scanner';
-        roster = { day: r.day, badges: r.badges, cancelled: r.cancelled };
+        roster = { day: r.day, badges: r.badges, cancelled: r.cancelled, sessions: r.sessions || [], sessionIns: r.sessionIns || [] };
         store.set('roster', roster); store.set('savedAt', Date.now());
         store.set('event', r.event?.name || '');
         indexRoster();

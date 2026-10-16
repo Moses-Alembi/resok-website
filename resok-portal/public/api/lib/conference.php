@@ -1024,12 +1024,32 @@ function confRoster(PDO $pdo, array $event): array
     $cancelled->execute([$eventId]);
     $today = confToday($event)->format('Y-m-d');
     $inToday = $pdo->prepare('SELECT s.registration_id, MIN(s.scanned_at) first_at FROM conf_scans s
-                              WHERE s.event_id = ? AND s.scan_day = ? AND s.result = "ok" GROUP BY s.registration_id');
+                              WHERE s.event_id = ? AND s.scan_day = ? AND s.result = "ok" AND s.session_id IS NULL GROUP BY s.registration_id');
     $inToday->execute([$eventId, $today]);
     $firstAt = [];
     foreach ($inToday->fetchAll() as $r) $firstAt[(int)$r['registration_id']] = $r['first_at'];
+    // Today's programme sessions, so a phone at a room door can record attendance for one.
+    $sessions = [];
+    $sessionIns = [];
+    try {
+        $sq = $pdo->prepare('SELECT s.id, s.title, s.starts_at, s.ends_at, r.name AS room FROM conf_sessions s LEFT JOIN conf_rooms r ON r.id = s.room_id
+                             WHERE s.event_id = ? AND s.day = ? AND s.kind <> "break" ORDER BY s.starts_at, s.id');
+        $sq->execute([$eventId, $today]);
+        foreach ($sq->fetchAll() as $x) {
+            $sessions[] = ['id' => (int)$x['id'], 'title' => $x['title'], 'startsAt' => substr((string)$x['starts_at'], 0, 5),
+                           'endsAt' => substr((string)$x['ends_at'], 0, 5), 'room' => $x['room']];
+        }
+        $si = $pdo->prepare('SELECT DISTINCT s.session_id, b.code FROM conf_scans s JOIN conf_badges b ON b.registration_id = s.registration_id AND b.status = "active"
+                             WHERE s.event_id = ? AND s.scan_day = ? AND s.result = "ok" AND s.session_id IS NOT NULL');
+        $si->execute([$eventId, $today]);
+        foreach ($si->fetchAll() as $x) $sessionIns[] = ['sessionId' => (int)$x['session_id'], 'code' => $x['code']];
+    } catch (Throwable $e) {
+        // No programme tables yet: door scanning only.
+    }
     return [
         'day' => $today,
+        'sessions' => $sessions,
+        'sessionIns' => $sessionIns,
         'badges' => array_map(fn($r) => ['code' => $r['code'], 'ref' => $r['ref'], 'name' => $r['badge_name'],
                                          'institution' => $r['institution'], 'category' => $r['category'],
                                          'inTodayAt' => $firstAt[(int)$r['reg_id']] ?? null], $active->fetchAll()),
@@ -1064,6 +1084,17 @@ function confSyncScans(PDO $pdo, array $event, int $staffId, array $scans): arra
         }
         $at = $at->setTimezone($zone);
         $day = $at->format('Y-m-d');
+        // A scan for a session must name a session of this conference on that day.
+        $sessionId = (int)($s['sessionId'] ?? 0) ?: null;
+        if ($sessionId) {
+            try {
+                $sv = $pdo->prepare('SELECT 1 FROM conf_sessions WHERE id = ? AND event_id = ? AND day = ?');
+                $sv->execute([$sessionId, $eventId, $day]);
+                if (!$sv->fetch()) $sessionId = null;
+            } catch (Throwable $e) {
+                $sessionId = null;
+            }
+        }
         $b = $pdo->prepare('SELECT b.id, b.status, b.registration_id, r.status AS reg_status, r.event_id
                             FROM conf_badges b JOIN conf_registrations r ON r.id = b.registration_id WHERE b.code = ?');
         $b->execute([$code]);
@@ -1073,15 +1104,22 @@ function confSyncScans(PDO $pdo, array $event, int $staffId, array $scans): arra
             if ($badge['status'] !== 'active' || $badge['reg_status'] !== 'confirmed') {
                 $result = 'cancelled';
             } else {
-                $dup = $pdo->prepare('SELECT 1 FROM conf_scans WHERE registration_id = ? AND scan_day = ? AND result = "ok" LIMIT 1');
-                $dup->execute([(int)$badge['registration_id'], $day]);
+                // At a session door, "already in" means already in this session; at a main
+                // door, already through a main door today.
+                if ($sessionId) {
+                    $dup = $pdo->prepare('SELECT 1 FROM conf_scans WHERE registration_id = ? AND session_id = ? AND result = "ok" LIMIT 1');
+                    $dup->execute([(int)$badge['registration_id'], $sessionId]);
+                } else {
+                    $dup = $pdo->prepare('SELECT 1 FROM conf_scans WHERE registration_id = ? AND scan_day = ? AND session_id IS NULL AND result = "ok" LIMIT 1');
+                    $dup->execute([(int)$badge['registration_id'], $day]);
+                }
                 $result = $dup->fetch() ? 'duplicate' : 'ok';
             }
         }
-        $pdo->prepare('INSERT IGNORE INTO conf_scans (event_id, client_id, code, badge_id, registration_id, scan_day, gate, result, scanned_by, scanned_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        $pdo->prepare('INSERT IGNORE INTO conf_scans (event_id, client_id, code, badge_id, registration_id, scan_day, gate, session_id, result, scanned_by, scanned_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$eventId, $clientId, $code, $badge['id'] ?? null, $badge ? (int)$badge['registration_id'] : null, $day,
-                       mb_substr(trim((string)($s['gate'] ?? '')), 0, 60) ?: null, $result, $staffId, $at->format('Y-m-d H:i:s')]);
+                       mb_substr(trim((string)($s['gate'] ?? '')), 0, 60) ?: null, $sessionId, $result, $staffId, $at->format('Y-m-d H:i:s')]);
         $results[] = ['clientId' => $clientId, 'result' => $result];
     }
     return $results;

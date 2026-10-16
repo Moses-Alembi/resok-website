@@ -34,7 +34,7 @@ foreach (['SimpleMailer', 'portal-mail', 'abstracts', 'abstracts-review', 'abstr
     require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 // Conference registration reminders ride on the same job and the same mail queue.
-foreach (['conference', 'conference-groups'] as $module) {
+foreach (['conference', 'conference-groups', 'conference-survey'] as $module) {
     if (is_file(__DIR__ . '/../lib/' . $module . '.php')) require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 
@@ -46,11 +46,12 @@ $pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], [
 $pdo->exec("SET time_zone = '+03:00'");
 
 if (!abstractsEnsureTables($pdo)) exit("Abstract tables are unavailable.\n");
-$conference = ['payment' => 0, 'presenter' => 0];
+$conference = ['payment' => 0, 'presenter' => 0, 'survey' => 0];
 if (function_exists('confEnsureTables') && confEnsureTables($pdo)) {
     try {
         $conference['payment'] = confSendPaymentReminders($pdo, $config);
         $conference['presenter'] = confSendPresenterReminders($pdo, $config);
+        if (function_exists('confSendSurveyInvites')) $conference['survey'] = confSendSurveyInvites($pdo, $config);
     } catch (Throwable $e) {
         echo 'Conference reminders failed: ' . $e->getMessage() . "\n";
     }
@@ -59,6 +60,6 @@ $report = absRunScheduled($pdo, $config);
 echo 'Deadline reminders queued: ' . $report['deadlineReminders'] . "\n"
    . 'Review reminders queued: ' . $report['reviewReminders'] . "\n"
    . 'Attendance reminders queued: ' . ($report['attendanceReminders'] ?? 0) . "\n"
-   . 'Conference payment reminders: ' . $conference['payment'] . ', presenter reminders: ' . $conference['presenter'] . "\n"
+   . 'Conference payment reminders: ' . $conference['payment'] . ', presenter reminders: ' . $conference['presenter'] . ', evaluation invitations: ' . $conference['survey'] . "\n"
    . 'Mail sent: ' . $report['mail']['sent'] . ', failed attempts: ' . $report['mail']['failed']
    . ', still waiting: ' . $report['mail']['waiting'] . "\n";

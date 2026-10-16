@@ -99,6 +99,7 @@
         <button role="tab" aria-selected="false" data-tab="fees" data-need="admin">Fees and extras</button>
         <button role="tab" aria-selected="false" data-tab="groups" data-need="finance">Group invoices</button>
         <button role="tab" aria-selected="false" data-tab="sponsors" data-need="admin">Sponsors</button>
+        <button role="tab" aria-selected="false" data-tab="survey" data-need="admin">Evaluation</button>
         <button role="tab" aria-selected="false" data-tab="settings" data-need="admin">Settings and staff</button>
       </nav>
 
@@ -169,6 +170,22 @@
         </div>
       </section>
 
+      <section data-pane="survey" hidden>
+        <div class="panel">
+          <h2>Delegate evaluation</h2>
+          <p class="hint" style="margin-bottom:12px">Open the evaluation when the conference ends. Only delegates who were scanned in can answer, once each, from their conference page. Each is emailed an invitation within the hour, and one reminder five days later if they have not answered. Answers are shown here without names.</p>
+          <div id="svMsg" class="notice" hidden></div>
+          <div class="row" style="align-items:end">
+            <div class="field"><label for="svCloses">Closes <span class="hint">optional</span></label><input type="datetime-local" id="svCloses"></div>
+            <div class="field" style="flex:0;display:flex;gap:8px">
+              <button class="btn btn-primary" type="button" id="svToggle">Open the evaluation</button>
+              <a class="btn btn-ghost" href="api/index.php?route=conference/admin/survey/export"><i class="fas fa-file-csv"></i> CSV</a>
+            </div>
+          </div>
+          <div id="svResults"></div>
+        </div>
+      </section>
+
       <section data-pane="settings" hidden>
         <div class="panel">
           <h2>Registration</h2>
@@ -218,6 +235,7 @@
       if (b.dataset.tab === 'regs') loadRegs();
       if (b.dataset.tab === 'sponsors') loadSponsors();
       if (b.dataset.tab === 'groups') loadGroups();
+      if (b.dataset.tab === 'survey') svCall('conference/admin/survey');
     }));
 
     async function loadOverview() {
@@ -419,6 +437,40 @@
     }
     function renderAddons() { $('addonList').innerHTML = ov.addons.map(addonForm).join('') || '<p class="hint" style="margin-bottom:10px">No extras yet.</p>'; bindAddons($('addonList')); }
     $('addAddon').onclick = () => { $('addonList').insertAdjacentHTML('beforeend', addonForm()); bindAddons($('addonList')); };
+
+    // ---------------- evaluation ----------------
+    let sv = null;
+    async function svCall(path, opts, okText) {
+      try {
+        sv = await api(path, opts);
+        renderSurvey();
+        if (okText) note($('svMsg'), 'ok', okText);
+      } catch (e) { note($('svMsg'), 'error', e.message); }
+    }
+    function bars(dist) {
+      const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+      return Object.entries(dist).map(([k, n]) => `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><span style="width:44px;text-align:right">${esc(k)}</span>
+        <span style="flex:1;max-width:320px;background:#f2f4f7;border-radius:4px;height:10px"><span style="display:block;height:10px;border-radius:4px;background:var(--green);width:${Math.round(100 * n / total)}%"></span></span><span>${n}</span></div>`).join('');
+    }
+    function renderSurvey() {
+      const st = sv.state, r = sv.results;
+      $('svToggle').textContent = st.switchedOn ? 'Close the evaluation' : 'Open the evaluation';
+      $('svCloses').value = st.closesAt ? st.closesAt.slice(0, 16).replace(' ', 'T') : '';
+      const status = st.open ? 'Open' : (st.switchedOn ? 'Past its closing date' : 'Closed');
+      $('svResults').innerHTML = `<p style="margin:14px 0"><b>${esc(status)}</b> &middot; ${r.responses} of ${r.attended} attendees have answered${r.attended ? ` (${Math.round(100 * r.responses / r.attended)}%)` : ''}.</p>`
+        + r.questions.map((q) => {
+          let body = '';
+          if (q.type === 'text') body = q.comments.length ? `<ul style="margin:6px 0 0 18px">${q.comments.map((c) => `<li style="margin-bottom:6px;white-space:pre-wrap">${esc(c)}</li>`).join('')}</ul>` : '<p class="hint">No comments yet.</p>';
+          else body = (q.average !== undefined && q.average !== null ? `<p style="margin:4px 0">Average <b>${q.average}</b>${q.nps !== undefined ? ` &middot; net promoter score <b>${q.nps}</b>` : ''}</p>` : '') + bars(q.distribution);
+          return `<div style="border-top:1px solid var(--line);padding:12px 0"><b>${esc(q.label)}</b> <span class="hint">${q.answers} answer${q.answers === 1 ? '' : 's'}</span>${body}</div>`;
+        }).join('');
+    }
+    $('svToggle').onclick = () => {
+      const opening = !sv.state.switchedOn;
+      if (opening && !confirm('Open the evaluation? Every delegate who was scanned in will be emailed an invitation.')) return;
+      svCall('conference/admin/survey', { method: 'POST', body: JSON.stringify({ open: opening, closesAt: $('svCloses').value }) }, opening ? 'The evaluation is open. Invitations go out with the hourly job.' : 'The evaluation is closed.');
+    };
+    $('svCloses').onchange = () => svCall('conference/admin/survey', { method: 'POST', body: JSON.stringify({ closesAt: $('svCloses').value }) }, 'Closing date saved.');
 
     // ---------------- group invoices ----------------
     async function grCall(path, opts, okText) {

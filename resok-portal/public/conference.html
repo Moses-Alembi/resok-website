@@ -78,6 +78,15 @@
     .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:18px}
     .tabs button{background:none;border:0;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
     .tabs button[aria-selected=true]{color:var(--green);border-bottom-color:var(--green)}
+    .scale{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .scale label{position:relative;display:inline-flex;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;margin:0}
+    .scale input{position:absolute;opacity:0;width:1px;height:1px}
+    .scale span{display:flex;align-items:center;justify-content:center;min-width:42px;height:40px;padding:0 10px;border-radius:7px}
+    .scale input:checked + span{background:var(--green);color:#fff}
+    .scale input:focus-visible + span{outline:2px solid var(--green);outline-offset:4px}
+    .scale-ends{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);max-width:520px;margin-top:4px}
+    .q{margin-bottom:20px}
+    .q > b{display:block;font-size:14.5px}
     @media (max-width:640px){.qr-wrap{grid-template-columns:1fr;justify-items:center;text-align:center}.panel{padding:20px}dl{grid-template-columns:1fr}}
   </style>
 </head>
@@ -140,6 +149,18 @@
         <div id="payError" class="notice error" hidden></div>
         <button class="btn btn-primary" type="submit" id="payBtn"><i class="fas fa-paper-plane"></i> Submit payment</button>
       </form>
+    </section>
+
+    <!-- Evaluation -->
+    <section class="panel" id="survey" hidden>
+      <h2>How was the conference?</h2>
+      <p class="lede" style="margin:0 0 18px">Five minutes of your time helps us plan next year. The organisers see your answers without your name.</p>
+      <form id="surveyForm" novalidate>
+        <div id="surveyQs"></div>
+        <div id="surveyError" class="notice error" hidden></div>
+        <button class="btn btn-primary" type="submit" id="surveyBtn"><i class="fas fa-paper-plane"></i> Send my evaluation</button>
+      </form>
+      <div id="surveyDone" class="notice ok" hidden>Thank you, your evaluation has been received.</div>
     </section>
 
     <!-- Visa letter -->
@@ -448,6 +469,54 @@
           <dt>Certificate</dt><dd><a href="api/index.php?route=conference/certificate"><i class="fas fa-file-pdf"></i> Download your certificate of attendance</a></dd>` : ''}`;
     }
 
+    // ---------- evaluation ----------
+    let surveyQs = [];
+    function renderSurvey(sv) {
+      show('survey', !!(sv && sv.open && sv.eligible));
+      if (!sv || !sv.open || !sv.eligible) return;
+      $('surveyForm').hidden = sv.answered;
+      show('surveyDone', sv.answered);
+      if (sv.answered) return;
+      surveyQs = sv.questions || [];
+      $('surveyQs').innerHTML = surveyQs.map((q) => {
+        const name = 'sq-' + q.key;
+        if (q.type === 'rating' || q.type === 'scale10') {
+          const lo = q.type === 'rating' ? 1 : 0, hi = q.type === 'rating' ? 5 : 10;
+          let opts = '';
+          for (let i = lo; i <= hi; i++) opts += `<label><input type="radio" name="${name}" value="${i}"><span>${i}</span></label>`;
+          return `<fieldset class="q" style="border:0;padding:0"><legend><b>${esc(q.label)}</b></legend><div class="scale">${opts}</div>
+            <div class="scale-ends"><span>${q.type === 'rating' ? 'Poor' : 'Not at all likely'}</span><span>${q.type === 'rating' ? 'Excellent' : 'Extremely likely'}</span></div></fieldset>`;
+        }
+        if (q.type === 'choice') {
+          return `<fieldset class="q" style="border:0;padding:0"><legend><b>${esc(q.label)}</b></legend><div class="scale">${q.options.map((o) =>
+            `<label><input type="radio" name="${name}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join('')}</div></fieldset>`;
+        }
+        return `<div class="q field"><label for="${name}">${esc(q.label)} <span class="hint">optional</span></label><textarea id="${name}" rows="3" maxlength="2000"></textarea></div>`;
+      }).join('');
+    }
+    async function loadSurvey() {
+      try { renderSurvey((await api('conference/survey')).survey); } catch (e) { show('survey', false); }
+    }
+    $('surveyForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const answers = {};
+      surveyQs.forEach((q) => {
+        if (q.type === 'text') { const v = $('sq-' + q.key).value.trim(); if (v) answers[q.key] = v; return; }
+        const c = document.querySelector(`input[name="sq-${q.key}"]:checked`);
+        if (c) answers[q.key] = q.type === 'choice' ? c.value : Number(c.value);
+      });
+      const btn = $('surveyBtn');
+      btn.disabled = true;
+      try {
+        renderSurvey((await api('conference/survey', { method: 'POST', body: JSON.stringify({ answers }) })).survey);
+        $('survey').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        notice($('surveyError'), 'error', e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     $('visaForm').addEventListener('submit', (ev) => {
       ev.preventDefault();
       const q = new URLSearchParams({ passport: $('vPass').value.trim(), nationality: $('vNat').value.trim() });
@@ -488,7 +557,7 @@
         $('loading').innerHTML = `<p>${esc(e.status === 404 ? 'There is no conference open for registration at the moment.' : e.message)}</p>`;
         return;
       }
-      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register', 'visa'].forEach((id) => show(id, false));
+      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register', 'visa', 'survey'].forEach((id) => show(id, false));
       show('intro');
       renderHeader();
       renderWho();
@@ -502,6 +571,7 @@
       } else if (reg.status === 'confirmed') {
         renderConfirmed(reg);
         show('visa');
+        if (reg.checkedInDays.length) loadSurvey().then(() => { if (location.hash === '#survey' && !$('survey').hidden) $('survey').scrollIntoView(); });
         show('fees', false);
       } else {
         renderAwaiting(reg);

@@ -42,6 +42,43 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         return (bool)$stmt->fetch();
     };
 
+    // ------------------------------------------------------------------ evaluation survey
+    if (strpos($route, 'conference/survey') === 0 || strpos($route, 'conference/admin/survey') === 0) {
+        if (!function_exists('confSurveyEnsureTables') || !confSurveyEnsureTables($pdo)) {
+            respond(503, ['error' => 'The evaluation is not available on this server.']);
+        }
+        $user = auth($config);
+        $event = $eventFor($user);
+        $eventId = (int)$event['id'];
+        if ($route === 'conference/survey') {
+            $reg = confRegistrationFor($pdo, $eventId, (int)$user['userId']);
+            if ($method === 'GET') respond(200, ['survey' => confSurveyForDelegate($pdo, $event, $reg)]);
+            if ($method === 'POST') {
+                if ($e = confSurveySubmit($pdo, $event, $reg, input())) respond(400, ['error' => $e]);
+                respond(200, ['survey' => confSurveyForDelegate($pdo, $event, $reg)]);
+            }
+            respond(405, ['error' => 'Method not allowed']);
+        }
+        if (!confHasRole($pdo, $user, $config, $eventId, 'admin')) respond(403, ['error' => 'Only conference administrators see the evaluation.']);
+        confRequireStaffMfa($pdo, $config, $user, confRoles($pdo, $user, $config, $eventId));
+        if ($route === 'conference/admin/survey' && $method === 'GET') {
+            respond(200, ['state' => confSurveyState($pdo, $eventId), 'results' => confSurveyResults($pdo, $event)]);
+        }
+        if ($route === 'conference/admin/survey' && $method === 'POST') {
+            if ($e = confSurveySaveState($pdo, $eventId, input(), (int)$user['userId'])) respond(400, ['error' => $e]);
+            respond(200, ['state' => confSurveyState($pdo, $eventId), 'results' => confSurveyResults($pdo, $event)]);
+        }
+        if ($route === 'conference/admin/survey/export' && $method === 'GET') {
+            header_remove('Content-Type');
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="evaluation-' . date('Ymd') . '.csv"');
+            header('Cache-Control: private, no-store');
+            echo absCsv(confSurveyCsvRows($pdo, $event));
+            exit;
+        }
+        respond(404, ['error' => 'Unknown route.']);
+    }
+
     // ------------------------------------------------------------------ groups
     $groupsReady = function_exists('confGroupsEnsureTables') && confGroupsEnsureTables($pdo);
     if (strpos($route, 'conference/admin/groups') === 0) {

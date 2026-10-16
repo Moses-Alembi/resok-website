@@ -42,6 +42,89 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         return (bool)$stmt->fetch();
     };
 
+    // ------------------------------------------------------------------ sponsors
+    $sponsorsReady = function_exists('confSponsorsEnsureTables') && confSponsorsEnsureTables($pdo);
+    if ($route === 'conference/sponsors' && $method === 'GET') {
+        if (!$sponsorsReady) respond(503, ['error' => 'Sponsors are not available on this server.']);
+        $event = $eventFor(authOptional($config));
+        respond(200, ['sponsors' => confSponsors($pdo, (int)$event['id'])]);
+    }
+    if (preg_match('#^conference/sponsors/(\d+)/logo$#', $route, $m) && $method === 'GET') {
+        if (!$sponsorsReady) respond(404, ['error' => 'No logo.']);
+        $stmt = $pdo->prepare('SELECT logo_file, logo_mime, active FROM conf_sponsors WHERE id = ?');
+        $stmt->execute([(int)$m[1]]);
+        $row = $stmt->fetch();
+        $path = $row && $row['logo_file'] ? confLogoDir($config) . '/' . basename((string)$row['logo_file']) : '';
+        if (!$path || !is_file($path)) respond(404, ['error' => 'No logo.']);
+        header_remove('Content-Type');
+        header('Content-Type: ' . $row['logo_mime']);
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: public, max-age=3600');
+        readfile($path);
+        exit;
+    }
+    // Booth staff: their sponsors, scanning a badge, and their own leads.
+    if (strpos($route, 'conference/leads') === 0) {
+        if (!$sponsorsReady) respond(503, ['error' => 'Lead scanning is not available on this server.']);
+        $user = auth($config);
+        $event = $eventFor($user);
+        $eventId = (int)$event['id'];
+        $mine = confSponsorsForStaff($pdo, $eventId, (int)$user['userId']);
+        $sponsorFor = function (int $id) use ($mine): array {
+            foreach ($mine as $s) if ($s['id'] === $id) return $s;
+            respond(403, ['error' => 'You do not scan for that sponsor.']);
+        };
+        if ($route === 'conference/leads' && $method === 'GET') {
+            if (!$mine) respond(403, ['error' => 'This account is not registered as staff for any sponsor. Ask the organisers to add you.']);
+            $sid = (int)($_GET['sponsor'] ?? $mine[0]['id']);
+            $sp = $sponsorFor($sid);
+            respond(200, ['event' => $eventShape($event), 'sponsors' => $mine, 'sponsor' => $sp, 'leads' => confLeads($pdo, $sid)]);
+        }
+        if ($route === 'conference/leads/scan' && $method === 'POST') {
+            $data = input();
+            $sp = $sponsorFor((int)($data['sponsorId'] ?? 0));
+            [$lead, $e] = confRecordLead($pdo, $eventId, $sp['id'], (int)$user['userId'], (string)($data['code'] ?? ''), (string)($data['note'] ?? ''));
+            if ($e) respond(400, ['error' => $e]);
+            respond(200, ['lead' => $lead]);
+        }
+        if ($route === 'conference/leads/export' && $method === 'GET') {
+            $sp = $sponsorFor((int)($_GET['sponsor'] ?? 0));
+            $rows = [['Name', 'Institution', 'Country', 'Profession', 'Email (if shared)', 'Note', 'Scanned']];
+            foreach (confLeads($pdo, $sp['id']) as $l) $rows[] = [$l['name'], $l['institution'], $l['country'], $l['profession'], $l['email'] ?? '', $l['note'], $l['scannedAt']];
+            header_remove('Content-Type');
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="leads-' . date('Ymd') . '.csv"');
+            header('Cache-Control: no-store');
+            echo function_exists('absCsv') ? absCsv($rows) : '';
+            exit;
+        }
+        respond(404, ['error' => 'Unknown route.']);
+    }
+    if (strpos($route, 'conference/admin/sponsors') === 0) {
+        if (!$sponsorsReady) respond(503, ['error' => 'Sponsors are not available on this server.']);
+        $user = auth($config);
+        $event = $eventFor($user);
+        $eventId = (int)$event['id'];
+        if (!confHasRole($pdo, $user, $config, $eventId, 'admin')) respond(403, ['error' => 'Only conference administrators manage sponsors.']);
+        $list = fn() => respond(200, ['sponsors' => confSponsors($pdo, $eventId, true), 'tiers' => CONF_SPONSOR_TIERS]);
+        if ($route === 'conference/admin/sponsors' && $method === 'GET') $list();
+        if ($method !== 'POST') respond(405, ['error' => 'Method not allowed']);
+        $e = null;
+        if ($route === 'conference/admin/sponsors') {
+            [, $e] = confSaveSponsor($pdo, $eventId, input());
+        } elseif (preg_match('#^conference/admin/sponsors/(\d+)/logo$#', $route, $m)) {
+            $e = confSponsorLogo($pdo, $config, $eventId, (int)$m[1], $_FILES['logo'] ?? null);
+        } elseif (preg_match('#^conference/admin/sponsors/(\d+)/staff$#', $route, $m)) {
+            $e = confSponsorStaffAdd($pdo, $eventId, (int)$m[1], (string)(input()['email'] ?? ''));
+        } elseif (preg_match('#^conference/admin/sponsors/(\d+)/staff/(\d+)/remove$#', $route, $m)) {
+            $e = confSponsorStaffRemove($pdo, $eventId, (int)$m[1], (int)$m[2]);
+        } else {
+            respond(404, ['error' => 'Unknown route.']);
+        }
+        if ($e) respond(400, ['error' => $e]);
+        $list();
+    }
+
     // ------------------------------------------------------------------ programme
     if ($route === 'conference/programme' && $method === 'GET') {
         if (!$programmeReady) respond(503, ['error' => 'The programme is not available on this server.']);

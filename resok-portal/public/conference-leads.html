@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#087539" />
+  <title>Booth Lead Scanner - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root{--green:#087539;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    [hidden]{display:none!important}
+    header{background:var(--green);color:#fff;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    header strong{font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    header select{border:0;border-radius:8px;padding:6px 8px;font:inherit;font-size:13.5px}
+    main{max-width:720px;margin:0 auto;padding:14px 16px 40px}
+    .cam{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3;max-height:52vh;margin:0 auto}
+    video{width:100%;height:100%;object-fit:cover;display:block}
+    .cam .start{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;color:#cfd8d2;text-align:center;padding:16px}
+    .btn{border:0;border-radius:10px;padding:11px 18px;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;background:var(--green);color:#fff;text-decoration:none;display:inline-flex;gap:8px;align-items:center}
+    .btn.ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 10px rgba(16,24,40,.06);margin-top:14px}
+    .found{border-left:5px solid var(--green)}
+    .found.bad{border-left-color:var(--red)}
+    .found h2{font-size:19px}
+    .muted{color:var(--muted);font-size:13.5px}
+    input,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px 11px;font:inherit;font-size:14.5px}
+    .row{display:flex;gap:8px;margin-top:10px}
+    .row input{flex:1;text-transform:uppercase}
+    ul{list-style:none}
+    li{padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+    li .muted{font-size:12.5px}
+    .chip{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#f2f4f7;color:#475467;margin-left:4px}
+    .chip.ok{background:#e8f3ec;color:var(--green)}
+    .head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <header><strong id="title">Booth lead scanner</strong><select id="sponsor" aria-label="Sponsor" hidden></select></header>
+  <main>
+    <div id="boot" class="card">Loading&hellip;</div>
+    <div id="app" hidden>
+      <div class="cam">
+        <video id="video" playsinline muted hidden></video>
+        <div class="start" id="start"><p>Scan the QR code on a delegate's badge, with their agreement, to save them as a contact.</p><button class="btn" id="startBtn" type="button">Start camera</button></div>
+      </div>
+      <form class="row" id="manual" autocomplete="off"><input id="code" placeholder="Or type the badge code" aria-label="Badge code"><button class="btn ghost" type="submit">Save</button></form>
+
+      <div class="card found" id="found" hidden></div>
+
+      <div class="card">
+        <div class="head"><h2 style="font-size:16px">Your contacts <span id="count" class="muted"></span></h2><a class="btn ghost" id="export">Download CSV</a></div>
+        <p class="muted" style="margin:6px 0 4px">Email addresses appear only for delegates who agreed, at registration, to share them with exhibitors.</p>
+        <ul id="leads"></ul>
+      </div>
+    </div>
+  </main>
+  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
+  <script src="js/vendor/jsqr-1.4.0.js"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const api = (p, o) => window.ResokPortal.api(p, o);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let sponsorId = null;
+    let last = '';
+    let lastAt = 0;
+
+    function renderLeads(leads) {
+      $('count').textContent = `(${leads.length})`;
+      $('leads').innerHTML = leads.map((l) => `<li><strong>${esc(l.name)}</strong>${l.shared ? '<span class="chip ok">email shared</span>' : '<span class="chip">name only</span>'}
+        <div class="muted">${esc([l.profession, l.institution, l.country].filter(Boolean).join(' · '))}${l.email ? ' · ' + esc(l.email) : ''}</div>
+        ${l.note ? `<div class="muted">Note: ${esc(l.note)}</div>` : ''}</li>`).join('') || '<li class="muted">No contacts yet.</li>';
+      $('export').href = `api/index.php?route=conference/leads/export&sponsor=${sponsorId}`;
+    }
+    async function load() {
+      const r = await api('conference/leads' + (sponsorId ? `&sponsor=${sponsorId}` : ''));
+      sponsorId = r.sponsor.id;
+      $('title').textContent = `${r.sponsor.name}${r.sponsor.booth ? ' · Booth ' + r.sponsor.booth : ''}`;
+      const sel = $('sponsor');
+      sel.hidden = r.sponsors.length < 2;
+      sel.innerHTML = r.sponsors.map((s) => `<option value="${s.id}" ${s.id === sponsorId ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+      renderLeads(r.leads);
+    }
+    $('sponsor').addEventListener('change', () => { sponsorId = Number($('sponsor').value); load(); });
+
+    async function save(code) {
+      code = String(code || '').trim().toUpperCase();
+      if (!code) return;
+      const now = Date.now();
+      if (code === last && now - lastAt < 4000) return;
+      last = code; lastAt = now;
+      const box = $('found');
+      try {
+        const r = await api('conference/leads/scan', { method: 'POST', body: JSON.stringify({ sponsorId, code }) });
+        const l = r.lead;
+        box.className = 'card found';
+        box.innerHTML = `<h2>${esc(l.name)}</h2><div class="muted">${esc([l.profession, l.institution, l.country].filter(Boolean).join(' · '))}</div>
+          <div class="muted" style="margin-top:4px">${l.shared ? 'Email shared: ' + esc(l.email) : 'This delegate has not agreed to share their email.'}</div>
+          <form id="noteForm" style="margin-top:10px"><textarea id="note" rows="2" placeholder="Add a note, e.g. interested in spirometers">${esc(l.note || '')}</textarea>
+          <button class="btn" type="submit" style="margin-top:8px">Save note</button></form>`;
+        $('noteForm').onsubmit = async (e) => {
+          e.preventDefault();
+          await api('conference/leads/scan', { method: 'POST', body: JSON.stringify({ sponsorId, code, note: $('note').value }) });
+          load();
+        };
+        if (navigator.vibrate) navigator.vibrate(80);
+        load();
+      } catch (e) {
+        box.className = 'card found bad';
+        box.innerHTML = `<h2>Not saved</h2><div class="muted">${esc(e.message)}</div>`;
+      }
+      box.hidden = false;
+    }
+    $('manual').addEventListener('submit', (e) => { e.preventDefault(); save($('code').value); $('code').value = ''; });
+
+    let detector = null;
+    let canvas = null;
+    $('startBtn').addEventListener('click', async () => {
+      const video = $('video');
+      try {
+        video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        await video.play();
+      } catch {
+        $('start').innerHTML = '<p>The camera could not be opened. Allow camera access, or type badge codes below.</p>';
+        return;
+      }
+      if ('BarcodeDetector' in window) { try { detector = new window.BarcodeDetector({ formats: ['qr_code'] }); } catch { detector = null; } }
+      canvas = document.createElement('canvas');
+      $('start').hidden = true;
+      video.hidden = false;
+      (async function loop() {
+        if (video.readyState >= 2) {
+          try {
+            if (detector) {
+              const c = await detector.detect(video);
+              if (c[0]) save(c[0].rawValue);
+            } else if (window.jsQR) {
+              const w = 560, h = Math.round(video.videoHeight * (w / video.videoWidth)) || 420;
+              canvas.width = w; canvas.height = h;
+              const ctx = canvas.getContext('2d', { willReadFrequently: true });
+              ctx.drawImage(video, 0, 0, w, h);
+              const hit = window.jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
+              if (hit) save(hit.data);
+            }
+          } catch { /* unreadable frame */ }
+        }
+        setTimeout(loop, 200);
+      })();
+    });
+
+    (async function boot() {
+      try {
+        await load();
+        $('boot').hidden = true;
+        $('app').hidden = false;
+      } catch (e) {
+        $('boot').innerHTML = e.status === 401 ? `Sign in with the account the organisers registered for your booth. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>` : esc(e.message);
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

@@ -97,6 +97,7 @@
         <button role="tab" aria-selected="true" data-tab="overview">Overview</button>
         <button role="tab" aria-selected="false" data-tab="regs">Registrations</button>
         <button role="tab" aria-selected="false" data-tab="fees" data-need="admin">Fees and extras</button>
+        <button role="tab" aria-selected="false" data-tab="sponsors" data-need="admin">Sponsors</button>
         <button role="tab" aria-selected="false" data-tab="settings" data-need="admin">Settings and staff</button>
       </nav>
 
@@ -139,6 +140,16 @@
           <h2>Workshops and extras</h2>
           <div id="addonList"></div>
           <button class="btn btn-ghost" type="button" id="addAddon"><i class="fas fa-plus"></i> Add an extra</button>
+        </div>
+      </section>
+
+      <section data-pane="sponsors" hidden>
+        <div class="panel">
+          <h2>Sponsors and exhibitors</h2>
+          <p class="hint" style="margin-bottom:12px">Logos appear on the conference site by tier. Booth staff sign in to the <a href="conference-leads">booth lead scanner</a> to save delegates who visit their stand; they see a delegate's email only if the delegate agreed at registration. Booth staff need their own conference registration (use a staff-only category) to get a badge.</p>
+          <div id="spMsg" class="notice" hidden></div>
+          <div id="spList"></div>
+          <button class="btn btn-ghost" type="button" id="addSp"><i class="fas fa-plus"></i> Add a sponsor</button>
         </div>
       </section>
 
@@ -189,6 +200,7 @@
       document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
       document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== b.dataset.tab; });
       if (b.dataset.tab === 'regs') loadRegs();
+      if (b.dataset.tab === 'sponsors') loadSponsors();
     }));
 
     async function loadOverview() {
@@ -390,6 +402,57 @@
     }
     function renderAddons() { $('addonList').innerHTML = ov.addons.map(addonForm).join('') || '<p class="hint" style="margin-bottom:10px">No extras yet.</p>'; bindAddons($('addonList')); }
     $('addAddon').onclick = () => { $('addonList').insertAdjacentHTML('beforeend', addonForm()); bindAddons($('addonList')); };
+
+    // ---------------- sponsors ----------------
+    let tiers = {};
+    function spForm(sp = {}) {
+      const id = sp.id || 'new';
+      return `<details ${sp.id ? '' : 'open'} data-sp="${id}"><summary>${sp.id ? `${esc(sp.name)} <span class="hint">${esc(sp.tierLabel)}${sp.booth ? ' · booth ' + esc(sp.booth) : ''} · ${sp.leads} lead(s)${sp.active ? '' : ' · hidden'}</span>` : 'New sponsor'}</summary>
+        <div style="margin-top:10px">
+          ${sp.logoUrl ? `<img src="${esc(sp.logoUrl)}" alt="" style="max-height:60px;max-width:200px;margin-bottom:10px">` : ''}
+          <div class="row"><div class="field"><label>Name</label><input type="text" data-f="name" value="${esc(sp.name || '')}"></div>
+            <div class="field" style="max-width:160px"><label>Tier</label><select data-f="tier">${Object.entries(tiers).map(([k, v]) => `<option value="${k}" ${k === (sp.tier || 'exhibitor') ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+            <div class="field" style="max-width:110px"><label>Booth</label><input type="text" data-f="booth" value="${esc(sp.booth || '')}"></div>
+            <div class="field" style="max-width:90px"><label>Order</label><input type="number" min="0" data-f="sortOrder" value="${sp.sortOrder ?? 0}"></div></div>
+          <div class="row"><div class="field"><label>Website</label><input type="text" data-f="website" value="${esc(sp.website || '')}" placeholder="https://"></div>
+            <div class="field"><label>Contact name</label><input type="text" data-f="contactName" value="${esc(sp.contactName || '')}"></div>
+            <div class="field"><label>Contact email</label><input type="email" data-f="contactEmail" value="${esc(sp.contactEmail || '')}"></div></div>
+          <label class="check" style="margin-bottom:10px"><input type="checkbox" data-f="active" ${sp.active === false ? '' : 'checked'}> Show on the conference site</label>
+          <div class="actions"><button class="btn btn-primary" type="button" data-spsave>Save</button>
+            ${sp.id ? `<label class="btn btn-ghost" style="cursor:pointer">Upload logo<input type="file" accept="image/png,image/jpeg" data-splogo hidden></label>` : ''}</div>
+          ${sp.id ? `<h3>Booth staff</h3><div class="hint">${sp.staff.map((u) => `${esc(u.email)} <button class="btn btn-danger" style="padding:2px 8px" data-sprm="${u.userId}">Remove</button>`).join('<br>') || 'None yet.'}</div>
+            <div class="row" style="align-items:end;margin-top:8px"><div class="field"><label>Add by portal email</label><input type="email" data-spstaff></div><div class="field" style="flex:0"><button class="btn btn-ghost" type="button" data-spadd>Add</button></div></div>` : ''}
+        </div></details>`;
+    }
+    async function spCall(path, opts) {
+      try { const r = await api(path, opts); tiers = r.tiers; renderSponsors(r.sponsors); return true; }
+      catch (e) { note($('spMsg'), 'error', e.message); return false; }
+    }
+    function renderSponsors(list) {
+      $('spList').innerHTML = list.map(spForm).join('') || '<p class="hint" style="margin-bottom:10px">No sponsors yet.</p>';
+      $('spList').querySelectorAll('details').forEach((det) => {
+        const id = det.dataset.sp;
+        const f = (k) => det.querySelector(`[data-f="${k}"]`);
+        det.querySelector('[data-spsave]').onclick = () => spCall('conference/admin/sponsors', { method: 'POST', body: JSON.stringify({
+          id: id === 'new' ? undefined : Number(id), name: f('name').value, tier: f('tier').value, booth: f('booth').value, sortOrder: f('sortOrder').value,
+          website: f('website').value, contactName: f('contactName').value, contactEmail: f('contactEmail').value, active: f('active').checked }) });
+        const logo = det.querySelector('[data-splogo]');
+        if (logo) logo.onchange = () => { const fd = new FormData(); fd.append('logo', logo.files[0]); spCall(`conference/admin/sponsors/${id}/logo`, { method: 'POST', body: fd }); };
+        const add = det.querySelector('[data-spadd]');
+        if (add) add.onclick = () => spCall(`conference/admin/sponsors/${id}/staff`, { method: 'POST', body: JSON.stringify({ email: det.querySelector('[data-spstaff]').value }) });
+        det.querySelectorAll('[data-sprm]').forEach((b) => b.onclick = () => spCall(`conference/admin/sponsors/${id}/staff/${b.dataset.sprm}/remove`, { method: 'POST', body: '{}' }));
+      });
+    }
+    async function loadSponsors() { await spCall('conference/admin/sponsors'); }
+    $('addSp').onclick = () => { $('spList').insertAdjacentHTML('beforeend', spForm()); renderSponsorsBindNew(); };
+    function renderSponsorsBindNew() {
+      const det = $('spList').querySelector('details[data-sp="new"]:last-of-type');
+      if (!det) return;
+      const f = (k) => det.querySelector(`[data-f="${k}"]`);
+      det.querySelector('[data-spsave]').onclick = () => spCall('conference/admin/sponsors', { method: 'POST', body: JSON.stringify({
+        name: f('name').value, tier: f('tier').value, booth: f('booth').value, sortOrder: f('sortOrder').value,
+        website: f('website').value, contactName: f('contactName').value, contactEmail: f('contactEmail').value, active: f('active').checked }) });
+    }
 
     // ---------------- settings and staff ----------------
     const toLocal = (v) => v ? String(v).replace(' ', 'T').slice(0, 16) : '';

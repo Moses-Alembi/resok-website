@@ -65,6 +65,12 @@ DirectoryIndex index.html
   RewriteCond %{ENV:RESOK_LOCAL} !=1
   RewriteRule ^(projects|sponsors|blog|post|knowledge|guidelines|patient-resources|learning)(\.html)?/?$ /coming-soon.html [R=302,L]
 
+  # The KISLHC 2027 site is being built (16 Oct 2026). Everything under /kislhc2027 goes to
+  # Coming Soon on the live server until it is ready; remove this rule to publish it. The
+  # 2026 site at /kislhc is a separate upload and is not affected.
+  RewriteCond %{ENV:RESOK_LOCAL} !=1
+  RewriteRule ^kislhc2027(/.*)?$ /coming-soon.html [R=302,L]
+
   # learning is listed above as well, so it goes to Coming Soon until the library is ready
   # (16 Oct 2026). Remove it from that list to open /learning to members again.
   # Members-only pages. Each one moved to private/<name>.html (blocked by private/.htaccess)

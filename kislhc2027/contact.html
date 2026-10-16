@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact Us | KISLHC 2027</title>
+  <meta name="description" content="Get in touch with the organisers of the 8th Kenya International Scientific Lung Health Conference (KISLHC 2027)." />
+
+
+  <!-- Favicon -->
+  <link rel="icon" href="assets/img/kislhc-logo.png" type="image/png" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Critical CSS -->
+  <style>
+    /* =============== RESET & BASE =============== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    :root {
+      --brand-primary: #00932e;
+      --brand-secondary: #bc0b22;
+      --text-dark: #2c3e50;
+      --text-light: #7f8c8d;
+      --bg-light: #f5f7fa;
+      --white: #fff;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+     body {
+  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* ✅ Oceanic background */
+  background: linear-gradient(135deg, #e4edf9 0%, #d1f0ec 100%);
+  color: var(--text-dark);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding-top: 0;
+}
+
+    /* =============== NAVIGATION =============== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      background: transparent;
+      backdrop-filter: none;
+      border-bottom: 0;
+      font-family: 'Mulish', 'Poppins', sans-serif;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .navbar .fas,
+    .navbar .far,
+    .navbar .fab {
+      color: inherit !important;
+    }
+    .nav-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 5%;
+    }
+     .nav-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 40px;
+      color: #f4e6cd;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+      transition: min-height 0.28s ease, opacity 0.25s ease, border-color 0.25s ease;
+      position: relative;
+    }
+    .nav-top-left,
+    .nav-top-right {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+    }
+    .nav-top-right {
+      margin-left: auto;
+    }
+    .nav-language {
+      position: relative;
+    }
+    .nav-language-btn {
+      background: transparent;
+      border: 0;
+      color: #f4e6cd;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+      padding: 0;
+      border-radius: 0;
+      box-shadow: none;
+      transition: color 0.2s ease;
+    }
+    .nav-language-btn:hover {
+      color: #fff;
+    }
+    .nav-language-btn:active {
+      box-shadow: none;
+    }
+    .nav-language-menu {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      min-width: 160px;
+      list-style: none;
+      margin: 0;
+      padding: 10px;
+      background: #e7ecf2;
+      border: 0;
+      border-radius: 14px;
+      box-shadow:
+        8px 8px 16px rgba(171, 182, 196, 0.65),
+        -8px -8px 16px rgba(244, 247, 251, 0.65);
+      display: none;
+      z-index: 1300;
+    }
+    .nav-language-menu.show {
+      display: block;
+    }
+    .nav-language .nav-language-menu a {
+      display: block;
+      padding: 10px 12px;
+      color: #111111;
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-shadow: none;
+      border-radius: 10px;
+      background: #e7ecf2;
+      box-shadow:
+        4px 4px 8px rgba(182, 191, 202, 0.55),
+        -4px -4px 8px rgba(243, 246, 250, 0.7);
+      transition: box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+    }
+    .nav-language .nav-language-menu a:hover {
+      background: #e7ecf2;
+      color: #111111;
+      box-shadow:
+        inset 4px 4px 8px rgba(182, 191, 202, 0.65),
+        inset -4px -4px 8px rgba(243, 246, 250, 0.75);
+    }
+    .nav-top a {
+      color: #f4e6cd;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .nav-top a:hover {
+      color: #fff;
+    }
+    .nav-top-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .nav-top-right a + a {
+      padding-left: 14px;
+      border-left: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .nav-top-right .nav-language + a {
+      padding-left: 14px;
+      border-left: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .nav-main {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      min-height: 82px;
+      transition: min-height 0.28s ease, border-color 0.25s ease;
+      position: relative;
+      column-gap: 14px;
+    }
+    .logo img {
+      height: 62px;
+      display: block;
+      transition: height 0.28s ease;
+    }
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      gap: 1.65rem;
+      margin: 0;
+      padding: 0;
+      align-items: center;
+      justify-self: center;
+    }
+    .nav-link {
+      text-decoration: none;
+      color: #f5e9d2;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      transition: color 0.2s ease;
+    }
+    .nav-link:hover {
+      color: var(--brand-secondary);
+    }
+    .nav-link.is-active {
+      color: var(--brand-secondary);
+    }
+    .nav-icons {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: 0;
+      justify-self: end;
+    }
+    .nav-icons a {
+      color: #f4e6cd;
+      text-decoration: none;
+      font-size: 0.76rem;
+      line-height: 1;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+      transition: color 0.2s ease;
+    }
+    .nav-icons a i,
+    .nav-mobile-social a i {
+      width: 1em;
+      text-align: center;
+      line-height: 1;
+    }
+    .nav-top::after,
+    .nav-main::after {
+      content: "";
+      position: absolute;
+      left: calc(50% - 50vw);
+      bottom: 0;
+      width: 100vw;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.14);
+      pointer-events: none;
+    }
+    .nav-icons a:hover {
+      color: #fff;
+    }
+    .nav-mobile-social {
+      display: none;
+    }
+    .navbar.scrolled {
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .navbar.scrolled .nav-top {
+      min-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+      padding: 0;
+      margin: 0;
+      gap: 0;
+    }
+    .navbar.scrolled .nav-main {
+      min-height: 64px;
+    }
+    .navbar.scrolled .nav-top::after {
+      background: transparent;
+    }
+    .navbar.scrolled .nav-main::after {
+      background: rgba(0, 0, 0, 0.08);
+    }
+    .navbar.scrolled .nav-link {
+      color: #23313d;
+    }
+    .navbar.scrolled .nav-link:hover,
+    .navbar.scrolled .nav-link.is-active {
+      color: var(--brand-secondary);
+    }
+    .navbar.scrolled .nav-icons a {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #eef2f6;
+      color: #23313d;
+      box-shadow:
+        4px 4px 8px rgba(194, 204, 216, 0.95),
+        -4px -4px 8px rgba(255, 255, 255, 0.95);
+      font-size: 0.82rem;
+      transition: box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
+    }
+    .navbar.scrolled .nav-icons a:hover {
+      color: var(--brand-secondary);
+      transform: translateY(-1px);
+      box-shadow:
+        inset 3px 3px 7px rgba(194, 204, 216, 0.9),
+        inset -3px -3px 7px rgba(255, 255, 255, 0.95);
+    }
+    .navbar.scrolled .nav-language-btn {
+      color: #23313d;
+      text-shadow: none;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+    .navbar.scrolled .nav-language-btn:hover {
+      color: var(--brand-secondary);
+    }
+    .navbar.scrolled .nav-language-menu {
+      background: #e7ecf2;
+      border: 0;
+      box-shadow:
+        8px 8px 16px rgba(171, 182, 196, 0.65),
+        -8px -8px 16px rgba(244, 247, 251, 0.65);
+    }
+    .navbar.scrolled .nav-language .nav-language-menu a {
+      color: #111111;
+      background: #e7ecf2;
+      box-shadow:
+        4px 4px 8px rgba(182, 191, 202, 0.55),
+        -4px -4px 8px rgba(243, 246, 250, 0.7);
+    }
+    .navbar.scrolled .nav-language .nav-language-menu a:hover {
+      background: #e7ecf2;
+      color: #111111;
+      box-shadow:
+        inset 4px 4px 8px rgba(182, 191, 202, 0.65),
+        inset -4px -4px 8px rgba(243, 246, 250, 0.75);
+    }
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .hamburger span {
+      width: 25px;
+      height: 3px;
+      background: #f4e6ce;
+      margin: 3px 0;
+      transition: 0.3s;
+    }
+
+    /* =============== MOBILE MENU =============== */
+    @media (max-width: 992px) {
+      body {
+        padding-top: 0;
+      }
+      .nav-top {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 16px;
+        padding: 10px 0 8px;
+        min-height: auto;
+        font-size: 0.82rem;
+      }
+      .nav-top-left,
+      .nav-top-right {
+        width: 100%;
+        justify-content: center;
+        gap: 16px;
+      }
+      .nav-language-menu {
+        right: 50%;
+        transform: translateX(50%);
+      }
+      .nav-main {
+        display: flex;
+        min-height: 64px;
+        padding: 0 4px;
+      }
+      .navbar.scrolled .nav-main {
+        min-height: 60px;
+      }
+      .logo img {
+        height: 50px;
+      }
+      .navbar.scrolled .logo img {
+        height: 46px;
+      }
+      .nav-menu {
+        position: fixed;
+        left: -90%;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+        flex-direction: column;
+        align-items: stretch;
+        background: #e9edf3;
+        border-right: 0;
+        width: min(84vw, 320px);
+        text-align: left;
+        transition: left 0.3s ease;
+        box-shadow:
+          12px 0 24px rgba(25, 35, 50, 0.18),
+          inset 6px 6px 12px rgba(206, 214, 226, 0.55),
+          inset -6px -6px 12px rgba(255, 255, 255, 0.7);
+        padding: 84px 12px 72px;
+        gap: 0;
+        margin: 0;
+        z-index: 1200;
+      }
+      .nav-menu.active {
+        left: 0;
+      }
+      .nav-menu li {
+        border-top: 0;
+        margin: 0 6px 12px;
+        border-radius: 12px;
+        background: #e9edf3;
+        box-shadow:
+          5px 5px 11px rgba(197, 205, 217, 0.95),
+          -5px -5px 11px rgba(255, 255, 255, 0.95);
+      }
+      .nav-menu li:last-child {
+        border-bottom: 0;
+        background: transparent;
+        box-shadow: none;
+        margin-bottom: 0;
+      }
+      .nav-link {
+        display: block;
+        color: #2f3c4a;
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1.15;
+        letter-spacing: 0;
+        padding: 14px 16px;
+        border-radius: 12px;
+        text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.55);
+      }
+      .nav-link.is-active,
+      .nav-link:hover {
+        color: #c93b3b;
+        box-shadow:
+          inset 4px 4px 9px rgba(197, 205, 217, 0.95),
+          inset -4px -4px 9px rgba(255, 255, 255, 0.95);
+      }
+      .nav-icons {
+        display: flex;
+        margin-left: auto;
+        margin-right: 12px;
+        gap: 10px;
+        padding-right: 12px;
+        border-right: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .nav-icons a {
+        font-size: 0.95rem;
+      }
+      .nav-mobile-social {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 18px;
+        border: 0 !important;
+      }
+      .nav-mobile-social a {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #e9edf3;
+        color: #1f2933;
+        font-size: 0.95rem;
+        text-decoration: none;
+        box-shadow:
+          5px 5px 10px rgba(195, 204, 216, 0.95),
+          -5px -5px 10px rgba(255, 255, 255, 0.95);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+      }
+      .nav-mobile-social a:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          inset 4px 4px 8px rgba(195, 204, 216, 0.9),
+          inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+      }
+      .nav-mobile-social a[aria-label="instagram"] i {
+        background: radial-gradient(circle at 30% 110%, #fdf497 0%, #fdf497 8%, #fd5949 45%, #d6249f 60%, #285AEB 95%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent !important;
+      }
+      .hamburger {
+        display: flex;
+        margin-left: 0;
+      }
+      .hamburger.active span:nth-child(1) {
+        transform: rotate(-45deg) translate(-5px, 6px);
+      }
+      .hamburger.active span:nth-child(2) {
+        opacity: 0;
+      }
+      .hamburger.active span:nth-child(3) {
+        transform: rotate(45deg) translate(-5px, -6px);
+      }
+      .navbar.scrolled .nav-icons a {
+        width: 28px;
+        height: 28px;
+        font-size: 0.74rem;
+      }
+      .navbar.scrolled .nav-icons {
+        gap: 8px;
+        margin-right: 6px;
+        padding-right: 0;
+        border-right: 0;
+      }
+    }
+
+    /* =============== HERO SECTION =============== */
+    .hero-section {
+      background: url('assets/img/hero.jpg') center/cover no-repeat;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      padding: 160px 0 100px;
+      color: white;
+      text-align: center;
+    }
+    .hero-section::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 22% 24%, rgba(112, 34, 86, 0.14), transparent 52%),
+        radial-gradient(circle at 82% 18%, rgba(0, 70, 110, 0.16), transparent 58%),
+        linear-gradient(115deg, rgba(6, 18, 44, 0.72) 0%, rgba(8, 30, 61, 0.62) 48%, rgba(28, 16, 44, 0.6) 100%);
+    }
+    .hero-section::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        linear-gradient(to top, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.02) 35%, rgba(0, 0, 0, 0.2)),
+        radial-gradient(ellipse at center, transparent 34%, rgba(0, 0, 0, 0.24) 100%);
+    }
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(120deg, rgba(17, 41, 78, 0.34), rgba(63, 36, 82, 0.28));
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .hero-title {
+      font-size: 2.25rem;
+      margin-bottom: 12px;
+      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.6);
+      font-family: 'Poppins', 'Mulish', sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      line-height: 1.2;
+      color: #fff;
+    }
+
+    /* =============== MAIN CONTENT =============== */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      padding: 35px;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .section-title {
+      font-size: 1.6rem;
+      color: var(--text-dark);
+      margin-bottom: 25px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #eee;
+      display: inline-block;
+    }
+    .section-title i {
+      color: var(--brand-primary);
+      margin-right: 10px;
+    }
+
+    /* =============== CONTACT ITEM =============== */
+    .contact-item {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-left: 4px solid var(--brand-primary);
+    }
+    .contact-item i {
+      color: var(--brand-primary);
+      font-size: 1.2rem;
+    }
+    .contact-link {
+      color: var(--text-dark);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1.05rem;
+    }
+    .contact-link:hover {
+      color: var(--brand-primary);
+      text-decoration: underline;
+    }
+
+    /* =============== BUTTONS =============== */
+    .btn {
+      background: var(--brand-primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      margin: 5px;
+    }
+    .btn:hover {
+      background: #007a25;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 147, 46, 0.3);
+    }
+    .btn-social {
+      background: #f8f9fa;
+      color: var(--text-dark);
+      border: 1px solid #ddd;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px;
+      text-decoration: none;
+    }
+    .btn-social:hover {
+      background: #e3f2fd;
+      border-color: var(--brand-primary);
+      color: var(--brand-primary);
+    }
+    .btn-office {
+      background: var(--brand-secondary);
+      color: white;
+    }
+    .btn-office:hover {
+      background: #9a091b;
+      box-shadow: 0 4px 12px rgba(188, 11, 34, 0.3);
+    }
+
+    
+/* =============== FOOTER =============== */
+.site-footer {
+  background: #041821;
+  color: #d8e6ee;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.site-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 5%;
+}
+.site-footer-top {
+  display: grid;
+  grid-template-columns: 1.7fr auto auto;
+  align-items: center;
+  position: relative;
+}
+.site-footer-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0;
+}
+.site-footer-brand-row img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+.site-footer-brand-row span {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #f1f7fb;
+}
+.site-footer-top-social {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 100%;
+  padding: 0 30px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.site-footer-top-social a {
+  color: #d8e6ee;
+  font-size: 0.9rem;
+  transition: color .25s ease;
+}
+.site-footer-top-social a:hover {
+  color: var(--brand-secondary);
+}
+.site-footer-donate {
+  justify-self: end;
+  padding: 16px 0 16px 22px;
+}
+.site-footer-donate a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-secondary);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  height: 42px;
+  min-width: 110px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background-color .25s ease, transform .25s ease;
+}
+.site-footer-donate a:hover {
+  background: var(--brand-primary);
+  transform: translateY(-2px);
+}
+.site-footer-mid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr 1fr 1fr 1.35fr;
+  gap: 28px;
+  padding: 42px 0;
+  position: relative;
+}
+.site-footer-top::after,
+.site-footer-mid::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 50vw);
+  bottom: 0;
+  width: 100vw;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.site-footer-head {
+  margin: 0 0 14px;
+  color: #fff;
+  font-size: 0.98rem;
+  line-height: 1.15;
+  font-weight: 700;
+}
+.site-footer-text {
+  font-size: 0.7rem;
+  line-height: 1.55;
+  color: #c2d6e1;
+  margin-bottom: 18px;
+}
+.site-footer-subscribe {
+  display: flex;
+  align-items: stretch;
+  max-width: 420px;
+}
+.site-footer-subscribe input {
+  border: 0;
+  outline: 0;
+  flex: 1;
+  background: #071f2a;
+  color: #eef6fb;
+  padding: 14px 16px;
+  font-size: 0.75rem;
+}
+.site-footer-subscribe input::placeholder {
+  color: #90a8b7;
+}
+.site-footer-subscribe button {
+  border: 0;
+  width: 56px;
+  background: var(--brand-secondary);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color .25s ease;
+}
+.site-footer-subscribe button:hover {
+  background: var(--brand-primary);
+}
+.site-footer-col h4 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #fff;
+  font-weight: 700;
+}
+.site-footer-divider {
+  width: 52px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 14px 0 18px;
+}
+.site-footer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.site-footer-list li {
+  margin: 0 0 8px;
+}
+.site-footer-list a {
+  color: #d0e0ea;
+  text-decoration: none;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  transition: color .25s ease;
+}
+.site-footer-list a:hover {
+  color: #fff;
+}
+.site-footer-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.site-footer-gallery-grid img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.site-footer-bottom {
+  text-align: center;
+  padding: 18px 0 20px;
+  color: #c5d8e4;
+  font-size: 0.8rem;
+}
+.site-footer .fas,
+.site-footer .far,
+.site-footer .fab {
+  color: inherit !important;
+}
+@media (max-width: 1200px) {
+  .site-footer-head,
+  .site-footer-col h4 {
+    font-size: 0.94rem;
+  }
+  .site-footer-list a {
+    font-size: 0.86rem;
+  }
+  .site-footer-bottom {
+    font-size: 0.88rem;
+  }
+}
+@media (max-width: 900px) {
+  .site-footer-top {
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+  }
+  .site-footer-brand-row {
+    padding: 14px 0;
+    gap: 8px;
+    min-width: 0;
+  }
+  .site-footer-brand-row img {
+    width: 42px;
+    height: 42px;
+  }
+  .site-footer-top-social {
+    border: 0;
+    padding: 0;
+    justify-content: center;
+    gap: 10px;
+    min-height: auto;
+  }
+  .site-footer-donate {
+    justify-self: end;
+    padding: 0;
+  }
+  .site-footer-mid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "newsletter newsletter newsletter"
+      "conference touch resources"
+      "gallery gallery gallery";
+    align-items: start;
+    gap: 24px 24px;
+    padding: 34px 0;
+  }
+  .site-footer-mid > :nth-child(1) { grid-area: newsletter; }
+  .site-footer-mid > :nth-child(2) { grid-area: conference; }
+  .site-footer-mid > :nth-child(3) { grid-area: touch; }
+  .site-footer-mid > :nth-child(4) { grid-area: resources; }
+  .site-footer-mid > :nth-child(5) { grid-area: gallery; }
+  .site-footer-subscribe {
+    max-width: 420px;
+  }
+  .site-footer-head,
+  .site-footer-col h4 {
+    font-size: 0.96rem;
+  }
+  .site-footer-list a,
+  .site-footer-text {
+    font-size: 0.82rem;
+  }
+}
+@media (max-width: 600px) {
+  .site-footer-top {
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .site-footer-brand-row span {
+    font-size: 0.8rem;
+    max-width: 74px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .site-footer-top-social a {
+    font-size: 0.82rem;
+  }
+  .site-footer-donate a {
+    min-width: 86px;
+    height: 36px;
+    font-size: 0.82rem;
+    padding: 0 10px;
+  }
+  .site-footer-mid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "newsletter newsletter newsletter"
+      "col1 col2 col3"
+      "gallery gallery gallery";
+    gap: 20px 16px;
+    padding: 30px 0;
+  }
+  .site-footer-mid > :nth-child(1) { grid-area: newsletter; }
+  .site-footer-mid > :nth-child(2) { grid-area: col1; }
+  .site-footer-mid > :nth-child(3) { grid-area: col2; }
+  .site-footer-mid > :nth-child(4) { grid-area: col3; }
+  .site-footer-mid > :nth-child(5) { grid-area: gallery; }
+  .site-footer-subscribe {
+    max-width: 100%;
+  }
+  .site-footer-col h4 {
+    font-size: 0.92rem;
+  }
+  .site-footer-list a {
+    font-size: 0.82rem;
+  }
+  .site-footer-divider {
+    margin: 10px 0 12px;
+  }
+  .site-footer-gallery-grid {
+    gap: 6px;
+  }
+}
+
+    /* =============== RESPONSIVE =============== */
+    @media (max-width: 768px) {
+      .hero-title { font-size: 2.2rem; }
+      .container { padding: 0 15px; }
+      .card { padding: 25px 20px; }
+      .section-title { font-size: 1.4rem; }
+    }
+    
+    /* Loader CSS  */
+.site-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff; /* fully hides website while loading */
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.site-loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.preloader-content img {
+  width: 90px;
+  max-width: 25vw;
+  height: auto;
+  display: block;
+}
+
+.footer-wave-divider {
+  width: 100%;
+  height: 90px;
+  line-height: 0;
+  overflow: hidden;
+}
+.footer-wave-divider svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.footer-wave-divider path {
+  fill: #041821;
+}
+@media (max-width: 768px) {
+  .footer-wave-divider { height: 70px; }
+}
+
+
+  </style>
+</head>
+<body>
+    
+     <!-- Loader -->
+<div id="siteLoader" class="site-loader">
+  <div class="preloader-content">
+    <img src="assets/img/loader.gif" alt="Loading">
+  </div>
+</div>
+
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-shell">
+      <div class="nav-top">
+        <div class="nav-top-left">
+          <a href="#" class="nav-top-item"><i class="fas fa-question-circle"></i> Ask a Question</a>
+          <a href="mailto:kislcsecretariat@resok.org" class="nav-top-item"><i class="far fa-envelope"></i>kislcsecretariat@resok.org</a>
+        </div>
+        <div class="nav-top-right">
+          <div class="nav-language">
+            <button type="button" class="nav-language-btn" id="langToggle" aria-haspopup="true" aria-expanded="false">
+              English UK <i class="fas fa-chevron-down"></i>
+            </button>
+            <ul class="nav-language-menu" id="langMenu" aria-label="Language options">
+              <li><a href="#" data-lang="en-uk">English UK</a></li>
+              <li><a href="#" data-lang="en-us">English US</a></li>
+              <li><a href="#" data-lang="sw-ke">Kiswahili</a></li>
+            </ul>
+          </div>
+          <a href="#about">About</a>
+          <a href="registration.html">Register</a>
+        </div>
+      </div>
+
+      <div class="nav-main">
+        <a href="index.html" class="logo">
+          <img src="assets/img/kislhc-logo.png" alt="KISLHC 2027 logo">
+        </a>
+        <ul class="nav-menu" id="navMenu">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="abstracts.html" class="nav-link">Abstracts</a></li>
+          <li><a href="registration.html" class="nav-link">Registration</a></li>
+          <li><a href="sponsors.html" class="nav-link">Sponsorship</a></li>
+          <li><a href="index.html#program" class="nav-link">Programme</a></li>
+          <li><a href="contact.html" class="nav-link is-active">Contact</a></li>
+          <li class="nav-mobile-social">
+            <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+            <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+            <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+            <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+            <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+          </li>
+        </ul>
+        <div class="nav-icons" aria-label="Social links and search">
+          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+        <div class="hamburger" id="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-title">CONTACT US</h1>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <div class="container">
+
+    <!-- Address & Phone -->
+    <div class="card">
+      <h2 class="section-title"><i class="fas fa-map-marker-alt"></i> Office Address</h2>
+      <div class="contact-item">
+        <i class="fas fa-building"></i>
+        <span>Regent Court Block A, Suite A6<br>Hurlingham, Argwings Kodhek Road<br>P.O. Box 27789 – 00506</span>
+      </div>
+      <div class="contact-item">
+        <i class="fas fa-phone"></i>
+        <span id="phoneNumbers">
+          +254 735 700 660<br>
+          +254 721 721 979<br>
+          +254 734 982 535
+        </span>
+        <!-- ✅ Copy button for phone numbers -->
+        <button class="copy-btn" onclick="copyText(document.getElementById('phoneNumbers').innerText.replace(/<br>/g, '\n'))">
+          <i class="far fa-copy"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Email Contacts -->
+    <div class="card">
+      <h2 class="section-title"><i class="fas fa-envelope"></i> Email Contacts</h2>
+      
+      <div class="contact-item">
+        <i class="fas fa-user-tie"></i>
+        <span id="email1">kislcsecretariat@resok.org(For general correspondences)</span>
+        <button class="copy-btn" onclick="copyText('kislcsecretariat@resok.org')">
+          <i class="far fa-copy"></i>
+        </button>
+      </div>
+      
+      <div class="contact-item">
+        <i class="fas fa-info-circle"></i>
+        <span id="email2">info@resok.org(For general correspondences)</span>
+        <button class="copy-btn" onclick="copyText('info@resok.org')">
+          <i class="far fa-copy"></i>
+        </button>
+      </div>
+      
+      <div class="contact-item">
+        <i class="fas fa-file-alt"></i>
+        <span id="email3">kislhcabstracts@resok.org(For Abstracts correspondences)</span>
+        <button class="copy-btn" onclick="copyText('kislhcabstracts@resok.org')">
+          <i class="far fa-copy"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Social Media -->
+    <div class="card">
+      <h2 class="section-title"><i class="fab fa-twitter"></i> Follow Us</h2>
+      
+      <div style="margin: 20px 0;">
+        <a href="https://x.com/ReSoKenya" target="_blank" class="btn-social">
+          <i class="fab fa-twitter"></i> Twitter / X
+        </a>
+        <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_
+        source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank" class="btn-social">
+          <i class="fab fa-linkedin-in"></i> LinkedIn
+        </a>
+        <a href="https://www.facebook.com/share/1DLne8xyKQ/" target="_blank" class="btn-social">
+          <i class="fab fa-facebook-f"></i> Facebook
+        </a>
+        <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" target="_blank" class="btn-social">
+          <i class="fab fa-instagram"></i> Instagram
+        </a>
+        <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" target="_blank" class="btn-social">
+          <i class="fab fa-youtube"></i> YouTube
+        </a>
+        <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" target="_blank" class="btn-social">
+          <i class="fab fa-tiktok"></i> TikTok
+        </a>
+      </div>
+    </div>
+
+    <!-- Website -->
+    <div class="card">
+      <h2 class="section-title"><i class="fas fa-globe"></i> Official Website</h2>
+      <div class="contact-item">
+        <i class="fas fa-link"></i>
+        <span id="website">www.resok.org/kislhc</span>
+        <button class="copy-btn" onclick="copyText('www.resok.org/kislhc')">
+          <i class="far fa-copy"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+
+  
+  <!-- Venue -->
+<section class="section" id="venue">
+  <div class="card">
+    <h2 class="section-title"><i class="fas fa-map-marker-alt"></i> Conference Venue</h2>
+    <div class="info-box">
+      <p><strong>The KISLHC 2027 venue and dates will be announced here.</strong> The 2026 conference was held at Diani Reef Beach Resort &amp; Spa, Kwale County.</p>
+    </div>
+  </div>
+</section>
+
+ <div class="footer-wave-divider" aria-hidden="true">
+  <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+    <path d="M0,48 C260,136 520,0 820,56 C1080,104 1260,64 1440,22 L1440,160 L0,160 Z"></path>
+  </svg>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-top">
+      <div class="site-footer-brand-row">
+        <img src="assets/img/kislhc-logo.png" alt="KISLHC logo">
+        <span>KISLHC</span>
+      </div>
+
+      <div class="site-footer-top-social" aria-label="Social links">
+        <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+        <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+        <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+        <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+        <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+      </div>
+
+      <div class="site-footer-donate">
+        <a href="registration.html">Register</a>
+      </div>
+    </div>
+
+    <div class="site-footer-mid">
+      <div>
+        <h3 class="site-footer-head">Sign Up For A Newsletter</h3>
+        <p class="site-footer-text">
+          Get conference updates, abstract reminders, speaker announcements, and program highlights directly in your inbox.
+        </p>
+        <form class="site-footer-subscribe" action="#" method="post">
+          <input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address">
+          <button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button>
+        </form>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Conference</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="index.html#faq">FAQs</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Get In Touch</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="contact.html">Contact Us</a></li>
+          <li><a href="../blog.html">ReSoK News</a></li>
+          <li><a href="contact.html">Event Location</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Resources</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="index.html#program">Programme</a></li>
+          <li><a href="abstracts.html">Call for Abstracts</a></li>
+          <li><a href="sponsors.html">Sponsorship</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Our Gallery</h4>
+        <div class="site-footer-divider"></div>
+        <div class="site-footer-gallery-grid">
+          <img src="assets/img/gallery/g0.jpg" alt="Gallery 1" loading="lazy">
+          <img src="assets/img/gallery/g1.jpg" alt="Gallery 2" loading="lazy">
+          <img src="assets/img/gallery/g2.jpg" alt="Gallery 3" loading="lazy">
+          <img src="assets/img/gallery/g3.jpg" alt="Gallery 4" loading="lazy">
+          <img src="assets/img/gallery/g4.jpg" alt="Gallery 5" loading="lazy">
+          <img src="assets/img/gallery/g5.jpg" alt="Gallery 6" loading="lazy">
+          <img src="assets/img/gallery/g6.jpg" alt="Gallery 7" loading="lazy">
+          <img src="assets/img/gallery/g7.jpg" alt="Gallery 8" loading="lazy">
+        </div>
+      </div>
+    </div>
+
+    <div class="site-footer-bottom">
+      &copy; 2026&ndash;2027 Kenya International Scientific Lung Health Conference (KISLHC). Developed and Designed by ReSoK ICT
+    </div>
+  </div>
+</footer>
+
+  <!-- JavaScript -->
+  <script>
+  
+   
+  <!-- Loader JS -->
+  document.addEventListener('DOMContentLoaded', () => {
+    const siteLoader = document.getElementById('siteLoader');
+    let loaderHidden = false;
+    const minimumLoaderMs = 600; // long enough to avoid a flash, short enough not to make anyone wait
+    const loaderStart = performance.now();
+    let pageLoadComplete = false;
+
+    const hideLoader = () => {
+      if (!siteLoader || loaderHidden) return;
+      loaderHidden = true;
+      siteLoader.classList.add('is-hidden');
+      setTimeout(() => {
+        if (siteLoader && siteLoader.parentNode) {
+          siteLoader.parentNode.removeChild(siteLoader);
+        }
+      }, 500);
+    };
+
+    const maybeHideLoader = () => {
+      if (!pageLoadComplete) return;
+      const elapsed = performance.now() - loaderStart;
+      const waitMore = Math.max(0, minimumLoaderMs - elapsed);
+      setTimeout(hideLoader, waitMore);
+    };
+
+    window.addEventListener('load', () => {
+      pageLoadComplete = true;
+      maybeHideLoader();
+    }, { once: true });
+
+    // Fallback in case load event never fires
+    setTimeout(() => {
+      if (!pageLoadComplete) {
+        pageLoadComplete = true;
+        maybeHideLoader();
+      }
+    }, 15000);
+  });
+  
+    document.addEventListener('DOMContentLoaded', () => {
+      // Mobile Menu
+      const hamburger = document.getElementById('hamburger');
+      const navMenu = document.getElementById('navMenu');
+      const navbar = document.querySelector('.navbar');
+      const languageDropdown = document.querySelector('.nav-language');
+      const languageToggle = document.getElementById('langToggle');
+      const languageMenu = document.getElementById('langMenu');
+
+      const syncNavbarState = () => {
+        if (!navbar) return;
+        navbar.classList.toggle('scrolled', window.scrollY > 40);
+      };
+      syncNavbarState();
+      window.addEventListener('scroll', syncNavbarState, { passive: true });
+
+      if (hamburger && navMenu) {
+        hamburger.addEventListener('click', () => {
+          hamburger.classList.toggle('active');
+          navMenu.classList.toggle('active');
+        });
+        document.querySelectorAll('.nav-link').forEach(link => {
+          link.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            navMenu.classList.remove('active');
+          });
+        });
+      }
+
+      if (languageDropdown && languageToggle && languageMenu) {
+        languageToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = languageMenu.classList.toggle('show');
+          languageToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+
+        languageMenu.querySelectorAll('a').forEach((link) => {
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            languageToggle.childNodes[0].textContent = `${link.textContent} `;
+            languageMenu.classList.remove('show');
+            languageToggle.setAttribute('aria-expanded', 'false');
+          });
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!languageDropdown.contains(e.target)) {
+            languageMenu.classList.remove('show');
+            languageToggle.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+    });
+  </script>
+  <script src="../assets/js/consent.js?v=20260930-icon"></script>
+</body>
+</html>

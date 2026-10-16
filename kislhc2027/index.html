@@ -1,0 +1,2945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KISLHC 2027 | 8th Kenya International Scientific Lung Health Conference</title>
+  <meta name="description" content="8th Kenya International Scientific Lung Health Conference (KISLHC 2027). Call for abstracts opens 1 November 2026 and closes 31 May 2027." />
+  <meta name="theme-color" content="#bc0b22">
+
+
+  <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/kislhc/sw.js');
+  });
+}
+</script>
+  <!-- Favicon -->
+  <link rel="icon" href="assets/img/kislhc-logo.png" type="image/png" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Critical CSS (inlined) -->
+  <style>
+    /* =============== RESET & BASE =============== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    :root {
+      --brand-red: #bc0b22;
+      --brand-blue: #3498db;
+      --text-dark: #2c3e50;
+      --text-light: #7f8c8d;
+      --bg-light: #f5f7fa;
+      --white: #fff;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+
+      --brand-primary: #00932e;      /* Your green */
+      --brand-secondary: #bc0b22;    /* Your red */
+      --coastal-turquoise: #40E0D0;  /* Ocean */
+      --coastal-coral: #FF6F61;      /* Coral */     
+      --coastal-blue: #0a2e38;       /* Deep ocean */
+      --bg-light: #f5f7fa;
+      --text-dark: #2c3e50;
+      --white: #fff;
+}
+    body {
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--bg-light) 0%, #e4edf9 100%);
+      color: var(--text-dark);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding-top: 0;
+    }
+
+    /* =============== NAVIGATION =============== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      background: transparent;
+      backdrop-filter: none;
+      border-bottom: 0;
+      font-family: 'Mulish', 'Poppins', sans-serif;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    body.hero-video-active .navbar {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(-120%);
+    }
+    .navbar .fas,
+    .navbar .far,
+    .navbar .fab {
+      color: inherit !important;
+    }
+    .nav-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 5%;
+    }
+     .nav-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 40px;
+      color: #f4e6cd;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+      transition: min-height 0.28s ease, opacity 0.25s ease, border-color 0.25s ease;
+      position: relative;
+    }
+    .nav-top-left,
+    .nav-top-right {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+    }
+    .nav-top-right {
+      margin-left: auto;
+    }
+    .nav-top a {
+      color: #f4e6cd;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .nav-top a:hover {
+      color: #fff;
+    }
+    .nav-top-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .nav-top-right a + a {
+      padding-left: 14px;
+      border-left: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .nav-main {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      min-height: 82px;
+      transition: min-height 0.28s ease, border-color 0.25s ease;
+      position: relative;
+      column-gap: 14px;
+    }
+    .logo img {
+      height: 62px;
+      display: block;
+      transition: height 0.28s ease;
+    }
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      gap: 1.65rem;
+      margin: 0;
+      padding: 0;
+      align-items: center;
+      justify-self: center;
+    }
+    .nav-link {
+      text-decoration: none;
+      color: #f5e9d2;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      transition: color 0.2s ease;
+    }
+    .nav-link:hover {
+      color: var(--brand-secondary);
+    }
+    .nav-link.is-active {
+      color: var(--brand-secondary);
+    }
+    .nav-icons {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: 0;
+      justify-self: end;
+    }
+    .nav-icons a {
+      color: #f4e6cd;
+      text-decoration: none;
+      font-size: 0.76rem;
+      line-height: 1;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+      transition: color 0.2s ease;
+    }
+    .nav-icons a i,
+    .nav-mobile-social a i {
+      width: 1em;
+      text-align: center;
+      line-height: 1;
+    }
+    .nav-top::after,
+    .nav-main::after {
+      content: "";
+      position: absolute;
+      left: calc(50% - 50vw);
+      bottom: 0;
+      width: 100vw;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.14);
+      pointer-events: none;
+    }
+    .nav-icons a:hover {
+      color: #fff;
+    }
+    .nav-mobile-social {
+      display: none;
+    }
+    .navbar.scrolled {
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .navbar.scrolled .nav-top {
+      min-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+      padding: 0;
+      margin: 0;
+      gap: 0;
+    }
+    .navbar.scrolled .nav-main {
+      min-height: 64px;
+    }
+    .navbar.scrolled .nav-top::after {
+      background: transparent;
+    }
+    .navbar.scrolled .nav-main::after {
+      background: rgba(0, 0, 0, 0.08);
+    }
+    .navbar.scrolled .nav-link {
+      color: #23313d;
+    }
+    .navbar.scrolled .nav-link:hover,
+    .navbar.scrolled .nav-link.is-active {
+      color: var(--brand-secondary);
+    }
+    .navbar.scrolled .nav-icons a {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #eef2f6;
+      color: #23313d;
+      box-shadow:
+        4px 4px 8px rgba(194, 204, 216, 0.95),
+        -4px -4px 8px rgba(255, 255, 255, 0.95);
+      font-size: 0.82rem;
+      transition: box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
+    }
+    .navbar.scrolled .nav-icons a:hover {
+      color: var(--brand-secondary);
+      transform: translateY(-1px);
+      box-shadow:
+        inset 3px 3px 7px rgba(194, 204, 216, 0.9),
+        inset -3px -3px 7px rgba(255, 255, 255, 0.95);
+    }
+    .navbar.scrolled .hamburger span {
+      background: #23313d;
+    }
+    .navbar.scrolled .logo img {
+      height: 48px;
+    }
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .hamburger span {
+      width: 25px;
+      height: 3px;
+      background: #f4e6ce;
+      margin: 3px 0;
+      transition: 0.3s;
+    }
+
+    /* =============== MOBILE MENU =============== */
+    @media (max-width: 992px) {
+      body {
+        padding-top: 0;
+      }
+      .nav-top {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 16px;
+        padding: 10px 0 8px;
+        min-height: auto;
+        font-size: 0.82rem;
+      }
+      .nav-top-left,
+      .nav-top-right {
+        width: 100%;
+        justify-content: center;
+        gap: 16px;
+      }
+      .nav-main {
+        display: flex;
+        min-height: 64px;
+        padding: 0 4px;
+      }
+      .navbar.scrolled .nav-main {
+        min-height: 60px;
+      }
+      .logo img {
+        height: 50px;
+      }
+      .navbar.scrolled .logo img {
+        height: 46px;
+      }
+      .nav-menu {
+        position: fixed;
+        left: -90%;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+        flex-direction: column;
+        align-items: stretch;
+        background: #e9edf3;
+        border-right: 0;
+        width: min(84vw, 320px);
+        text-align: left;
+        transition: left 0.3s ease;
+        box-shadow:
+          12px 0 24px rgba(25, 35, 50, 0.18),
+          inset 6px 6px 12px rgba(206, 214, 226, 0.55),
+          inset -6px -6px 12px rgba(255, 255, 255, 0.7);
+        padding: 84px 12px 72px;
+        gap: 0;
+        margin: 0;
+        z-index: 1200;
+      }
+      .nav-menu.active {
+        left: 0;
+      }
+      .nav-menu li {
+        border-top: 0;
+        margin: 0 6px 12px;
+        border-radius: 12px;
+        background: #e9edf3;
+        box-shadow:
+          5px 5px 11px rgba(197, 205, 217, 0.95),
+          -5px -5px 11px rgba(255, 255, 255, 0.95);
+      }
+      .nav-menu li:last-child {
+        border-bottom: 0;
+        background: transparent;
+        box-shadow: none;
+        margin-bottom: 0;
+      }
+      .nav-link {
+        display: block;
+        color: #2f3c4a;
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1.15;
+        letter-spacing: 0;
+        padding: 14px 16px;
+        border-radius: 12px;
+        text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.55);
+      }
+      .nav-link.is-active,
+      .nav-link:hover {
+        color: #c93b3b;
+        box-shadow:
+          inset 4px 4px 9px rgba(197, 205, 217, 0.95),
+          inset -4px -4px 9px rgba(255, 255, 255, 0.95);
+      }
+      .nav-icons {
+        display: flex;
+        margin-left: auto;
+        margin-right: 12px;
+        gap: 10px;
+        padding-right: 12px;
+        border-right: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .nav-icons a {
+        font-size: 0.95rem;
+      }
+      .nav-mobile-social {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 18px;
+        border: 0 !important;
+      }
+      .nav-mobile-social a {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #e9edf3;
+        color: #1f2933;
+        font-size: 0.95rem;
+        text-decoration: none;
+        box-shadow:
+          5px 5px 10px rgba(195, 204, 216, 0.95),
+          -5px -5px 10px rgba(255, 255, 255, 0.95);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+      }
+      .nav-mobile-social a:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          inset 4px 4px 8px rgba(195, 204, 216, 0.9),
+          inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+      }
+      .nav-mobile-social a[aria-label="instagram"] i {
+        background: radial-gradient(circle at 30% 110%, #fdf497 0%, #fdf497 8%, #fd5949 45%, #d6249f 60%, #285AEB 95%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent !important;
+      }
+      .hamburger {
+        display: flex;
+        margin-left: 0;
+      }
+      .hamburger.active span:nth-child(1) {
+        transform: rotate(-45deg) translate(-5px, 6px);
+      }
+      .hamburger.active span:nth-child(2) {
+        opacity: 0;
+      }
+      .hamburger.active span:nth-child(3) {
+        transform: rotate(45deg) translate(-5px, -6px);
+      }
+      .navbar.scrolled .nav-icons a {
+        width: 28px;
+        height: 28px;
+        font-size: 0.74rem;
+      }
+      .navbar.scrolled .nav-icons {
+        gap: 8px;
+        margin-right: 6px;
+        padding-right: 0;
+        border-right: 0;
+      }
+    }
+  /* =============== HERO SECTION =============== */
+    .hero-section {
+      background: url('assets/img/hero.jpg') center/cover no-repeat;
+      position: relative;
+      overflow: visible;
+      isolation: isolate;
+      padding: 160px 0 100px;
+      color: white;
+      text-align: center;
+    }
+    .hero-rotator {
+      position: relative;
+      min-height: 100vh;
+    }
+    .hero-rotator .hero-section {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 0.8s ease, visibility 0s linear 0.8s;
+    }
+    .hero-rotator .hero-section.is-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      z-index: 1;
+      transition: opacity 0.8s ease;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-rotator .hero-section,
+      .hero-rotator .hero-section.is-active {
+        transition: none;
+      }
+    }
+    .hero-section::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 22% 24%, rgba(112, 34, 86, 0.14), transparent 52%),
+        radial-gradient(circle at 82% 18%, rgba(0, 70, 110, 0.16), transparent 58%),
+        linear-gradient(115deg, rgba(6, 18, 44, 0.72) 0%, rgba(8, 30, 61, 0.62) 48%, rgba(28, 16, 44, 0.6) 100%);
+    }
+    .hero-section::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        linear-gradient(to top, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.02) 35%, rgba(0, 0, 0, 0.2)),
+        radial-gradient(ellipse at center, transparent 34%, rgba(0, 0, 0, 0.24) 100%);
+    }
+    .hero-wave-divider {
+      position: absolute;
+      left: 0;
+      bottom: -70px;
+      width: 100%;
+      height: 140px;
+      line-height: 0;
+      z-index: 4;
+      pointer-events: none;
+    }
+    .hero-wave-divider svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    @media (max-width: 768px) {
+      .hero-wave-divider {
+        height: 120px;
+        bottom: -56px;
+      }
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .hero-title {
+      font-size: 2.25rem;
+      margin-bottom: 12px;
+      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.6);
+      font-family: 'Poppins', 'Mulish', sans-serif;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      line-height: 1.2;
+    }
+    .date-pill {
+      background: white;
+      color: var(--text-dark);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-weight: 600;
+      margin: 15px 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .theme-bar {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 16px;
+  margin: 25px auto;
+  max-width: 900px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(255, 111, 97, 0.15); /* coral glow */
+  border: 1px solid rgba(255, 111, 97, 0.2);
+}
+
+.theme-label {
+  background: var(--coastal-coral); /* coral instead of red */
+  color: white;
+  padding: 6px 20px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+    
+    .countdown {
+      background: rgba(255,255,255,0.9);
+      padding: 20px 25px;
+      border-radius: 12px;
+      display: inline-block;
+      margin: 25px 0;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    .countdown-grid {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .countdown-item {
+      background: #f8f9fa;
+      padding: 10px 15px;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 70px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .countdown-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+    .countdown-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-light);
+    }
+    .hero-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 25px;
+    }
+    .btn {
+      background: var(--brand-blue);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.28);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(52, 152, 219, 0.35);
+    }
+    .btn-primary { background: var(--brand-red); box-shadow: 0 4px 12px rgba(188,11,34,0.3); }
+    .btn-primary:hover { background: #9a091b; box-shadow: 0 6px 16px rgba(188,11,34,0.4); }
+    .btn-success { background: #00932e; box-shadow: 0 4px 12px rgba(107,212,37,0.3); }
+    .btn-success:hover { background: #00932e; box-shadow: 0 6px 16px rgba(107,212,37,0.4); }
+    .btn-dark { background: #4b5563; box-shadow: 0 4px 12px rgba(75,85,99,0.3); }
+    .btn-dark:hover { background: #3a424d; box-shadow: 0 6px 16px rgba(75,85,99,0.4); }
+
+    /* =============== SECTIONS =============== */
+    .section {
+  padding: 60px 5%;
+  background: linear-gradient(to bottom, 
+    var(--bg-light) 0%, 
+    #fdf5eb 100%); /* warm sand tint */
+}
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+      padding: 40px;
+      margin-bottom: 30px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .section-title {
+      font-size: 1.75rem;
+      color: var(--text-dark);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #eee;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .info-box {
+      background: #e3f2fd;
+      border-left: 4px solid var(--brand-blue);
+      padding: 18px;
+      border-radius: 0 10px 10px 0;
+      margin: 15px 0;
+    }
+    .notice-box {
+      background: #fff8e1;
+      border-left: 4px solid #ffc107;
+      padding: 18px;
+      border-radius: 0 10px 10px 0;
+      margin: 15px 0;
+    }
+    ul { padding-left: 25px; margin: 12px 0; }
+    li { margin-bottom: 8px; }
+
+    /* =============== ICONS =============== */
+    .fas, .far, .fab {
+      color: var(--brand-red) !important;
+    }
+
+    /* =============== OBJECTIVES =============== */
+    .objectives-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .objective-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-left: 4px solid var(--border-color);
+      text-align: center;
+    }
+    .objective-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+    .objective-card h3 {
+      font-size: 1.1rem;
+      color: var(--text-dark);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    /* =============== PARTNERS =============== */
+    .partners-section {
+      padding: 60px 5%;
+      background: #f9fbfd;
+      text-align: center;
+    }
+    .partners-title {
+      font-size: 1.6rem;
+      color: var(--text-dark);
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+    .partner-cards-container {
+      display: flex;
+      gap: 20px;
+      padding: 10px 0;
+      position: relative;
+      margin: 0 auto;
+      width: 7440px; /* 2 × 3720px (17 cards × 200px + 16 gaps × 20px) */
+      animation: scroll-partners 45s linear infinite;
+      will-change: transform;
+    }
+    @keyframes scroll-partners {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-3720px); }
+    }
+    .partner-card {
+      min-width: 200px;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .partner-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+    .partner-logo-wrapper {
+      width: 100%;
+      max-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .partner-logo-wrapper img {
+      max-width: 100%;
+      max-height: 70px;
+      object-fit: contain;
+      filter: grayscale(10%);
+      transition: filter 0.3s ease;
+     
+    }
+    .partner-card:hover .partner-logo-wrapper img {
+      filter: grayscale(0%);
+    }
+    .partner-name {
+      font-size: 0.9rem;
+      color: #34548a;
+      text-align: center;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+    .partner-button {
+      margin-top: 30px;
+      background: transparent;
+      color: #34548a;
+      border: 2px solid #34548a;
+      padding: 12px 28px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .partner-button:hover {
+      background: #e3f2fd;
+      transform: translateY(-2px);
+    }
+
+
+    /* =============== FIX: CONTAIN PARTNER SECTION HEIGHT =============== */
+.partners-section {
+  padding: 60px 5%;
+  background: #f9fbfd;
+  text-align: center;
+  overflow: hidden; /* ← Prevents layout shift */
+}
+
+.partner-cards-container {
+  display: flex;
+  gap: 20px;
+  padding: 10px 0;
+  position: relative;
+  margin: 0 auto;
+  width: 7440px;
+  animation: scroll-partners 45s linear infinite;
+  will-change: transform;
+  /* 👇 CRITICAL: Limit height and hide overflow */
+  height: 180px; /* Adjust based on your card height */
+  overflow: hidden;
+}
+
+.partner-card {
+  min-width: 200px;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  /*  Ensure cards don't exceed container height */
+  max-height: 140px;
+  overflow: hidden;
+}
+
+/* =============== COUNTDOWN - STAY HORIZONTAL =============== */
+.countdown-grid {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 768px) {
+  .countdown-grid {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .countdown-item {
+    padding: 8px 10px;
+    min-width: 60px;
+    font-size: 0.9rem;
+  }
+  .countdown-value {
+    font-size: 1.4rem;
+  }
+  .countdown-label {
+    font-size: 0.7rem;
+  }
+}
+
+/* =============== THEME BAR - VERTICAL STACK =============== */
+.theme-bar {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text-dark); /* ← Keeps text dark */
+  padding: 16px;
+  border-radius: 12px;
+  margin: 20px auto;
+  max-width: 800px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-label {
+  background: var(--brand-secondary); /* ← Red stays */
+  color: white;
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.theme-bar p {
+  margin: 0;
+  line-height: 1.4;
+  font-size: 1.1rem;
+  color: var(--text-dark); /* ← Explicitly set to dark */
+  max-width: 100%;
+  word-wrap: break-word;
+  text-align: center;
+}
+
+/* Responsive: Adjust text size on mobile */
+@media (max-width: 768px) {
+  .theme-bar {
+    padding: 14px;
+    max-width: 100%;
+  }
+  .theme-bar p {
+    font-size: 1rem;
+  }
+  .theme-label {
+    font-size: 0.9rem;
+    padding: 5px 14px;
+  }
+}
+/* =============== THEME BAR - VERTICAL STACK =============== */
+.theme-bar {
+  background: rgba(255, 255, 255, 0.85);
+  padding: 16px;
+  border-radius: 12px;
+  margin: 20px auto;
+  max-width: 800px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-label {
+  background: var(--brand-secondary); /* ← Red stays */
+  color: white;
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.theme-bar p {
+  margin: 0;
+  line-height: 1.4;
+  font-size: 1.1rem;
+  color: var(--text-dark); /* ← Explicitly set to dark */
+  max-width: 100%;
+  word-wrap: break-word;
+  text-align: center;
+}
+
+.theme-label {
+  background: red !important; /* ← Force red */
+  color: white !important;
+  padding: 6px 16px !important;
+  border-radius: 30px !important;
+  font-size: 0.95rem !important;
+  font-weight: bold !important;
+  display: inline-block !important;
+}
+
+/* Responsive: Adjust text size on mobile */
+@media (max-width: 768px) {
+  .theme-bar {
+    padding: 14px;
+    max-width: 100%;
+  }
+  .theme-bar p {
+    font-size: 1rem;
+  }
+  .theme-label {
+    font-size: 0.9rem;
+    padding: 5px 14px;
+  }
+}
+
+/* =============== DATE PILL - SINGLE BOX =============== */
+.date-pill {
+  background: white;
+  color: var(--text-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-weight: 600;
+  margin: 15px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.date-pill > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  .date-pill {
+    padding: 8px 12px;
+    gap: 8px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+  }
+  .date-pill > div {
+    gap: 6px;
+  }
+  .date-pill i {
+    font-size: 0.9rem;
+  }
+}
+
+/* =============== HERO PILLS TUNING =============== */
+.hero-section .date-pill,
+.hero-section .theme-bar,
+.hero-section .countdown,
+.hero-section .countdown-item {
+  background: rgba(18, 24, 34, 0.26) !important;
+  color: #edf7fb !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none !important;
+}
+.hero-section .date-pill {
+  font-size: 0.82rem !important;
+  padding: 9px 16px !important;
+  font-weight: 500;
+}
+.hero-section .theme-bar {
+  padding: 14px !important;
+}
+.hero-section .theme-label {
+  font-size: 0.82rem !important;
+  padding: 5px 12px !important;
+}
+.hero-section .theme-bar p {
+  font-size: 0.9rem !important;
+  color: #edf7fb !important;
+}
+.hero-section .countdown {
+  padding: 14px 18px !important;
+}
+.hero-section .countdown h3 {
+  color: #edf7fb !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.hero-section .countdown-item {
+  min-width: 62px;
+  padding: 8px 10px;
+}
+.hero-section .countdown-value {
+  font-size: 1.2rem;
+  color: #edf7fb !important;
+}
+.hero-section .countdown-label {
+  font-size: 0.68rem;
+  color: #d5e9f1 !important;
+}
+
+    /* =============== FOOTER =============== */
+.site-footer {
+  background: #041821;
+  color: #d8e6ee;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.site-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 5%;
+}
+.site-footer-top {
+  display: grid;
+  grid-template-columns: 1.7fr auto auto;
+  align-items: center;
+  position: relative;
+}
+.site-footer-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0;
+}
+.site-footer-brand-row img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+.site-footer-brand-row span {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #f1f7fb;
+}
+.site-footer-top-social {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 100%;
+  padding: 0 30px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.site-footer-top-social a {
+  color: #d8e6ee;
+  font-size: 0.9rem;
+  transition: color .25s ease;
+}
+.site-footer-top-social a:hover {
+  color: var(--brand-secondary);
+}
+.site-footer-donate {
+  justify-self: end;
+  padding: 16px 0 16px 22px;
+}
+.site-footer-donate a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-secondary);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  height: 42px;
+  min-width: 110px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background-color .25s ease, transform .25s ease;
+}
+.site-footer-donate a:hover {
+  background: var(--brand-primary);
+  transform: translateY(-2px);
+}
+.site-footer-mid {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr 1fr 1fr 1.35fr;
+  gap: 28px;
+  padding: 42px 0;
+  position: relative;
+}
+.site-footer-top::after,
+.site-footer-mid::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 50vw);
+  bottom: 0;
+  width: 100vw;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.site-footer-head {
+  margin: 0 0 14px;
+  color: #fff;
+  font-size: 0.98rem;
+  line-height: 1.15;
+  font-weight: 700;
+}
+.site-footer-text {
+  font-size: 0.7rem;
+  line-height: 1.55;
+  color: #c2d6e1;
+  margin-bottom: 18px;
+}
+.site-footer-subscribe {
+  display: flex;
+  align-items: stretch;
+  max-width: 420px;
+}
+.site-footer-subscribe input {
+  border: 0;
+  outline: 0;
+  flex: 1;
+  background: #071f2a;
+  color: #eef6fb;
+  padding: 14px 16px;
+  font-size: 0.75rem;
+}
+.site-footer-subscribe input::placeholder {
+  color: #90a8b7;
+}
+.site-footer-subscribe button {
+  border: 0;
+  width: 56px;
+  background: var(--brand-secondary);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color .25s ease;
+}
+.site-footer-subscribe button:hover {
+  background: var(--brand-primary);
+}
+.site-footer-col h4 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #fff;
+  font-weight: 700;
+}
+.site-footer-divider {
+  width: 52px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 14px 0 18px;
+}
+.site-footer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.site-footer-list li {
+  margin: 0 0 8px;
+}
+.site-footer-list a {
+  color: #d0e0ea;
+  text-decoration: none;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  transition: color .25s ease;
+}
+.site-footer-list a:hover {
+  color: #fff;
+}
+.site-footer-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.site-footer-gallery-grid img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.site-footer-bottom {
+  text-align: center;
+  padding: 18px 0 20px;
+  color: #c5d8e4;
+  font-size: 0.8rem;
+}
+.site-footer .fas,
+.site-footer .far,
+.site-footer .fab {
+  color: inherit !important;
+}
+@media (max-width: 1200px) {
+  .site-footer-head,
+  .site-footer-col h4 {
+    font-size: 0.94rem;
+  }
+  .site-footer-list a {
+    font-size: 0.86rem;
+  }
+  .site-footer-bottom {
+    font-size: 0.88rem;
+  }
+}
+@media (max-width: 900px) {
+  .site-footer-top {
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+  }
+  .site-footer-brand-row {
+    padding: 14px 0;
+    gap: 8px;
+    min-width: 0;
+  }
+  .site-footer-brand-row img {
+    width: 42px;
+    height: 42px;
+  }
+  .site-footer-top-social {
+    border: 0;
+    padding: 0;
+    justify-content: center;
+    gap: 10px;
+    min-height: auto;
+  }
+  .site-footer-donate {
+    justify-self: end;
+    padding: 0;
+  }
+  .site-footer-mid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "newsletter newsletter newsletter"
+      "conference touch resources"
+      "gallery gallery gallery";
+    align-items: start;
+    gap: 24px 24px;
+    padding: 34px 0;
+  }
+  .site-footer-mid > :nth-child(1) { grid-area: newsletter; }
+  .site-footer-mid > :nth-child(2) { grid-area: conference; }
+  .site-footer-mid > :nth-child(3) { grid-area: touch; }
+  .site-footer-mid > :nth-child(4) { grid-area: resources; }
+  .site-footer-mid > :nth-child(5) { grid-area: gallery; }
+  .site-footer-subscribe {
+    max-width: 420px;
+  }
+  .site-footer-head,
+  .site-footer-col h4 {
+    font-size: 0.96rem;
+  }
+  .site-footer-list a,
+  .site-footer-text {
+    font-size: 0.82rem;
+  }
+}
+@media (max-width: 600px) {
+  .site-footer-top {
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .site-footer-brand-row span {
+    font-size: 0.8rem;
+    max-width: 74px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .site-footer-top-social a {
+    font-size: 0.82rem;
+  }
+  .site-footer-donate a {
+    min-width: 86px;
+    height: 36px;
+    font-size: 0.82rem;
+    padding: 0 10px;
+  }
+  .site-footer-mid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "newsletter newsletter newsletter"
+      "col1 col2 col3"
+      "gallery gallery gallery";
+    gap: 20px 16px;
+    padding: 30px 0;
+  }
+  .site-footer-mid > :nth-child(1) { grid-area: newsletter; }
+  .site-footer-mid > :nth-child(2) { grid-area: col1; }
+  .site-footer-mid > :nth-child(3) { grid-area: col2; }
+  .site-footer-mid > :nth-child(4) { grid-area: col3; }
+  .site-footer-mid > :nth-child(5) { grid-area: gallery; }
+  .site-footer-subscribe {
+    max-width: 100%;
+  }
+  .site-footer-col h4 {
+    font-size: 0.92rem;
+  }
+  .site-footer-list a {
+    font-size: 0.82rem;
+  }
+  .site-footer-divider {
+    margin: 10px 0 12px;
+  }
+  .site-footer-gallery-grid {
+    gap: 6px;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .partner-cards-container {
+    height: 160px;
+  }
+  .partner-card {
+    min-width: 150px;
+    padding: 15px;
+    max-height: 130px;
+  }
+  .partner-logo-wrapper img {
+    max-height: 60px;
+  }
+  .partner-name {
+    font-size: 0.8rem;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .hero-content {
+    padding: 0 15px;
+  }
+}
+
+
+
+    /* =============== RESPONSIVE =============== */
+    @media (max-width: 768px) {
+      .hero-title { font-size: 2.2rem; }
+      .hero-buttons { flex-direction: column; align-items: center; }
+      .btn { width: 90%; max-width: 300px; }
+      .countdown-item { min-width: 60px; padding: 8px 10px; }
+      .countdown-value { font-size: 1.4rem; }
+      .section { padding: 40px 5%; }
+      .card { padding: 28px 18px; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-title { font-size: 1.8rem; }
+      .date-pill, .theme-bar { font-size: 0.95rem; }
+      .countdown-label { font-size: 0.7rem; }
+    }
+
+
+    /* =============== COASTAL SECTION STYLES =============== */
+.section {
+  padding: 60px 5%;
+  background: linear-gradient(to bottom, #ffffff 0%, #d1f0ec 100%);
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(64, 224, 208, 0.1); /* turquoise glow */
+  padding: 40px;
+  margin-bottom: 30px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  border-top: 4px solid #40E0D0; /* ocean turquoise */
+}
+
+.section-title {
+  font-size: 1.75rem;
+  color: var(--text-dark);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0f7fa; /* light turquoise line */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title i {
+  color: #2E8B57; /* mangrove green */
+  
+  
+}
+
+
+/* =============== ATTEND SECTION =============== */
+.attend-section {
+  background: #ffffff;
+  padding: 110px 3.8%;
+}
+.attend-shell {
+  max-width: 1540px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 0.95fr 1.18fr;
+  align-items: center;
+  gap: 64px;
+}
+.attend-kicker {
+  font-size: 1rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6c7c8c;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.attend-title {
+  font-size: clamp(2.2rem, 3vw, 3.2rem);
+  line-height: 1.14;
+  color: #081b45;
+  margin: 0 0 22px;
+  font-weight: 800;
+  max-width: 760px;
+}
+.attend-meta {
+  font-size: 1.2rem;
+  color: #0f2148;
+  line-height: 1.5;
+  margin: 0 0 22px;
+  font-weight: 400;
+}
+.attend-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 999px;
+  background: #bc0b22;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.02rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 7px 18px rgba(188, 11, 34, 0.32);
+}
+.attend-btn:hover {
+  background: #9a091b;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(188, 11, 34, 0.38);
+}
+.attend-image-wrap {
+  justify-self: end;
+  width: min(100%, 980px);
+  height: 500px;
+  overflow: hidden;
+  border-radius: 230px 0 230px 0;
+  box-shadow: none;
+  background: #d7dce4;
+}
+.attend-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+@media (max-width: 1024px) {
+  .attend-shell {
+    gap: 30px;
+  }
+  .attend-kicker {
+    font-size: 1.05rem;
+  }
+  .attend-meta {
+    font-size: 1.08rem;
+  }
+  .attend-image-wrap {
+    height: 400px;
+  }
+}
+@media (max-width: 860px) {
+  .attend-shell {
+    grid-template-columns: 1fr;
+  }
+  .attend-image-wrap {
+    width: 100%;
+    height: 320px;
+    justify-self: stretch;
+    border-radius: 120px 0 120px 0;
+  }
+}
+
+.footer-wave-divider {
+  width: 100%;
+  height: 90px;
+  line-height: 0;
+  overflow: hidden;
+}
+.footer-wave-divider svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.footer-wave-divider path {
+  fill: #041821;
+}
+@media (max-width: 768px) {
+  .footer-wave-divider { height: 70px; }
+}
+
+/* =============== WHATSAPP FLOATING BUTTON =============== */
+.whatsapp-float {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1500;
+  width: 62px;
+  height: 62px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  background: transparent;
+}
+.whatsapp-float img,
+.whatsapp-float svg {
+  width: 62px;
+  height: 62px;
+  display: block;
+}
+.whatsapp-float:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.26);
+  filter: saturate(1.05);
+}
+.whatsapp-float:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.22), 0 16px 30px rgba(0, 0, 0, 0.22);
+}
+@media (max-width: 520px) {
+  .whatsapp-float {
+    width: 56px;
+    height: 56px;
+    right: 16px;
+    bottom: 16px;
+  }
+  .whatsapp-float img {
+    width: 56px;
+    height: 56px;
+  }
+  .whatsapp-float svg {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+
+/* =============== COMMITTEE MESSAGE SECTIONS =============== */
+.committee-message-section {
+  padding: 70px 5%;
+  background:
+    radial-gradient(circle at top left, rgba(64, 224, 208, 0.12), transparent 35%),
+    linear-gradient(to bottom, #ffffff 0%, #f2fbfa 100%);
+}
+.committee-message-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.committee-message-card {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid rgba(10, 27, 69, 0.06);
+  box-shadow: 0 16px 40px rgba(11, 35, 74, 0.08);
+  padding: clamp(22px, 4vw, 44px);
+  overflow: hidden;
+}
+.committee-message-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(0, 1.15fr);
+  gap: clamp(24px, 4vw, 48px);
+  align-items: start;
+}
+.committee-message-card.is-article .committee-message-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr);
+  align-items: start;
+}
+.committee-message-card.is-reversed .committee-message-grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr);
+}
+.committee-message-media {
+  position: sticky;
+  top: 108px;
+  overflow: hidden;
+  border-radius: 170px 18px 170px 18px;
+  background: #fff;
+  box-shadow: 0 14px 32px rgba(11, 35, 74, 0.14);
+  align-self: start;
+}
+.committee-message-card.is-article .committee-message-media {
+  position: sticky;
+  top: 108px;
+  float: none;
+  width: 100%;
+  margin: 0;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  max-width: 100%;
+  justify-self: end;
+}
+.committee-message-card.is-article .committee-message-copy-wrap {
+  grid-column: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+.committee-message-media img {
+  width: 100%;
+  display: block;
+  border-radius: inherit;
+  aspect-ratio: 1.18 / 1;
+  object-fit: cover;
+}
+.committee-message-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #00932e;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.committee-message-kicker i {
+  color: var(--brand-red) !important;
+}
+.committee-message-title {
+  font-size: clamp(2.1rem, 4vw, 3.8rem);
+  line-height: 1.03;
+  color: #0a2338;
+  margin-bottom: 18px;
+}
+.committee-message-copy {
+  color: #4b5563;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+.committee-message-extra {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+.committee-message-card.is-expanded .committee-message-extra {
+  opacity: 1;
+}
+.committee-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+.committee-message-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.committee-message-btn:hover {
+  transform: translateY(-2px);
+}
+.committee-message-btn-primary {
+  background: #bc0b22;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(188, 11, 34, 0.22);
+}
+.committee-message-btn-primary:hover {
+  background: #9f091d;
+}
+.committee-message-btn-secondary {
+  background: #eef8f6;
+  color: #0a2338;
+  border: 1px solid rgba(10, 35, 56, 0.08);
+}
+.committee-message-btn-secondary:hover {
+  background: #e3f3ef;
+}
+
+@media (max-width: 920px) {
+  .committee-message-grid,
+  .committee-message-card.is-reversed .committee-message-grid {
+    grid-template-columns: 1fr;
+  }
+  .committee-message-card.is-article .committee-message-media {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    margin: 0 0 22px 0;
+    max-width: none;
+    justify-self: stretch;
+    position: relative;
+    top: auto;
+  }
+  .committee-message-card.is-article .committee-message-copy-wrap {
+    padding-top: 4px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .committee-message-card.is-article .committee-message-copy-wrap {
+    overflow: visible;
+  }
+  .committee-message-card.is-article .committee-message-title,
+  .committee-message-card.is-article .committee-message-copy,
+  .committee-message-card.is-article .committee-message-actions {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .committee-message-section {
+    padding: 48px 5%;
+  }
+  .committee-message-media {
+    border-radius: 110px 14px 110px 14px;
+    position: relative;
+    top: auto;
+  }
+  .committee-message-card.is-article .committee-message-media {
+    margin-bottom: 18px;
+  }
+  .committee-message-card.is-article .committee-message-grid {
+    grid-template-columns: 1fr;
+  }
+  .committee-message-title {
+    font-size: clamp(1.8rem, 8vw, 2.7rem);
+  }
+  .committee-message-copy {
+    font-size: 1rem;
+  }
+}
+
+
+/* =============== FAQ SECTION =============== */
+.faq-section {
+  padding: 90px 5%;
+  background:
+    radial-gradient(circle at top, rgba(64, 224, 208, 0.12), transparent 40%),
+    linear-gradient(to bottom, #ffffff 0%, #f4f8ff 100%);
+}
+.faq-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  text-align: center;
+}
+.faq-kicker {
+  font-size: 1rem;
+  color: #2f48b8;
+  font-weight: 800;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.faq-title {
+  font-size: clamp(1.9rem, 3vw, 2.7rem);
+  line-height: 1.1;
+  color: #26304a;
+  margin-bottom: 12px;
+}
+.faq-subtitle {
+  font-size: 1.05rem;
+  color: #5d667a;
+  margin-bottom: 42px;
+}
+.faq-list {
+  display: grid;
+  gap: 16px;
+  text-align: left;
+}
+.faq-item {
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(18, 42, 79, 0.08);
+  overflow: hidden;
+  border: 1px solid rgba(40, 60, 110, 0.08);
+}
+.faq-question {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #3242a8;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+}
+.faq-question:hover {
+  background: rgba(47, 72, 184, 0.03);
+}
+.faq-question-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.faq-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  background: #3242a8;
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+.faq-question-text {
+  font-size: 1.04rem;
+  line-height: 1.45;
+}
+.faq-chevron {
+  flex: 0 0 auto;
+  color: #1c2335;
+  transition: transform 0.25s ease;
+}
+.faq-item.is-open .faq-chevron {
+  transform: rotate(180deg);
+}
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.28s ease;
+}
+.faq-answer-inner {
+  padding: 0 24px 22px 58px;
+  color: #556173;
+  line-height: 1.7;
+}
+.faq-answer-inner p + p {
+  margin-top: 10px;
+}
+.faq-item.is-open .faq-answer {
+  max-height: 420px;
+}
+
+@media (max-width: 768px) {
+  .faq-section {
+    padding: 72px 5%;
+  }
+  .faq-subtitle {
+    margin-bottom: 28px;
+  }
+  .faq-question {
+    padding: 18px 18px;
+  }
+  .faq-question-text {
+    font-size: 0.98rem;
+  }
+  .faq-answer-inner {
+    padding: 0 18px 18px 52px;
+  }
+}
+
+    .highlights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .highlights-grid img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navigation -->
+    <nav class="navbar">
+    <div class="nav-shell">
+      <div class="nav-top">
+        <div class="nav-top-left">
+          <a href="contact.html" class="nav-top-item"><i class="fas fa-question-circle"></i> Ask a Question</a>
+          <a href="mailto:kislcsecretariat@resok.org" class="nav-top-item"><i class="far fa-envelope"></i>kislcsecretariat@resok.org</a>
+        </div>
+        <div class="nav-top-right">
+          <a href="#">English UK</a>
+          <a href="#about">About</a>
+          <a href="registration.html">Register</a>
+        </div>
+      </div>
+
+      <div class="nav-main">
+        <a href="index.html" class="logo">
+          <img src="assets/img/kislhc-logo.png" alt="KISLHC 2027 logo">
+        </a>
+        <ul class="nav-menu" id="navMenu">
+          <li><a href="index.html" class="nav-link is-active">Home</a></li>
+          <li><a href="abstracts.html" class="nav-link">Abstracts</a></li>
+          <li><a href="registration.html" class="nav-link">Registration</a></li>
+          <li><a href="sponsors.html" class="nav-link">Sponsorship</a></li>
+          <li><a href="#program" class="nav-link">Programme</a></li>
+          <li><a href="https://kislhc.lxpo.net" class="nav-link" target="_blank" rel="noopener noreferrer">2026 Presentations</a></li>
+          <li><a href="contact.html" class="nav-link">Contact</a></li>
+          <li class="nav-mobile-social">
+            <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+            <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+            <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+            <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+            <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+          </li>
+        </ul>
+        <div class="nav-icons" aria-label="Social links and search">
+          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+        <div class="hamburger" id="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+ 
+    <!-- Hero Section -->
+  <div class="hero-rotator" id="home">
+    <section class="hero-section is-active" aria-hidden="false">
+      <div class="hero-content">
+        <h1 class="hero-title">8th Kenya International Scientific Lung Health Conference 2027</h1>
+ 
+        <!-- Date & Location Pill -->
+        <div style="text-align: center; margin: 20px 0;">
+          <div class="date-pill" style="max-width: 90vw; line-height: 1.35;">
+ 
+            <!-- Date -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fas fa-calendar-alt" style="color: #00932e;"></i>
+              <span>Dates to be announced</span>
+            </div>
+ 
+            <!-- Divider -->
+            <span style="color: rgba(230, 243, 248, 0.75);">|</span>
+ 
+            <!-- Location -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fas fa-map-marker-alt" style="color: #bc0b22;"></i>
+              <span>Venue to be announced</span>
+            </div>
+ 
+          </div>
+        </div>
+ 
+        <!-- Theme Bar -->
+        <div class="theme-bar">
+          <span class="theme-label">THEME</span>
+          <p>The KISLHC 2027 theme will be announced soon</p>
+        </div>
+ 
+        <div class="countdown">
+          <h3 style="color: #2c3e50;" id="countdownLabel">Abstract submission opens in</h3>
+          <div class="countdown-grid">
+            <div class="countdown-item">
+              <div id="days" class="countdown-value">00</div>
+              <div class="countdown-label">Days</div>
+            </div>
+            <div class="countdown-item">
+              <div id="hours" class="countdown-value">00</div>
+              <div class="countdown-label">Hours</div>
+            </div>
+            <div class="countdown-item">
+              <div id="minutes" class="countdown-value">00</div>
+              <div class="countdown-label">Minutes</div>
+            </div>
+            <div class="countdown-item">
+              <div id="seconds" class="countdown-value">00</div>
+              <div class="countdown-label">Seconds</div>
+            </div>
+          </div>
+        </div>
+ 
+        <div class="hero-buttons">
+          <a href="abstracts.html" class="btn btn-primary">
+            <i class="fas fa-file-alt"></i> Call for Abstracts
+          </a>
+          <a href="registration.html" class="btn btn-success">
+            <i class="fas fa-user-plus"></i> Registration
+          </a>
+          <a href="sponsors.html" class="btn btn-dark">
+            <i class="fas fa-handshake"></i> Become a Sponsor
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-wave-divider" aria-hidden="true">
+        <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+          <path d="M0,48 C260,136 520,0 820,56 C1080,104 1260,64 1440,22 L1440,160 L0,160 Z" fill="#ffffff"></path>
+        </svg>
+      </div>
+    </section>
+
+  </div>
+  
+  
+
+
+ <!-- About KISLHC -->
+<section class="section" id="about" style="background: linear-gradient(to bottom, #ffffff 0%, #d1f0ec 100%); padding: 60px 5%;">
+  <div class="card" style="background: white; border-top: 4px solid #40E0D0; box-shadow: 0 6px 20px rgba(64, 224, 208, 0.1);">
+    <h2 class="section-title">
+      <i class="fas fa-info-circle" style="color: #2E8B57;"></i> About KISLHC
+    </h2>
+    <p>Respiratory diseases such as Asthma, Chronic Obstructive Pulmonary Disease, Pneumonia and Tuberculosis remain major causes of illness and death among Kenyans with available statistics suggesting a rising burden of these diseases possibly as a result of increased urbanization and air pollution.</p>
+    <p>The International Scientific Lung Health Conference offers a platform for dissemination of the most updated information on the latest developments in research and clinical practice in the field of lung health and respiratory medicine. It provides stakeholders an opportunity to debate on controversial issues, challenges, and solutions; share experiences and to bring their personal contribution to the area.</p>
+    
+    <!-- Optional: Add a small coastal icon or pattern -->
+    <div style="text-align: right; margin-top: 20px; opacity: 0.3;">
+      <i class="fas fa-water" style="font-size: 1.5rem; color: #40E0D0;"></i>
+    </div>
+  </div>
+</section>
+
+ <!-- Objectives -->
+  <section class="section">
+    <div class="card">
+      <h2 class="section-title"><i class="fas fa-book-open"></i> What KISLHC Sets Out to Do</h2>
+      <p>The conference aims to unite stakeholders to accelerate progress toward ending the TB epidemic by 2030 and improving overall lung health.</p>
+      
+      <div class="objectives-grid">
+        <!-- Objective 1 -->
+        <div class="objective-card" style="--border-color: #27ae60;">
+          <div class="objective-icon" style="color: #27ae60;"><i class="fas fa-flag-checkered"></i></div>
+          <h3>Reviewing achievements and identifying gaps in management of chronic lung diseases</h3>
+        </div>
+
+        <!-- Objective 2 -->
+        <div class="objective-card" style="--border-color: #e74c3c;">
+          <div class="objective-icon" style="color: #e74c3c;"><i class="fas fa-vial"></i></div>
+          <h3>Promoting the implementation and scaling up of new WHO-recommended tools in lung Health.</h3>
+        </div>
+
+        <!-- Objective 3 -->
+        <div class="objective-card" style="--border-color: #f39c12;">
+          <div class="objective-icon" style="color: #f39c12;"><i class="fas fa-hand-holding-usd"></i></div>
+          <h3>Mobilizing political and financial commitment to bridge funding gaps for lung health research, innovation, and care.</h3>
+        </div>
+
+        <!-- Objective 4 -->
+        <div class="objective-card" style="--border-color: #2980b9;">
+          <div class="objective-icon" style="color: #2980b9;"><i class="fas fa-users"></i></div>
+          <h3>Fostering collaboration across different sectors (health, civil society, academia, private sector) and ensuring community engagement.</h3>
+        </div>
+
+        <!-- Objective 5 -->
+        <div class="objective-card" style="--border-color: #3498db;">
+          <div class="objective-icon" style="color: #3498db;"><i class="fas fa-balance-scale"></i></div>
+          <h3>Addressing health inequities, human rights, and stigma associated with lung diseases.</h3>
+        </div>
+
+       <!-- Objective 6 -->
+        <div class="objective-card" style="--border-color: #e74c3c;">
+          <div class="objective-icon" style="color: #e74c3c;"><i class="fas fa-heartbeat"></i></div>
+          <h3>Public Health interventions towards Universal Health Coverage</h3>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  
+  
+  <!-- Highlights from KISLHC 2026 -->
+<section class="section" id="highlights">
+  <div class="card">
+    <h2 class="section-title"><i class="fas fa-images"></i> Highlights from KISLHC 2026</h2>
+    <p>The 7th KISLHC met in Diani, Kwale County, from 5 to 8 August 2026 under the theme <strong>"From Detection to Recovery: Integrated Pathways and Patient-Centred Innovations in Lung Health"</strong>, with pre-conference skills workshops, plenaries, oral and e-poster sessions, and the awards gala.</p>
+    <div class="highlights-grid">
+      <img src="assets/img/gallery/g0.jpg" alt="KISLHC 2026" loading="lazy">
+      <img src="assets/img/gallery/g1.jpg" alt="KISLHC 2026" loading="lazy">
+      <img src="assets/img/gallery/g2.jpg" alt="KISLHC 2026" loading="lazy">
+      <img src="assets/img/gallery/g3.jpg" alt="KISLHC 2026" loading="lazy">
+      <img src="assets/img/gallery/g4.jpg" alt="KISLHC 2026" loading="lazy">
+      <img src="assets/img/gallery/g5.jpg" alt="KISLHC 2026" loading="lazy">
+    </div>
+    <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 25px;">
+      <a href="https://kislhc.lxpo.net" class="btn" target="_blank" rel="noopener noreferrer" style="background: transparent; border: 2px solid #bc0b22; color: #bc0b22;">
+        <i class="fas fa-desktop"></i> KISLHC 2026 presentations
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Scientific Programme -->
+<section class="section" id="program">
+  <div class="card">
+    <h2 class="section-title"><i class="fas fa-calendar-alt"></i> Scientific Programme</h2>
+    <div class="info-box">
+      <p><i class="fas fa-hourglass-half"></i> <strong>The KISLHC 2027 programme will be published after abstract review closes.</strong></p>
+      <p>It will include pre-conference skills-building workshops, plenaries, symposia, and oral and poster sessions built from the abstracts accepted in this call.</p>
+    </div>
+  </div>
+</section>
+
+  <!-- Abstract Submission -->
+  <section class="section" id="abstracts">
+    <div class="card">
+      <h2 class="section-title"><i class="fas fa-file-contract"></i> Call for Abstracts</h2>
+      <div class="info-box">
+        <p><i class="fas fa-door-open"></i> <strong>Submissions open:</strong> 1 November 2026 &nbsp;|&nbsp; <strong>Deadline:</strong> 31 May 2027, 23:59 East Africa Time</p>
+        <p>Structured abstracts of up to 300 words (Background, Methods, Results, Conclusion), reviewed double-blind, for oral or poster presentation. Tracks span tuberculosis, airways disease, ILD, lung cancer, paediatrics, critical care, interventional pulmonology, tobacco control, health systems, digital health and more. There is no fee to submit.</p>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 16px; margin-top: 25px; flex-wrap: wrap;">
+        <a href="abstracts.html" class="btn btn-primary"><i class="fas fa-book-open"></i> Guidelines and tracks</a>
+        <a href="../resok-portal/public/abstracts" class="btn" style="background: transparent; border: 2px solid var(--brand-blue); color: var(--brand-blue);">
+          <i class="fas fa-paper-plane"></i> Go to the submission system
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Registration -->
+  <section class="section" id="register">
+    <div class="card">
+      <h2 class="section-title"><i class="fas fa-user-check"></i> Registration</h2>
+      <div class="info-box">
+        <p><i class="fas fa-info-circle"></i> <strong>Registration for KISLHC 2027 will open soon.</strong> Fees, categories and early-bird dates will be announced here.</p>
+        <p>You will register and pay online with your ReSoK account, the same login used for abstracts, and receive a personal QR code for your conference badge. ReSoK members in good standing receive the member rate.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Attend Section -->
+  <section class="attend-section" id="venue">
+    <div class="attend-shell">
+      <div class="attend-content">
+        <p class="attend-kicker">Attend KISLHC 2027</p>
+        <h2 class="attend-title">Venue to be announced</h2>
+        <p class="attend-meta">
+          Pre-conference workshops and the main<br>
+          conference: dates and venue to be announced.<br>
+          Follow ReSoK for the announcement.
+        </p>
+        <a href="abstracts.html" class="attend-btn">Submit an Abstract</a>
+      </div>
+      <div class="attend-image-wrap">
+        <img src="assets/img/gallery/g6.jpg" alt="Delegates at KISLHC 2026" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+
+
+  <section class="faq-section" id="faq" aria-labelledby="faq-title">
+    <div class="faq-shell">
+      <p class="faq-kicker">Frequently Asked Questions</p>
+      <h2 class="faq-title" id="faq-title">General information about KISLHC 2027</h2>
+      <p class="faq-subtitle">Quick answers to the most common questions about the conference, registration, and abstracts.</p>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-1">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">1. What is the Kenya International Scientific Lung Health Conference (KISLHC)?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-1" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>KISLHC is a national and regional scientific meeting dedicated to advancing lung health through research, clinical practice, policy dialogue, and partnership. It brings together healthcare professionals, researchers, policymakers, and industry partners to share evidence, discuss challenges, and highlight practical solutions for respiratory health.</p>
+              <p>The conference also creates space for learning across disciplines, with sessions that connect prevention, diagnosis, treatment, rehabilitation, and health system strengthening. In that sense, it is both a scientific forum and a collaboration platform for people working to improve lung health outcomes.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-2">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">2. Who is organizing the convention?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-2" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>The convention is organized by the KISLHC planning committee, working with a network of stakeholders from government, professional societies, academic institutions, and health-sector partners. This collaborative approach helps ensure the programme reflects current priorities in lung health and brings together a wide range of expertise.</p>
+              <p>The organizing team is responsible for scientific content, logistics, communications, and participant support, while partner institutions contribute through expertise, sponsorship, publicity, and technical input. Together, they help deliver a conference that is scientifically strong, practical, and inclusive.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-3">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">3. Who can attend the convention?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-3" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>The convention is open to healthcare professionals, researchers, students, policymakers, development partners, public health practitioners, and other stakeholders interested in lung health. It is designed to be multidisciplinary, so people from different backgrounds can learn from one another and contribute meaningfully.</p>
+              <p>Whether you work in clinical care, public health programming, research, advocacy, education, or administration, you will find sessions relevant to your work. Students and early-career professionals are also encouraged to attend because the event provides a strong learning and networking environment.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-4">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">4. Are county government employees allowed to participate?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-4" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Yes. County government employees working in health and related sectors are welcome to participate, subject to the usual approval and duty-release procedures in their institutions. The conference content is relevant to county-level service delivery, policy implementation, and health system strengthening.</p>
+              <p>Participation from county teams is especially valuable because many lung health priorities are implemented at county level. Attendance can therefore support knowledge exchange, planning, and alignment with national and local health goals.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-5">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">5. How do I register for the convention?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-5" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>When registration opens, you will register online with a ReSoK account, the same login used for abstract submission. Members of the Society use their existing portal login; everyone else creates a free account in a minute. You then choose the category that fits your role, such as delegate, student, or day participant.</p>
+              <p>Once your payment is confirmed you receive a confirmation email with a personal QR code. The same code is printed on your badge and scanned at the venue each day, which also records your attendance for CPD points.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-6">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">6. What are the registration fees?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-6" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Registration fees vary depending on the participant category, because the conference supports different audiences with different levels of access and support. The fee schedule includes categories for local delegates, regional and international participants, students, day-rate attendees, members, workshop participants, and organizing committee members.</p>
+              <p>The KISLHC 2027 fees will be published in the registration section when registration opens. If you are unsure which category applies to you, contact the secretariat before paying.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-7">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">7. Can abstracts be submitted via email?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-7" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>No. Abstracts are submitted only through the online abstract system, which opens on 1 November 2026 and closes on 31 May 2027 at 23:59 East Africa Time. This ensures every abstract is captured in the same format and reviewed blind.</p>
+              <p>Email is generally best reserved for support, technical questions, or follow-up communication with the abstracts team. If a portal or submission link is provided, it should be used as the primary submission route unless the secretariat gives different instructions.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-8">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">8. Is there a fee for submitting an abstract?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-8" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>No separate fee is charged for abstract submission. In other words, submitting an abstract is not treated as an extra paid service beyond the normal conference process.</p>
+              <p>However, if an abstract is accepted and the author wishes to attend the conference, standard registration fees may still apply depending on the participant category. It is always a good idea to check the registration information for the latest details.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-9">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">9. When will abstract notifications be sent?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-9" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Review starts after the deadline of 31 May 2027. Every author receives the decision by email, and can also see the status of each abstract at any time by signing in to the abstract system.</p>
+              <p>If you submit an abstract, it is important to monitor the inbox you used during registration as well as any conference announcements. That helps you avoid missing important updates about acceptance, revisions, or presentation instructions.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-10">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">10. Can one person submit more than one abstract?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-10" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Yes. A single author may submit more than one abstract, provided each submission is distinct, scientifically sound, and follows the conference guidelines. This allows researchers and teams to share different pieces of work from separate studies or project components.</p>
+              <p>Each abstract should stand on its own and be submitted in the required format so that it can be reviewed independently. If your submissions are part of a larger project, make sure the focus, objectives, and findings are clearly different.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-11">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">11. Can organizations, partners and companies support the convention through sponsorship?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-11" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Yes. Organizations, partners, and companies can support the convention through sponsorship packages, exhibition opportunities, and broader partnership arrangements. Sponsorship is an important way to support the scientific programme while also increasing visibility for the sponsor’s brand or institution.</p>
+              <p>The conference welcomes support from institutions that share an interest in lung health, public health, innovation, and community impact. Sponsorship options usually vary in size and benefit, allowing organizations to choose a level of support that fits their goals and budget.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-12">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">12. How can an organization apply to become a sponsor or exhibitor?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-12" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Interested organizations can contact the conference team through the sponsorship or contact pages to request the sponsor and exhibitor information. The team can then share details about available packages, exhibition space, branding opportunities, and any deadlines or requirements.</p>
+              <p>This is usually the best first step if your organization wants to compare the options before committing. It also gives the organizing team a chance to understand your goals and suggest the most suitable sponsorship or exhibitor category.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-13">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">13. I am a service provider or supplier interested in doing business with KISLHC. How can I engage?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-13" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Service providers and suppliers interested in working with KISLHC can reach out through the official contact channels to express interest and request guidance on the appropriate engagement process. Depending on the type of service, the organizing team may direct you to procurement, sponsorship, or partnership contacts.</p>
+              <p>Doing this early is helpful because it allows the team to understand your offering and share any relevant requirements, timelines, or selection steps. Clear communication at the start also makes it easier to identify whether your organization fits the conference’s needs.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-14">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">14. Will exhibitors receive exhibition space?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-14" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Yes. Approved exhibitors are allocated designated exhibition space as part of the exhibitor arrangement. The space is intended to support engagement with delegates, showcase products or services, and create visibility during the conference.</p>
+              <p>The exact setup usually depends on the package or agreement that has been confirmed with the organizing team. If space, location, or technical requirements matter to your organization, those details should be discussed early during the planning process.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-15">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">15. Will sponsors receive recognition and other benefits during the convention?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-15" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>Yes. Sponsors typically receive recognition and benefits based on the selected sponsorship package and the agreed partnership terms. These benefits may include branding visibility, acknowledgment during sessions, exhibition presence, and other forms of conference recognition.</p>
+              <p>The specific package determines the level of exposure and the type of benefits provided. Sponsors are encouraged to discuss their expectations with the organizing team so that the partnership aligns with both the conference needs and the sponsor’s objectives.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-16">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">16. How can I get updates and official announcements?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-16" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>The best way to stay informed is to regularly check the official conference website and follow the conference’s communication channels. Those channels are used to share programme updates, speaker announcements, registration information, and any important changes.</p>
+              <p>If you are registered or have already interacted with the conference team, also keep an eye on your email inbox so you do not miss targeted notifications. Staying connected through official channels is the most reliable way to receive accurate information.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-17">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">17. My abstract won't submit. What could be the problem?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-17" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>If your abstract will not submit, the problem is often related to incomplete fields, file format issues, slow connectivity, or a session timing out before the form is completed. The first step is to review the form carefully and make sure every required field has been filled in correctly.</p>
+              <p>If the issue persists, refresh the page, try a different browser, or resubmit after checking your internet connection. If none of those steps works, contact the abstracts support team with a clear description of the problem so they can help you troubleshoot it.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-18">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">18. Who can I contact for further enquiries?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-18" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>You can use the contact page or email the conference secretariat for help with registration, abstracts, sponsorship, exhibition, logistics, and general enquiries. That is the quickest route for getting official guidance from the organizing team.</p>
+              <p>When writing in, it helps to include your full name, organization, and a short description of your question so the team can respond more efficiently. Clear details usually make it easier to direct your enquiry to the right person.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" type="button" data-faq-button aria-expanded="false" aria-controls="faq-answer-19">
+            <span class="faq-question-left"><span class="faq-badge">?</span><span class="faq-question-text">19. What are the key conference sub-themes?</span></span>
+            <i class="fas fa-chevron-down faq-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="faq-answer" id="faq-answer-19" role="region" aria-hidden="true">
+            <div class="faq-answer-inner">
+              <p>The conference sub-themes cover the broad areas that shape lung health practice and policy, including prevention, early detection, diagnosis, treatment, rehabilitation, health systems strengthening, and financing. They also reflect current priorities such as innovation, digital health, and integrated care across the life course.</p>
+              <p>These themes are intended to help delegates understand how different parts of the health system connect and how research can translate into better services for patients. They also provide a useful structure for organizing presentations, workshops, and discussions across the programme.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+
+  <!-- Partners -->
+  <section class="partners-section" id="partners">
+    <h2 class="partners-title">Our Partners</h2>
+    <div class="partner-cards-container" id="partnerContainer">
+
+      <!-- All 17 partners -->
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/00.jpg" alt="Ministry of Health Kenya" loading="lazy">
+        </div>
+        <div class="partner-name">KISLHC</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/01.jpg" alt="Kenya International Scientific Lung Health Conference" loading="lazy">
+        </div>
+        <div class="partner-name">Ministry of Health</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/02.jpg" alt="National Tuberculosis Leprosy and Lung Disease Program" loading="lazy">
+        </div>
+        <div class="partner-name">National Tuberculosis Leprosy and Lung Disease Program</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/03.jpg" alt="Respiratory Society of Kenya" loading="lazy">
+        </div>
+        <div class="partner-name">Respiratory Society of Kenya</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/04.jpg" alt="Africa Institute of Development Study" loading="lazy">
+        </div>
+        <div class="partner-name">Africa Institute of Development Study</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/16.jpg" alt="US AID" loading="lazy">
+        </div>
+        <div class="partner-name">Light Consortium</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/05.jpg" alt="TB ARCH" loading="lazy">
+        </div>
+        <div class="partner-name">Department of State</div>
+      </div>
+      
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/10.jpg" alt="Stop TB Partnership" loading="lazy">
+        </div>
+        <div class="partner-name">Stop TB Partnership</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/07.jpg" alt="PEPFAR" loading="lazy">
+        </div>
+        <div class="partner-name">PEPFAR</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/08.jpg" alt="Center for Health Solutions" loading="lazy">
+        </div>
+        <div class="partner-name">Center for Health Solutions</div>
+      </div>
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/09.jpg" alt="KEMRI" loading="lazy">
+        </div>
+        <div class="partner-name">KEMRI</div>
+      </div>
+
+     
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/12.jpg" alt="AMREF" loading="lazy">
+        </div>
+        <div class="partner-name">AMREF</div>
+      </div>
+
+
+      <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/14.jpg" alt="World Health Organization" loading="lazy">
+        </div>
+        <div class="partner-name">World Health Organization</div>
+      </div>
+      
+       <div class="partner-card">
+        <div class="partner-logo-wrapper">
+          <img src="assets/img/partners/18.jpg" alt="Kenyatta National Hospital" loading="lazy">
+        </div>
+        <div class="partner-name">Kenyatta National Hospital</div>
+      </div>
+     
+    </div>
+    <a href="sponsors.html" class="partner-button">Partner With Us</a>
+  </section>
+
+
+
+<div class="footer-wave-divider" aria-hidden="true">
+  <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+    <path d="M0,48 C260,136 520,0 820,56 C1080,104 1260,64 1440,22 L1440,160 L0,160 Z"></path>
+  </svg>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-top">
+      <div class="site-footer-brand-row">
+        <img src="assets/img/kislhc-logo.png" alt="KISLHC logo">
+        <span>KISLHC</span>
+      </div>
+
+      <div class="site-footer-top-social" aria-label="Social links">
+        <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
+        <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
+        <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
+        <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
+        <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+      </div>
+
+      <div class="site-footer-donate">
+        <a href="registration.html">Register</a>
+      </div>
+    </div>
+
+    <div class="site-footer-mid">
+      <div>
+        <h3 class="site-footer-head">Sign Up For A Newsletter</h3>
+        <p class="site-footer-text">
+          Get conference updates, abstract reminders, speaker announcements, and program highlights directly in your inbox.
+        </p>
+        <form class="site-footer-subscribe" action="#" method="post">
+          <input type="email" name="email" placeholder="Your Email Address" aria-label="Email Address">
+          <button type="submit" aria-label="Submit"><i class="fas fa-arrow-right"></i></button>
+        </form>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Conference</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#faq">FAQs</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Get In Touch</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="contact.html">Contact Us</a></li>
+          <li><a href="../blog.html">ReSoK News</a></li>
+          <li><a href="#venue">Venue</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Resources</h4>
+        <div class="site-footer-divider"></div>
+        <ul class="site-footer-list">
+          <li><a href="#program">Programme</a></li>
+          <li><a href="abstracts.html">Call for Abstracts</a></li>
+          <li><a href="sponsors.html">Sponsorship</a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer-col">
+        <h4>Our Gallery</h4>
+        <div class="site-footer-divider"></div>
+        <div class="site-footer-gallery-grid">
+          <img src="assets/img/gallery/g0.jpg" alt="Gallery 1" loading="lazy">
+          <img src="assets/img/gallery/g1.jpg" alt="Gallery 2" loading="lazy">
+          <img src="assets/img/gallery/g2.jpg" alt="Gallery 3" loading="lazy">
+          <img src="assets/img/gallery/g3.jpg" alt="Gallery 4" loading="lazy">
+          <img src="assets/img/gallery/g4.jpg" alt="Gallery 5" loading="lazy">
+          <img src="assets/img/gallery/g5.jpg" alt="Gallery 6" loading="lazy">
+          <img src="assets/img/gallery/g6.jpg" alt="Gallery 7" loading="lazy">
+          <img src="assets/img/gallery/g7.jpg" alt="Gallery 8" loading="lazy">
+        </div>
+      </div>
+    </div>
+
+    <div class="site-footer-bottom">
+      &copy; 2026&ndash;2027 Kenya International Scientific Lung Health Conference (KISLHC). Developed and Designed by ReSoK ICT
+    </div>
+  </div>
+</footer>
+
+  <!-- WhatsApp Floating Button -->
+  <a
+    class="whatsapp-float"
+    href="https://wa.me/254717728517?text=Hello%20KISLHC%20team%2C%20I%20have%20an%20inquiry%20about%20KISLHC%202027."
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Chat with us on WhatsApp"
+    title="Chat with us on WhatsApp"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="30" fill="#25D366" />
+      <path fill="#ffffff" d="M32 14.5c-9.7 0-17.6 7.9-17.6 17.6 0 3.1.8 6.1 2.3 8.7L14 50l9.5-2.5c2.5 1.4 5.4 2.2 8.5 2.2 9.7 0 17.6-7.9 17.6-17.6S41.7 14.5 32 14.5zm0 32.1c-2.9 0-5.6-.8-8-2.2l-.6-.3-5.7 1.5 1.5-5.6-.3-.6c-1.5-2.5-2.3-5.3-2.3-8.2 0-8.5 6.9-15.4 15.4-15.4s15.4 6.9 15.4 15.4-6.9 15.4-15.4 15.4z"/>
+      <path fill="#ffffff" d="M41.7 36.8c-.5-.3-3-1.5-3.5-1.6-.5-.2-.8-.3-1.2.3-.3.5-1.4 1.6-1.7 2-.3.3-.6.4-1.1.2-.5-.3-2.2-.8-4.2-2.6-1.6-1.4-2.6-3.1-2.9-3.6-.3-.5 0-.8.2-1.1.2-.2.5-.6.7-.9.2-.3.3-.5.5-.8.2-.3.1-.6 0-.9-.1-.3-1.2-2.9-1.6-4-.4-1.1-.8-.9-1.2-.9h-1c-.3 0-.9.1-1.3.6-.5.5-1.7 1.6-1.7 3.9s1.7 4.5 1.9 4.8c.2.3 3.4 5.2 8.2 7.3 1.1.5 2 .8 2.7 1 .9.3 1.7.2 2.4.1.7-.1 2.9-1.2 3.3-2.3.4-1.1.4-2.1.3-2.3-.1-.2-.5-.3-1-.6z"/>
+    </svg>
+  </a>
+
+
+  <!-- JavaScript -->
+  <script>
+    // Mobile Menu Toggle
+    document.addEventListener('DOMContentLoaded', () => {
+      const hamburger = document.getElementById('hamburger');
+      const navMenu = document.getElementById('navMenu');
+      const navbar = document.querySelector('.navbar');
+      const newsletterForm = document.querySelector('.site-footer-subscribe');
+      const languageDropdown = document.querySelector('.nav-language');
+      const languageToggle = document.getElementById('langToggle');
+
+      const syncNavbarState = () => {
+        if (!navbar) return;
+        navbar.classList.toggle('scrolled', window.scrollY > 40);
+      };
+      syncNavbarState();
+      window.addEventListener('scroll', syncNavbarState, { passive: true });
+      
+      if (hamburger && navMenu) {
+        hamburger.addEventListener('click', () => {
+          hamburger.classList.toggle('active');
+          navMenu.classList.toggle('active');
+        });
+
+        // Close mobile menu when clicking a link
+        document.querySelectorAll('.nav-link').forEach(link => {
+          link.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            navMenu.classList.remove('active');
+          });
+        });
+      }
+
+      if (newsletterForm) {
+        newsletterForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+        });
+      }
+
+      // Hero Rotator (Details -> Video full-length -> repeat)
+      const heroRotator = document.querySelector('.hero-rotator');
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (heroRotator && !reduceMotion) {
+        const heroSlides = Array.from(heroRotator.querySelectorAll('.hero-section'));
+        const detailsIndex = heroSlides.findIndex(s => !s.querySelector('video'));
+        const videoIndex = heroSlides.findIndex(s => !!s.querySelector('video'));
+        const detailsDurationMs = 5000;
+
+        if (detailsIndex >= 0 && videoIndex >= 0) {
+          let rotatorTimer = null;
+          const videoEl = heroSlides[videoIndex].querySelector('video');
+
+          const setActiveSlide = (nextIndex) => {
+            document.body.classList.toggle('hero-video-active', nextIndex === videoIndex);
+            heroSlides.forEach((slide, idx) => {
+              const isActive = idx === nextIndex;
+              slide.classList.toggle('is-active', isActive);
+              slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+              if (!isActive) {
+                const anyVideo = slide.querySelector('video');
+                if (anyVideo) anyVideo.pause();
+              }
+            });
+          };
+
+          const showDetails = () => {
+            if (rotatorTimer) clearTimeout(rotatorTimer);
+            setActiveSlide(detailsIndex);
+            rotatorTimer = setTimeout(showVideo, detailsDurationMs);
+          };
+
+          const showVideo = () => {
+            if (rotatorTimer) clearTimeout(rotatorTimer);
+            setActiveSlide(videoIndex);
+            if (!videoEl) return showDetails();
+
+            try { videoEl.currentTime = 0; } catch (e) {}
+            const playPromise = videoEl.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+              playPromise.catch(() => {});
+            }
+          };
+
+          if (videoEl) {
+            videoEl.addEventListener('ended', showDetails);
+          }
+
+          showDetails();
+        }
+      }
+
+      // Smooth Scrolling
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            window.scrollTo({
+              top: target.offsetTop - 80,
+              behavior: 'smooth'
+            });
+          }
+        });
+      });
+
+      // Duplicate Partners for Infinite Scroll
+      const container = document.getElementById('partnerContainer');
+      if (container) {
+        const original = container.innerHTML;
+        container.innerHTML = original + original;
+      }
+
+      // Countdown: to the abstract call opening, then to its deadline. Switch these to the
+      // conference dates once they are set.
+      const stages = [
+        { at: new Date('2026-11-01T00:00:00+03:00').getTime(), label: 'Abstract submission opens in' },
+        { at: new Date('2027-05-31T23:59:00+03:00').getTime(), label: 'Abstract deadline in' },
+      ];
+      const label = document.getElementById('countdownLabel');
+      let countdownInterval = null;
+      const tick = () => {
+        const now = Date.now();
+        const stage = stages.find((st) => st.at > now);
+        if (!stage) {
+          if (countdownInterval) clearInterval(countdownInterval);
+          if (label) label.textContent = 'Abstract submission has closed';
+          document.querySelector('.countdown-grid').innerHTML =
+            '<div style="font-size: 1.4rem; color: #27ae60; font-weight: bold; width: 100%;">Programme coming soon</div>';
+          return;
+        }
+        if (label) label.textContent = stage.label;
+        const distance = stage.at - now;
+        document.getElementById("days").textContent = Math.floor(distance / 86400000);
+        document.getElementById("hours").textContent = String(Math.floor((distance % 86400000) / 3600000)).padStart(2, "0");
+        document.getElementById("minutes").textContent = String(Math.floor((distance % 3600000) / 60000)).padStart(2, "0");
+        document.getElementById("seconds").textContent = String(Math.floor((distance % 60000) / 1000)).padStart(2, "0");
+      };
+      tick();
+      countdownInterval = setInterval(tick, 1000);
+    });
+
+
+
+        document.querySelectorAll('[data-faq-button]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const item = button.closest('.faq-item');
+    const answerId = button.getAttribute('aria-controls');
+    const answer = answerId ? document.getElementById(answerId) : null;
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+
+    document.querySelectorAll('.faq-item.is-open').forEach((openItem) => {
+      if (openItem !== item) {
+        openItem.classList.remove('is-open');
+        const openButton = openItem.querySelector('[data-faq-button]');
+        const openAnswer = openItem.querySelector('.faq-answer');
+        if (openButton) openButton.setAttribute('aria-expanded', 'false');
+        if (openAnswer) {
+          openAnswer.setAttribute('aria-hidden', 'true');
+          openAnswer.style.maxHeight = '0px';
+        }
+      }
+    });
+
+    if (item && answer) {
+      item.classList.toggle('is-open', !isOpen);
+      button.setAttribute('aria-expanded', String(!isOpen));
+      answer.setAttribute('aria-hidden', String(isOpen));
+      answer.style.maxHeight = isOpen ? '0px' : `${answer.scrollHeight}px`;
+    }
+  });
+});
+
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.faq-item.is-open .faq-answer').forEach((answer) => {
+    answer.style.maxHeight = `${answer.scrollHeight}px`;
+  });
+}, { passive: true });
+  </script>
+
+
+
+
+  <!-- Google Analytics -->
+  
+  
+  
+  <script>
+      
+        // Committee message expand/collapse
+document.querySelectorAll('[data-committee-toggle]').forEach((button) => {
+  const card = button.closest('.committee-message-card');
+  const extra = card ? card.querySelector('[data-committee-extra]') : null;
+  const label = button.querySelector('[data-committee-toggle-label]');
+  const icon = button.querySelector('i');
+
+  if (!card || !extra) {
+    return;
+  }
+
+  const syncState = (expanded) => {
+    card.classList.toggle('is-expanded', expanded);
+    button.setAttribute('aria-expanded', String(expanded));
+    extra.style.maxHeight = expanded ? `${extra.scrollHeight}px` : '0px';
+    if (label) label.textContent = expanded ? 'Show Less' : 'Read More';
+    if (icon) {
+      icon.classList.toggle('fa-arrow-right', !expanded);
+      icon.classList.toggle('fa-arrow-up', expanded);
+    }
+  };
+
+  syncState(false);
+
+  button.addEventListener('click', () => {
+    const expanded = button.getAttribute('aria-expanded') === 'true';
+    syncState(!expanded);
+  });
+
+  window.addEventListener('resize', () => {
+    if (button.getAttribute('aria-expanded') === 'true') {
+      extra.style.maxHeight = `${extra.scrollHeight}px`;
+    }
+  }, { passive: true });
+});
+
+      
+  </script>
+  
+
+
+
+  
+  <script src="../assets/js/consent.js?v=20260930-icon"></script>
+</body>
+</html>
+
+
+
+
+

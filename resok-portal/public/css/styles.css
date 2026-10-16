@@ -195,7 +195,10 @@
       font-size: 14px;
     }
 
-    .form-row input,
+    /* Text-like inputs only. A bare ".form-row input" also stretched the ID/Passport radio
+       buttons to full width with 12px padding, which on phones pushed each circle over the
+       next label. */
+    .form-row input:not([type="radio"]):not([type="checkbox"]),
     .form-row select {
       width: 100%;
       padding: 12px;
@@ -206,7 +209,7 @@
       transition: border-color 0.3s;
     }
 
-    .form-row input:focus,
+    .form-row input:not([type="radio"]):not([type="checkbox"]):focus,
     .form-row select:focus {
       outline: none;
       border-color: var(--brand-secondary);
@@ -252,16 +255,30 @@
     }
 
     .id-toggle input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      flex: none;
       cursor: pointer;
+      accent-color: var(--brand-primary);
     }
 
     @media (max-width: 768px) {
       .id-inline {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
       }
       .id-toggle {
         justify-content: flex-start;
+        gap: 24px;
+        padding: 10px 12px;
+        white-space: normal;
+        flex-wrap: wrap;
+      }
+      .id-toggle label {
+        font-size: 14px;
+        min-height: 28px;
       }
     }
 

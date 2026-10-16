@@ -127,11 +127,11 @@ function confGroups(PDO $pdo, int $eventId): array
 function confSaveGroup(PDO $pdo, array $event, array $data, int $by): array
 {
     $eventId = (int)$event['id'];
-    $name = trim((string)($data['name'] ?? ''));
+    $name = trim(confStr($data['name'] ?? ''));
     if ($name === '' || mb_strlen($name) > 200) return [null, 'Give the group the institution\'s name.'];
-    $email = trim((string)($data['contactEmail'] ?? ''));
+    $email = trim(confStr($data['contactEmail'] ?? ''));
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) return [null, 'The contact email is not valid.'];
-    $contact = mb_substr(trim((string)($data['contactName'] ?? '')), 0, 120) ?: null;
+    $contact = mb_substr(trim(confStr($data['contactName'] ?? '')), 0, 120) ?: null;
     $id = (int)($data['id'] ?? 0);
     if ($id) {
         if (!confGroupRow($pdo, $eventId, $id)) return [null, 'No such group.'];

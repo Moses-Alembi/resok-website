@@ -107,16 +107,16 @@ function confSponsors(PDO $pdo, int $eventId, bool $forStaff = false): array
 /** @return array{0: ?int, 1: ?string} */
 function confSaveSponsor(PDO $pdo, int $eventId, array $data): array
 {
-    $name = trim((string)($data['name'] ?? ''));
+    $name = trim(confStr($data['name'] ?? ''));
     if ($name === '' || mb_strlen($name) > 160) return [null, 'Give the sponsor a name.'];
-    $tier = (string)($data['tier'] ?? 'exhibitor');
+    $tier = confStr($data['tier'] ?? 'exhibitor');
     if (!array_key_exists($tier, CONF_SPONSOR_TIERS)) return [null, 'Unknown tier.'];
-    $website = trim((string)($data['website'] ?? ''));
+    $website = trim(confStr($data['website'] ?? ''));
     if ($website !== '' && !preg_match('#^https?://[^\s<>"]+$#i', $website)) return [null, 'The website must start with https://'];
-    $email = trim((string)($data['contactEmail'] ?? ''));
+    $email = trim(confStr($data['contactEmail'] ?? ''));
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) return [null, 'The contact email is not valid.'];
-    $values = [$name, $tier, $website ?: null, mb_substr(trim((string)($data['booth'] ?? '')), 0, 40) ?: null,
-               mb_substr(trim((string)($data['contactName'] ?? '')), 0, 120) ?: null, $email ?: null,
+    $values = [$name, $tier, $website ?: null, mb_substr(trim(confStr($data['booth'] ?? '')), 0, 40) ?: null,
+               mb_substr(trim(confStr($data['contactName'] ?? '')), 0, 120) ?: null, $email ?: null,
                max(0, (int)($data['sortOrder'] ?? 0)), array_key_exists('active', $data) ? (!empty($data['active']) ? 1 : 0) : 1];
     $id = (int)($data['id'] ?? 0);
     if ($id) {

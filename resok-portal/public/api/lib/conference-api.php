@@ -112,13 +112,13 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
             $extra = [];
             if ($m[2] === 'add') {
                 $stmt = $pdo->prepare('SELECT * FROM conf_registrations WHERE event_id = ? AND ref = ?');
-                $stmt->execute([$eventId, strtoupper(trim((string)($data['ref'] ?? '')))]);
+                $stmt->execute([$eventId, strtoupper(trim(confStr($data['ref'] ?? '')))]);
                 $reg = $stmt->fetch();
                 $e = $reg ? confGroupAdd($pdo, $event, $g, $reg, $by) : 'No registration has that reference.';
             } elseif ($m[2] === 'remove') {
                 $e = confGroupRemove($pdo, $event, $g, (int)($data['registrationId'] ?? 0), $by);
             } else {
-                [$result, $e] = confGroupPaid($pdo, $config, $event, $g, (string)($data['reference'] ?? ''), $by);
+                [$result, $e] = confGroupPaid($pdo, $config, $event, $g, confStr($data['reference'] ?? ''), $by);
                 $extra = ['result' => $result];
             }
             if ($e) respond(400, ['error' => $e]);
@@ -170,7 +170,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
             $data = input();
             $sp = $sponsorFor((int)($data['sponsorId'] ?? 0));
             if (function_exists('throttleCheck')) throttleCheck($pdo, $config, 'conf_lead_scan', (string)$user['userId']);
-            [$lead, $e] = confRecordLead($pdo, $eventId, $sp['id'], (int)$user['userId'], (string)($data['code'] ?? ''), (string)($data['note'] ?? ''));
+            [$lead, $e] = confRecordLead($pdo, $eventId, $sp['id'], (int)$user['userId'], confStr($data['code'] ?? ''), confStr($data['note'] ?? ''));
             if ($e) {
                 if (function_exists('throttleFailure')) throttleFailure($pdo, $config, 'conf_lead_scan', (string)$user['userId']);
                 respond(400, ['error' => $e]);
@@ -417,7 +417,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         if ($route === 'conference/admin/cpd' && $method === 'POST') {
             $need('admin');
             $data = input();
-            [$result, $e] = confPushToCpd($pdo, $event, (string)($data['day'] ?? ''), (int)($data['cpdEventId'] ?? 0), $staffId);
+            [$result, $e] = confPushToCpd($pdo, $event, confStr($data['day'] ?? ''), (int)($data['cpdEventId'] ?? 0), $staffId);
             if ($e) respond(400, ['error' => $e]);
             respond(200, ['result' => $result] + confCpdOverview($pdo, $event));
         }
@@ -442,7 +442,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         if ($route === 'conference/admin/staff' && $method === 'POST') {
             $need('admin');
             $data = input();
-            if ($e = confStaffGrant($pdo, $eventId, (string)($data['email'] ?? ''), (string)($data['role'] ?? ''), $staffId)) respond(400, ['error' => $e]);
+            if ($e = confStaffGrant($pdo, $eventId, confStr($data['email'] ?? ''), confStr($data['role'] ?? ''), $staffId)) respond(400, ['error' => $e]);
             respond(200, ['staff' => confStaffList($pdo, $eventId)]);
         }
         if (preg_match('#^conference/admin/staff/(\d+)/revoke$#', $route, $m) && $method === 'POST') {
@@ -483,7 +483,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
             switch ($action) {
                 case 'settle':
                     $need('finance', 'registration');
-                    $e = confStaffSettle($pdo, $config, $event, $reg, $staffId, (string)($data['method'] ?? ''), (string)($data['reference'] ?? ''), (string)($data['note'] ?? ''));
+                    $e = confStaffSettle($pdo, $config, $event, $reg, $staffId, confStr($data['method'] ?? ''), confStr($data['reference'] ?? ''), confStr($data['note'] ?? ''));
                     break;
                 case 'certificate':
                     $need('registration', 'finance');
@@ -497,11 +497,11 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
                     break;
                 case 'transfer':
                     $need('registration');
-                    $e = confTransfer($pdo, $config, $event, $reg, $staffId, (string)($data['email'] ?? ''), (string)($data['badgeName'] ?? ''));
+                    $e = confTransfer($pdo, $config, $event, $reg, $staffId, confStr($data['email'] ?? ''), confStr($data['badgeName'] ?? ''));
                     break;
                 case 'cancel':
                     $need('admin', 'registration');
-                    $e = confCancel($pdo, $event, $reg, $staffId, (string)($data['reason'] ?? ''));
+                    $e = confCancel($pdo, $event, $reg, $staffId, confStr($data['reason'] ?? ''));
                     break;
                 case 'details':
                     $need('registration');
@@ -517,7 +517,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         if (preg_match('#^conference/admin/payments/(\d+)/review$#', $route, $m) && $method === 'POST') {
             $need('finance');
             $data = input();
-            if ($e = confReviewPayment($pdo, $config, $event, (int)$m[1], $staffId, (string)($data['decision'] ?? ''), (string)($data['note'] ?? ''))) {
+            if ($e = confReviewPayment($pdo, $config, $event, (int)$m[1], $staffId, confStr($data['decision'] ?? ''), confStr($data['note'] ?? ''))) {
                 respond(400, ['error' => $e]);
             }
             respond(200, ['ok' => true]);

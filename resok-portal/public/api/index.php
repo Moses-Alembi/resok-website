@@ -1081,6 +1081,38 @@ if (strpos($route, '&') !== false) {
 }
 $method = $_SERVER['REQUEST_METHOD'];
 
+/**
+ * A second lock behind SameSite=Lax. Lax stops other sites' forms, but a sibling subdomain
+ * (webmail, cPanel, anything else under resok.org) counts as the same site and would still
+ * carry the session cookie. Every page that writes through this API is served from this
+ * host, so a browser that says a write came from anywhere else is refused. Servers calling
+ * in (M-Pesa) send neither header and are unaffected; so are tools like curl.
+ */
+function crossSiteWriteBlocked(array $config): bool
+{
+    $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+    $allowed = array_filter([$host, strtolower((string)parse_url((string)($config['portal_base_url'] ?? ''), PHP_URL_HOST))]);
+    $hostOf = static function (string $url): string {
+        $p = parse_url($url);
+        if (!$p || empty($p['host'])) return '';
+        return strtolower($p['host'] . (isset($p['port']) ? ':' . $p['port'] : ''));
+    };
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
+    if ($origin !== null) {
+        // "null" is what a sandboxed frame or a file:// page sends: never ours.
+        $o = $origin === 'null' ? '' : $hostOf($origin);
+        $bare = preg_replace('/:\d+$/', '', $o);
+        return !in_array($o, $allowed, true) && !in_array($bare, $allowed, true);
+    }
+    $site = strtolower((string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
+    return $site === 'cross-site' || $site === 'same-site';
+}
+if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)
+    && !in_array($route, ['payments/stk/callback', 'payments/mpesa/callback'], true)
+    && crossSiteWriteBlocked($config)) {
+    respond(403, ['error' => 'This request came from another website and was refused.']);
+}
+
 try {
     requireConfig($config);
     $pdo = db($config);

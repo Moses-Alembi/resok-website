@@ -106,7 +106,7 @@ function confRooms(PDO $pdo, int $eventId): array
 /** @return ?string an error, or null */
 function confSaveRoom(PDO $pdo, int $eventId, array $data): ?string
 {
-    $name = trim((string)($data['name'] ?? ''));
+    $name = trim(confStr($data['name'] ?? ''));
     if ($name === '' || mb_strlen($name) > 120) return 'Give the room a name.';
     $cap = isset($data['capacity']) && $data['capacity'] !== '' && $data['capacity'] !== null ? max(0, (int)$data['capacity']) : null;
     $id = (int)($data['id'] ?? 0);
@@ -182,15 +182,15 @@ function confProgramme(PDO $pdo, int $eventId, bool $forStaff = false): array
 /** @return array{0: ?int, 1: ?string} */
 function confSaveSession(PDO $pdo, int $eventId, array $data): array
 {
-    $day = trim((string)($data['day'] ?? ''));
+    $day = trim(confStr($data['day'] ?? ''));
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) return [null, 'Choose the day.'];
-    $start = trim((string)($data['startsAt'] ?? ''));
-    $end = trim((string)($data['endsAt'] ?? ''));
+    $start = trim(confStr($data['startsAt'] ?? ''));
+    $end = trim(confStr($data['endsAt'] ?? ''));
     if (!preg_match('/^\d{2}:\d{2}$/', $start) || !preg_match('/^\d{2}:\d{2}$/', $end)) return [null, 'Times must look like 09:30.'];
     if ($end <= $start) return [null, 'The session must end after it starts.'];
-    $title = trim((string)($data['title'] ?? ''));
+    $title = trim(confStr($data['title'] ?? ''));
     if ($title === '' || mb_strlen($title) > 200) return [null, 'Give the session a title.'];
-    $kind = (string)($data['kind'] ?? 'other');
+    $kind = confStr($data['kind'] ?? 'other');
     if (!array_key_exists($kind, CONF_SESSION_KINDS)) return [null, 'Unknown session type.'];
     $roomId = (int)($data['roomId'] ?? 0) ?: null;
     if ($roomId) {
@@ -204,7 +204,7 @@ function confSaveSession(PDO $pdo, int $eventId, array $data): array
         if ($other = $clash->fetchColumn()) return [null, "That room already has \"{$other}\" at that time."];
     }
     $values = [$day, $start . ':00', $end . ':00', $roomId, $kind, $title,
-               mb_substr(trim((string)($data['chairs'] ?? '')), 0, 300) ?: null, trim((string)($data['description'] ?? '')) ?: null];
+               mb_substr(trim(confStr($data['chairs'] ?? '')), 0, 300) ?: null, trim(confStr($data['description'] ?? '')) ?: null];
     $id = (int)($data['id'] ?? 0);
     if ($id) {
         $stmt = $pdo->prepare('UPDATE conf_sessions SET day = ?, starts_at = ?, ends_at = ?, room_id = ?, kind = ?, title = ?, chairs = ?, description = ? WHERE id = ? AND event_id = ?');
@@ -236,11 +236,11 @@ function confAddItem(PDO $pdo, int $eventId, int $sessionId, array $data): ?stri
     $kind = $check->fetchColumn();
     if ($kind === false) return 'No such session.';
     $abstractId = (int)($data['abstractId'] ?? 0) ?: null;
-    $title = trim((string)($data['title'] ?? ''));
-    $speaker = trim((string)($data['speaker'] ?? ''));
-    $start = trim((string)($data['startsAt'] ?? ''));
+    $title = trim(confStr($data['title'] ?? ''));
+    $speaker = trim(confStr($data['speaker'] ?? ''));
+    $start = trim(confStr($data['startsAt'] ?? ''));
     if ($start !== '' && !preg_match('/^\d{2}:\d{2}$/', $start)) return 'Times must look like 09:30.';
-    $board = mb_substr(trim((string)($data['board'] ?? '')), 0, 12) ?: null;
+    $board = mb_substr(trim(confStr($data['board'] ?? '')), 0, 12) ?: null;
     if ($abstractId) {
         $a = $pdo->prepare("SELECT a.id FROM abs_abstracts a JOIN abs_decisions d ON d.abstract_id = a.id
                             WHERE a.id = ? AND a.event_id = ? AND d.outcome = 'accept' AND a.status <> 'withdrawn'");

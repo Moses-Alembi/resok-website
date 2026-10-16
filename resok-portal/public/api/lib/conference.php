@@ -26,6 +26,12 @@ const CONF_ROLES = ['finance', 'registration', 'scanner'];
 const CONF_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const CONF_CODE_PREFIX = 'RSK-';
 
+/** Text from a request field. A list or object where text belongs is treated as empty, not as the word "Array". */
+function confStr($v): string
+{
+    return is_scalar($v) ? (string)$v : '';
+}
+
 function confSchema(): array
 {
     $tail = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
@@ -427,20 +433,20 @@ function confPriceOn(array $category, DateTimeImmutable $day): ?array
 /** @return array{0: ?int, 1: ?string} [category id, error] */
 function confSaveCategory(PDO $pdo, int $eventId, array $data, int $by): array
 {
-    $name = trim((string)($data['name'] ?? ''));
+    $name = trim(confStr($data['name'] ?? ''));
     if ($name === '' || mb_strlen($name) > 120) return [null, 'Give the category a name (up to 120 characters).'];
-    $currency = strtoupper(trim((string)($data['currency'] ?? 'KES')));
+    $currency = strtoupper(trim(confStr($data['currency'] ?? 'KES')));
     if (!preg_match('/^[A-Z]{3}$/', $currency)) return [null, 'The currency must be a three-letter code such as KES or USD.'];
     $capacity = isset($data['capacity']) && $data['capacity'] !== '' && $data['capacity'] !== null ? max(0, (int)$data['capacity']) : null;
 
     $windows = [];
     foreach ((array)($data['windows'] ?? []) as $w) {
-        $label = trim((string)($w['label'] ?? ''));
+        $label = trim(confStr($w['label'] ?? ''));
         if ($label === '') continue;
         $price = (float)($w['price'] ?? 0);
         if ($price < 0) return [null, 'A price cannot be negative.'];
-        $starts = trim((string)($w['startsOn'] ?? '')) ?: null;
-        $ends = trim((string)($w['endsOn'] ?? '')) ?: null;
+        $starts = trim(confStr($w['startsOn'] ?? '')) ?: null;
+        $ends = trim(confStr($w['endsOn'] ?? '')) ?: null;
         foreach ([$starts, $ends] as $d) {
             if ($d !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) return [null, 'Fee dates must look like 2027-06-30.'];
         }
@@ -449,7 +455,7 @@ function confSaveCategory(PDO $pdo, int $eventId, array $data, int $by): array
     }
     if (!$windows) return [null, 'Add at least one fee (use 0 for a free or complimentary category).'];
 
-    $values = [$name, mb_substr(trim((string)($data['description'] ?? '')), 0, 400) ?: null, $currency,
+    $values = [$name, mb_substr(trim(confStr($data['description'] ?? '')), 0, 400) ?: null, $currency,
                !empty($data['memberRate']) ? 1 : 0, !empty($data['adminOnly']) ? 1 : 0, !empty($data['needsProof']) ? 1 : 0,
                $capacity, max(0, (int)($data['sortOrder'] ?? 0)), array_key_exists('active', $data) ? (!empty($data['active']) ? 1 : 0) : 1];
     $id = (int)($data['id'] ?? 0);
@@ -496,14 +502,14 @@ function confAddons(PDO $pdo, int $eventId, bool $includeHidden = false): array
 /** @return array{0: ?int, 1: ?string} */
 function confSaveAddon(PDO $pdo, int $eventId, array $data, int $by): array
 {
-    $name = trim((string)($data['name'] ?? ''));
+    $name = trim(confStr($data['name'] ?? ''));
     if ($name === '' || mb_strlen($name) > 160) return [null, 'Give the add-on a name (up to 160 characters).'];
     $price = (float)($data['price'] ?? 0);
     if ($price < 0) return [null, 'A price cannot be negative.'];
-    $currency = strtoupper(trim((string)($data['currency'] ?? 'KES')));
+    $currency = strtoupper(trim(confStr($data['currency'] ?? 'KES')));
     if (!preg_match('/^[A-Z]{3}$/', $currency)) return [null, 'The currency must be a three-letter code such as KES or USD.'];
     $capacity = isset($data['capacity']) && $data['capacity'] !== '' && $data['capacity'] !== null ? max(0, (int)$data['capacity']) : null;
-    $values = [$name, mb_substr(trim((string)($data['description'] ?? '')), 0, 400) ?: null, $price, $currency, $capacity,
+    $values = [$name, mb_substr(trim(confStr($data['description'] ?? '')), 0, 400) ?: null, $price, $currency, $capacity,
                max(0, (int)($data['sortOrder'] ?? 0)), array_key_exists('active', $data) ? (!empty($data['active']) ? 1 : 0) : 1];
     $id = (int)($data['id'] ?? 0);
     if ($id) {
@@ -665,13 +671,13 @@ function confRegister(PDO $pdo, array $config, array $event, array $user, array 
     $price = confPriceOn($cat, confToday($event));
     if (!$price) return [null, 'That category is not on sale today.'];
 
-    $badgeName = trim((string)preg_replace('/\s+/u', ' ', (string)($data['badgeName'] ?? '')));
+    $badgeName = trim((string)preg_replace('/\s+/u', ' ', confStr($data['badgeName'] ?? '')));
     if ($badgeName === '' || mb_strlen($badgeName) > 60) return [null, 'Enter the name to print on your badge (up to 60 characters).'];
-    $institution = trim((string)($data['institution'] ?? ''));
+    $institution = trim(confStr($data['institution'] ?? ''));
     if ($institution === '') return [null, 'Enter your institution or organisation.'];
-    $country = trim((string)($data['country'] ?? ''));
+    $country = trim(confStr($data['country'] ?? ''));
     if ($country === '') return [null, 'Enter your country.'];
-    $phone = trim((string)($data['phone'] ?? ''));
+    $phone = trim(confStr($data['phone'] ?? ''));
     if ($phone !== '' && !preg_match('/^\+?[0-9 ()-]{7,20}$/', $phone)) return [null, 'Enter a valid phone number, for example +254 712 345 678.'];
 
     $addonIds = array_values(array_unique(array_map('intval', (array)($data['addons'] ?? []))));
@@ -688,7 +694,7 @@ function confRegister(PDO $pdo, array $config, array $event, array $user, array 
 
     // Paid by an institution: the group code is checked before anything is saved.
     $group = null;
-    $groupCode = trim((string)($data['groupCode'] ?? ''));
+    $groupCode = trim(confStr($data['groupCode'] ?? ''));
     if ($groupCode !== '') {
         // A join code is 8 characters, so guessing is slow but not impossible without a limit.
         if (function_exists('throttleCheck')) throttleCheck($pdo, $config, 'conf_group_code', (string)$userId);
@@ -708,9 +714,9 @@ function confRegister(PDO $pdo, array $config, array $event, array $user, array 
                        VALUES (?, ?, ?, ?, "awaiting_payment", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$eventId, $userId, $ref, $cat['id'], $price['label'], $amount, $cat['currency'], $cat['memberRate'] ? 1 : 0,
                        $badgeName, mb_substr($institution, 0, 200), mb_substr($country, 0, 60),
-                       mb_substr(trim((string)($data['profession'] ?? '')), 0, 120) ?: null, $phone ?: null,
-                       mb_substr(trim((string)($data['dietary'] ?? '')), 0, 200) ?: null,
-                       mb_substr(trim((string)($data['accessibility'] ?? '')), 0, 300) ?: null,
+                       mb_substr(trim(confStr($data['profession'] ?? '')), 0, 120) ?: null, $phone ?: null,
+                       mb_substr(trim(confStr($data['dietary'] ?? '')), 0, 200) ?: null,
+                       mb_substr(trim(confStr($data['accessibility'] ?? '')), 0, 300) ?: null,
                        !empty($data['shareContact']) ? 1 : 0]);
         $regId = (int)$pdo->lastInsertId();
         $ins = $pdo->prepare('INSERT INTO conf_registration_addons (registration_id, addon_id, price) VALUES (?, ?, ?)');
@@ -759,8 +765,8 @@ function confSubmitPayment(PDO $pdo, array $config, array $event, array $reg, in
         return 'Your place is being paid for by ' . $g['name'] . ' on invoice ' . $g['invoice_ref'] . '. You do not need to pay yourself.';
     }
 
-    $method = (string)($data['method'] ?? '');
-    $reference = strtoupper(trim((string)($data['reference'] ?? '')));
+    $method = confStr($data['method'] ?? '');
+    $reference = strtoupper(trim(confStr($data['reference'] ?? '')));
     if ($method === 'mpesa') {
         if (!preg_match('/^[A-Z0-9]{10}$/', $reference)) return 'Enter the 10-character M-Pesa transaction code from your SMS, for example SGH4K2L9PQ.';
     } elseif ($method === 'bank') {
@@ -1067,18 +1073,19 @@ function confSyncScans(PDO $pdo, array $event, int $staffId, array $scans): arra
 {
     $eventId = (int)$event['id'];
     $zone = function_exists('absZone') ? absZone($event) : new DateTimeZone('Africa/Nairobi');
-    usort($scans, fn($a, $b) => strcmp((string)($a['scannedAt'] ?? ''), (string)($b['scannedAt'] ?? '')));
+    $scans = array_slice(array_values(array_filter($scans, 'is_array')), 0, 500);
+    usort($scans, fn($a, $b) => strcmp(is_string($a['scannedAt'] ?? null) ? $a['scannedAt'] : '', is_string($b['scannedAt'] ?? null) ? $b['scannedAt'] : ''));
     $results = [];
-    foreach (array_slice($scans, 0, 500) as $s) {
-        $clientId = substr(preg_replace('/[^A-Za-z0-9-]/', '', (string)($s['clientId'] ?? '')), 0, 40);
-        $code = strtoupper(substr(trim((string)($s['code'] ?? '')), 0, 40));
+    foreach ($scans as $s) {
+        $clientId = substr(preg_replace('/[^A-Za-z0-9-]/', '', confStr($s['clientId'] ?? '')), 0, 40);
+        $code = strtoupper(substr(trim(confStr($s['code'] ?? '')), 0, 40));
         if ($clientId === '' || $code === '') continue;
         $existing = $pdo->prepare('SELECT result FROM conf_scans WHERE client_id = ?');
         $existing->execute([$clientId]);
         if ($prior = $existing->fetchColumn()) { $results[] = ['clientId' => $clientId, 'result' => $prior]; continue; }
 
         try {
-            $at = new DateTimeImmutable((string)($s['scannedAt'] ?? 'now'));
+            $at = new DateTimeImmutable(confStr($s['scannedAt'] ?? 'now'));
         } catch (Throwable $e) {
             $at = new DateTimeImmutable('now');
         }
@@ -1119,7 +1126,7 @@ function confSyncScans(PDO $pdo, array $event, int $staffId, array $scans): arra
         $pdo->prepare('INSERT IGNORE INTO conf_scans (event_id, client_id, code, badge_id, registration_id, scan_day, gate, session_id, result, scanned_by, scanned_at)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$eventId, $clientId, $code, $badge['id'] ?? null, $badge ? (int)$badge['registration_id'] : null, $day,
-                       mb_substr(trim((string)($s['gate'] ?? '')), 0, 60) ?: null, $sessionId, $result, $staffId, $at->format('Y-m-d H:i:s')]);
+                       mb_substr(trim(confStr($s['gate'] ?? '')), 0, 60) ?: null, $sessionId, $result, $staffId, $at->format('Y-m-d H:i:s')]);
         $results[] = ['clientId' => $clientId, 'result' => $result];
     }
     return $results;
@@ -1163,14 +1170,14 @@ function confList(PDO $pdo, array $event, array $filters): array
             FROM conf_registrations r JOIN users u ON u.id = r.user_id JOIN conf_categories c ON c.id = r.category_id
             WHERE r.event_id = ?';
     $args = [(int)$event['id']];
-    $status = (string)($filters['status'] ?? '');
+    $status = confStr($filters['status'] ?? '');
     if ($status === 'pending_payment') {
         $sql .= ' AND EXISTS (SELECT 1 FROM conf_payments p WHERE p.registration_id = r.id AND p.status = "pending")';
     } elseif (in_array($status, ['awaiting_payment', 'confirmed', 'cancelled'], true)) {
         $sql .= ' AND r.status = ?';
         $args[] = $status;
     }
-    $q = trim((string)($filters['q'] ?? ''));
+    $q = trim(confStr($filters['q'] ?? ''));
     if ($q !== '') {
         $sql .= ' AND (r.badge_name LIKE ? OR u.email LIKE ? OR r.ref LIKE ? OR r.institution LIKE ? OR r.phone LIKE ?)';
         $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $q) . '%';

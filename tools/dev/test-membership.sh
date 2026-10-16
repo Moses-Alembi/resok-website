@@ -29,7 +29,7 @@ absent() {
 
 # Runs a snippet against the library, with no database and no mail involved.
 lib() { $PHP -r "require '$LIB'; date_default_timezone_set('Africa/Nairobi'); $1" 2>/dev/null | grep -v Warning; }
-day() { $PHP -r "echo (new DateTime('$1 days'))->format('Y-m-d');"; }
+day() { $PHP -r "date_default_timezone_set('Africa/Nairobi'); echo (new DateTime('$1 days'))->format('Y-m-d');"; }
 # A term is twelve months, not 365 days. Those disagree across a leap year, and the code is
 # right to count in months - so the expectation counts in months too rather than approximating.
 plusterm() { $PHP -r "echo (new DateTime('$1'))->modify('+12 months')->format('Y-m-d');"; }

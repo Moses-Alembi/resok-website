@@ -119,8 +119,9 @@ Options -Indexes
 # Source, config, and data files must never be served, wherever they end up in the tree.
 # Includes backup copies (config.local.php.bak, file~, .old/.orig/.save), which Apache would
 # otherwise serve as plain text - secrets and all - because they no longer end in .php.
-# Not .json: manifest.json has to stay public.
-<FilesMatch "^\.|~$|\.(sql|py|sh|ps1|yml|yaml|md|ini|log|bak|sample|dist|lock|neon|old|orig|swp|tmp|save|backup)$">
+# Not .json: manifest.json has to stay public. composer.json is named instead: it lists the
+# exact library versions, which is a shopping list for anyone looking for a known hole.
+<FilesMatch "^\.|~$|^composer\.json$|\.(sql|py|sh|ps1|yml|yaml|md|ini|log|bak|sample|dist|lock|neon|old|orig|swp|tmp|save|backup)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -161,7 +162,10 @@ Options -Indexes
   </FilesMatch>
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
-  Header set Permissions-Policy "geolocation=(), camera=(), microphone=()"
+  # camera=(self), not (): the conference door scanner and the booth lead scanner read QR
+  # codes with the phone camera. () blocked them on the live site while working on the
+  # laptop, whose test server ignores this file. Other sites' frames still get no camera.
+  Header set Permissions-Policy "geolocation=(), camera=(self), microphone=(), payment=(), usb=()"
   # The portal carries a logged-in session, so it must not be loadable in someone else's
   # frame. X-Frame-Options for older browsers, frame-ancestors for current ones.
   # HSTS.

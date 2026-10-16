@@ -116,18 +116,17 @@ function inviteSend(PDO $pdo, array $config, array $invite): bool
 
     $sent = false;
     try {
-        if (function_exists('brandedEmailHtml') && class_exists('SimpleMailer')) {
-            $html = brandedEmailHtml(
-                'Your ReSoK portal account is ready',
-                '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">' . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
-                . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">The Respiratory Society of Kenya members&rsquo; '
-                . 'portal is now open. Your membership record, payments and renewals all live there.</p>'
-                . '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">Claim your account below. You will set your own '
-                . 'password and confirm your details, so everything on your record is right from the start.</p>'
-                . '<p style="margin:0;font-size:13px;color:#667085;">This link is unique to you and expires in '
-                . INVITE_TTL_DAYS . ' days.</p>',
+        if (function_exists('cardEmailHtml') && class_exists('SimpleMailer')) {
+            $html = cardEmailHtml(
+                'Your account is ready',
+                ($name !== '' ? 'Hi ' . $name : 'Hello') . '!',
+                cardEmailParagraph('The Respiratory Society of Kenya members&rsquo; portal is now open. Your membership '
+                    . 'record, payments and renewals all live there.')
+                . cardEmailParagraph('Claim your account below. You will set your own password and confirm your '
+                    . 'details, so everything on your record is right from the start.', true),
                 'Claim my account',
-                $link
+                $link,
+                'This link is unique to you and expires in ' . INVITE_TTL_DAYS . ' days.'
             );
             // No archive copy: the link sets the account's password.
             $sent = (new SimpleMailer($config))->withoutArchiveCopy()->send((string)$invite['email'],
@@ -311,22 +310,22 @@ function claimSend(PDO $pdo, array $config, array $member, ?string &$error = nul
 
     $sent = false;
     try {
-        if (!function_exists('brandedEmailHtml') || !class_exists('SimpleMailer')) {
+        if (!function_exists('cardEmailHtml') || !class_exists('SimpleMailer')) {
             throw new RuntimeException('The mail helpers are not loaded on this server.');
         }
-        $p = '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">';
-        $html = brandedEmailHtml(
-            'Your ReSoK portal account is ready',
-            $p . htmlspecialchars($greeting, ENT_QUOTES) . ',</p>'
-            . $p . 'The Respiratory Society of Kenya members&rsquo; portal is now open. '
-            . htmlspecialchars($recordLine . ($untilLine !== '' ? ' ' . $untilLine : ''), ENT_QUOTES) . '</p>'
-            . $p . 'Choose your password to start using it. Once you are signed in, please check your '
-            . 'details and add anything missing.</p>'
-            . '<p style="margin:0;font-size:13px;color:#667085;">This link is unique to you and expires in '
-            . CLAIM_TTL_DAYS . ' days. If it expires, use &ldquo;Forgot password&rdquo; on the login page '
-            . 'with this email address. If you were not expecting this email, you can ignore it.</p>',
+        $firstName = trim((string)($member['first_name'] ?? ''));
+        $html = cardEmailHtml(
+            'Your account is ready',
+            ($firstName !== '' ? 'Hi ' . $firstName : 'Hello') . '!',
+            cardEmailParagraph('The Respiratory Society of Kenya members&rsquo; portal is now open. '
+                . htmlspecialchars($recordLine . ($untilLine !== '' ? ' ' . $untilLine : ''), ENT_QUOTES))
+            . cardEmailParagraph('Choose your password to start using it. Once you are signed in, please check '
+                . 'your details and add anything missing.', true),
             'Choose my password',
-            $link
+            $link,
+            'This link is unique to you and expires in ' . CLAIM_TTL_DAYS . ' days. If it expires, use '
+            . '&ldquo;Forgot password&rdquo; on the login page with this email address.<br>'
+            . 'If you were not expecting this email, you can ignore it.'
         );
         // No archive copy: the link sets the account's password.
         $sent = (new SimpleMailer($config))->withoutArchiveCopy()->send($email, 'Your ReSoK portal account is ready', $text, [], $html);

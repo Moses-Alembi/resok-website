@@ -246,14 +246,14 @@ function brandedEmailHtml(string $title, string $bodyHtml, ?string $ctaText = nu
 }
 
 /**
- * The "confirm your email" layout: logo, envelope, big centred heading, one button, set on a
- * pale green page.
+ * The centred card layout used for account emails (confirm your email, claim your account):
+ * logo, envelope, big centred heading, one button, set on a pale green page.
  *
  * Images are loaded from the live site whatever portal_base_url says. A mail client fetches
  * them from wherever the reader is, so a localhost URL from the laptop would be a broken image.
  * Everything is tables and inline styles because Outlook ignores most of anything else.
  */
-function verificationEmailHtml(string $greeting, string $messageHtml, string $ctaText, string $ctaUrl): string
+function cardEmailHtml(string $heading, string $greeting, string $bodyHtml, string $ctaText, string $ctaUrl, string $footnote): string
 {
     $img = 'https://www.resok.org/resok-portal/public/assets/img/';
     $font = "font-family:'Segoe UI',Helvetica,Arial,sans-serif;";
@@ -266,18 +266,30 @@ function verificationEmailHtml(string $greeting, string $messageHtml, string $ct
         . '<tr><td align="center" style="background:#ffffff;border-radius:16px;padding:36px 28px 40px;">'
         . '<img src="' . $img . 'logo.png" width="260" alt="ReSoK - Respiratory Society of Kenya" style="display:block;width:260px;max-width:80%;height:auto;border:0;margin:0 auto;">'
         . '<img src="' . $img . 'email-verify.png" width="210" alt="" style="display:block;width:210px;height:auto;border:0;margin:34px auto 26px;">'
-        . '<h1 style="margin:0 0 30px;font-size:36px;line-height:1.2;font-weight:800;color:#2b2b2b;' . $font . '">Confirm your email</h1>'
+        . '<h1 style="margin:0 0 30px;font-size:36px;line-height:1.2;font-weight:800;color:#2b2b2b;' . $font . '">' . htmlspecialchars($heading, ENT_QUOTES) . '</h1>'
         . '<p style="margin:0 0 14px;font-size:21px;font-weight:700;color:#2b2b2b;">' . htmlspecialchars($greeting, ENT_QUOTES) . '</p>'
-        . '<p style="margin:0 auto 32px;max-width:380px;font-size:16px;line-height:1.7;color:#333333;">' . $messageHtml . '</p>'
+        . '<div style="margin:0 auto 32px;max-width:400px;">' . $bodyHtml . '</div>'
         . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:#087539;border-radius:8px;">'
         . '<a href="' . $url . '" style="display:inline-block;padding:15px 30px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;' . $font . '">' . htmlspecialchars($ctaText, ENT_QUOTES) . '</a>'
         . '</td></tr></table>'
         . '<p style="margin:34px 0 0;font-size:13px;line-height:1.6;color:#8a8f98;">Thanks,<br>ReSoK ICT</p>'
         . '<p style="margin:22px auto 0;max-width:420px;font-size:11px;line-height:1.5;color:#a3a8b0;word-break:break-all;">Button not working? Paste this link into your browser:<br><a href="' . $url . '" style="color:#087539;">' . $url . '</a></p>'
         . '</td></tr>'
-        . '<tr><td align="center" style="padding:16px 0 0;font-size:12px;color:#6b8f78;">If you did not create this account, you can safely ignore this email.</td></tr>'
+        . '<tr><td align="center" style="padding:16px 0 0;font-size:12px;color:#6b8f78;">' . $footnote . '</td></tr>'
         . '</table>'
         . '</td></tr></table></body></html>';
+}
+
+/** One paragraph of body text for cardEmailHtml(), already escaped by the caller. */
+function cardEmailParagraph(string $html, bool $last = false): string
+{
+    return '<p style="margin:0 0 ' . ($last ? '0' : '14px') . ';font-size:16px;line-height:1.7;color:#333333;">' . $html . '</p>';
+}
+
+function verificationEmailHtml(string $greeting, string $messageHtml, string $ctaText, string $ctaUrl): string
+{
+    return cardEmailHtml('Confirm your email', $greeting, cardEmailParagraph($messageHtml, true), $ctaText, $ctaUrl,
+        'If you did not create this account, you can safely ignore this email.');
 }
 
 /** The confirmation email for an Academy learner: Academy wording, not the membership application's. */

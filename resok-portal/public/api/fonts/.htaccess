@@ -1,0 +1,9 @@
+# Code and data the API reads from disk. Nothing here is meant to be fetched over HTTP:
+# index.php includes these files itself. A direct request is refused rather than run.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

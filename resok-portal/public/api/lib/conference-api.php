@@ -52,6 +52,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         if (!confHasRole($pdo, $user, $config, $eventId, 'finance') && !confHasRole($pdo, $user, $config, $eventId, 'admin')) {
             respond(403, ['error' => 'Only finance and conference administrators manage group invoices.']);
         }
+        confRequireStaffMfa($pdo, $config, $user, confRoles($pdo, $user, $config, $eventId));
         $by = (int)$user['userId'];
         $list = fn(array $extra = []) => respond(200, ['groups' => confGroups($pdo, $eventId)] + $extra);
         if ($route === 'conference/admin/groups' && $method === 'GET') $list();
@@ -106,6 +107,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         header_remove('Content-Type');
         header('Content-Type: ' . $row['logo_mime']);
         header('X-Content-Type-Options: nosniff');
+        header("Content-Security-Policy: default-src 'none'; img-src 'self'; sandbox");
         header('Cache-Control: public, max-age=3600');
         readfile($path);
         exit;
@@ -130,8 +132,12 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         if ($route === 'conference/leads/scan' && $method === 'POST') {
             $data = input();
             $sp = $sponsorFor((int)($data['sponsorId'] ?? 0));
+            if (function_exists('throttleCheck')) throttleCheck($pdo, $config, 'conf_lead_scan', (string)$user['userId']);
             [$lead, $e] = confRecordLead($pdo, $eventId, $sp['id'], (int)$user['userId'], (string)($data['code'] ?? ''), (string)($data['note'] ?? ''));
-            if ($e) respond(400, ['error' => $e]);
+            if ($e) {
+                if (function_exists('throttleFailure')) throttleFailure($pdo, $config, 'conf_lead_scan', (string)$user['userId']);
+                respond(400, ['error' => $e]);
+            }
             respond(200, ['lead' => $lead]);
         }
         if ($route === 'conference/leads/export' && $method === 'GET') {
@@ -153,6 +159,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         $event = $eventFor($user);
         $eventId = (int)$event['id'];
         if (!confHasRole($pdo, $user, $config, $eventId, 'admin')) respond(403, ['error' => 'Only conference administrators manage sponsors.']);
+        confRequireStaffMfa($pdo, $config, $user, confRoles($pdo, $user, $config, $eventId));
         $list = fn() => respond(200, ['sponsors' => confSponsors($pdo, $eventId, true), 'tiers' => CONF_SPONSOR_TIERS]);
         if ($route === 'conference/admin/sponsors' && $method === 'GET') $list();
         if ($method !== 'POST') respond(405, ['error' => 'Method not allowed']);
@@ -312,17 +319,18 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
                                JOIN conf_registrations r ON r.id = p.registration_id WHERE p.id = ?');
         $stmt->execute([(int)$m[1]]);
         $p = $stmt->fetch();
-        $allowed = $p && ((int)$p['user_id'] === (int)$user['userId']
-            || confHasRole($pdo, $user, $config, (int)$p['event_id'], 'finance')
+        $owner = $p && (int)$p['user_id'] === (int)$user['userId'];
+        $staff = $p && !$owner && (confHasRole($pdo, $user, $config, (int)$p['event_id'], 'finance')
             || confHasRole($pdo, $user, $config, (int)$p['event_id'], 'registration'));
-        if (!$allowed || !$p['proof_file']) respond(404, ['error' => 'No such file.']);
+        if ((!$owner && !$staff) || !$p['proof_file']) respond(404, ['error' => 'No such file.']);
+        if ($staff) confRequireStaffMfa($pdo, $config, $user, confRoles($pdo, $user, $config, (int)$p['event_id']));
         $path = confProofDir($config) . '/' . basename((string)$p['proof_file']);
         if (!is_file($path)) respond(404, ['error' => 'The file is missing on the server.']);
         header_remove('Content-Type');
         header('Content-Type: ' . $p['proof_mime']);
         header('Content-Disposition: inline; filename="payment-proof"');
         header('X-Content-Type-Options: nosniff');
-        header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; plugin-types application/pdf");
+        header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
         header('Cache-Control: private, no-store');
         readfile($path);
         exit;
@@ -339,6 +347,7 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
             foreach ($any as $r) if (in_array($r, $roles, true)) return;
             respond(403, ['error' => 'You do not have access to this part of conference registration.']);
         };
+        confRequireStaffMfa($pdo, $config, $user, $roles);
 
         if ($route === 'conference/scan/roster' && $method === 'GET') {
             $need('scanner');

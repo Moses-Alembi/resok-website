@@ -38,6 +38,10 @@ const THROTTLE_RULES = [
     'directory-contact' => [20, 40, 3600, 1800],
     // Job applications. Every submission counts, so one browser cannot flood a vacancy.
     'careers-apply'  => [5,  20, 3600, 1800],
+    // Conference group join codes: a delegate mistyping one is fine, a script trying many is not.
+    'conf_group_code' => [5, 15, 3600, 1800],
+    // Booth staff scanning codes that are not badges: a misread or two, not a sweep.
+    'conf_lead_scan' => [20, 60, 3600, 900],
     // Token collection. The client limit is the one that matters: a delegate list is public
     // enough that the attack is one browser working through many addresses, not many
     // attempts at one. Generous per address, because a real attendee whose code expires

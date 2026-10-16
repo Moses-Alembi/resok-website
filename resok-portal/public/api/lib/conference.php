@@ -268,6 +268,28 @@ function confHasRole(PDO $pdo, array $user, array $config, int $eventId, string 
     return in_array($role, confRoles($pdo, $user, $config, $eventId), true);
 }
 
+/**
+ * Finance, desk staff and conference administrators see phone numbers, payment slips and
+ * registration records, so they need two-factor sign-in, exactly as portal staff do. Scanner
+ * volunteers see only a name at the door and are exempt, so a borrowed phone at the gate is
+ * not blocked. Responds 403 with mfaSetupRequired, which sends the browser to the setup page.
+ */
+function confRequireStaffMfa(PDO $pdo, array $config, array $user, array $roles): void
+{
+    if (empty($config['require_staff_mfa'])) return;
+    if (!array_intersect(['admin', 'finance', 'registration'], $roles)) return;
+    if (function_exists('mfaEnsureColumns') && !mfaEnsureColumns($pdo)) return;
+    try {
+        $stmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([(int)($user['userId'] ?? 0)]);
+        if ((int)($stmt->fetchColumn() ?: 0) === 1) return;
+    } catch (Throwable $e) {
+        error_log('Could not read two-factor state for conference staff: ' . $e->getMessage());
+        return;
+    }
+    respond(403, ['error' => 'Conference registration staff need two-factor sign-in. Set it up, then come back.', 'mfaSetupRequired' => true]);
+}
+
 function confStaffList(PDO $pdo, int $eventId): array
 {
     $stmt = $pdo->prepare('SELECT s.id, s.role, s.created_at, u.email, u.id AS user_id
@@ -668,8 +690,13 @@ function confRegister(PDO $pdo, array $config, array $event, array $user, array 
     $group = null;
     $groupCode = trim((string)($data['groupCode'] ?? ''));
     if ($groupCode !== '') {
+        // A join code is 8 characters, so guessing is slow but not impossible without a limit.
+        if (function_exists('throttleCheck')) throttleCheck($pdo, $config, 'conf_group_code', (string)$userId);
         $group = function_exists('confGroupByCode') ? confGroupByCode($pdo, $eventId, $groupCode) : null;
-        if (!$group) return [null, 'That group code is not recognised, or the group has already been invoiced and paid. Check it with your institution.'];
+        if (!$group) {
+            if (function_exists('throttleFailure')) throttleFailure($pdo, $config, 'conf_group_code', (string)$userId);
+            return [null, 'That group code is not recognised, or the group has already been invoiced and paid. Check it with your institution.'];
+        }
     }
 
     $amount = $price['price'] + $addonTotal;

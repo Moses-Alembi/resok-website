@@ -492,7 +492,7 @@ function absCsv(array $rows): string
         // submitted title from running as one when the file is opened. Formatting tokens
         // (<i> and the like) mean nothing in a spreadsheet, so they go.
         $row = array_map(static fn($v) => is_string($v) ? absPlain($v) : $v, $row);
-        fputcsv($fh, array_map(static fn($v) => is_string($v) && $v !== '' && strpbrk($v[0], '=+-@') !== false ? "'" . $v : $v, $row));
+        fputcsv($fh, array_map(static fn($v) => is_string($v) && $v !== '' && strpbrk($v[0], "=+-@\t\r") !== false ? "'" . $v : $v, $row));
     }
     rewind($fh);
     return (string)stream_get_contents($fh);

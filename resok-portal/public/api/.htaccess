@@ -1,0 +1,12 @@
+# The settings files hold database and mail passwords. PHP prints nothing when they are
+# requested, but they are refused outright so a server that stops running PHP for a moment
+# cannot hand them out as text.
+<FilesMatch "^config(\.local|\.sample)?\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

@@ -98,6 +98,15 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         respond(200, ['registration' => confShape($pdo, confRegistrationRow($pdo, (int)$reg['id']))]);
     }
 
+    if ($route === 'conference/certificate' && $method === 'GET') {
+        $user = auth($config);
+        $event = $eventFor($user);
+        $reg = confRegistrationFor($pdo, (int)$event['id'], (int)$user['userId']);
+        $pdf = $reg ? confCertificatePdf($pdo, $event, $reg) : null;
+        if (!$pdf) respond(404, ['error' => 'A certificate is available once you have been scanned in at the conference.']);
+        confSendPdf($pdf, 'Certificate-of-attendance-' . $reg['ref'] . '.pdf');
+    }
+
     // A proof is shown to the person who uploaded it and to finance and desk staff.
     if (preg_match('#^conference/payments/(\d+)/proof$#', $route, $m) && $method === 'GET') {
         $user = auth($config);
@@ -152,6 +161,18 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
                         'addons' => confAddons($pdo, $eventId, true), 'today' => confToday($event)->format('Y-m-d')];
             if (in_array('admin', $roles, true)) $payload['staff'] = confStaffList($pdo, $eventId);
             respond(200, $payload);
+        }
+
+        if ($route === 'conference/admin/cpd' && $method === 'GET') {
+            $need('admin', 'finance');
+            respond(200, confCpdOverview($pdo, $event));
+        }
+        if ($route === 'conference/admin/cpd' && $method === 'POST') {
+            $need('admin');
+            $data = input();
+            [$result, $e] = confPushToCpd($pdo, $event, (string)($data['day'] ?? ''), (int)($data['cpdEventId'] ?? 0), $staffId);
+            if ($e) respond(400, ['error' => $e]);
+            respond(200, ['result' => $result] + confCpdOverview($pdo, $event));
         }
 
         if ($route === 'conference/admin/settings' && $method === 'POST') {
@@ -211,11 +232,17 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
                 $need('finance', 'registration');
                 respond(200, ['registration' => confShape($pdo, $reg, true)]);
             }
-            if ($method !== 'POST') respond(405, ['error' => 'Method not allowed']);
+            if ($method !== 'POST' && $action !== 'certificate') respond(405, ['error' => 'Method not allowed']);
             switch ($action) {
                 case 'settle':
                     $need('finance', 'registration');
                     $e = confStaffSettle($pdo, $config, $event, $reg, $staffId, (string)($data['method'] ?? ''), (string)($data['reference'] ?? ''), (string)($data['note'] ?? ''));
+                    break;
+                case 'certificate':
+                    $need('registration', 'finance');
+                    $pdf = confCertificatePdf($pdo, $event, $reg);
+                    if (!$pdf) respond(404, ['error' => 'No certificate: this delegate has not been scanned in.']);
+                    confSendPdf($pdf, 'Certificate-of-attendance-' . $reg['ref'] . '.pdf');
                     break;
                 case 'reprint':
                     $need('registration');
@@ -261,4 +288,16 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
     }
 
     respond(404, ['error' => 'Unknown conference route.']);
+}
+
+/** Streams a PDF download and stops. */
+function confSendPdf(string $pdf, string $filename): void
+{
+    header_remove('Content-Type');
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9._-]/', '-', $filename) . '"');
+    header('Cache-Control: private, no-store');
+    header('X-Content-Type-Options: nosniff');
+    echo $pdf;
+    exit;
 }

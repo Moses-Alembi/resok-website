@@ -1098,7 +1098,15 @@
         tr.appendChild(make('td', 'mono', r.reference));
         const t = make('td'); const link = window.AbsText.make('a', null, r.title); link.href = '#';
         link.addEventListener('click', (e) => { e.preventDefault(); openDetail(r.id); });
-        t.appendChild(link); if (r.presenter) t.appendChild(make('div', 'muted', r.presenter)); tr.appendChild(t);
+        t.appendChild(link); if (r.presenter) t.appendChild(make('div', 'muted', r.presenter));
+        // Only worth saying once the abstract is accepted: that is when the presenter must register.
+        if (r.decision.outcome === 'accept' && r.presenterRegistration) {
+          const regLabel = { confirmed: 'Presenter registered', awaiting_payment: 'Presenter registered, not paid', none: 'Presenter not registered' }[r.presenterRegistration];
+          const chip = make('div', r.presenterRegistration === 'confirmed' ? 'muted' : 'flag', regLabel);
+          if (r.presenterRegistration === 'confirmed') chip.style.color = '#087539';
+          t.appendChild(chip);
+        }
+        tr.appendChild(t);
         const avg = make('td', null, r.average != null ? String(r.average) : '—');
         avg.appendChild(make('div', 'muted', `${r.completed}/${r.wanted} reviews`));
         if (r.spread != null && r.spread > (current.review.discrepancyThreshold || 1.5)) avg.appendChild(make('div', 'flag', 'scores disagree'));

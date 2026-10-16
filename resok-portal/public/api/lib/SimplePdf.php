@@ -65,9 +65,25 @@ class SimplePdf
     }
 
     // Rough average glyph width for Helvetica at size 1 (good enough for wrapping/centering, not typesetting).
+    /**
+     * Width of ASCII text in Helvetica, from the standard font metrics (thousandths of the
+     * font size, characters 32 to 126). This used to be a flat 0.5 or 0.58 of the size per
+     * character, which overstated a long bold line by a fifth, so centred titles on
+     * certificates sat visibly left of centre.
+     */
+    private const HELVETICA = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+    private const HELVETICA_BOLD = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+
     private function widthOf(string $text, float $size, bool $bold): float
     {
-        return strlen($text) * $size * ($bold ? 0.58 : 0.5);
+        $table = $bold ? self::HELVETICA_BOLD : self::HELVETICA;
+        $units = 0;
+        $length = strlen($text);
+        for ($i = 0; $i < $length; $i++) {
+            $code = ord($text[$i]);
+            $units += ($code >= 32 && $code <= 126) ? $table[$code - 32] : 556;
+        }
+        return $units * $size / 1000;
     }
 
     /**

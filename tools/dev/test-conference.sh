@@ -27,6 +27,9 @@ json() { $PHP -r '$d = json_decode(stream_get_contents(STDIN), true); $p = explo
 
 cleanup() {
     $MYSQL -e "
+      DELETE a FROM event_attendees a JOIN cpd_events e ON e.id = a.event_id WHERE e.slug = 'test-conf-cpd-day';
+      DELETE l FROM conf_cpd_links l JOIN cpd_events e ON e.id = l.cpd_event_id WHERE e.slug = 'test-conf-cpd-day';
+      DELETE FROM cpd_events WHERE slug = 'test-conf-cpd-day';
       DELETE s FROM conf_scans s JOIN conf_registrations r ON r.id = s.registration_id JOIN users u ON u.id = r.user_id WHERE u.email LIKE 'conf-%@resok.local';
       DELETE FROM conf_scans WHERE code LIKE 'RSK-TESTBOGUS%' OR client_id LIKE 't-%';
       DELETE FROM conf_payments WHERE reference LIKE 'TST%' OR reference = 'RCPT-001';
@@ -165,6 +168,28 @@ r=$(get "$ADMIN" "conference/admin/badges&unprinted=1")
 check "filters after & reach the server (raw)"                  '"badges":[' "$r"
 r=$(curl -s -b "$ADMIN" "${API}conference%2Fadmin%2Fbadges%26unprinted%3D1")
 check "and when the page's helper encodes them"                 'Ms Colleague' "$r"
+
+echo "CPD and certificates:"
+$MYSQL -e "INSERT INTO cpd_events (slug, title, event_type, format, starts_at, approved_points, status)
+           VALUES ('test-conf-cpd-day', 'TEST Conference day 1', 'Conference', 'in_person', NOW(), 6.0, 'published');"
+CPD=$(q "SELECT id FROM cpd_events WHERE slug='test-conf-cpd-day'")
+TODAY=$(q "SELECT DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+03:00'))")
+r=$(get "$ADMIN" conference/admin/cpd)
+check "the day with scans is listed for CPD"                    "\"day\":\"$TODAY\"" "$r"
+r=$(post "$SCAN" conference/admin/cpd "{\"day\":\"$TODAY\",\"cpdEventId\":$CPD}")
+check "a scanner cannot send attendance to CPD"                 'do not have access' "$r"
+r=$(post "$ADMIN" conference/admin/cpd "{\"day\":\"$TODAY\",\"cpdEventId\":$CPD}")
+check "a day's scans are sent to its CPD event"                 '"cpdEvent":"TEST Conference day 1"' "$r"
+check "the attendee is marked as attended in person"           '1|in_person' "$(q "SELECT CONCAT(attended,'|',channel) FROM event_attendees WHERE event_id=$CPD AND email='conf-guest@resok.local'")"
+r=$(post "$ADMIN" conference/admin/cpd "{\"day\":\"$TODAY\",\"cpdEventId\":$CPD}")
+check "sending again adds nobody twice"                         '"added":0,' "$r"
+r=$(curl -s -b "$GUEST" "${API}conference/certificate" | head -c 4)
+check "a delegate scanned in downloads a certificate"           '%PDF' "$r"
+r=$(get "$OTHER" conference/certificate)
+check "no certificate before being scanned in"                  'once you have been scanned in' "$r"
+r=$(curl -s -b "$ADMIN" "${API}conference/admin/registrations/$REG_GUEST/certificate" | head -c 4)
+check "desk staff download a delegate's certificate"            '%PDF' "$r"
+r=$(get "$ADMIN" "conference/admin/badges&unprinted=1")
 check "unprinted badges are listed for printing"                'Ms Colleague' "$r"
 
 echo "Closing:"

@@ -103,7 +103,9 @@
         <div class="tiles" id="tiles"></div>
         <div class="panel"><h2>By category</h2><div class="tbl"><table><thead><tr><th>Category</th><th class="num">Confirmed</th><th class="num">Awaiting payment</th></tr></thead><tbody id="catStats"></tbody></table></div></div>
         <div class="panel"><h2>Money</h2><div class="tbl"><table><thead><tr><th>Currency</th><th class="num">Confirmed</th><th class="num">Waiting to be checked</th><th class="num">Rejected</th></tr></thead><tbody id="moneyStats"></tbody></table></div></div>
-        <div class="panel"><h2>Attendance</h2><div id="attendance"></div></div>
+        <div class="panel"><h2>Attendance and CPD</h2>
+          <p class="hint" style="margin-bottom:10px">Each day, everyone scanned in becomes an in-person attendee of the CPD event you choose for that day. Load that event's KMPDC tokens on the Events page as usual and they go to these people. You can send again after late scans; nobody is added twice.</p>
+          <div id="cpdMsg" class="notice" hidden></div><div id="attendance"></div></div>
       </section>
 
       <section data-pane="regs" hidden>
@@ -211,10 +213,35 @@
       const cur = {};
       (ov.stats.money || []).forEach((m) => { cur[m.currency] = cur[m.currency] || {}; cur[m.currency][m.status] = m.total; });
       $('moneyStats').innerHTML = Object.entries(cur).map(([c, v]) => `<tr><td>${c}</td><td class="num">${money(v.confirmed, c)}</td><td class="num">${money(v.pending, c)}</td><td class="num">${money(v.rejected, c)}</td></tr>`).join('') || '<tr><td colspan="4" class="hint">No payments yet.</td></tr>';
-      $('attendance').innerHTML = (ov.stats.checkinsByDay || []).length
-        ? `<table><tbody>${ov.stats.checkinsByDay.map((d) => `<tr><td>${esc(fmtDate(d.scan_day))}</td><td class="num">${d.people} people</td></tr>`).join('')}</tbody></table>`
-        : '<p class="hint">Attendance appears here once badges are scanned at the venue.</p>';
+      loadCpd();
       if (has('admin')) { renderCats(); renderAddons(); renderSettings(); renderStaff(ov.staff || []); }
+    }
+
+    // ---------------- attendance and CPD ----------------
+    async function loadCpd() {
+      const box = $('attendance');
+      if (!(has('admin') || has('finance'))) {
+        box.innerHTML = (ov.stats.checkinsByDay || []).map((d) => `<div>${esc(fmtDate(d.scan_day))}: ${d.people} people</div>`).join('') || '<p class="hint">Attendance appears here once badges are scanned at the venue.</p>';
+        return;
+      }
+      const c = await api('conference/admin/cpd');
+      if (!c.days.length) { box.innerHTML = '<p class="hint">Attendance appears here once badges are scanned at the venue.</p>'; return; }
+      const opts = (sel) => '<option value="">Choose the CPD event…</option>' + c.cpdEvents.map((e) =>
+        `<option value="${e.id}" ${e.id === sel ? 'selected' : ''}>${esc(e.title)} (${esc(fmtDate(e.date))}${e.points != null ? ', ' + e.points + ' pts' : ''})</option>`).join('');
+      box.innerHTML = `<div class="tbl"><table><thead><tr><th>Day</th><th class="num">People in</th><th>CPD event</th><th></th></tr></thead><tbody>${c.days.map((d) => `
+        <tr><td>${esc(fmtDate(d.day))}</td><td class="num">${d.people}</td>
+          <td><select data-cpdday="${d.day}" ${has('admin') ? '' : 'disabled'}>${opts(d.cpdEventId)}</select>
+            ${d.pushedAt ? `<div class="hint">Sent ${d.pushedCount} on ${esc(fmtDate(d.pushedAt))}</div>` : ''}</td>
+          <td class="num">${has('admin') ? `<button class="btn btn-primary" data-sendday="${d.day}">${d.pushedAt ? 'Send again' : 'Send to CPD'}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+      box.querySelectorAll('[data-sendday]').forEach((b) => b.addEventListener('click', async () => {
+        const day = b.dataset.sendday;
+        const sel = box.querySelector(`[data-cpdday="${day}"]`);
+        try {
+          const r = await api('conference/admin/cpd', { method: 'POST', body: JSON.stringify({ day, cpdEventId: Number(sel.value) }) });
+          note($('cpdMsg'), 'ok', `${r.result.sent} people sent to "${r.result.cpdEvent}": ${r.result.added} new, ${r.result.updated} already there.`);
+          loadCpd();
+        } catch (e) { note($('cpdMsg'), 'error', e.message); }
+      }));
     }
 
     // ---------------- registrations ----------------
@@ -252,7 +279,7 @@
           ${r.phone ? `<dt>Phone</dt><dd>${esc(r.phone)}</dd>` : ''}${r.profession ? `<dt>Profession</dt><dd>${esc(r.profession)}</dd>` : ''}
           ${r.dietary ? `<dt>Dietary</dt><dd>${esc(r.dietary)}</dd>` : ''}${r.accessibility ? `<dt>Accessibility</dt><dd>${esc(r.accessibility)}</dd>` : ''}
           <dt>Badge</dt><dd>${r.badge ? `${esc(r.badge.code)} · ${r.badge.printed ? 'printed' : 'not printed'}` : 'None yet'}</dd>
-          <dt>Attended</dt><dd>${r.checkedInDays.length ? r.checkedInDays.map(fmtDate).join(', ') : 'Not yet'}</dd>
+          <dt>Attended</dt><dd>${r.checkedInDays.length ? r.checkedInDays.map(fmtDate).join(', ') + ` · <a href="api/index.php?route=conference/admin/registrations/${r.id}/certificate">Certificate</a>` : 'Not yet'}</dd>
           ${r.cancelReason ? `<dt>Cancelled</dt><dd>${esc(r.cancelReason)}</dd>` : ''}</dl>
         <h3>Payments</h3>${pays}
         ${awaiting && (has('finance') || has('registration')) ? `<details><summary>Take payment at the desk, or waive the fee</summary>

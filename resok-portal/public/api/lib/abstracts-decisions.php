@@ -50,7 +50,20 @@ function absDecisionBoard(PDO $pdo, array $eventRow, array $access): array
     $stmt->execute([(int)$eventRow['id']]);
     $reviews = $pdo->prepare("SELECT reviewer_user_id, total, recommendation, recommended_type, comments_authors, comments_committee
                               FROM abs_reviews WHERE abstract_id = ? AND status = 'submitted' ORDER BY id");
-    $presenter = $pdo->prepare('SELECT first_name, last_name, affiliation FROM abs_authors WHERE abstract_id = ? AND is_presenting = 1 LIMIT 1');
+    $presenter = $pdo->prepare('SELECT first_name, last_name, affiliation, email FROM abs_authors WHERE abstract_id = ? AND is_presenting = 1 LIMIT 1');
+    // Whether each presenting author has registered for the conference (platform schematic:
+    // an accepted abstract is confirmed in the programme only once its presenter is registered).
+    $registered = [];
+    try {
+        if (function_exists('confEnsureTables') && confEnsureTables($pdo)) {
+            $reg = $pdo->prepare("SELECT LOWER(u.email) email, r.status FROM conf_registrations r JOIN users u ON u.id = r.user_id
+                                  WHERE r.event_id = ? AND r.status <> 'cancelled'");
+            $reg->execute([(int)$eventRow['id']]);
+            foreach ($reg->fetchAll() as $x) $registered[$x['email']] = $x['status'];
+        }
+    } catch (Throwable $e) {
+        // Registration not set up on this server: the column stays empty.
+    }
     $names = [];
     $rows = [];
     foreach ($stmt->fetchAll() as $a) {
@@ -73,6 +86,7 @@ function absDecisionBoard(PDO $pdo, array $eventRow, array $access): array
             'trackId' => $a['track_id'] !== null ? (int)$a['track_id'] : null, 'trackName' => $a['track_name'],
             'preferredType' => $a['preferred_type'], 'presenter' => $p ? trim($p['first_name'] . ' ' . $p['last_name']) : null,
             'presenterAffiliation' => $p['affiliation'] ?? null,
+            'presenterRegistration' => $p ? ($registered[strtolower((string)$p['email'])] ?? 'none') : null,
             'reviews' => $list, 'completed' => count($list), 'wanted' => $s['reviewsPerAbstract'],
             'average' => $totals ? round(array_sum($totals) / count($totals), 2) : null,
             'spread' => count($totals) >= 2 ? round(max($totals) - min($totals), 2) : null,

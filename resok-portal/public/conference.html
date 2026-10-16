@@ -425,7 +425,8 @@
         <dt>Reference</dt><dd>${esc(reg.ref)}</dd>
         <dt>Category</dt><dd>${esc(reg.category ? reg.category.name : '')}</dd>
         ${reg.addons.length ? `<dt>Extras</dt><dd>${reg.addons.map((a) => esc(a.name)).join(', ')}</dd>` : ''}
-        ${reg.checkedInDays.length ? `<dt>Attended</dt><dd>${reg.checkedInDays.map(fmtDate).join(', ')}</dd>` : ''}`;
+        ${reg.checkedInDays.length ? `<dt>Attended</dt><dd>${reg.checkedInDays.map(fmtDate).join(', ')}</dd>
+          <dt>Certificate</dt><dd><a href="api/index.php?route=conference/certificate"><i class="fas fa-file-pdf"></i> Download your certificate of attendance</a></dd>` : ''}`;
     }
 
     // ---------- account ----------

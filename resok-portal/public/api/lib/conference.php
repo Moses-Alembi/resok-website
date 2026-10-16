@@ -184,6 +184,17 @@ function confSchema(): array
             UNIQUE KEY conf_staff_unique (event_id, user_id, role),
             KEY conf_staff_user (user_id)
         )" . $tail,
+        // Which CPD event (cpd_events, where the KMPDC tokens live) each conference day's
+        // attendance is sent to. One accredited day, one CPD event.
+        "CREATE TABLE IF NOT EXISTS conf_cpd_links (
+            event_id INT UNSIGNED NOT NULL,
+            scan_day DATE NOT NULL,
+            cpd_event_id INT UNSIGNED NOT NULL,
+            pushed_count INT UNSIGNED NULL,
+            pushed_at DATETIME NULL,
+            pushed_by INT UNSIGNED NULL,
+            PRIMARY KEY (event_id, scan_day)
+        )" . $tail,
         "CREATE TABLE IF NOT EXISTS conf_audit (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
             event_id INT UNSIGNED NOT NULL,
@@ -1140,4 +1151,181 @@ function confEmail(PDO $pdo, array $config, array $event, array $reg, string $ki
     $html = cardEmailHtml($heading, $salutation, $body, $cta, $link, 'Questions? Contact the conference secretariat.');
     $key = $kind === 'confirmed' ? 'conf-confirmed-' . $reg['id'] . '-' . ($vars['badgeId'] ?? 0) : null;
     absSendLogged($pdo, $config, (int)$event['id'], null, 'conf_' . $kind, $to, $subject, $text, $html, $key);
+}
+
+// ---------------------------------------------------------------------------------------
+// CPD: door scans become the attendance list
+// ---------------------------------------------------------------------------------------
+
+/**
+ * The days on which anyone was scanned in, each with the CPD event it is linked to (if any),
+ * and the CPD events that could be chosen. Schematic: "Nobody types attendance lists after
+ * the conference: the scans are the list."
+ */
+function confCpdOverview(PDO $pdo, array $event): array
+{
+    $eventId = (int)$event['id'];
+    $days = $pdo->prepare('SELECT scan_day, COUNT(DISTINCT registration_id) people FROM conf_scans
+                           WHERE event_id = ? AND result = "ok" GROUP BY scan_day ORDER BY scan_day');
+    $days->execute([$eventId]);
+    $links = $pdo->prepare('SELECT * FROM conf_cpd_links WHERE event_id = ?');
+    $links->execute([$eventId]);
+    $byDay = [];
+    foreach ($links->fetchAll() as $l) $byDay[$l['scan_day']] = $l;
+    $cpdEvents = [];
+    try {
+        $rows = $pdo->query('SELECT id, title, starts_at, approved_points, approval_ref FROM cpd_events ORDER BY starts_at DESC LIMIT 200')->fetchAll();
+        foreach ($rows as $r) {
+            $cpdEvents[] = ['id' => (int)$r['id'], 'title' => $r['title'], 'date' => substr((string)$r['starts_at'], 0, 10),
+                            'points' => $r['approved_points'] !== null ? (float)$r['approved_points'] : null, 'approvalRef' => $r['approval_ref']];
+        }
+    } catch (Throwable $e) {
+        // No CPD events table on this server yet: nothing to link to.
+    }
+    return [
+        'days' => array_map(fn($d) => [
+            'day' => $d['scan_day'], 'people' => (int)$d['people'],
+            'cpdEventId' => isset($byDay[$d['scan_day']]) ? (int)$byDay[$d['scan_day']]['cpd_event_id'] : null,
+            'pushedCount' => isset($byDay[$d['scan_day']]['pushed_count']) ? (int)$byDay[$d['scan_day']]['pushed_count'] : null,
+            'pushedAt' => $byDay[$d['scan_day']]['pushed_at'] ?? null,
+        ], $days->fetchAll()),
+        'cpdEvents' => $cpdEvents,
+    ];
+}
+
+/**
+ * Sends everyone scanned in on a day to that day's CPD event as an in-person attendee, through
+ * the same attendanceRecord() a pasted register uses. Safe to send again: attendees are kept
+ * per event and email, so a second send after late scans adds only the new people.
+ *
+ * @return array{0: ?array, 1: ?string}
+ */
+function confPushToCpd(PDO $pdo, array $event, string $day, int $cpdEventId, int $by): array
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) return [null, 'Choose a day.'];
+    if (!function_exists('attendanceRecord') || !function_exists('attendanceEnsureTables') || !attendanceEnsureTables($pdo)) {
+        return [null, 'The CPD attendance module is not available on this server.'];
+    }
+    $check = $pdo->prepare('SELECT id, title FROM cpd_events WHERE id = ?');
+    $check->execute([$cpdEventId]);
+    $cpd = $check->fetch();
+    if (!$cpd) return [null, 'Choose the CPD event for this day.'];
+
+    $stmt = $pdo->prepare('SELECT DISTINCT r.id, r.badge_name, u.email FROM conf_scans s
+                           JOIN conf_registrations r ON r.id = s.registration_id JOIN users u ON u.id = r.user_id
+                           WHERE s.event_id = ? AND s.scan_day = ? AND s.result = "ok" AND r.status = "confirmed"');
+    $stmt->execute([(int)$event['id'], $day]);
+    $rows = array_map(fn($r) => ['name' => $r['badge_name'], 'email' => strtolower((string)$r['email']), 'kmpdc' => null, 'minutes' => null],
+                      $stmt->fetchAll());
+    if (!$rows) return [null, 'Nobody was scanned in on that day.'];
+    $result = attendanceRecord($pdo, $cpdEventId, $rows, 'in_person', 'register', $by, true);
+    $pdo->prepare('INSERT INTO conf_cpd_links (event_id, scan_day, cpd_event_id, pushed_count, pushed_at, pushed_by) VALUES (?, ?, ?, ?, NOW(), ?)
+                   ON DUPLICATE KEY UPDATE cpd_event_id = VALUES(cpd_event_id), pushed_count = VALUES(pushed_count), pushed_at = NOW(), pushed_by = VALUES(pushed_by)')
+        ->execute([(int)$event['id'], $day, $cpdEventId, count($rows), $by]);
+    confAudit($pdo, (int)$event['id'], null, $by, 'cpd_sent', ['day' => $day, 'cpdEvent' => $cpdEventId] + $result);
+    return [$result + ['sent' => count($rows), 'cpdEvent' => $cpd['title']], null];
+}
+
+// ---------------------------------------------------------------------------------------
+// Certificate of attendance
+// ---------------------------------------------------------------------------------------
+
+/** The days a registration was scanned in, each with the CPD points of its linked CPD event. */
+function confAttendedDays(PDO $pdo, array $reg): array
+{
+    try {
+        $stmt = $pdo->prepare('SELECT DISTINCT s.scan_day, e.approved_points FROM conf_scans s
+                               LEFT JOIN conf_cpd_links l ON l.event_id = s.event_id AND l.scan_day = s.scan_day
+                               LEFT JOIN cpd_events e ON e.id = l.cpd_event_id
+                               WHERE s.registration_id = ? AND s.result = "ok" ORDER BY s.scan_day');
+        $stmt->execute([(int)$reg['id']]);
+        return array_map(fn($r) => ['day' => $r['scan_day'], 'points' => $r['approved_points'] !== null ? (float)$r['approved_points'] : null], $stmt->fetchAll());
+    } catch (Throwable $e) {
+        // cpd_events missing on this server: days without points.
+        $plain = $pdo->prepare('SELECT DISTINCT scan_day FROM conf_scans WHERE registration_id = ? AND result = "ok" ORDER BY scan_day');
+        $plain->execute([(int)$reg['id']]);
+        return array_map(fn($d) => ['day' => $d, 'points' => null], $plain->fetchAll(PDO::FETCH_COLUMN));
+    }
+}
+
+/**
+ * A4 landscape certificate in the same frame as the Academy's, so the Society's certificates
+ * look like one family. Issued only for days actually scanned in at the venue.
+ */
+function confCertificatePdf(PDO $pdo, array $event, array $reg): ?string
+{
+    $days = confAttendedDays($pdo, $reg);
+    if (!$days || $reg['status'] !== 'confirmed') return null;
+    if (!class_exists('SimplePdf')) require_once __DIR__ . '/SimplePdf.php';
+    $clean = static function (string $t, bool $unicode): string {
+        return function_exists('academyCertificatePdfText') ? academyCertificatePdfText($t, $unicode) : $t;
+    };
+
+    $w = 842.0; $h = 595.0; $cx = $w / 2;
+    $pdf = new SimplePdf($w, $h);
+    $fonts = dirname(__DIR__) . '/fonts/';
+    $unicode = $pdf->useUnicodeFonts($fonts . 'NotoSans-Regular.ttf', $fonts . 'NotoSans-Bold.ttf');
+
+    $pdf->setFillColor(255, 255, 255);
+    $pdf->rect(0, 0, $w, $h);
+    $pdf->setFillColor(6, 48, 26);
+    $pdf->rect(0, 0, $w, 16);
+    $pdf->rect(0, $h - 16, $w, 16);
+    $pdf->setFillColor(0, 147, 46);
+    $pdf->rect(0, 16, $w, 4);
+    $pdf->rect(0, $h - 20, $w, 4);
+    $pdf->setStrokeColor(207, 218, 211);
+    $pdf->rect(36, 44, $w - 72, $h - 88, 'S');
+
+    $y = 70.0;
+    $logo = dirname(__DIR__, 2) . '/assets/img/certificate-resok-logo.jpg';
+    $size = @getimagesize($logo);
+    $logoW = 240.0;
+    $logoH = $size ? $logoW * $size[1] / $size[0] : 64.0;
+    if ($pdf->image($logo, $cx - $logoW / 2, $y, $logoW, $logoH)) {
+        $y += $logoH + 30;
+    } else {
+        $pdf->setTextColor(6, 48, 26);
+        $pdf->text($cx, $y + 26, 'RESPIRATORY SOCIETY OF KENYA', 16, true, 'C');
+        $y += 56;
+    }
+    $pdf->setTextColor(19, 32, 25);
+    $pdf->text($cx, $y, 'CERTIFICATE OF ATTENDANCE', 30, true, 'C');
+    $y += 16;
+    $pdf->setStrokeColor(188, 11, 34);
+    $pdf->line($cx - 60, $y, $cx + 60, $y, 1.5);
+    $y += 36;
+    $pdf->setTextColor(109, 127, 116);
+    $pdf->text($cx, $y, 'This is to certify that', 13, false, 'C');
+    $y += 40;
+    $pdf->setTextColor(6, 48, 26);
+    $pdf->text($cx, $y, $clean((string)$reg['badge_name'], $unicode), 28, true, 'C');
+    $y += 34;
+    $pdf->setTextColor(109, 127, 116);
+    $pdf->text($cx, $y, 'attended', 13, false, 'C');
+    $y += 30;
+    $pdf->setTextColor(19, 32, 25);
+    $title = $clean((string)$event['name'], $unicode);
+    $lines = function_exists('academyCertificatePdfLines')
+        ? academyCertificatePdfLines($title, 640, 2, fn($t) => $pdf->measure($t, 17, true))
+        : [$title];
+    foreach ($lines as $line) { $pdf->text($cx, $y, $line, 17, true, 'C'); $y += 22; }
+
+    $fmt = fn($d) => (new DateTimeImmutable((string)$d))->format('j F Y');
+    $dayList = implode(', ', array_map(fn($d) => $fmt($d['day']), $days));
+    $points = array_sum(array_map(fn($d) => (float)($d['points'] ?? 0), $days));
+    $y += 6;
+    $pdf->setTextColor(52, 64, 84);
+    $where = trim((string)($event['venue'] ?? ''));
+    $pdf->text($cx, $y, $clean('on ' . $dayList . ($where !== '' ? ' at ' . $where : ''), $unicode), 12.5, false, 'C');
+    if ($points > 0) {
+        $y += 22;
+        $pdf->setTextColor(6, 48, 26);
+        $pdf->text($cx, $y, rtrim(rtrim(number_format($points, 1), '0'), '.') . ' KMPDC CPD point' . ($points == 1.0 ? '' : 's'), 13, true, 'C');
+    }
+
+    $pdf->setTextColor(109, 127, 116);
+    $pdf->text(60, $h - 52, 'Registration ' . $reg['ref'], 9.5);
+    $pdf->text($w - 60, $h - 52, 'Issued ' . date('j F Y') . ' by the Respiratory Society of Kenya', 9.5, false, 'R');
+    return $pdf->output();
 }

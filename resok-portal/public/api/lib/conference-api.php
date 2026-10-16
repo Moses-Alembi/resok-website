@@ -306,6 +306,9 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         $event = $eventFor($user);
         $reg = confRegistrationFor($pdo, (int)$event['id'], (int)$user['userId']);
         if (!$reg) respond(404, ['error' => 'Register first; the letter is issued for a registration.']);
+        // Only a paid, confirmed registration: an official invitation must not be obtainable
+        // by creating an account and registering without paying.
+        if ($reg['status'] !== 'confirmed') respond(403, ['error' => 'The invitation letter is available once your registration is confirmed (after payment).']);
         $passport = mb_substr(trim((string)preg_replace('/[^\p{L}\p{N} -]/u', '', (string)($_GET['passport'] ?? ''))), 0, 30);
         $nationality = mb_substr(trim((string)preg_replace('/[^\p{L} -]/u', '', (string)($_GET['nationality'] ?? ''))), 0, 40);
         confAudit($pdo, (int)$event['id'], (int)$reg['id'], (int)$user['userId'], 'invitation_letter');

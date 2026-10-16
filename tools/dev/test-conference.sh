@@ -113,8 +113,7 @@ $PHP resok-portal/public/api/cron/abstracts.php >/dev/null 2>&1
 check "an unpaid registration gets one payment reminder"        "1" "$(q "SELECT COUNT(*) FROM abs_emails WHERE template='conf_payment_reminder' AND to_email='conf-member@resok.local'")"
 check "a delegate with a payment waiting is not chased"         "0" "$(q "SELECT COUNT(*) FROM abs_emails WHERE template='conf_payment_reminder' AND to_email='conf-guest@resok.local'")"
 r=$(curl -s -b "$MEMBER" "${API}conference/invitation-letter&passport=AK1234567&nationality=Ugandan")
-check "a delegate downloads a visa letter"                      '%PDF' "${r:0:4}"
-check "the letter carries the passport number typed"           'AK1234567' "$r"
+check "no visa letter before the registration is paid"          'once your registration is confirmed' "$r"
 
 echo "Paying:"
 r=$(post "$GUEST" conference/payment '{"method":"mpesa","reference":"short"}')
@@ -146,6 +145,9 @@ check "a waiver needs a reason"                                 'Say why' "$r"
 r=$(post "$ADMIN" "conference/admin/registrations/$REG_MEMBER/settle" '{"method":"onsite","reference":"RCPT-001"}')
 check "the desk takes payment and confirms"                     '"status":"confirmed"' "$r"
 MEMBER_CODE=$(get "$MEMBER" conference/current | json me.registration.badge.code)
+r=$(curl -s -b "$MEMBER" "${API}conference/invitation-letter&passport=AK1234567&nationality=Ugandan")
+check "a confirmed delegate downloads a visa letter"            '%PDF' "${r:0:4}"
+check "the letter carries the passport number typed"           'AK1234567' "$r"
 
 echo "Scanning:"
 r=$(get "$SCAN" conference/scan/roster)

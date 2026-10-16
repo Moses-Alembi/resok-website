@@ -76,7 +76,8 @@
       <input id="manualCode" type="text" placeholder="Type a badge code, e.g. RSK-..." aria-label="Badge code" />
       <button class="btn ghost" type="submit">Check</button>
     </form>
-    <div class="stats"><span>In today: <b id="inCount">0</b></span><span>Badges: <b id="rosterCount">0</b></span><span id="syncedAt"></span></div>
+    <div class="stats"><span>In today: <b id="inCount">0</b></span><span>Badges: <b id="rosterCount">0</b></span><span id="syncedAt"></span>
+      <button class="btn ghost" type="button" id="wipe" style="padding:6px 10px;font-size:12px">Remove the list from this phone</button></div>
   </footer>
 
   <script src="js/portal-state.js?v=20261015-directory-soon"></script>
@@ -94,6 +95,12 @@
     // no network. The server re-decides each scan when it syncs and catches a badge let in
     // at two doors while both phones were offline.
     let roster = store.get('roster', null);        // { day, badges: [...], cancelled: [...] }
+    // A borrowed phone should not carry delegates' names around after the event: a list not
+    // refreshed for three days is dropped.
+    if (roster && Date.now() - (store.get('savedAt', 0) || 0) > 3 * 86400000) {
+      try { Object.keys(localStorage).filter((k) => k.startsWith('confScan:') && k !== 'confScan:queue').forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ }
+      roster = null;
+    }
     let queue = store.get('queue', []);            // scans not yet uploaded
     let byCode = new Map();
     let cancelled = new Set();
@@ -193,7 +200,7 @@
         const flagged = (r.results || []).filter((x) => x.result === 'duplicate');
         if (flagged.length) logLine(`${flagged.length} scan(s) were already in at another door.`);
         roster = { day: r.day, badges: r.badges, cancelled: r.cancelled };
-        store.set('roster', roster);
+        store.set('roster', roster); store.set('savedAt', Date.now());
         indexRoster();
         $('syncedAt').textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       } catch (e) {
@@ -260,6 +267,14 @@
       $('manualCode').value = '';
     });
     $('startBtn').addEventListener('click', startCamera);
+    $('wipe').addEventListener('click', async () => {
+      if (queue.length) await sync();
+      if (queue.length) { logLine(`${queue.length} scan(s) still need uploading. Connect to the internet first, then remove the list.`); return; }
+      try { Object.keys(localStorage).filter((k) => k.startsWith('confScan:')).forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ }
+      roster = null; byCode = new Map(); cancelled = new Set(); inToday = new Map();
+      $('rosterCount').textContent = '0'; $('inCount').textContent = '0';
+      logLine('The delegate list has been removed from this phone.');
+    });
     window.addEventListener('online', () => { updateNet(); sync(); });
     window.addEventListener('offline', updateNet);
     setInterval(() => { if (queue.length) sync(); }, 10000);
@@ -270,7 +285,7 @@
         const r = await api('conference/scan/roster');
         $('eventName').textContent = r.event?.name || 'Badge scanner';
         roster = { day: r.day, badges: r.badges, cancelled: r.cancelled };
-        store.set('roster', roster);
+        store.set('roster', roster); store.set('savedAt', Date.now());
         store.set('event', r.event?.name || '');
         indexRoster();
         $('syncedAt').textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });

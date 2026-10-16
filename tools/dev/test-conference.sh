@@ -146,6 +146,8 @@ check "a waiver needs a reason"                                 'Say why' "$r"
 r=$(post "$ADMIN" "conference/admin/registrations/$REG_MEMBER/settle" '{"method":"onsite","reference":"RCPT-001"}')
 check "the desk takes payment and confirms"                     '"status":"confirmed"' "$r"
 MEMBER_CODE=$(get "$MEMBER" conference/current | json me.registration.badge.code)
+EMAIL_QR=$(q "SELECT html_body FROM abs_emails WHERE template='conf_confirmed' AND to_email='conf-guest@resok.local' ORDER BY id DESC LIMIT 1" | node tools/dev/qr-from-email.js)
+check "the confirmation email carries a QR that scans to the badge" "$GUEST_CODE" "$EMAIL_QR"
 r=$(curl -s -b "$MEMBER" "${API}conference/invitation-letter&passport=AK1234567&nationality=Ugandan")
 check "a confirmed delegate downloads a visa letter"            '%PDF' "${r:0:4}"
 check "the letter carries the passport number typed"           'AK1234567' "$r"

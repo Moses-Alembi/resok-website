@@ -1223,8 +1223,14 @@ function confEmail(PDO $pdo, array $config, array $event, array $reg, string $ki
     if ($kind === 'confirmed') {
         $subject = "You're registered: {$name}";
         $heading = "You're registered";
+        // The QR itself, drawn as a table so it shows without images being allowed. If it
+        // cannot be drawn the email still points to the account, where it always is.
+        $badge = confActiveBadge($pdo, (int)$reg['id']);
+        $qr = $badge && function_exists('qrEmailTable') ? qrEmailTable((string)$badge['code']) : null;
         $body = $p('Your registration for <strong>' . $h($name) . '</strong> is confirmed. Your reference is <strong>' . $h($reg['ref']) . '</strong>.')
-              . $p('Your personal QR code is in your account. Open it on your phone at the badge desk to collect your badge; the same code is printed on the badge and scanned at each session, which records your attendance for CPD points.'
+              . ($qr ? '<div style="margin:6px 0 18px;text-align:center">' . $qr
+                       . '<div style="font-family:Consolas,monospace;font-size:15px;letter-spacing:1px;margin-top:8px;color:#16202c">' . $h($badge['code']) . '</div></div>' : '')
+              . $p('Your personal QR code is ' . ($qr ? 'above and ' : '') . 'in your account. Open it on your phone at the badge desk to collect your badge; the same code is printed on the badge and scanned at each session, which records your attendance for CPD points.'
                    . (!empty($vars['reprint']) ? ' <strong>A new badge has been issued; your earlier badge no longer works.</strong>' : ''), true);
         $text = "{$salutation}\n\nYour registration for {$name} is confirmed. Reference: {$reg['ref']}.\n\n"
               . "Your personal QR code is in your account: {$link}\nShow it at the badge desk to collect your badge.\n\nReSoK ICT";

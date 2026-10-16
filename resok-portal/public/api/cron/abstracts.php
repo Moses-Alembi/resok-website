@@ -34,7 +34,7 @@ foreach (['SimpleMailer', 'portal-mail', 'abstracts', 'abstracts-review', 'abstr
     require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 // Conference registration reminders ride on the same job and the same mail queue.
-foreach (['conference', 'conference-groups', 'conference-survey'] as $module) {
+foreach (['qr', 'conference', 'conference-groups', 'conference-survey'] as $module) {
     if (is_file(__DIR__ . '/../lib/' . $module . '.php')) require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 

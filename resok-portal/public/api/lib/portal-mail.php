@@ -252,30 +252,49 @@ function brandedEmailHtml(string $title, string $bodyHtml, ?string $ctaText = nu
  * Images are loaded from the live site whatever portal_base_url says. A mail client fetches
  * them from wherever the reader is, so a localhost URL from the laptop would be a broken image.
  * Everything is tables and inline styles because Outlook ignores most of anything else.
+ *
+ * Dark mode comes in two kinds. Apple Mail and iOS honour the prefers-color-scheme rules in
+ * the <style> block (Outlook.com reads the same rules under its [data-ogsc] prefix). Gmail and
+ * the Outlook apps ignore them and invert the colours themselves, but never touch images. So
+ * the logo, whose lettering is dark on transparent, is sent on its own white rounded panel
+ * (email-logo.png): unseen against the white card, and still legible however dark the card
+ * turns. The envelope is pale on transparent and reads on either.
  */
 function cardEmailHtml(string $heading, string $greeting, string $bodyHtml, string $ctaText, string $ctaUrl, string $footnote): string
 {
     $img = 'https://www.resok.org/resok-portal/public/assets/img/';
     $font = "font-family:'Segoe UI',Helvetica,Arial,sans-serif;";
     $url = htmlspecialchars($ctaUrl, ENT_QUOTES);
-    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
-        . '<body style="margin:0;padding:0;background:#dff1e6;' . $font . '">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#dff1e6;"><tr><td align="center" style="padding:28px 12px;">'
+    $dark = '.c-page{background:#0f1512!important}'
+        . '.c-card{background:#1b221e!important}'
+        . '.c-head{color:#f2f5f3!important}'
+        . '.c-text{color:#d5dbd7!important}'
+        . '.c-muted{color:#9aa5a0!important}'
+        . '.c-link{color:#5fd08f!important}'
+        . '.c-foot{color:#8fb39c!important}';
+    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        . '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">'
+        . '<style>:root{color-scheme:light dark;supported-color-schemes:light dark}'
+        . '@media (prefers-color-scheme:dark){' . $dark . '}'
+        . preg_replace('/\.c-/', '[data-ogsc] .c-', $dark)
+        . '</style></head>'
+        . '<body class="c-page" style="margin:0;padding:0;background:#dff1e6;' . $font . '">'
+        . '<table role="presentation" class="c-page" width="100%" cellpadding="0" cellspacing="0" style="background:#dff1e6;"><tr><td align="center" style="padding:28px 12px;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">'
-        // White card
-        . '<tr><td align="center" style="background:#ffffff;border-radius:16px;padding:36px 28px 40px;">'
-        . '<img src="' . $img . 'logo.png" width="260" alt="ReSoK - Respiratory Society of Kenya" style="display:block;width:260px;max-width:80%;height:auto;border:0;margin:0 auto;">'
-        . '<img src="' . $img . 'email-verify.png" width="210" alt="" style="display:block;width:210px;height:auto;border:0;margin:34px auto 26px;">'
-        . '<h1 style="margin:0 0 30px;font-size:36px;line-height:1.2;font-weight:800;color:#2b2b2b;' . $font . '">' . htmlspecialchars($heading, ENT_QUOTES) . '</h1>'
-        . '<p style="margin:0 0 14px;font-size:21px;font-weight:700;color:#2b2b2b;">' . htmlspecialchars($greeting, ENT_QUOTES) . '</p>'
+        // Card
+        . '<tr><td align="center" class="c-card" style="background:#ffffff;border-radius:16px;padding:30px 28px 40px;">'
+        . '<img src="' . $img . 'email-logo.png" width="280" alt="ReSoK - Respiratory Society of Kenya" style="display:block;width:280px;max-width:85%;height:auto;border:0;margin:0 auto;">'
+        . '<img src="' . $img . 'email-verify.png" width="210" alt="" style="display:block;width:210px;height:auto;border:0;margin:28px auto 26px;">'
+        . '<h1 class="c-head" style="margin:0 0 30px;font-size:36px;line-height:1.2;font-weight:800;color:#2b2b2b;' . $font . '">' . htmlspecialchars($heading, ENT_QUOTES) . '</h1>'
+        . '<p class="c-head" style="margin:0 0 14px;font-size:21px;font-weight:700;color:#2b2b2b;">' . htmlspecialchars($greeting, ENT_QUOTES) . '</p>'
         . '<div style="margin:0 auto 32px;max-width:400px;">' . $bodyHtml . '</div>'
         . '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:#087539;border-radius:8px;">'
         . '<a href="' . $url . '" style="display:inline-block;padding:15px 30px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;' . $font . '">' . htmlspecialchars($ctaText, ENT_QUOTES) . '</a>'
         . '</td></tr></table>'
-        . '<p style="margin:34px 0 0;font-size:13px;line-height:1.6;color:#8a8f98;">Thanks,<br>ReSoK ICT</p>'
-        . '<p style="margin:22px auto 0;max-width:420px;font-size:11px;line-height:1.5;color:#a3a8b0;word-break:break-all;">Button not working? Paste this link into your browser:<br><a href="' . $url . '" style="color:#087539;">' . $url . '</a></p>'
+        . '<p class="c-muted" style="margin:34px 0 0;font-size:13px;line-height:1.6;color:#8a8f98;">Thanks,<br>ReSoK ICT</p>'
+        . '<p class="c-muted" style="margin:22px auto 0;max-width:420px;font-size:11px;line-height:1.5;color:#a3a8b0;word-break:break-all;">Button not working? Paste this link into your browser:<br><a href="' . $url . '" class="c-link" style="color:#087539;">' . $url . '</a></p>'
         . '</td></tr>'
-        . '<tr><td align="center" style="padding:16px 0 0;font-size:12px;color:#6b8f78;">' . $footnote . '</td></tr>'
+        . '<tr><td align="center" class="c-foot" style="padding:16px 0 0;font-size:12px;color:#6b8f78;">' . $footnote . '</td></tr>'
         . '</table>'
         . '</td></tr></table></body></html>';
 }
@@ -283,7 +302,7 @@ function cardEmailHtml(string $heading, string $greeting, string $bodyHtml, stri
 /** One paragraph of body text for cardEmailHtml(), already escaped by the caller. */
 function cardEmailParagraph(string $html, bool $last = false): string
 {
-    return '<p style="margin:0 0 ' . ($last ? '0' : '14px') . ';font-size:16px;line-height:1.7;color:#333333;">' . $html . '</p>';
+    return '<p class="c-text" style="margin:0 0 ' . ($last ? '0' : '14px') . ';font-size:16px;line-height:1.7;color:#333333;">' . $html . '</p>';
 }
 
 function verificationEmailHtml(string $greeting, string $messageHtml, string $ctaText, string $ctaUrl): string

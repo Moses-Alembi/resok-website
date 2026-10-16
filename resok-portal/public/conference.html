@@ -141,6 +141,17 @@
       </form>
     </section>
 
+    <!-- Visa letter -->
+    <section class="panel" id="visa" hidden>
+      <h2>Need a visa invitation letter?</h2>
+      <p class="lede" style="margin:0 0 14px">Download a letter of invitation to take to the embassy. Your passport details are printed on the letter only; they are not stored.</p>
+      <form id="visaForm" class="row" style="align-items:end">
+        <div class="field"><label for="vPass">Passport number</label><input type="text" id="vPass" maxlength="30" autocomplete="off"></div>
+        <div class="field"><label for="vNat">Nationality</label><input type="text" id="vNat" maxlength="40"></div>
+        <div class="field" style="flex:0"><button class="btn btn-ghost" type="submit"><i class="fas fa-file-pdf"></i> Download letter</button></div>
+      </form>
+    </section>
+
     <!-- Fees -->
     <section class="panel" id="fees" hidden>
       <h2>Registration fees</h2>
@@ -429,6 +440,12 @@
           <dt>Certificate</dt><dd><a href="api/index.php?route=conference/certificate"><i class="fas fa-file-pdf"></i> Download your certificate of attendance</a></dd>` : ''}`;
     }
 
+    $('visaForm').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const q = new URLSearchParams({ passport: $('vPass').value.trim(), nationality: $('vNat').value.trim() });
+      window.location.href = 'api/index.php?route=conference/invitation-letter&' + q.toString();
+    });
+
     // ---------- account ----------
     document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
       document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
@@ -463,7 +480,7 @@
         $('loading').innerHTML = `<p>${esc(e.status === 404 ? 'There is no conference open for registration at the moment.' : e.message)}</p>`;
         return;
       }
-      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register'].forEach((id) => show(id, false));
+      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register', 'visa'].forEach((id) => show(id, false));
       show('intro');
       renderHeader();
       renderWho();
@@ -476,9 +493,11 @@
         renderRegister();
       } else if (reg.status === 'confirmed') {
         renderConfirmed(reg);
+        show('visa');
         show('fees', false);
       } else {
         renderAwaiting(reg);
+        show('visa');
       }
     }
     load();

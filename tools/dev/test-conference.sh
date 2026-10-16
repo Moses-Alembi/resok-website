@@ -33,6 +33,7 @@ cleanup() {
       DELETE s FROM conf_scans s JOIN conf_registrations r ON r.id = s.registration_id JOIN users u ON u.id = r.user_id WHERE u.email LIKE 'conf-%@resok.local';
       DELETE FROM conf_scans WHERE code LIKE 'RSK-TESTBOGUS%' OR client_id LIKE 't-%';
       DELETE FROM conf_payments WHERE reference LIKE 'TST%' OR reference = 'RCPT-001';
+      DELETE FROM abs_emails WHERE to_email LIKE 'conf-%@resok.local';
       DELETE b FROM conf_badges b JOIN conf_registrations r ON r.id = b.registration_id JOIN conf_categories c ON c.id = r.category_id WHERE c.name LIKE 'TEST %';
       DELETE p FROM conf_payments p JOIN conf_registrations r ON r.id = p.registration_id JOIN conf_categories c ON c.id = r.category_id WHERE c.name LIKE 'TEST %';
       DELETE ra FROM conf_registration_addons ra JOIN conf_addons a ON a.id = ra.addon_id WHERE a.name LIKE 'TEST %';
@@ -101,6 +102,16 @@ r=$(post "$MEMBER" conference/register "{\"categoryId\":$CAT_MEMBER,\"badgeName\
 check "a full workshop is refused"                              'is full' "$r"
 r=$(post "$MEMBER" conference/register "{\"categoryId\":$CAT_MEMBER,\"badgeName\":\"Dr Conf Member\",\"institution\":\"KNH\",\"country\":\"Kenya\"}")
 check "a member in good standing gets the member rate"          '"amountDue":18000' "$r"
+
+echo "Reminders and letters:"
+$MYSQL -e "UPDATE conf_registrations r JOIN users u ON u.id = r.user_id SET r.created_at = NOW() - INTERVAL 4 DAY WHERE u.email = 'conf-member@resok.local';"
+$PHP resok-portal/public/api/cron/abstracts.php >/dev/null 2>&1
+$PHP resok-portal/public/api/cron/abstracts.php >/dev/null 2>&1
+check "an unpaid registration gets one payment reminder"        "1" "$(q "SELECT COUNT(*) FROM abs_emails WHERE template='conf_payment_reminder' AND to_email='conf-member@resok.local'")"
+check "a delegate with a payment waiting is not chased"         "0" "$(q "SELECT COUNT(*) FROM abs_emails WHERE template='conf_payment_reminder' AND to_email='conf-guest@resok.local'")"
+r=$(curl -s -b "$MEMBER" "${API}conference/invitation-letter&passport=AK1234567&nationality=Ugandan")
+check "a delegate downloads a visa letter"                      '%PDF' "${r:0:4}"
+check "the letter carries the passport number typed"           'AK1234567' "$r"
 
 echo "Paying:"
 r=$(post "$GUEST" conference/payment '{"method":"mpesa","reference":"short"}')

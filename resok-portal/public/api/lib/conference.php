@@ -1106,14 +1106,14 @@ function confList(PDO $pdo, array $event, array $filters): array
 // ---------------------------------------------------------------------------------------
 
 /** Sends through the abstract system's paced queue, so every conference email shares one hourly budget. */
-function confEmail(PDO $pdo, array $config, array $event, array $reg, string $kind, array $vars = []): void
+function confEmail(PDO $pdo, array $config, array $event, array $reg, string $kind, array $vars = []): bool
 {
-    if (!function_exists('absSendLogged') || !function_exists('cardEmailHtml')) return;
+    if (!function_exists('absSendLogged') || !function_exists('cardEmailHtml')) return false;
     $u = $pdo->prepare('SELECT u.email, mp.title, mp.first_name, mp.surname FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.id = ?');
     $u->execute([(int)$reg['user_id']]);
     $who = $u->fetch() ?: [];
     $to = (string)($who['email'] ?? '');
-    if ($to === '') return;
+    if ($to === '') return false;
     $salutation = function_exists('emailSalutation')
         ? emailSalutation($who['title'] ?? null, $who['first_name'] ?? null, $who['surname'] ?? null)
         : 'Dear delegate,';
@@ -1145,12 +1145,26 @@ function confEmail(PDO $pdo, array $config, array $event, array $reg, string $ki
         $text = "{$salutation}\n\nWe could not confirm the payment you submitted for registration {$reg['ref']}.\nReason: " . ($vars['note'] ?? '')
               . "\n\nPlease submit it again from your account: {$link}\n\nReSoK ICT";
         $cta = 'Open my registration';
+    } elseif ($kind === 'payment_reminder') {
+        $due = number_format((float)$reg['amount_due'], 0) . ' ' . $reg['currency'];
+        $subject = "Complete your registration: {$name}";
+        $heading = 'Your registration is waiting for payment';
+        $body = $p('Thank you for registering for <strong>' . $h($name) . '</strong>. Your place is not confirmed until payment is received.')
+              . $p('Reference <strong>' . $h($reg['ref']) . '</strong>, amount due <strong>' . $h($due) . '</strong>. Once you have paid, enter the M-Pesa code or upload the bank slip on your registration page and your QR code will follow.', true);
+        $text = "{$salutation}\n\nThank you for registering for {$name}. Your place is not confirmed until payment is received.\n"
+              . "Reference {$reg['ref']}, amount due {$due}. Once you have paid, enter the M-Pesa code or upload the bank slip here: {$link}\n\nReSoK ICT";
+        $cta = 'Complete my registration';
     } else {
-        return;
+        return false;
     }
     $html = cardEmailHtml($heading, $salutation, $body, $cta, $link, 'Questions? Contact the conference secretariat.');
-    $key = $kind === 'confirmed' ? 'conf-confirmed-' . $reg['id'] . '-' . ($vars['badgeId'] ?? 0) : null;
-    absSendLogged($pdo, $config, (int)$event['id'], null, 'conf_' . $kind, $to, $subject, $text, $html, $key);
+    $key = match ($kind) {
+        'confirmed' => 'conf-confirmed-' . $reg['id'] . '-' . ($vars['badgeId'] ?? 0),
+        'payment_reminder' => 'conf-payrem-' . $reg['id'] . '-' . (int)($vars['stage'] ?? 1),
+        default => null,
+    };
+    return absSendLogged($pdo, $config, (int)$event['id'], null, 'conf_' . $kind, $to, $subject, $text, $html, $key)
+        || ($key === null);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1327,5 +1341,143 @@ function confCertificatePdf(PDO $pdo, array $event, array $reg): ?string
     $pdf->setTextColor(109, 127, 116);
     $pdf->text(60, $h - 52, 'Registration ' . $reg['ref'], 9.5);
     $pdf->text($w - 60, $h - 52, 'Issued ' . date('j F Y') . ' by the Respiratory Society of Kenya', 9.5, false, 'R');
+    return $pdf->output();
+}
+
+// ---------------------------------------------------------------------------------------
+// Reminders (run from cron/abstracts.php every 15 minutes)
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Delegates who registered but have not paid, 3 and then 10 days after registering, while
+ * registration is open. Nobody with a payment waiting to be checked is chased. Each reminder
+ * carries a once-only key, so running this every 15 minutes sends each one once.
+ */
+function confSendPaymentReminders(PDO $pdo, array $config): int
+{
+    $sent = 0;
+    $events = $pdo->query("SELECT * FROM abs_events WHERE status = 'published'")->fetchAll();
+    foreach ($events as $event) {
+        if (confRegistrationState($event, confSettings($pdo, (int)$event['id'])) !== 'open') continue;
+        $stmt = $pdo->prepare("SELECT r.*, DATEDIFF(NOW(), r.created_at) AS age FROM conf_registrations r
+                               WHERE r.event_id = ? AND r.status = 'awaiting_payment' AND r.amount_due > 0
+                                 AND NOT EXISTS (SELECT 1 FROM conf_payments p WHERE p.registration_id = r.id AND p.status IN ('pending','confirmed'))
+                                 AND r.created_at <= (NOW() - INTERVAL 3 DAY)");
+        $stmt->execute([(int)$event['id']]);
+        foreach ($stmt->fetchAll() as $reg) {
+            $stage = (int)$reg['age'] >= 10 ? 2 : 1;
+            if (confEmail($pdo, $config, $event, $reg, 'payment_reminder', ['stage' => $stage])) $sent++;
+        }
+    }
+    return $sent;
+}
+
+/**
+ * Presenting authors of accepted abstracts, once the decision is released, who have not
+ * registered: 3 days after release and again 14 days after. Platform schematic: an accepted
+ * abstract is confirmed in the programme only once its presenter is registered.
+ */
+function confSendPresenterReminders(PDO $pdo, array $config): int
+{
+    $sent = 0;
+    $events = $pdo->query("SELECT * FROM abs_events WHERE status = 'published'")->fetchAll();
+    foreach ($events as $event) {
+        if (confRegistrationState($event, confSettings($pdo, (int)$event['id'])) !== 'open') continue;
+        $stmt = $pdo->prepare("SELECT a.id, a.reference, a.title, au.first_name, au.last_name, au.email, DATEDIFF(NOW(), d.released_at) AS age
+                               FROM abs_abstracts a
+                               JOIN abs_decisions d ON d.abstract_id = a.id
+                               JOIN abs_authors au ON au.abstract_id = a.id AND au.is_presenting = 1
+                               WHERE a.event_id = ? AND d.outcome = 'accept' AND d.released_at IS NOT NULL
+                                 AND d.released_at <= (NOW() - INTERVAL 3 DAY) AND a.status NOT IN ('withdrawn')
+                                 AND NOT EXISTS (SELECT 1 FROM conf_registrations r JOIN users u ON u.id = r.user_id
+                                                 WHERE r.event_id = a.event_id AND r.status <> 'cancelled' AND LOWER(u.email) = LOWER(au.email))");
+        $stmt->execute([(int)$event['id']]);
+        foreach ($stmt->fetchAll() as $row) {
+            $stage = (int)$row['age'] >= 14 ? 2 : 1;
+            $to = (string)$row['email'];
+            if ($to === '' || !function_exists('absSendLogged') || !function_exists('cardEmailHtml')) continue;
+            $portal = rtrim((string)($config['portal_base_url'] ?? ''), '/') ?: 'https://www.resok.org/resok-portal/public';
+            $salutation = function_exists('emailSalutation') ? emailSalutation(null, $row['first_name'], null) : 'Dear colleague,';
+            $plainTitle = function_exists('absPlain') ? absPlain($row['title']) : strip_tags((string)$row['title']);
+            $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
+            $html = cardEmailHtml('Please register to present', $salutation,
+                cardEmailParagraph('Congratulations again on the acceptance of your abstract <strong>' . $h($row['reference']) . '</strong>, "' . $h($plainTitle) . '".')
+                . cardEmailParagraph('As the presenting author you need to register for <strong>' . $h($event['name']) . '</strong> so that your presentation can be confirmed in the programme. If you have not registered when the programme is finalised, the slot may be offered to an abstract on the waiting list.', true),
+                'Register now', $portal . '/conference', 'If someone else is now presenting, please tell the secretariat.');
+            $text = "{$salutation}\n\nYour abstract {$row['reference']} was accepted. As the presenting author, please register for {$event['name']} so your presentation can be confirmed in the programme: {$portal}/conference\n\nReSoK ICT";
+            $key = 'conf-presenter-' . $row['id'] . '-' . $stage;
+            if (absSendLogged($pdo, $config, (int)$event['id'], (int)$row['id'], 'conf_presenter_reminder', $to,
+                              'Please register to present: ' . $event['name'], $text, $html, $key)) {
+                $sent++;
+            }
+        }
+    }
+    return $sent;
+}
+
+// ---------------------------------------------------------------------------------------
+// Visa invitation letter
+// ---------------------------------------------------------------------------------------
+
+/**
+ * A letter an international delegate can take to an embassy. Passport details are typed by
+ * the delegate when they download it and are printed, never stored.
+ */
+function confInvitationLetterPdf(array $event, array $reg, string $passport, string $nationality): string
+{
+    if (!class_exists('SimplePdf')) require_once __DIR__ . '/SimplePdf.php';
+    $clean = static fn(string $t, bool $u): string => function_exists('academyCertificatePdfText') ? academyCertificatePdfText($t, $u) : $t;
+    $pdf = new SimplePdf(595, 842);
+    $fonts = dirname(__DIR__) . '/fonts/';
+    $u = $pdf->useUnicodeFonts($fonts . 'NotoSans-Regular.ttf', $fonts . 'NotoSans-Bold.ttf');
+
+    $logo = dirname(__DIR__, 2) . '/assets/img/certificate-resok-logo.jpg';
+    $size = @getimagesize($logo);
+    $lw = 190.0;
+    $lh = $size ? $lw * $size[1] / $size[0] : 50.0;
+    $pdf->image($logo, 56, 48, $lw, $lh);
+    $pdf->setFillColor(0, 147, 46);
+    $pdf->rect(56, 48 + $lh + 12, 483, 2);
+    $pdf->setTextColor(102, 112, 133);
+    $pdf->text(539, 70, 'Respiratory Society of Kenya', 9, false, 'R');
+    $pdf->text(539, 83, 'www.resok.org', 9, false, 'R');
+    $pdf->text(539, 96, 'kislcsecretariat@resok.org', 9, false, 'R');
+
+    $y = 48 + $lh + 50;
+    $pdf->setTextColor(22, 32, 44);
+    $pdf->text(56, $y, date('j F Y'), 11);
+    $y += 22;
+    $pdf->text(56, $y, 'Ref: ' . $reg['ref'], 11);
+    $y += 34;
+    $pdf->text(56, $y, 'To the Visa Officer', 11);
+    $y += 30;
+    $pdf->text(56, $y, 'LETTER OF INVITATION', 11.5, true);
+    $y += 17;
+    $y = $pdf->multilineText(56, $y, 483, $clean((string)$event['name'], $u), 11.5, 16, true) + 14;
+
+    $fmt = fn($d) => $d ? (new DateTimeImmutable((string)$d))->format('j F Y') : null;
+    $dates = $event['starts_on'] ? ($fmt($event['starts_on']) . ($event['ends_on'] && $event['ends_on'] !== $event['starts_on'] ? ' to ' . $fmt($event['ends_on']) : '')) : 'dates to be confirmed';
+    $venue = trim((string)($event['venue'] ?? '')) !== '' ? trim((string)$event['venue']) . ', Kenya' : 'Kenya';
+    $who = $clean((string)$reg['badge_name'], $u);
+    $passportLine = $passport !== '' ? ', holder of passport number ' . $clean($passport, $u) . ($nationality !== '' ? ' (' . $clean($nationality, $u) . ')' : '') : '';
+    $paras = [
+        "The Respiratory Society of Kenya is pleased to invite {$who}{$passportLine}, of " . $clean((string)$reg['institution'], $u)
+            . ', ' . $clean((string)$reg['country'], $u) . ', to attend the ' . $clean((string)$event['name'], $u) . " in {$venue}, {$dates}.",
+        'The conference brings together clinicians, researchers, public health practitioners and policymakers working in lung health from Kenya and the region. The delegate is registered under reference ' . $reg['ref'] . '.',
+        'This letter is issued to support a visa application. It does not commit the Society to meeting any travel, accommodation, subsistence or other costs, which remain the responsibility of the delegate or their sponsoring institution.',
+        'Please contact the conference secretariat at kislcsecretariat@resok.org should you need to verify this invitation.',
+    ];
+    foreach ($paras as $para) {
+        $y = $pdf->multilineText(56, $y, 483, $para, 11, 16) + 12;
+    }
+    $y += 20;
+    $pdf->text(56, $y, 'Yours faithfully,', 11);
+    $y += 56;
+    $pdf->text(56, $y, 'Conference Secretariat', 11, true);
+    $y += 15;
+    $pdf->text(56, $y, 'Respiratory Society of Kenya', 11);
+
+    $pdf->setFillColor(6, 48, 26);
+    $pdf->rect(0, 826, 595, 16);
     return $pdf->output();
 }

@@ -33,6 +33,8 @@ if (!$isCli) {
 foreach (['SimpleMailer', 'portal-mail', 'abstracts', 'abstracts-review', 'abstracts-decisions'] as $module) {
     require_once __DIR__ . '/../lib/' . $module . '.php';
 }
+// Conference registration reminders ride on the same job and the same mail queue.
+if (is_file(__DIR__ . '/../lib/conference.php')) require_once __DIR__ . '/../lib/conference.php';
 
 $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $config['db_host'], (int)($config['db_port'] ?? 3306), $config['db_name']);
 $pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], [
@@ -42,9 +44,19 @@ $pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], [
 $pdo->exec("SET time_zone = '+03:00'");
 
 if (!abstractsEnsureTables($pdo)) exit("Abstract tables are unavailable.\n");
+$conference = ['payment' => 0, 'presenter' => 0];
+if (function_exists('confEnsureTables') && confEnsureTables($pdo)) {
+    try {
+        $conference['payment'] = confSendPaymentReminders($pdo, $config);
+        $conference['presenter'] = confSendPresenterReminders($pdo, $config);
+    } catch (Throwable $e) {
+        echo 'Conference reminders failed: ' . $e->getMessage() . "\n";
+    }
+}
 $report = absRunScheduled($pdo, $config);
 echo 'Deadline reminders queued: ' . $report['deadlineReminders'] . "\n"
    . 'Review reminders queued: ' . $report['reviewReminders'] . "\n"
    . 'Attendance reminders queued: ' . ($report['attendanceReminders'] ?? 0) . "\n"
+   . 'Conference payment reminders: ' . $conference['payment'] . ', presenter reminders: ' . $conference['presenter'] . "\n"
    . 'Mail sent: ' . $report['mail']['sent'] . ', failed attempts: ' . $report['mail']['failed']
    . ', still waiting: ' . $report['mail']['waiting'] . "\n";

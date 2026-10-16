@@ -3815,7 +3815,7 @@ if ('serviceWorker' in navigator) {
       if (!el('aLetter').files.length) data.delete('letter');
       el('applyBtn').disabled = true; showNote('applyNote', '', '');
       try {
-        const response = await fetch(API + 'careers/apply', { method: 'POST', body: data });
+        const response = await (window.ResokProof ? window.ResokProof.fetch : fetch)(API + 'careers/apply', { method: 'POST', body: data });
         const res = await response.json().catch(() => ({}));
         if (!response.ok) {
           Object.entries(res.fields || {}).forEach(([field, message]) => {
@@ -4331,7 +4331,8 @@ if ('serviceWorker' in navigator) {
       });
     })();
   </script>
-  <script src="assets/js/site-forms.js" defer></script>
+  <script src="resok-portal/public/js/proof.js?v=20261017-proof" defer></script>
+  <script src="assets/js/site-forms.js?v=20261017-proof" defer></script>
   <script src="assets/js/members-only.js" defer></script>
     <script src="assets/js/consent.js?v=20260930-icon" defer></script>
 </body>

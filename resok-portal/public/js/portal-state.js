@@ -1,4 +1,5 @@
 (function () {
+  const SELF_SRC = document.currentScript ? document.currentScript.src : "";
   const STORAGE_KEY = "resok_portal_state";
   const TOKEN_KEY = "token";
   const CARD_ASSET_VERSION = "20260904-blue-bg";
@@ -77,6 +78,29 @@
     return `api/index.php?route=${encodeURIComponent(route).replace(/%2F/g, "/")}`;
   }
 
+  // "Verifying your browser" (js/proof.js, api/lib/proof.php). Loaded only the first time
+  // the server asks for it, so pages pay nothing while the check is off.
+  let proofLoading = null;
+  function loadProof() {
+    if (window.ResokProof) return Promise.resolve(window.ResokProof);
+    if (!proofLoading) {
+      proofLoading = new Promise((resolve) => {
+        const s = document.createElement("script");
+        s.src = new URL("proof.js?v=20261017-proof", SELF_SRC || location.href).href;
+        s.onload = () => resolve(window.ResokProof || null);
+        s.onerror = () => { proofLoading = null; resolve(null); };
+        document.head.appendChild(s);
+      });
+    }
+    return proofLoading;
+  }
+  async function proofFetch(url, init) {
+    const first = await fetch(url, init);
+    if (first.status !== 428) return first;
+    const proof = await loadProof();
+    return proof ? proof.fetch(url, init) : first;
+  }
+
   async function api(path, options = {}) {
     const headers = Object.assign({}, options.headers || {});
     if (!(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
@@ -85,7 +109,7 @@
     // caller that still has a token in localStorage from before this change.
     if (token()) headers.Authorization = `Bearer ${token()}`;
 
-    const response = await fetch(apiUrl(path), Object.assign({ credentials: "same-origin" }, options, { headers }));
+    const response = await proofFetch(apiUrl(path), Object.assign({ credentials: "same-origin" }, options, { headers }));
     let data = null;
     try {
       data = await response.json();
@@ -796,6 +820,7 @@
 
   window.ResokPortal = {
     api,
+    proofFetch,
     screeningFields,
     apiUrl,
     getState,

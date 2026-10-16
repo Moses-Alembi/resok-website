@@ -4,6 +4,21 @@
   var NEWSLETTER_EMAIL = 'info@resok.org';
   var NEWSLETTER_SUBJECT = 'ReSoK Newsletter Signup';
 
+  var proofLoading = null;
+  function loadProof() {
+    if (window.ResokProof) return Promise.resolve(window.ResokProof);
+    if (!proofLoading) {
+      proofLoading = new Promise(function (resolve) {
+        var s = document.createElement('script');
+        s.src = 'resok-portal/public/js/proof.js?v=20261017-proof';
+        s.onload = function () { resolve(window.ResokProof || null); };
+        s.onerror = function () { proofLoading = null; resolve(null); };
+        document.head.appendChild(s);
+      });
+    }
+    return proofLoading;
+  }
+
   function findEmail(form) {
     return form.querySelector('input[type="email"], input[name="email"]');
   }
@@ -67,10 +82,15 @@
     var statusEl = form.querySelector('[data-form-status]');
     if (statusEl) statusEl.style.display = 'none';
 
-    fetch('contact.php', {
-      method: 'POST',
-      body: new FormData(form)
-    })
+    var body = new FormData(form);
+    fetch('contact.php', { method: 'POST', body: body })
+      .then(function (response) {
+        // "Verifying your browser": load the solver only when the server asks for it.
+        if (response.status !== 428) return response;
+        return loadProof().then(function (proof) {
+          return proof ? proof.fetch('contact.php', { method: 'POST', body: body }) : response;
+        });
+      })
       .then(function (response) {
         return response.json().catch(function () { return {}; }).then(function (data) {
           return { ok: response.ok, data: data };

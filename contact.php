@@ -59,6 +59,12 @@ if (is_file($throttleFile)) {
         // visitor is off by the hours between PHP's default zone and MySQL's.
         date_default_timezone_set('Africa/Nairobi');
         $pdo->exec("SET time_zone = '+03:00'");
+        // Proof of work first: a bot without it must not use up the address's allowance.
+        $proofFile = __DIR__ . '/resok-portal/public/api/lib/proof.php';
+        if (is_file($proofFile)) {
+            require_once $proofFile;
+            proofRequire($pdo, $config, 'contact', 'POST');
+        }
         throttleCheck($pdo, $config, 'contact', $email);
         // Counted on every accepted attempt, sent or not, so a mail outage is no loophole.
         throttleFailure($pdo, $config, 'contact', $email);

@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'google-signin', 'mdt', 'careers', 'directory', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'proof', 'google-signin', 'mdt', 'careers', 'directory', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -1116,6 +1116,14 @@ if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)
 try {
     requireConfig($config);
     $pdo = db($config);
+
+    // Proof of work in front of sign-in, sign-up and the public forms (lib/proof.php).
+    if ($route === 'proof/challenge' && $method === 'GET') {
+        header('Cache-Control: no-store');
+        respond(200, function_exists('proofIssue') && function_exists('proofEnabled') && proofEnabled($config)
+            ? proofIssue($config) + ['enabled' => true] : ['enabled' => false]);
+    }
+    if (function_exists('proofRequire')) proofRequire($pdo, $config, $route, $method);
 
     if ($route === 'health') {
         respond(200, ['status' => 'OK', 'runtime' => 'php', 'timestamp' => gmdate('c')]);

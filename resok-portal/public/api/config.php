@@ -89,6 +89,11 @@ return [
     'security_digest_to' => config_value($local, 'security_digest_to', 'RESOK_SECURITY_DIGEST_TO', null),
     // Proxy ranges, beyond Cloudflare's, whose forwarded visitor address may be believed.
     'trusted_proxy_ranges' => config_list($local, 'trusted_proxy_ranges', 'RESOK_TRUSTED_PROXY_RANGES'),
+    // "Verifying your browser" before sign-in, sign-up and the public forms (lib/proof.php).
+    // Off until switched on. Bits: each extra one doubles the work; 16 is about a second on
+    // a mid-range phone.
+    'proof_of_work' => filter_var(config_value($local, 'proof_of_work', 'RESOK_PROOF_OF_WORK', false), FILTER_VALIDATE_BOOLEAN),
+    'proof_of_work_bits' => (int)config_value($local, 'proof_of_work_bits', 'RESOK_PROOF_OF_WORK_BITS', 16),
 
     'paybill_number' => config_value($local, 'paybill_number', 'RESOK_PAYBILL_NUMBER', '303030'),
     'paybill_account' => config_value($local, 'paybill_account', 'RESOK_PAYBILL_ACCOUNT', '2038334878'),

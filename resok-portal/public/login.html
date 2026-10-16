@@ -275,7 +275,7 @@
     </section>
   </main>
 
-  <script src="js/portal-state.js?v=20261015-directory-soon"></script>
+  <script src="js/portal-state.js?v=20261017-proof"></script>
   <script src="js/google-signin.js?v=20261005-phase4"></script>
   <script>
     const form = document.getElementById("loginForm");
@@ -344,7 +344,7 @@
       loginBtn.textContent = "Logging in...";
 
       try {
-        const response = await fetch("api/index.php?route=auth/login", {
+        const response = await (window.ResokPortal?.proofFetch || fetch)("api/index.php?route=auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           // Screening fields. window.ResokPortal is loaded above; the fallback keeps login

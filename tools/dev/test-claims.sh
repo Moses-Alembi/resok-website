@@ -5,7 +5,7 @@
 # The claims worth testing are about not losing a real member's record. An imported member
 # has to be able to get in without registering again - a second registration would sit beside
 # the real record with no membership number and ask a paid-up member to pay. The renewal date
-# has to reach 30 November 2026 without ever pulling a later date back. And a batch has to
+# has its shared 30 November 2026 date cleared once, without touching later dates. And a batch has to
 # pick up only the accounts nobody can sign in to, never a member who already has.
 #
 # Uses its own claim-*@resok.local accounts and removes them afterwards. No mail server is
@@ -48,19 +48,23 @@ profile() {  # email, renewal_due (SQL literal), status, membership number
                INSERT INTO member_payment_years (member_profile_id, year, source)
                SELECT mp.id, 2025, 'register' FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE u.email = '$1';" >/dev/null
 }
-profile claim-new@resok.local      NULL          expired  'ReSok M/9001'
+profile claim-new@resok.local      "'2026-11-30'" active   'ReSok M/9001'
 profile claim-later@resok.local    "'2027-03-31'" active   'ReSok M/9002'
 profile claim-rejected@resok.local NULL          rejected 'ReSok M/9003'
 profile claim-done@resok.local     NULL          expired  'ReSok M/9004'
 
+# Since 16 Oct 2026 the migration clears the shared 30 Nov date, once, while Moses supplies
+# each member's real expiry. The marker row is removed first so the clear can be exercised.
 echo "Renewal date for imported members:"
+$MYSQL -e "DELETE FROM migration_once WHERE name = 'clear-imported-renewal-dates';" 2>/dev/null
 $MYSQL < "$MIGRATION"
 row() { q "SELECT CONCAT(mp.membership_status, '|', COALESCE(mp.renewal_due, 'NULL')) FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE u.email = '$1';"; }
-check "an undated imported member becomes active to 30 Nov"  'active|2026-11-30' "$(row claim-new@resok.local)"
-check "a later renewal date is never pulled back"            'active|2027-03-31' "$(row claim-later@resok.local)"
+check "the shared 30 Nov date is cleared, membership stays active" 'active|NULL'   "$(row claim-new@resok.local)"
+check "a later renewal date is kept"                         'active|2027-03-31' "$(row claim-later@resok.local)"
 check "a rejected record is left alone"                      'rejected|NULL'     "$(row claim-rejected@resok.local)"
+$MYSQL -e "UPDATE member_profiles mp JOIN users u ON u.id = mp.user_id SET mp.renewal_due = '2026-11-30' WHERE u.email = 'claim-new@resok.local';"
 $MYSQL < "$MIGRATION"
-check "running it twice changes nothing"                     'active|2026-11-30' "$(row claim-new@resok.local)"
+check "it runs once: a 30 Nov date set later is not cleared" 'active|2026-11-30' "$(row claim-new@resok.local)"
 
 login() { local jar; jar=$(mktemp); curl -s -c "$jar" -X POST "${API}auth/login" \
   -H 'Content-Type: application/json' -d "{\"email\":\"$1\",\"password\":\"$2\"}" >/dev/null; echo "$jar"; }

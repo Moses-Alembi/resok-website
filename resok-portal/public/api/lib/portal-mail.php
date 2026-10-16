@@ -370,7 +370,11 @@ function sendPasswordResetEmail(array $config, string $email, string $url, ?stri
         'Choose a New Password',
         $url
     );
-    $mailer = (new SimpleMailer($config))->withoutArchiveCopy();
+    // The archive gets a copy with the token blanked out: the link sets the password.
+    parse_str((string)parse_url($url, PHP_URL_QUERY), $query);
+    $mailer = new SimpleMailer($config);
+    $token = (string)($query['token'] ?? '');
+    $token !== '' ? $mailer->withRedactedArchiveCopy($token) : $mailer->withoutArchiveCopy();
     $sent = $mailer->send($email, 'Reset your ReSoK members portal password', $text, [], $html);
     if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';
     return $sent;

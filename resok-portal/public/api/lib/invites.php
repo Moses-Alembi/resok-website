@@ -128,8 +128,8 @@ function inviteSend(PDO $pdo, array $config, array $invite): bool
                 $link,
                 'This link is unique to you and expires in ' . INVITE_TTL_DAYS . ' days.'
             );
-            // No archive copy: the link sets the account's password.
-            $sent = (new SimpleMailer($config))->withoutArchiveCopy()->send((string)$invite['email'],
+            // The archive gets a copy with the token blanked out: the link sets the password.
+            $sent = (new SimpleMailer($config))->withRedactedArchiveCopy((string)$invite['token'])->send((string)$invite['email'],
                 'Your ReSoK portal account is ready', $text, [], $html);
         }
     } catch (Throwable $e) {
@@ -327,8 +327,8 @@ function claimSend(PDO $pdo, array $config, array $member, ?string &$error = nul
             . '&ldquo;Forgot password&rdquo; on the login page with this email address.<br>'
             . 'If you were not expecting this email, you can ignore it.'
         );
-        // No archive copy: the link sets the account's password.
-        $sent = (new SimpleMailer($config))->withoutArchiveCopy()->send($email, 'Your ReSoK portal account is ready', $text, [], $html);
+        // The archive gets a copy with the token blanked out: the link sets the password.
+        $sent = (new SimpleMailer($config))->withRedactedArchiveCopy($token)->send($email, 'Your ReSoK portal account is ready', $text, [], $html);
         if (!$sent) $error = 'The mail server did not accept the message.';
     } catch (Throwable $e) {
         $error = mb_substr($e->getMessage(), 0, 255);

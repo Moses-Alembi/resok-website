@@ -24,8 +24,8 @@ class SimpleMailer
     private bool $archiveCopy = true;
 
     /**
-     * For a message whose link sets an account's password (resets, account-claim invites):
-     * a copy in a shared inbox would let whoever reads it take over the account.
+     * No copy at all. Password-setting emails now use withRedactedArchiveCopy() instead;
+     * this remains for any message that should leave no record in the archive.
      */
     public function withoutArchiveCopy(): self
     {
@@ -33,9 +33,62 @@ class SimpleMailer
         return $this;
     }
 
+    /** The secret to blank out of the archive's own copy, set by withRedactedArchiveCopy(). */
+    private ?string $redactSecret = null;
+
+    /**
+     * For a message whose link sets an account's password, but which the Society still wants
+     * a record of (Moses, 16 Oct 2026): the member gets the message untouched, and the archive
+     * gets a separate copy with $secret - the link's token - replaced everywhere it appears,
+     * plus a note saying who the original went to. The record is complete except for the one
+     * thing that would let whoever reads the archive inbox take over the account.
+     *
+     * The archive copy is sent only after the member's has been accepted, and a failure to
+     * send it is logged rather than reported: the member's email is what matters.
+     */
+    public function withRedactedArchiveCopy(string $secret): self
+    {
+        $this->redactSecret = $secret !== '' ? $secret : null;
+        return $this;
+    }
+
+    private const REDACTED = 'LINK-REMOVED-IN-ARCHIVE-COPY';
+
+    private function sendRedactedArchiveCopy(string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody, ?string $replyTo): void
+    {
+        $archive = $this->archiveAddress($to);
+        if ($archive === null || $this->redactSecret === null) return;
+
+        $when = date('j F Y, H:i');
+        $note = "Archive copy of the email sent to {$to} on {$when}. The link has been removed from this copy because it sets the account's password; the member's own email has the working link.";
+        $text = str_replace($this->redactSecret, self::REDACTED, $textBody);
+        $text = $note . "\n\n----------------------------------------\n\n" . $text;
+
+        $html = null;
+        if ($htmlBody !== null) {
+            $banner = '<div style="margin:0;padding:12px 16px;background:#fff4d6;border-bottom:1px solid #f0d58a;color:#5c4400;font-family:Segoe UI,Arial,sans-serif;font-size:13px;line-height:1.5;">'
+                . htmlspecialchars($note, ENT_QUOTES) . '</div>';
+            $html = str_replace($this->redactSecret, self::REDACTED, $htmlBody);
+            $html = preg_match('/<body[^>]*>/i', $html)
+                ? preg_replace('/(<body[^>]*>)/i', '$1' . $banner, $html, 1)
+                : $banner . $html;
+        }
+
+        $copy = (new self($this->config))->withoutArchiveCopy();
+        if (!$copy->send($archive, '[Archive] ' . $subject, $text, $attachments, $html, $replyTo)) {
+            error_log("Redacted archive copy of '{$subject}' to {$archive} not sent: " . ($copy->lastError ?? 'unknown error'));
+        }
+    }
+
+    /** The plain copy added to the message itself: none when redacting, which sends its own. */
     private function archiveBcc(string $to): ?string
     {
-        if (!$this->archiveCopy) return null;
+        if (!$this->archiveCopy || $this->redactSecret !== null) return null;
+        return $this->archiveAddress($to);
+    }
+
+    private function archiveAddress(string $to): ?string
+    {
         $bcc = trim((string)($this->config['mail_archive_bcc'] ?? self::DEFAULT_ARCHIVE_BCC));
         if ($bcc === '' || filter_var($bcc, FILTER_VALIDATE_EMAIL) === false) return null;
         return strcasecmp($bcc, trim($to)) === 0 ? null : $bcc;
@@ -51,10 +104,17 @@ class SimpleMailer
     {
         $this->lastError = null;
         $host = trim((string)($this->config['smtp_host'] ?? ''));
-        if ($host !== '') {
-            return $this->sendSmtp($host, $to, $subject, $textBody, $attachments, $htmlBody, $replyTo);
+        $sent = $host !== ''
+            ? $this->sendSmtp($host, $to, $subject, $textBody, $attachments, $htmlBody, $replyTo)
+            : $this->sendPhpMail($to, $subject, $textBody, $attachments, $htmlBody, $replyTo);
+        if ($sent && $this->redactSecret !== null) {
+            try {
+                $this->sendRedactedArchiveCopy($to, $subject, $textBody, $attachments, $htmlBody, $replyTo);
+            } catch (Throwable $e) {
+                error_log('Redacted archive copy failed: ' . $e->getMessage());
+            }
         }
-        return $this->sendPhpMail($to, $subject, $textBody, $attachments, $htmlBody, $replyTo);
+        return $sent;
     }
 
     private function fromAddress(): string
@@ -140,7 +200,10 @@ class SimpleMailer
         }
         $message = $this->buildMime($to, $subject, $textBody, $attachments, $from, $htmlBody, $replyTo);
         [$headerBlock, $bodyBlock] = explode("\r\n\r\n", $message, 2);
-        $extraHeaders = trim((string)preg_replace('/^(To|Subject):.*$/mi', '', $headerBlock));
+        // To and Subject are removed with their line endings. Blanking only the text left a
+        // stray "\n" behind each, and mail() refuses a header block with an empty line in it
+        // ("Multiple or malformed newlines"), so every HTML email on this path failed.
+        $extraHeaders = trim((string)preg_replace('/^(To|Subject):[^\r\n]*(\r\n|$)/mi', '', $headerBlock));
         return @mail($to, $subject, $bodyBlock, $extraHeaders . $bccHeader);
     }
 

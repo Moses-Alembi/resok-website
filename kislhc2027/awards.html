@@ -1598,43 +1598,33 @@
       .site-footer-mid > :nth-child(5) { grid-area: gallery; }
     }
   </style>
+  <link rel="stylesheet" href="assets/css/resok-header.css?v=20261017a" />
 </head>
 <body>
-  <nav class="navbar">
-    <div class="nav-shell">
-      <div class="nav-top">
-        <div class="nav-top-left">
-          <a href="contact.html" class="nav-top-item"><i class="fas fa-question-circle"></i> Ask a Question</a>
-          <a href="mailto:kislcsecretariat@resok.org" class="nav-top-item"><i class="far fa-envelope"></i>kislcsecretariat@resok.org</a>
-        </div>
-        <div class="nav-top-right">
-          <div class="nav-language">
-            <button type="button" class="nav-language-btn" id="langToggle" aria-haspopup="true" aria-expanded="false">
-              English UK <i class="fas fa-chevron-down"></i>
-            </button>
-            <ul class="nav-language-menu" id="langMenu" aria-label="Language options">
-              <li><a href="#" data-lang="en-uk">English UK</a></li>
-              <li><a href="#" data-lang="en-us">English US</a></li>
-              <li><a href="#" data-lang="sw-ke">Kiswahili</a></li>
-            </ul>
-          </div>
-          <a href="#about">About</a>
-          <a href="registration.html">Register</a>
+  <nav class="rh-navbar" aria-label="Main">
+    <div class="rh-shell">
+      <div class="rh-top">
+        <div class="rh-top-left">
+          <a href="contact.html" class="rh-top-item"><i class="fas fa-question-circle"></i> Ask a Question</a>
+          <a href="mailto:kislcsecretariat@resok.org" class="rh-top-item"><i class="far fa-envelope"></i>kislcsecretariat@resok.org</a>
         </div>
       </div>
 
-      <div class="nav-main">
-        <a href="index.html" class="logo">
-          <img src="assets/img/kislhc-logo.png" alt="KISLHC 2027 logo" />
-        </a>
-        <ul class="nav-menu" id="navMenu">
-          <li><a href="index.html" class="nav-link">Home</a></li>
-          <li><a href="abstracts.html" class="nav-link">Abstracts</a></li>
-          <li><a href="registration.html" class="nav-link">Registration</a></li>
-          <li><a href="sponsors.html" class="nav-link is-active">Sponsorship</a></li>
-          <li><a href="index.html#program" class="nav-link">Programme</a></li>
-          <li><a href="contact.html" class="nav-link">Contact</a></li>
-          <li class="nav-mobile-social">
+      <div class="rh-main">
+        <ul class="rh-menu" id="rhMenu">
+          <li><a href="index.html" class="rh-link"><i class="fas fa-home" aria-hidden="true"></i>Home</a></li>
+          <li><a href="abstracts.html" class="rh-link"><i class="fas fa-file-lines" aria-hidden="true"></i>Abstracts</a></li>
+          <li><a href="registration.html" class="rh-link"><i class="fas fa-id-badge" aria-hidden="true"></i>Registration</a></li>
+          <li><a href="sponsors.html" class="rh-link is-active"><i class="fas fa-handshake" aria-hidden="true"></i>Sponsorship</a></li>
+          <li><a href="index.html#program" class="rh-link"><i class="fas fa-calendar-days" aria-hidden="true"></i>Programme</a></li>
+          <li><a href="https://kislhc.lxpo.net" class="rh-link" target="_blank" rel="noopener noreferrer"><i class="fas fa-circle-play" aria-hidden="true"></i>2026 Presentations</a></li>
+          <li><a href="contact.html" class="rh-link"><i class="fas fa-envelope" aria-hidden="true"></i>Contact</a></li>
+          <li class="rh-mobile-actions">
+            <a href="registration.html" class="rh-mobile-action rh-mobile-action-member"><i class="fas fa-user-plus" aria-hidden="true"></i>Register Now</a>
+            <a href="../index.html" class="rh-mobile-action rh-mobile-action-donate"><i class="fas fa-lungs" aria-hidden="true"></i>ReSoK Website</a>
+            <a href="../resok-portal/public/login" class="rh-mobile-action rh-mobile-action-login"><i class="fas fa-user" aria-hidden="true"></i>Login</a>
+          </li>
+          <li class="rh-mobile-social">
             <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
             <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
             <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
@@ -1643,20 +1633,20 @@
             <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
           </li>
         </ul>
-        <div class="nav-icons" aria-label="Social links">
-          <a href="https://www.facebook.com/share/1DLne8xyKQ/" aria-label="facebook"><i class="fab fa-facebook-f"></i></a>
-          <a href="https://www.tiktok.com/@resokenya?is_from_webapp=1&sender_device=pc" aria-label="tiktok"><i class="fab fa-tiktok"></i></a>
-          <a href="https://youtube.com/@respiratorysocietykenya?si=1G_SzakIjlz-BzIa" aria-label="youtube"><i class="fab fa-youtube"></i></a>
-          <a href="https://x.com/ReSoKenya" aria-label="twitter"><i class="fab fa-twitter"></i></a>
-          <a href="https://www.linkedin.com/in/respiratory-society-of-kenya-671208303?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" aria-label="linkedin"><i class="fab fa-linkedin-in"></i></a>
-          <a href="https://www.instagram.com/respiratorysocietyofkenya?igsh=am5zYmMwZHpqZHA5" aria-label="instagram"><i class="fab fa-instagram"></i></a>
+        <div class="rh-actions">
+          <a href="../resok-portal/public/login" class="rh-action"><i class="fas fa-user" aria-hidden="true"></i> Login</a>
+          <a href="../index.html" class="rh-action"><i class="fas fa-lungs" aria-hidden="true"></i> ReSoK</a>
+          <a href="registration.html" class="rh-member">Register Now</a>
         </div>
-        <div class="hamburger" id="hamburger" aria-label="Menu" role="button" tabindex="0">
+        <button class="rh-hamburger" type="button" id="rhHamburger" aria-label="Toggle menu" aria-controls="rhMenu" aria-expanded="false">
           <span></span>
           <span></span>
           <span></span>
-        </div>
+        </button>
       </div>
+      <a href="index.html" class="rh-logo" aria-label="KISLHC 2027 home">
+        <img src="assets/img/kislhc-logo.png" alt="KISLHC logo">
+      </a>
     </div>
   </nav>
 
@@ -2094,5 +2084,6 @@
     }
   </script>
   <script src="../assets/js/consent.js?v=20260930-icon"></script>
+  <script src="assets/js/resok-header.js?v=20261017a" defer></script>
 </body>
 </html>

@@ -32,3 +32,10 @@ INSERT IGNORE INTO member_payment_years (member_profile_id, year, amount, paid_o
 SELECT mp.id, 2026, 5000.00, '2026-01-19', 'manual', 'Office register: paid 19.01.2026'
 FROM member_profiles mp
 WHERE mp.membership_id IN ('ReSoK M/106', 'ReSok M/106');
+
+-- Expiry follows the year paid for: a membership year ends on 31 December
+-- (membershipDueFromYear in lib/membership.php). Only ever moves a date later.
+UPDATE member_profiles
+SET renewal_due = '2026-12-31', membership_status = IF(membership_status = 'expired', 'active', membership_status)
+WHERE membership_id IN ('ReSok M/50', 'ReSoK M/106', 'ReSok M/106')
+  AND (renewal_due IS NULL OR renewal_due < '2026-12-31');

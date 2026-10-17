@@ -66,11 +66,14 @@ absent "no welcome email is attempted"                         '"welcomeEmailSen
 check "the slip is now paid"                                    "paid" "$(q "SELECT status FROM payments WHERE provider_reference = 'TRENEWOLD1'")"
 check "the date runs a year on from the old date, not today"    "$DUE_NEXT" "$(due "$P_OLD")"
 check "the membership number is unchanged"                      "ReSok M/T1" "$(q "SELECT membership_id FROM member_profiles WHERE id = $P_OLD")"
+THIS_YEAR=$($PHP -r "date_default_timezone_set('Africa/Nairobi'); echo date('Y');")
+check "this year is now ticked as paid"                         "portal" "$(q "SELECT source FROM member_payment_years WHERE member_profile_id = $P_OLD AND year = $THIS_YEAR")"
 check "the renewal is in the audit log"                         "membership_renewed" "$(q "SELECT action FROM admin_actions WHERE target_member_profile_id = $P_OLD ORDER BY id DESC LIMIT 1")"
 
 echo "An existing member's slip is refused:"
 upload "$OLD" TRENEWOLD2 >/dev/null
 r=$(curl -s -m 20 -b "$ADMIN" -X POST "${API}members/$P_OLD/reject" -H 'Content-Type: application/json' -d '{"reason":"Code not found on statement"}')
+check "a refused slip ticks nothing new"                        "1" "$(q "SELECT COUNT(*) FROM member_payment_years WHERE member_profile_id = $P_OLD")"
 check "the slip is marked failed"                               "failed" "$(q "SELECT status FROM payments WHERE provider_reference = 'TRENEWOLD2'")"
 check "but the membership is not ended"                         "active" "$(status "$P_OLD")"
 check "and its date is untouched"                               "$DUE_NEXT" "$(due "$P_OLD")"
@@ -89,6 +92,7 @@ r=$(approve "$P_NEW")
 absent "approving is not a renewal"                            '"renewal":true' "$r"
 check "a welcome email is attempted"                            '"welcomeEmailSent"' "$r"
 check "they are active"                                         "active" "$(status "$P_NEW")"
+check "a new member's year is ticked too"                       "portal" "$(q "SELECT source FROM member_payment_years WHERE member_profile_id = $P_NEW AND year = $THIS_YEAR")"
 check "and get a membership number"                             "ReSoK" "$(q "SELECT membership_id FROM member_profiles WHERE id = $P_NEW")"
 
 cleanup

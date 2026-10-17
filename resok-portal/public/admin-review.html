@@ -52,6 +52,9 @@
     .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}.stat span{display:block;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:6px}.stat strong{font-size:24px}
     .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:start}.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.toolbar input,.toolbar select{border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:10px 12px;font-size:14px}.toolbar input{flex:1;min-width:220px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius)}table{width:100%;border-collapse:collapse;background:var(--card)}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}th{background:var(--th-bg);color:var(--th-fg);font-size:12px;text-transform:uppercase;letter-spacing:.02em}tr{cursor:pointer}tr:hover{background:var(--row-hover)}tr.selected{background:var(--row-selected)}.status{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;text-transform:capitalize}.status.active{background:var(--status-active-bg);color:var(--status-active-fg)}.status.payment_required{background:var(--status-payreq-bg);color:var(--status-payreq-fg)}.status.under_review{background:var(--status-review-bg);color:var(--status-review-fg)}.status.rejected{background:var(--status-rejected-bg);color:var(--status-rejected-fg)}.status.expired{background:var(--status-expired-bg);color:var(--status-expired-fg)}
     .detail-empty{color:var(--muted);line-height:1.55}.detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.detail-head h2{font-size:19px;margin-bottom:4px}.detail-head p{color:var(--muted);font-size:14px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.fact{border:1px solid var(--line);border-radius:var(--radius);padding:11px}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:900;margin-bottom:5px}.fact strong{font-size:14px;word-break:break-word}.payments{display:grid;gap:10px;margin-top:12px}.payment{border:1px solid var(--line);border-radius:var(--radius);padding:11px;display:flex;justify-content:space-between;gap:10px}.payment span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.note{display:none;position:fixed;top:16px;right:16px;z-index:9999;max-width:min(440px,calc(100vw - 32px));border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.5;cursor:pointer;box-shadow:0 8px 24px rgba(16,24,40,.18)}.note.show{display:block}.note.error{background:var(--note-error-bg);color:var(--note-error-fg);border:1px solid var(--note-error-line)}.note.success{background:var(--note-success-bg);color:var(--note-success-fg);border:1px solid var(--note-success-line)}
+    #detailPanel [hidden]{display:none!important}
+    /* The member card follows the list as it scrolls, so Approve is always to hand. */
+    @media(min-width:981px){#detailPanel{position:sticky;top:80px;max-height:calc(100vh - 96px);overflow-y:auto;overscroll-behavior:contain}}
     @media(max-width:980px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{flex-direction:column}}@media(max-width:560px){.brand span,.admin-name{display:none}.page{padding:16px 14px}.stats{grid-template-columns:1fr}.facts{grid-template-columns:1fr}.toolbar input,.toolbar select{width:100%;min-width:0}.hero,.panel{padding:16px}}
     .ev-callout{padding:16px;border:1px solid var(--line);background:var(--th-bg);border-radius:8px}
     .ev-callout-ok{border-color:var(--note-success-line);background:var(--note-success-bg)}
@@ -786,8 +789,8 @@
           <div class="fact"><span>Portal Account</span><strong>${selectedMember.emailVerified === false ? "Not claimed yet" : "Claimed"}</strong></div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-          <button class="btn btn-primary" id="approveBtn"><i class="fas fa-check"></i> ${isExistingMember(selectedMember) ? "Confirm renewal payment" : "Approve / Issue ID"}</button>
-          <button class="btn btn-danger" id="rejectBtn"><i class="fas fa-xmark"></i> Reject</button>
+          <button class="btn btn-primary" id="approveBtn" ${hideDecision(selectedMember) ? "hidden" : ""}><i class="fas fa-check"></i> ${isExistingMember(selectedMember) ? "Confirm renewal payment" : "Approve / Issue ID"}</button>
+          <button class="btn btn-danger" id="rejectBtn" ${hideDecision(selectedMember) ? "hidden" : ""}><i class="fas fa-xmark"></i> Reject</button>
           <button class="btn" id="welcomePacketBtn"><i class="fas fa-envelope"></i> Send welcome packet</button>
           ${selectedMember.emailVerified === false ? '<button class="btn" id="claimLinkBtn"><i class="fas fa-key"></i> Send claim link</button>' : ""}
         </div>
@@ -858,6 +861,12 @@
       }
       try {
         const payments = await window.ResokPortal.api(`/api/payments/member/${memberId}`);
+        // An active member is only confirmed or rejected over a renewal slip waiting for a
+        // decision; with none, the buttons would do nothing, so they stay hidden.
+        if (isExistingMember(selectedMember) && selectedMember.membershipStatus === "active") {
+          const waiting = payments.some((p) => p.status === "pending" && p.proofDownloadUrl);
+          ["approveBtn", "rejectBtn"].forEach((id) => { const b = document.getElementById(id); if (b) b.hidden = !waiting; });
+        }
         box.innerHTML = payments.length ? payments.map((payment) => `
           <div class="payment">
             <div><strong>${esc(payment.reference)}</strong><span>${esc(payment.method)} | ${esc(payment.date || "")}</span>${payment.proofDownloadUrl ? `<span><a href="${esc(payment.proofDownloadUrl)}" target="_blank" rel="noopener">View proof</a></span>` : ""}</div>
@@ -871,6 +880,7 @@
 
     // Already a member (has a number, or is active/expired): approving confirms a renewal
     // payment, keeps their number and sends no welcome email. Mirrors memberAlreadyJoined().
+    function hideDecision(m) { return isExistingMember(m) && m.membershipStatus === "active"; }
     function isExistingMember(m) {
       return !!(m && ((m.membershipId && String(m.membershipId).trim()) || ["active", "expired"].includes(m.membershipStatus)));
     }

@@ -1041,6 +1041,7 @@ function confirmRenewalById(PDO $pdo, int $memberId, ?int $adminUserId): array {
         $pdo->prepare('UPDATE payments SET status = "paid" WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL')
             ->execute([$memberId]);
         requireModule('membershipExtend', 'lib/membership.php');
+        membershipRecordPortalYears($pdo, $memberId);
         $renewedTo = membershipExtend($pdo, $memberId);
         logAdminAction($pdo, $adminUserId, 'membership_renewed', $memberId, $renewedTo ? 'Renewed to ' . $renewedTo : 'Renewal confirmed');
     } else {
@@ -1071,6 +1072,7 @@ function approveMemberById(PDO $pdo, array $config, int $memberId, ?int $adminUs
     }
     $pdo->prepare('UPDATE payments SET status = "paid" WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL')
         ->execute([$memberId]);
+    if (function_exists('membershipRecordPortalYears')) membershipRecordPortalYears($pdo, $memberId);
     $membershipId = generateMembershipId($pdo);
     $pdo->prepare('UPDATE member_profiles SET membership_status = "active", membership_id = COALESCE(membership_id, ?), renewal_due = DATE_ADD(CURDATE(), INTERVAL 1 YEAR), review_reason = NULL, reviewed_at = NOW() WHERE id = ?')->execute([$membershipId, $memberId]);
     $row = memberRowByProfileId($pdo, $memberId);
@@ -4247,6 +4249,7 @@ Respiratory Society of Kenya");
                 if (memberAlreadyJoined(memberRowByProfileId($pdo, (int)$payment['member_profile_id']))) {
                     // Confirmed by Safaricom, so a renewal needs nobody to approve it.
                     requireModule('membershipExtend', 'lib/membership.php');
+                    membershipRecordPortalYears($pdo, (int)$payment['member_profile_id']);
                     membershipExtend($pdo, (int)$payment['member_profile_id']);
                 } else {
                     $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review", review_reason = NULL, reviewed_at = NOW() WHERE id = ?')->execute([(int)$payment['member_profile_id']]);
@@ -4417,6 +4420,7 @@ Respiratory Society of Kenya");
         $pdo->prepare('UPDATE payments SET status = "paid" WHERE id = ?')->execute([(int)$m[1]]);
         if (!empty($payment['member_profile_id'])) {
             $profileId = (int)$payment['member_profile_id'];
+            if (function_exists('membershipRecordPortalYears')) membershipRecordPortalYears($pdo, $profileId);
             $stmt = $pdo->prepare('SELECT membership_status FROM member_profiles WHERE id = ? LIMIT 1');
             $stmt->execute([$profileId]);
             $before = (string)($stmt->fetch()['membership_status'] ?? '');

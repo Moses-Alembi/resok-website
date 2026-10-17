@@ -377,6 +377,29 @@ function membershipYearsPaid(PDO $pdo, int $memberProfileId): array
 }
 
 /**
+ * Records the calendar year of each confirmed portal payment as a year paid for.
+ *
+ * The register filled member_payment_years and the portal never did, so a member who paid
+ * through the portal showed a dash for the year they paid (17 Oct 2026). Called wherever a
+ * payment becomes paid. A year the register already holds is left as the register has it.
+ */
+function membershipRecordPortalYears(PDO $pdo, int $memberProfileId): void
+{
+    try {
+        $pdo->prepare("INSERT IGNORE INTO member_payment_years (member_profile_id, year, amount, currency, paid_on, receipt, method, source, note)
+                       SELECT p.member_profile_id, YEAR(p.created_at), p.amount, COALESCE(p.currency, 'KES'), DATE(p.created_at),
+                              LEFT(COALESCE(NULLIF(p.provider_reference, ''), p.reference), 120), LEFT(p.method, 60), 'portal', 'Paid through the portal'
+                       FROM payments p
+                       WHERE p.member_profile_id = ? AND p.status = 'paid'
+                       ORDER BY p.created_at")
+            ->execute([$memberProfileId]);
+    } catch (Throwable $e) {
+        // The years table is missing on this server: the payment itself still stands.
+        error_log('Could not record paid years for member ' . $memberProfileId . ': ' . $e->getMessage());
+    }
+}
+
+/**
  * Every member's paid years in one query, keyed by profile id.
  *
  * The admin list shows a column per year for a few hundred members; asking per member would

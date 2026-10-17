@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Presentations - ReSoK</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--green-dark:#065a2c;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;
+      --bg:#f5f7fa;--radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06);--amber:#b54708;--amber-soft:#fff6e5}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:var(--green)}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50}
+    .top-inner{max-width:1000px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:16px}
+    .top img{height:38px;display:block}
+    .top .who{margin-left:auto;font-size:13.5px;color:var(--muted)}
+    main{max-width:1000px;margin:0 auto;padding:24px 18px 60px;display:flex;flex-direction:column;gap:20px}
+    .panel{background:#fff;border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+    h1{font-size:23px;letter-spacing:-.01em}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:72ch}
+    .notice{border-radius:10px;padding:12px 14px;font-size:14px;margin-top:14px}
+    .notice.info{background:#eef6ff;color:#1d4f91}
+    .notice.warn{background:var(--amber-soft);color:var(--amber)}
+    .notice.error{background:#fdecee;color:var(--red)}
+    .notice.ok{background:#e8f3ec;color:var(--green)}
+    .slot{border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:10px}
+    .slot h2{font-size:16px}
+    .meta{color:var(--muted);font-size:13.5px}
+    .ref{font-family:Consolas,monospace;font-size:12.5px;color:var(--muted)}
+    .chip{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px}
+    .chip.ok{background:#e8f3ec;color:var(--green)} .chip.no{background:var(--amber-soft);color:var(--amber)}
+    .btn{border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+    .btn-primary{background:var(--green);color:#fff} .btn-primary:hover{background:var(--green-dark)}
+    .btn-ghost{background:#fff;border:1px solid #d0d5dd;color:#344054}
+    .btn:disabled{opacity:.6;cursor:wait}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .bar{height:8px;background:#eef2f6;border-radius:999px;overflow:hidden}
+    .bar span{display:block;height:100%;background:var(--green);width:0;transition:width .2s}
+    @media (max-width:640px){.panel{padding:20px}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="top-inner">
+    <a href="conference"><img src="assets/img/logo.png" alt="ReSoK"></a>
+    <div class="who" id="who"></div>
+  </div></header>
+  <main>
+    <section class="panel">
+      <h1>My presentations</h1>
+      <p class="lede" id="lede">Upload the slides for each presentation you give. The newest version you upload is the one loaded on the computer in your session room.</p>
+      <div id="state" class="notice info">Loading&hellip;</div>
+    </section>
+    <div id="slots" style="display:grid;gap:14px"></div>
+  </main>
+
+  <script src="js/portal-state.js?v=20261017-proof"></script>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const api = (p, o) => window.ResokPortal.api(p, o);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const mb = (n) => (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + ' MB';
+    const when = (d) => d ? new Date(String(d).replace(' ', 'T')).toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    const ALLOWED = ['pptx', 'ppt', 'pdf'];
+    let data = null;
+
+    function note(text, type) { const s = $('state'); s.className = 'notice ' + (type || 'info'); s.innerHTML = text; s.hidden = !text; }
+
+    function render() {
+      const st = data.settings;
+      if (!data.slots.length) {
+        note('There is nothing for you to upload. Presenting authors of accepted abstracts and invited speakers see their presentations here once the programme team has listed them. If you expected one, sign in with the email address your abstract or invitation was sent to.', 'warn');
+      } else if (!st.open) {
+        note(st.switchedOn && st.deadline ? `The deadline (${esc(when(st.deadline))}) has passed. To change your slides now, contact the conference secretariat.` : 'Uploads are not open yet. You will be emailed when they are.', 'warn');
+      } else {
+        note(`Upload PowerPoint (.pptx) or PDF, up to ${mb(data.maxBytes)}.${st.deadline ? ` Deadline: <strong>${esc(when(st.deadline))}</strong>.` : ''} You can replace your file until then.`, 'info');
+      }
+      $('slots').innerHTML = data.slots.map((s, i) => `<article class="slot panel">
+          <div class="row" style="justify-content:space-between">
+            <div><h2>${s.reference ? `<span class="ref">${esc(s.reference)}</span> ` : ''}${esc(s.title)}</h2>
+              <div class="meta">${esc(s.presenter || '')}${s.type ? ' · ' + esc(s.type) : ''}${s.session ? ` · ${esc(s.session.title)}, ${esc(s.session.day)} ${esc(s.session.startsAt)}${s.session.room ? ', ' + esc(s.session.room) : ''}` : ''}</div></div>
+            ${s.file ? '<span class="chip ok"><i class="fas fa-check"></i> Received</span>' : '<span class="chip no">Not uploaded yet</span>'}
+          </div>
+          ${s.file ? `<div class="meta"><i class="fas fa-file"></i> <a href="${esc(s.file.downloadUrl)}">${esc(s.file.name)}</a> · ${mb(s.file.size)} · version ${s.file.version} · ${esc(when(s.file.uploadedAt))}</div>` : ''}
+          ${st.open ? `<div class="row">
+            <label class="btn ${s.file ? 'btn-ghost' : 'btn-primary'}" style="margin:0"><i class="fas fa-upload"></i> ${s.file ? 'Replace file' : 'Upload slides'}
+              <input type="file" accept=".pptx,.ppt,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint" data-slot="${i}" hidden></label>
+          </div>
+          <div data-progress="${i}" hidden><div class="bar"><span></span></div><div class="meta" data-ptext="${i}" style="margin-top:6px"></div></div>
+          <div data-msg="${i}" class="notice" hidden></div>` : ''}
+        </article>`).join('');
+      document.querySelectorAll('input[data-slot]').forEach((input) => input.addEventListener('change', () => {
+        if (input.files[0]) upload(Number(input.dataset.slot), input.files[0]);
+        input.value = '';
+      }));
+    }
+
+    async function upload(i, file) {
+      const slot = data.slots[i];
+      const msg = document.querySelector(`[data-msg="${i}"]`);
+      const show = (text, type) => { msg.className = 'notice ' + type; msg.textContent = text; msg.hidden = !text; };
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (!ALLOWED.includes(ext)) return show('Upload PowerPoint (.pptx or .ppt) or PDF. Macro-enabled files (.pptm) are not accepted.', 'error');
+      if (file.size > data.maxBytes) return show(`The file is ${mb(file.size)}; the limit is ${mb(data.maxBytes)}. In PowerPoint, use File > Compress Pictures (and compress any videos), then try again.`, 'error');
+      const prog = document.querySelector(`[data-progress="${i}"]`);
+      const bar = prog.querySelector('.bar span');
+      const ptext = document.querySelector(`[data-ptext="${i}"]`);
+      document.querySelectorAll('input[data-slot]').forEach((x) => { x.disabled = true; });
+      show('', 'info');
+      prog.hidden = false;
+      try {
+        const start = await api('conference/presentations/start', { method: 'POST', body: JSON.stringify({ slot: slot.slot, fileName: file.name, size: file.size }) });
+        const size = start.chunkBytes;
+        let offset = 0;
+        while (offset < file.size) {
+          const piece = file.slice(offset, offset + size);
+          let tries = 0;
+          for (;;) {
+            const res = await fetch(`api/index.php?route=conference/presentations/upload/${start.uploadId}&offset=${offset}`, {
+              method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/octet-stream' }, body: piece });
+            const body = await res.json().catch(() => ({}));
+            if (res.ok) { offset = body.received; break; }
+            if (res.status === 409 && typeof body.received === 'number') { offset = body.received; break; }
+            if (++tries >= 4 || res.status === 400 || res.status === 401 || res.status === 403) throw new Error(body.error || 'The upload stopped. Please try again.');
+            await new Promise((r) => setTimeout(r, 1500 * tries));   // a dropped connection: wait and resend
+          }
+          bar.style.width = Math.round(100 * offset / file.size) + '%';
+          ptext.textContent = `Uploading ${mb(offset)} of ${mb(file.size)}`;
+        }
+        ptext.textContent = 'Checking the file…';
+        await api(`conference/presentations/finish/${start.uploadId}`, { method: 'POST', body: '{}' });
+        data = await api('conference/presentations');
+        render();
+        const done = document.querySelector(`[data-msg="${i}"]`);
+        if (done) { done.className = 'notice ok'; done.textContent = 'Received. Thank you - this is now the version for your session.'; done.hidden = false; }
+      } catch (e) {
+        show(e.message, 'error');
+        prog.hidden = true;
+      } finally {
+        document.querySelectorAll('input[data-slot]').forEach((x) => { x.disabled = false; });
+      }
+    }
+
+    (async function boot() {
+      try {
+        data = await api('conference/presentations');
+        $('who').textContent = data.event ? data.event.name : '';
+        render();
+      } catch (e) {
+        if (e.status === 401) note(`Sign in to upload your presentation. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>`, 'warn');
+        else note(esc(e.message), 'error');
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

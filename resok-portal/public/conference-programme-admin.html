@@ -83,6 +83,17 @@
         <div id="spkNew"></div>
         <div id="spkList"></div>
       </section>
+      <section class="panel" id="presentations" hidden>
+        <h2 style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">Presentations <span class="muted" id="presCount"></span></h2>
+        <p class="muted">Presenting authors of accepted abstracts and invited speakers upload their slides at <a href="conference-presentations" target="_blank" rel="noopener">conference-presentations</a> (PowerPoint or PDF, up to 100 MB). Those without a file are emailed 14 and 3 days before the deadline. Download the newest version of each for the room computers.</p>
+        <div id="presMsg" class="notice" hidden></div>
+        <div class="row" style="align-items:end;margin:10px 0">
+          <div class="field" style="max-width:240px"><label for="presDeadline">Deadline</label><input type="datetime-local" id="presDeadline"></div>
+          <label class="check" style="flex:0;white-space:nowrap"><input type="checkbox" id="presOpen"> Uploads open</label>
+          <div class="field" style="max-width:200px"><label for="presFilter">Show</label><select id="presFilter"><option value="">All</option><option value="missing">Missing only</option><option value="received">Received only</option></select></div>
+        </div>
+        <div id="presList"></div>
+      </section>
     </div>
     <aside>
       <div class="panel">
@@ -293,8 +304,37 @@
     }
     $('spkAdd').onclick = () => { $('spkNew').innerHTML = spkForm(); bindForm($('spkNew').querySelector('form')); $('spkNew').querySelector('input[name=name]').focus(); };
 
+    // ---------------- presentations ----------------
+    let pr = null;
+    function presMsg(type, text) { const m = $('presMsg'); m.className = `notice ${type}`; m.textContent = text; m.hidden = !text; }
+    async function presCall(path, opts, okText) {
+      try { pr = await api(path, opts); renderPres(); if (okText) presMsg('ok', okText); return true; }
+      catch (e) { presMsg('error', e.message); return false; }
+    }
+    function renderPres() {
+      $('presentations').hidden = false;
+      $('presOpen').checked = pr.settings.switchedOn;
+      $('presDeadline').value = pr.settings.deadline ? pr.settings.deadline.slice(0, 16).replace(' ', 'T') : '';
+      $('presCount').textContent = `${pr.received} of ${pr.total} received`;
+      const f = $('presFilter').value;
+      const rows = pr.slots.filter((s) => !f || (f === 'missing' ? !s.file : !!s.file))
+        .sort((a, b) => String(a.session ? a.session.day + a.session.startsAt : 'z').localeCompare(String(b.session ? b.session.day + b.session.startsAt : 'z')));
+      $('presList').innerHTML = rows.length ? `<ul class="items">${rows.map((s) => `<li>
+          <span class="grow">${s.reference ? `<span class="ref">${esc(s.reference)}</span> ` : ''}${esc(s.title)}
+            <span class="muted">· ${esc(s.presenter || 'no presenter')}${s.session ? ` · ${esc(s.session.day.slice(5))} ${esc(s.session.startsAt)}${s.session.room ? ' ' + esc(s.session.room) : ''}` : ' · not placed yet'}</span></span>
+          ${s.file ? `<a class="btn btn-ghost btn-sm" href="${esc(s.file.downloadUrl)}"><i class="fas fa-download"></i> v${s.file.version}</a><span class="chip ok">received</span>`
+                   : '<span class="chip no">missing</span>'}</li>`).join('')}</ul>` : '<p class="muted">Nothing to show.</p>';
+    }
+    $('presFilter').onchange = () => pr && renderPres();
+    $('presOpen').onchange = () => {
+      const open = $('presOpen').checked;
+      if (open && !confirm('Open presentation uploads? Presenters can then upload, and reminders go out 14 and 3 days before the deadline.')) { $('presOpen').checked = false; return; }
+      presCall('conference/admin/presentations/settings', { method: 'POST', body: JSON.stringify({ open }) }, open ? 'Uploads are open.' : 'Uploads are closed.');
+    };
+    $('presDeadline').onchange = () => presCall('conference/admin/presentations/settings', { method: 'POST', body: JSON.stringify({ deadline: $('presDeadline').value }) }, 'Deadline saved.');
+
     (async function boot() {
-      try { st = await api('conference/admin/programme'); render(); spkCall('conference/admin/speakers'); }
+      try { st = await api('conference/admin/programme'); render(); spkCall('conference/admin/speakers'); presCall('conference/admin/presentations'); }
       catch (e) {
         $('boot').innerHTML = e.status === 401 ? `Sign in first. <a href="login?next=${encodeURIComponent(location.pathname)}">Sign in</a>` : esc(e.message);
       }

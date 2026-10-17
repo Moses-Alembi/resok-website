@@ -151,6 +151,13 @@
       </form>
     </section>
 
+    <!-- Presenters: link to the slide upload page -->
+    <section class="panel" id="presLink" hidden>
+      <h2><i class="fas fa-file-powerpoint" style="color:var(--red)"></i> Your presentation</h2>
+      <p class="lede" style="margin:0 0 14px" id="presLinkText"></p>
+      <a class="btn btn-primary" href="conference-presentations"><i class="fas fa-upload"></i> Upload my slides</a>
+    </section>
+
     <!-- Speaker profile -->
     <section class="panel" id="speaker" hidden>
       <h2>Your speaker profile</h2>
@@ -637,12 +644,21 @@
         $('loading').innerHTML = `<p>${esc(e.status === 404 ? 'There is no conference open for registration at the moment.' : e.message)}</p>`;
         return;
       }
-      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register', 'visa', 'survey', 'speaker'].forEach((id) => show(id, false));
+      ['loading', 'intro', 'confirmed', 'awaiting', 'auth', 'register', 'visa', 'survey', 'speaker', 'presLink'].forEach((id) => show(id, false));
       show('intro');
       renderHeader();
       renderWho();
       renderFees();
       const reg = data.me && data.me.registration;
+      if (data.me) api('conference/presentations').then((p) => {
+        if (!p.slots.length) return;
+        const missing = p.slots.filter((x) => !x.file).length;
+        $('presLinkText').textContent = !p.settings.open
+          ? 'You are presenting at the conference. Slide uploads are not open yet; you will be emailed when they are.'
+          : missing ? `You have ${missing} presentation${missing === 1 ? '' : 's'} to upload${p.settings.deadline ? ' before ' + new Date(p.settings.deadline.replace(' ', 'T')).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }) : ''}.`
+                    : 'Your slides are received. You can replace them until the deadline.';
+        show('presLink');
+      }).catch(() => {});
       if (data.me) loadSpeaker().then(() => { if (location.hash === '#speaker' && !$('speaker').hidden) $('speaker').scrollIntoView(); });
       if (!data.me) {
         $('signinLink').href = 'login?next=' + encodeURIComponent(location.pathname);

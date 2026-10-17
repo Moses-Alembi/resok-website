@@ -34,7 +34,7 @@ foreach (['SimpleMailer', 'portal-mail', 'abstracts', 'abstracts-review', 'abstr
     require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 // Conference registration reminders ride on the same job and the same mail queue.
-foreach (['qr', 'conference', 'conference-groups', 'conference-survey'] as $module) {
+foreach (['qr', 'conference', 'conference-groups', 'conference-survey', 'conference-presentations'] as $module) {
     if (is_file(__DIR__ . '/../lib/' . $module . '.php')) require_once __DIR__ . '/../lib/' . $module . '.php';
 }
 
@@ -52,6 +52,8 @@ if (function_exists('confEnsureTables') && confEnsureTables($pdo)) {
         $conference['payment'] = confSendPaymentReminders($pdo, $config);
         $conference['presenter'] = confSendPresenterReminders($pdo, $config);
         if (function_exists('confSendSurveyInvites')) $conference['survey'] = confSendSurveyInvites($pdo, $config);
+        if (function_exists('confPresSendReminders')) $conference['presentations'] = confPresSendReminders($pdo, $config);
+        if (function_exists('confPresCleanup')) confPresCleanup($pdo);
     } catch (Throwable $e) {
         echo 'Conference reminders failed: ' . $e->getMessage() . "\n";
     }

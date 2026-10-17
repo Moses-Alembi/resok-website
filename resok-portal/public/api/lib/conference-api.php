@@ -42,6 +42,75 @@ function confHandle(PDO $pdo, array $config, string $route, string $method): voi
         return (bool)$stmt->fetch();
     };
 
+    // ------------------------------------------------------------------ presentations
+    if (strpos($route, 'conference/presentations') === 0 || strpos($route, 'conference/admin/presentations') === 0) {
+        if (!function_exists('confPresEnsureTables') || !confPresEnsureTables($pdo)) {
+            respond(503, ['error' => 'Presentation uploads are not available on this server.']);
+        }
+        $user = auth($config);
+        $event = $eventFor($user);
+        $eventId = (int)$event['id'];
+        // The programme team gets every file: conference administrators and the programme chair.
+        $presStaff = $canEditProgramme($user, $eventId);
+
+        if (preg_match('#^conference/presentations/file/(\d+)$#', $route, $m) && $method === 'GET') {
+            if ($presStaff) confRequireStaffMfa($pdo, $config, $user, confRoles($pdo, $user, $config, $eventId));
+            $row = confPresFileFor($pdo, $eventId, $user, (int)$m[1], $presStaff);
+            $path = $row ? confPresDir($config) . '/' . basename((string)$row['file_name']) : '';
+            if (!$path || !is_file($path)) respond(404, ['error' => 'No such file.']);
+            $download = preg_replace('/[^A-Za-z0-9._ -]+/', '_', (string)$row['original_name']) ?: 'presentation';
+            header_remove('Content-Type');
+            header('Content-Type: ' . $row['mime']);
+            header('Content-Length: ' . filesize($path));
+            header('Content-Disposition: attachment; filename="' . $download . '"');
+            header('X-Content-Type-Options: nosniff');
+            header("Content-Security-Policy: default-src 'none'; sandbox");
+            header('Cache-Control: private, no-store');
+            readfile($path);
+            exit;
+        }
+        if ($route === 'conference/presentations' && $method === 'GET') {
+            $latest = confPresLatest($pdo, $eventId);
+            respond(200, ['event' => $eventShape($event), 'settings' => confPresSettings($pdo, $eventId),
+                          'maxBytes' => CONF_PRES_MAX_BYTES, 'chunkBytes' => CONF_PRES_CHUNK_BYTES,
+                          'slots' => array_map(fn($s) => confPresShape($s, $latest), confPresSlotsFor($pdo, $eventId, $user))]);
+        }
+        if ($route === 'conference/presentations/start' && $method === 'POST') {
+            [$id, $e] = confPresStart($pdo, $event, $user, input());
+            if ($e) respond(400, ['error' => $e]);
+            respond(200, ['uploadId' => $id, 'chunkBytes' => CONF_PRES_CHUNK_BYTES]);
+        }
+        if (preg_match('#^conference/presentations/upload/([a-f0-9]{32})$#', $route, $m) && $method === 'POST') {
+            $offset = (int)($_GET['offset'] ?? -1);
+            $bytes = (string)file_get_contents('php://input', false, null, 0, CONF_PRES_CHUNK_BYTES + 1);
+            [$received, $e] = confPresChunk($pdo, $user, $m[1], $offset, $bytes);
+            if ($e === 'out_of_order') respond(409, ['error' => 'Out of order.', 'received' => $received]);
+            if ($e) respond(400, ['error' => $e]);
+            respond(200, ['received' => $received]);
+        }
+        if (preg_match('#^conference/presentations/finish/([a-f0-9]{32})$#', $route, $m) && $method === 'POST') {
+            [$file, $e] = confPresFinish($pdo, $config, $event, $user, $m[1]);
+            if ($e) respond(400, ['error' => $e]);
+            respond(200, ['file' => $file]);
+        }
+
+        // Programme team
+        if (!$presStaff) respond(403, ['error' => 'Only the programme chair and conference administrators see all presentations.']);
+        confRequireStaffMfa($pdo, $config, $user, confRoles($pdo, $user, $config, $eventId));
+        $all = function () use ($pdo, $eventId): void {
+            $latest = confPresLatest($pdo, $eventId);
+            $slots = array_map(fn($s) => confPresShape($s, $latest), confPresAllSlots($pdo, $eventId));
+            respond(200, ['settings' => confPresSettings($pdo, $eventId), 'slots' => $slots,
+                          'received' => count(array_filter($slots, fn($s) => $s['file'] !== null)), 'total' => count($slots)]);
+        };
+        if ($route === 'conference/admin/presentations' && $method === 'GET') $all();
+        if ($route === 'conference/admin/presentations/settings' && $method === 'POST') {
+            if ($e = confPresSaveSettings($pdo, $eventId, input(), (int)$user['userId'])) respond(400, ['error' => $e]);
+            $all();
+        }
+        respond(404, ['error' => 'Unknown route.']);
+    }
+
     // ------------------------------------------------------------------ speakers
     $speakersReady = function_exists('confSpeakersEnsureTables') && confSpeakersEnsureTables($pdo);
     if (strpos($route, 'conference/speaker') === 0 || strpos($route, 'conference/admin/speakers') === 0) {

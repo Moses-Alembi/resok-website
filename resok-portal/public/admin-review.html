@@ -846,13 +846,13 @@
       await loadPayments(selectedMember.id);
     }
 
-    const YEAR_SOURCE = { register: "office register", portal: "paid in the portal", manual: "recorded by an admin" };
+    const YEAR_SOURCE = { register: "Office register", portal: "Paid in the portal", manual: "Recorded by an admin" };
     function renderYears(years) {
       const box = document.getElementById("memberYears");
       if (!box) return;
       if (!years.length) { box.textContent = "No years recorded."; return; }
       box.innerHTML = years.map((y) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);color:var(--text)">
-          <span><strong>${esc(y.year)}</strong> <span style="color:var(--muted)">&middot; ${esc(YEAR_SOURCE[y.source] || y.source)}${y.paidOn ? " &middot; " + esc(y.paidOn) : ""}${y.amount != null ? " &middot; KES " + esc(y.amount) : ""}${y.receipt ? " &middot; " + esc(y.receipt) : ""}</span></span>
+          <span><strong>${esc(y.year)}</strong> <span style="color:var(--muted)">&middot; ${esc(YEAR_SOURCE[y.source] || y.source)}${y.paidOn ? " &middot; Paid " + esc(new Date(y.paidOn + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })) : ""}${y.amount != null ? " &middot; KES " + esc(Number(y.amount).toLocaleString("en-KE")) : ""}${y.receipt ? " &middot; Receipt " + esc(y.receipt) : ""}</span></span>
           ${y.source === "manual" ? `<button class="btn" type="button" data-unmark="${esc(y.year)}" style="padding:3px 9px;font-size:12px">Remove</button>` : ""}</div>`).join("");
       box.querySelectorAll("[data-unmark]").forEach((b) => b.addEventListener("click", async () => {
         if (!confirm(`Remove ${b.dataset.unmark} from this member's paid years?`)) return;

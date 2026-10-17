@@ -1014,7 +1014,50 @@ function logAdminAction(PDO $pdo, ?int $adminUserId, string $action, ?int $targe
     $stmt->execute([$adminUserId, $action, $targetMemberProfileId, $reason]);
 }
 
+/**
+ * Already a member: holds a membership number, or is (or was) active. New applicants get their
+ * number only when approved, so this tells a renewal from a first subscription. Imported
+ * members carry their register number, so they count as members from day one.
+ */
+function memberAlreadyJoined(?array $row): bool {
+    if (!$row) return false;
+    return trim((string)($row['membership_id'] ?? '')) !== ''
+        || in_array((string)($row['membership_status'] ?? ''), ['active', 'expired'], true);
+}
+
+/**
+ * Approving someone who is already a member confirms their renewal payment instead: the
+ * date moves on one term from where it stands (time already paid for is kept), the status
+ * is active, and no welcome email goes out - they joined long ago. This is what an old member
+ * who uploads a renewal slip lands in, and approving them used to welcome them to the
+ * Society as if new and reset their date to a year from today.
+ */
+function confirmRenewalById(PDO $pdo, int $memberId, ?int $adminUserId): array {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM payments WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL');
+    $stmt->execute([$memberId]);
+    $hasProof = (int)$stmt->fetchColumn() > 0;
+    $renewedTo = null;
+    if ($hasProof) {
+        $pdo->prepare('UPDATE payments SET status = "paid" WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL')
+            ->execute([$memberId]);
+        requireModule('membershipExtend', 'lib/membership.php');
+        $renewedTo = membershipExtend($pdo, $memberId);
+        logAdminAction($pdo, $adminUserId, 'membership_renewed', $memberId, $renewedTo ? 'Renewed to ' . $renewedTo : 'Renewal confirmed');
+    } else {
+        // Nothing to confirm: only put a member who was left waiting back to active.
+        $pdo->prepare('UPDATE member_profiles SET membership_status = "active", review_reason = NULL, reviewed_at = NOW()
+                       WHERE id = ? AND membership_status IN ("under_review", "rejected", "payment_required")')
+            ->execute([$memberId]);
+        logAdminAction($pdo, $adminUserId, 'membership_restored', $memberId, null);
+    }
+    $member = mapMember(memberRowByProfileId($pdo, $memberId)) ?? [];
+    return $member + ['renewal' => true, 'renewedTo' => $renewedTo, 'welcomeEmailSent' => null, 'welcomeEmailError' => null];
+}
+
 function approveMemberById(PDO $pdo, array $config, int $memberId, ?int $adminUserId): array {
+    if (memberAlreadyJoined(memberRowByProfileId($pdo, $memberId))) {
+        return confirmRenewalById($pdo, $memberId, $adminUserId);
+    }
     // A proof upload is stored as pending, not paid: until an admin has looked at it, it is a
     // claim, and treating it as money received let a member download a "PAID" receipt for any
     // image they uploaded. Approving the member is that look, so it confirms their proof.
@@ -1057,6 +1100,17 @@ function approveMemberById(PDO $pdo, array $config, int $memberId, ?int $adminUs
 }
 
 function rejectMemberById(PDO $pdo, int $memberId, string $reason, ?int $adminUserId): array {
+    if (memberAlreadyJoined(memberRowByProfileId($pdo, $memberId))) {
+        // A renewal slip that is not accepted: the slip fails, the membership stands and
+        // runs to its date as before.
+        $pdo->prepare('UPDATE payments SET status = "failed" WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL')
+            ->execute([$memberId]);
+        $pdo->prepare('UPDATE member_profiles SET membership_status = "active", review_reason = ?, reviewed_at = NOW()
+                       WHERE id = ? AND membership_status IN ("under_review", "payment_required", "rejected")')
+            ->execute([$reason, $memberId]);
+        logAdminAction($pdo, $adminUserId, 'renewal_payment_rejected', $memberId, $reason);
+        return (mapMember(memberRowByProfileId($pdo, $memberId)) ?? []) + ['renewal' => true];
+    }
     $pdo->prepare('UPDATE member_profiles SET membership_status = "rejected", review_reason = ?, reviewed_at = NOW() WHERE id = ?')->execute([$reason, $memberId]);
     // The proof they sent was not accepted; mark it so, rather than leave it pending forever.
     $pdo->prepare('UPDATE payments SET status = "failed" WHERE member_profile_id = ? AND status = "pending" AND proof_filename IS NOT NULL')
@@ -4190,7 +4244,13 @@ Respiratory Society of Kenya");
             $pdo->prepare('UPDATE payments SET status = "paid", provider_reference = COALESCE(NULLIF(?, ""), provider_reference) WHERE id = ?')
                 ->execute([$meta['receipt'], (int)$payment['id']]);
             if (!empty($payment['member_profile_id'])) {
-                $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review", review_reason = NULL, reviewed_at = NOW() WHERE id = ?')->execute([(int)$payment['member_profile_id']]);
+                if (memberAlreadyJoined(memberRowByProfileId($pdo, (int)$payment['member_profile_id']))) {
+                    // Confirmed by Safaricom, so a renewal needs nobody to approve it.
+                    requireModule('membershipExtend', 'lib/membership.php');
+                    membershipExtend($pdo, (int)$payment['member_profile_id']);
+                } else {
+                    $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review", review_reason = NULL, reviewed_at = NOW() WHERE id = ?')->execute([(int)$payment['member_profile_id']]);
+                }
             }
             $pdo->commit();
         } catch (Throwable $saveError) {
@@ -4274,8 +4334,12 @@ Respiratory Society of Kenya");
         $stmt = $pdo->prepare('INSERT INTO payments (user_id, member_profile_id, amount, currency, method, payment_type, phone, status, reference, provider_reference, proof_filename, proof_original_name, proof_mime_type, proof_file_size) VALUES (?, ?, ?, "KES", ?, ?, ?, "pending", ?, ?, ?, ?, ?, ?)');
         $stmt->execute([(int)$user['userId'], (int)$member['id'], (float)$_POST['amount'], $paymentMode, $_POST['type'] ?? 'Membership Application/Renewal', $_POST['phone'] ?? $member['mobile'], $reference, $mpesaCode, $filename, $name, $type, (int)$file['size']]);
         $paymentId = (int)$pdo->lastInsertId();
-        $stmt = $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review", review_reason = NULL, reviewed_at = NOW() WHERE id = ?');
-        $stmt->execute([(int)$member['id']]);
+        // An applicant waits for review. An existing member renewing keeps their access while
+        // the slip is checked; it still shows in the review queue (see members/review-queue).
+        if (!memberAlreadyJoined($member)) {
+            $stmt = $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review", review_reason = NULL, reviewed_at = NOW() WHERE id = ?');
+            $stmt->execute([(int)$member['id']]);
+        }
         $pdo->commit();
 
         $stmt = $pdo->prepare('SELECT * FROM payments WHERE id = ? LIMIT 1');
@@ -4396,7 +4460,9 @@ Respiratory Society of Kenya");
     if ($route === 'members/review-queue' && $method === 'GET') {
         $user = auth($config);
         requireAdmin($user);
-        $rows = $pdo->query('SELECT mp.*, u.email FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.membership_status IN ("under_review", "payment_required", "rejected") ORDER BY mp.updated_at DESC LIMIT 100')->fetchAll();
+        $rows = $pdo->query('SELECT mp.*, u.email FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.membership_status IN ("under_review", "payment_required", "rejected")
+                                OR EXISTS (SELECT 1 FROM payments p WHERE p.member_profile_id = mp.id AND p.status = "pending" AND p.proof_filename IS NOT NULL)
+                             ORDER BY mp.updated_at DESC LIMIT 100')->fetchAll();
         respond(200, array_map(fn($row) => array_merge(mapMember($row), ['email' => $row['email']]), $rows));
     }
 

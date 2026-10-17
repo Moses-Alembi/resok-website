@@ -705,14 +705,15 @@
 
     async function bulkApprove() {
       if (!selectedIds.size) return;
-      if (!confirm(`Approve ${selectedIds.size} selected member(s)? This issues membership IDs and sends welcome emails.`)) return;
+      if (!confirm(`Approve ${selectedIds.size} selected member(s)? New applicants get a membership ID and a welcome email; existing members have their renewal confirmed, with no welcome email.`)) return;
       try {
         const result = await window.ResokPortal.api("/api/members/bulk-approve", { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds) }) });
         // Approving and delivering are separate outcomes, and the endpoint reports both per
         // member. Showing only the first is how a whole batch can be approved while not one
         // of them receives their letter and card, with nothing on screen to say so.
         const unsent = result.approved.filter((m) => m.welcomeEmailSent === false);
-        const parts = [`Approved ${result.approved.length} member(s).`];
+        const renewals = result.approved.filter((m) => m.renewal).length;
+        const parts = [`Approved ${result.approved.length - renewals} new member(s)` + (renewals ? `, confirmed ${renewals} renewal(s) (no welcome email).` : ".")];
         if (result.errors.length) parts.push(`${result.errors.length} could not be approved: ${result.errors[0].error}`);
         if (unsent.length) parts.push(`${unsent.length} welcome email(s) did not send - ${unsent[0].welcomeEmailError || "the mail server refused the message"}`);
         showNote(parts.join(" "), unsent.length || result.errors.length ? "error" : "success");
@@ -785,7 +786,7 @@
           <div class="fact"><span>Portal Account</span><strong>${selectedMember.emailVerified === false ? "Not claimed yet" : "Claimed"}</strong></div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-          <button class="btn btn-primary" id="approveBtn"><i class="fas fa-check"></i> Approve / Issue ID</button>
+          <button class="btn btn-primary" id="approveBtn"><i class="fas fa-check"></i> ${isExistingMember(selectedMember) ? "Confirm renewal payment" : "Approve / Issue ID"}</button>
           <button class="btn btn-danger" id="rejectBtn"><i class="fas fa-xmark"></i> Reject</button>
           <button class="btn" id="welcomePacketBtn"><i class="fas fa-envelope"></i> Send welcome packet</button>
           ${selectedMember.emailVerified === false ? '<button class="btn" id="claimLinkBtn"><i class="fas fa-key"></i> Send claim link</button>' : ""}
@@ -868,6 +869,12 @@
       }
     }
 
+    // Already a member (has a number, or is active/expired): approving confirms a renewal
+    // payment, keeps their number and sends no welcome email. Mirrors memberAlreadyJoined().
+    function isExistingMember(m) {
+      return !!(m && ((m.membershipId && String(m.membershipId).trim()) || ["active", "expired"].includes(m.membershipStatus)));
+    }
+
     async function approveSelectedMember() {
       if (!selectedMember) return;
       if (useLocalPreviewData()) {
@@ -886,7 +893,11 @@
         // Approval and the welcome email are separate things that can disagree: the member
         // is active either way, but if the email did not go out somebody has to know, or an
         // approved member simply never receives their letter and card.
-        if (approved && approved.welcomeEmailSent === false) {
+        if (approved && approved.renewal) {
+          showNote(approved.renewedTo
+            ? `Renewal confirmed. Membership now runs to ${approved.renewedTo}. No welcome email: they are already a member.`
+            : "No renewal payment was waiting; the member is active again. No welcome email: they are already a member.");
+        } else if (approved && approved.welcomeEmailSent === false) {
           showNote("Member approved, but the welcome email did NOT send"
             + (approved.welcomeEmailError ? ": " + approved.welcomeEmailError : "")
             + ". Their welcome letter has not been delivered.", "error");
@@ -976,11 +987,13 @@ ${why}`);
         return;
       }
       try {
-        await window.ResokPortal.api(`/api/members/${selectedMember.id}/reject`, {
+        const rejected = await window.ResokPortal.api(`/api/members/${selectedMember.id}/reject`, {
           method: "POST",
           body: JSON.stringify({ reason })
         });
-        showNote("Member rejected.");
+        showNote(rejected && rejected.renewal
+          ? "Renewal payment not accepted. Their membership is unchanged and still runs to its date."
+          : "Member rejected.");
         await loadMembers();
       } catch (error) {
         showNote(error.message || "Could not reject member.", "error");

@@ -4599,6 +4599,52 @@ Respiratory Society of Kenya");
         ]);
     }
 
+    // Years a member has paid for, and recording one paid outside the portal (the office
+    // register's 2026 entries were never imported, e.g. Dr Valentine Kei-Muriithi, 16.02.2026).
+    if (preg_match('#^members/(\d+)/years$#', $route, $m)) {
+        $user = auth($config);
+        requireAdmin($user);
+        $row = memberRowByProfileId($pdo, (int)$m[1]);
+        if (!$row) respond(404, ['error' => 'No such member.']);
+        requireModule('membershipYearsPaid', 'lib/membership.php');
+        if ($method === 'POST') {
+            $data = input();
+            $year = (int)($data['year'] ?? 0);
+            $thisYear = (int)date('Y');
+            if ($year < 2010 || $year > $thisYear + 1) respond(400, ['error' => 'Choose a year between 2010 and ' . ($thisYear + 1) . '.']);
+            $paidOn = trim(is_scalar($data['paidOn'] ?? null) ? (string)$data['paidOn'] : '');
+            if ($paidOn !== '') {
+                $d = DateTimeImmutable::createFromFormat('!Y-m-d', $paidOn);
+                if (!$d || $d->format('Y-m-d') !== $paidOn) respond(400, ['error' => 'The date paid must be a real date.']);
+                if ($d > new DateTimeImmutable('today')) respond(400, ['error' => 'The date paid cannot be in the future.']);
+            }
+            $amount = $data['amount'] ?? null;
+            if ($amount === '' || $amount === null) $amount = null;
+            elseif (!is_numeric($amount) || (float)$amount < 0 || (float)$amount > 1000000) respond(400, ['error' => 'The amount must be a number.']);
+            $receipt = mb_substr(trim(is_scalar($data['receipt'] ?? null) ? (string)$data['receipt'] : ''), 0, 120);
+            $exists = $pdo->prepare('SELECT source FROM member_payment_years WHERE member_profile_id = ? AND year = ?');
+            $exists->execute([(int)$m[1], $year]);
+            if ($exists->fetchColumn()) respond(409, ['error' => $year . ' is already recorded as paid for this member.']);
+            $pdo->prepare("INSERT INTO member_payment_years (member_profile_id, year, amount, currency, paid_on, receipt, method, source, note, recorded_by)
+                           VALUES (?, ?, ?, 'KES', ?, ?, NULL, 'manual', 'Recorded by an administrator', ?)")
+                ->execute([(int)$m[1], $year, $amount === null ? null : (float)$amount, $paidOn ?: null, $receipt ?: null, (int)$user['userId']]);
+            logAdminAction($pdo, (int)$user['userId'], 'year_marked_paid', (int)$m[1],
+                           $year . ($paidOn ? ', paid ' . $paidOn : '') . ($amount !== null ? ', KES ' . $amount : '') . ($receipt ? ', receipt ' . $receipt : ''));
+        }
+        respond(200, ['years' => membershipYearsPaid($pdo, (int)$m[1])]);
+    }
+    // Undo a year recorded by hand by mistake. Register and portal records are not removable here.
+    if (preg_match('#^members/(\d+)/years/(\d{4})/remove$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        $stmt = $pdo->prepare("DELETE FROM member_payment_years WHERE member_profile_id = ? AND year = ? AND source = 'manual'");
+        $stmt->execute([(int)$m[1], (int)$m[2]]);
+        if (!$stmt->rowCount()) respond(400, ['error' => 'Only a year recorded by hand can be removed here.']);
+        logAdminAction($pdo, (int)$user['userId'], 'year_unmarked', (int)$m[1], (string)$m[2]);
+        requireModule('membershipYearsPaid', 'lib/membership.php');
+        respond(200, ['years' => membershipYearsPaid($pdo, (int)$m[1])]);
+    }
+
     // Correcting a member's name: the register import put some names in the wrong fields
     // (e.g. "Amir Faraj Tamin" all in the surname). Logged with the old and new name.
     if (preg_match('#^members/(\d+)/name$#', $route, $m) && $method === 'POST') {

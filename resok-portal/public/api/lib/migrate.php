@@ -69,6 +69,7 @@ function migrateOrder(): array
         'migration-imported-members-renewal.sql', // clears imported members' shared 30 Nov date, once; needs the years above
         'migration-portal-paid-years.sql',     // portal payments count as paid years; needs the years above
         'migration-member-name-corrections.sql', // one-off name fixes for imported records
+        'migration-register-2026-payments.sql', // 2026 register payments the import missed
         'schema-blog.sql',                     // blog tables, which reference users
         'schema-elections.sql',                // board elections: posts, candidates, roll
         'schema-elections-ballot.sql',         // the ballot; depends on the roll above

@@ -15,7 +15,8 @@ check() {
 }
 q() { $MYSQL -N -e "$1"; }
 cleanup() {
-    q "DELETE a FROM admin_actions a JOIN member_profiles mp ON mp.id = a.target_member_profile_id JOIN users u ON u.id = mp.user_id WHERE u.email LIKE 't-name-%@local';
+    q "DELETE y FROM member_payment_years y JOIN member_profiles mp ON mp.id = y.member_profile_id JOIN users u ON u.id = mp.user_id WHERE u.email LIKE 't-name-%@local';
+       DELETE a FROM admin_actions a JOIN member_profiles mp ON mp.id = a.target_member_profile_id JOIN users u ON u.id = mp.user_id WHERE u.email LIKE 't-name-%@local';
        DELETE mp FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE u.email LIKE 't-name-%@local';
        DELETE FROM users WHERE email LIKE 't-name-%@local';" 2>/dev/null
 }
@@ -42,6 +43,26 @@ check "a list where a name belongs is refused"           'both needed' "$r"
 r=$(post "$ADMIN" "members/$P/name" "{\"firstName\":\"Wanjiru-O'Brien\",\"surname\":\"Ng'ang'a\"}")
 check "hyphens and apostrophes are fine"                 "Ng'ang'a" "$r"
 check "the membership number is untouched"               "ReSok M/T9" "$(q "SELECT membership_id FROM member_profiles WHERE id = $P")"
+
+echo "Marking a year paid (payments made outside the portal):"
+r=$(post "$MEM" "members/$P/years" '{"year":2026,"paidOn":"2026-02-16"}')
+check "a member cannot mark years paid"                  'rror' "$r"
+r=$(post "$ADMIN" "members/$P/years" '{"year":2026,"paidOn":"2026-02-16","amount":"5000","receipt":"REG-1"}')
+check "an admin marks 2026 paid"                         '"year":2026' "$r"
+check "with its date and source"                         '"paidOn":"2026-02-16"' "$r"
+check "the year tick shows in the members list"          "2026" "$(curl -s -b "$ADMIN" "${API}members" | /c/xampp/php/php.exe -r '$d=json_decode(stream_get_contents(STDIN),true); foreach(($d["members"]??$d) as $m) if(($m["membershipId"]??"")==="ReSok M/T9") echo json_encode($m["yearsPaid"]);')"
+r=$(post "$ADMIN" "members/$P/years" '{"year":2026}')
+check "the same year cannot be recorded twice"           'already recorded' "$r"
+r=$(post "$ADMIN" "members/$P/years" '{"year":2025,"paidOn":"2999-01-01"}')
+check "a future payment date is refused"                 'cannot be in the future' "$r"
+r=$(post "$ADMIN" "members/$P/years" '{"year":1900}')
+check "an impossible year is refused"                    'Choose a year' "$r"
+check "it is in the audit log"                           "2026, paid 2026-02-16, KES 5000, receipt REG-1" "$(q "SELECT reason FROM admin_actions WHERE target_member_profile_id = $P AND action = 'year_marked_paid'")"
+r=$(post "$ADMIN" "members/$P/years/2026/remove" '{}')
+check "a year recorded by hand can be removed"           '"years":[]' "$r"
+q "INSERT INTO member_payment_years (member_profile_id, year, source) VALUES ($P, 2024, 'register')"
+r=$(post "$ADMIN" "members/$P/years/2024/remove" '{}')
+check "a register year cannot be removed here"           'Only a year recorded by hand' "$r"
 
 cleanup; rm -f "$ADMIN" "$MEM"
 echo; echo "$pass passed, $fail failed"; [ "$fail" -eq 0 ]

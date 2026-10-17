@@ -806,6 +806,21 @@
           <button class="btn" id="welcomePacketBtn"><i class="fas fa-envelope"></i> Send welcome packet</button>
           ${selectedMember.emailVerified === false ? '<button class="btn" id="claimLinkBtn"><i class="fas fa-key"></i> Send claim link</button>' : ""}
         </div>
+        <h3 style="font-size:16px;margin:14px 0 8px">Years paid for</h3>
+        <div id="memberYears" class="detail-empty" style="margin-bottom:8px">Loading&hellip;</div>
+        <form id="yearForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:6px">
+          <label style="display:flex;flex-direction:column;font-size:11px;font-weight:900;text-transform:uppercase;color:var(--muted)">Year
+            <input id="ypYear" type="number" min="2010" max="${new Date().getFullYear() + 1}" value="${new Date().getFullYear()}" style="width:86px;margin-top:4px;border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px"></label>
+          <label style="display:flex;flex-direction:column;font-size:11px;font-weight:900;text-transform:uppercase;color:var(--muted)">Date paid
+            <input id="ypDate" type="date" max="${new Date().toISOString().slice(0, 10)}" style="margin-top:4px;border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:7px 10px;font-size:13px"></label>
+          <label style="display:flex;flex-direction:column;font-size:11px;font-weight:900;text-transform:uppercase;color:var(--muted)">Amount (KES)
+            <input id="ypAmount" type="number" min="0" step="1" placeholder="optional" style="width:110px;margin-top:4px;border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px"></label>
+          <label style="display:flex;flex-direction:column;font-size:11px;font-weight:900;text-transform:uppercase;color:var(--muted)">Receipt / M-Pesa code
+            <input id="ypReceipt" maxlength="120" placeholder="optional" style="width:150px;margin-top:4px;border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px"></label>
+          <button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Mark year as paid</button>
+        </form>
+        <p class="detail-empty" style="font-size:12px;margin-bottom:6px">For payments made outside the portal, e.g. from the office register.</p>
+
         <h3 style="font-size:16px;margin:14px 0 8px">Payments</h3>
         <div class="payments" id="memberPayments"><p class="detail-empty">Loading payments...</p></div>
 
@@ -820,6 +835,8 @@
       document.getElementById("editNameBtn").addEventListener("click", () => { document.getElementById("nameForm").hidden = false; document.getElementById("nmFirst").focus(); });
       document.getElementById("nmCancel").addEventListener("click", () => { document.getElementById("nameForm").hidden = true; });
       document.getElementById("nameForm").addEventListener("submit", saveMemberName);
+      document.getElementById("yearForm").addEventListener("submit", markYearPaid);
+      loadYears(selectedMember.id);
       document.getElementById("approveBtn").addEventListener("click", approveSelectedMember);
       document.getElementById("rejectBtn").addEventListener("click", rejectSelectedMember);
       document.getElementById("welcomePacketBtn").addEventListener("click", sendWelcomePacket);
@@ -827,6 +844,43 @@
       if (claimLinkBtn) claimLinkBtn.addEventListener("click", sendClaimLink);
       document.getElementById("cpdForm").addEventListener("submit", addCpdPoints);
       await loadPayments(selectedMember.id);
+    }
+
+    const YEAR_SOURCE = { register: "office register", portal: "paid in the portal", manual: "recorded by an admin" };
+    function renderYears(years) {
+      const box = document.getElementById("memberYears");
+      if (!box) return;
+      if (!years.length) { box.textContent = "No years recorded."; return; }
+      box.innerHTML = years.map((y) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);color:var(--text)">
+          <span><strong>${esc(y.year)}</strong> <span style="color:var(--muted)">&middot; ${esc(YEAR_SOURCE[y.source] || y.source)}${y.paidOn ? " &middot; " + esc(y.paidOn) : ""}${y.amount != null ? " &middot; KES " + esc(y.amount) : ""}${y.receipt ? " &middot; " + esc(y.receipt) : ""}</span></span>
+          ${y.source === "manual" ? `<button class="btn" type="button" data-unmark="${esc(y.year)}" style="padding:3px 9px;font-size:12px">Remove</button>` : ""}</div>`).join("");
+      box.querySelectorAll("[data-unmark]").forEach((b) => b.addEventListener("click", async () => {
+        if (!confirm(`Remove ${b.dataset.unmark} from this member's paid years?`)) return;
+        try {
+          renderYears((await window.ResokPortal.api(`/api/members/${selectedMember.id}/years/${b.dataset.unmark}/remove`, { method: "POST", body: "{}" })).years);
+          showNote(`${b.dataset.unmark} removed.`);
+          await loadMembers();
+        } catch (error) { showNote(error.message || "Could not remove the year.", "error"); }
+      }));
+    }
+    async function loadYears(memberId) {
+      if (useLocalPreviewData()) { renderYears([]); return; }
+      try { renderYears((await window.ResokPortal.api(`/api/members/${memberId}/years`)).years); }
+      catch (error) { const box = document.getElementById("memberYears"); if (box) box.textContent = error.message || "Could not load the years."; }
+    }
+    async function markYearPaid(event) {
+      event.preventDefault();
+      if (!selectedMember) return;
+      const val = (id) => document.getElementById(id).value.trim();
+      try {
+        const r = await window.ResokPortal.api(`/api/members/${selectedMember.id}/years`, { method: "POST", body: JSON.stringify({
+          year: Number(val("ypYear")), paidOn: val("ypDate"), amount: val("ypAmount"), receipt: val("ypReceipt") }) });
+        renderYears(r.years);
+        showNote(`${val("ypYear")} marked as paid.`);
+        await loadMembers();
+      } catch (error) {
+        showNote(error.message || "Could not record the year.", "error");
+      }
     }
 
     async function saveMemberName(event) {

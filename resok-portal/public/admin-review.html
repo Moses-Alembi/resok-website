@@ -771,9 +771,21 @@
           <div>
             <h2>${esc(memberName(selectedMember))}</h2>
             <p>${esc(selectedMember.email || "")}</p>
+            <button class="btn" type="button" id="editNameBtn" style="margin-top:8px;padding:5px 10px;font-size:12px"><i class="fas fa-pen"></i> Edit name</button>
           </div>
           <span class="status ${statusClass(selectedMember.membershipStatus)}">${esc(statusLabel(selectedMember.membershipStatus))}</span>
         </div>
+        <form id="nameForm" hidden style="border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:90px 1fr;gap:8px;margin-bottom:8px">
+            <input id="nmTitle" placeholder="Title" maxlength="20" value="${esc(selectedMember.title || "")}" style="border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px">
+            <input id="nmFirst" placeholder="First name" maxlength="60" required value="${esc(selectedMember.firstName || "")}" style="border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <input id="nmMiddle" placeholder="Middle name (optional)" maxlength="60" value="${esc(selectedMember.middleName || "")}" style="border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px">
+            <input id="nmSurname" placeholder="Surname" maxlength="60" required value="${esc(selectedMember.surname || "")}" style="border:1px solid var(--input-line);background:var(--input-bg);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px">
+          </div>
+          <div style="display:flex;gap:8px"><button class="btn btn-primary" type="submit"><i class="fas fa-check"></i> Save name</button><button class="btn" type="button" id="nmCancel">Cancel</button></div>
+        </form>
         <div class="facts">
           <div class="fact"><span>Membership ID</span><strong>${esc(selectedMember.membershipId || "Pending")}</strong></div>
           <div class="fact"><span>Mobile</span><strong>${esc(selectedMember.mobile || "Not set")}</strong></div>
@@ -805,6 +817,9 @@
         </form>
       `;
 
+      document.getElementById("editNameBtn").addEventListener("click", () => { document.getElementById("nameForm").hidden = false; document.getElementById("nmFirst").focus(); });
+      document.getElementById("nmCancel").addEventListener("click", () => { document.getElementById("nameForm").hidden = true; });
+      document.getElementById("nameForm").addEventListener("submit", saveMemberName);
       document.getElementById("approveBtn").addEventListener("click", approveSelectedMember);
       document.getElementById("rejectBtn").addEventListener("click", rejectSelectedMember);
       document.getElementById("welcomePacketBtn").addEventListener("click", sendWelcomePacket);
@@ -812,6 +827,20 @@
       if (claimLinkBtn) claimLinkBtn.addEventListener("click", sendClaimLink);
       document.getElementById("cpdForm").addEventListener("submit", addCpdPoints);
       await loadPayments(selectedMember.id);
+    }
+
+    async function saveMemberName(event) {
+      event.preventDefault();
+      if (!selectedMember) return;
+      const val = (id) => document.getElementById(id).value.trim();
+      try {
+        await window.ResokPortal.api(`/api/members/${selectedMember.id}/name`, { method: "POST", body: JSON.stringify({
+          title: val("nmTitle"), firstName: val("nmFirst"), middleName: val("nmMiddle"), surname: val("nmSurname") }) });
+        showNote("Name saved. Letters, cards and emails now use the corrected name.");
+        await loadMembers();
+      } catch (error) {
+        showNote(error.message || "Could not save the name.", "error");
+      }
     }
 
     async function addCpdPoints(event) {

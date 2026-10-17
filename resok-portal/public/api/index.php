@@ -4599,6 +4599,36 @@ Respiratory Society of Kenya");
         ]);
     }
 
+    // Correcting a member's name: the register import put some names in the wrong fields
+    // (e.g. "Amir Faraj Tamin" all in the surname). Logged with the old and new name.
+    if (preg_match('#^members/(\d+)/name$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireAdmin($user);
+        $row = memberRowByProfileId($pdo, (int)$m[1]);
+        if (!$row) respond(404, ['error' => 'No such member.']);
+        $data = input();
+        $clean = static function ($v, int $max): string {
+            $v = trim(preg_replace('/\s+/u', ' ', is_scalar($v) ? (string)$v : '') ?? '');
+            return mb_substr($v, 0, $max);
+        };
+        $title = $clean($data['title'] ?? '', 20);
+        $first = $clean($data['firstName'] ?? '', 60);
+        $middle = $clean($data['middleName'] ?? '', 60);
+        $surname = $clean($data['surname'] ?? '', 60);
+        if ($first === '' || $surname === '') respond(400, ['error' => 'First name and surname are both needed.']);
+        foreach ([$title, $first, $middle, $surname] as $part) {
+            if ($part !== '' && !preg_match("/^[\p{L}\p{M}'. -]+$/u", $part)) {
+                respond(400, ['error' => 'Names can contain letters, spaces, apostrophes, hyphens and full stops only.']);
+            }
+        }
+        $before = trim(implode(' ', array_filter([$row['title'] ?? '', $row['first_name'] ?? '', $row['middle_name'] ?? '', $row['surname'] ?? ''])));
+        $pdo->prepare('UPDATE member_profiles SET title = ?, first_name = ?, middle_name = ?, surname = ? WHERE id = ?')
+            ->execute([$title !== '' ? $title : null, $first, $middle !== '' ? $middle : null, $surname, (int)$m[1]]);
+        $after = trim(implode(' ', array_filter([$title, $first, $middle, $surname])));
+        logAdminAction($pdo, (int)$user['userId'], 'name_corrected', (int)$m[1], $before . ' -> ' . $after);
+        respond(200, mapMember(memberRowByProfileId($pdo, (int)$m[1])) ?? []);
+    }
+
     if (preg_match('#^members/(\d+)/reject$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
         requireAdmin($user);

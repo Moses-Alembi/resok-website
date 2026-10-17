@@ -410,7 +410,14 @@ function membershipRecordPortalYears(PDO $pdo, int $memberProfileId): void
 function membershipYearsByMember(PDO $pdo): array
 {
     try {
-        $stmt = $pdo->query('SELECT member_profile_id, year FROM member_payment_years ORDER BY year');
+        // Confirmed portal payments are read directly as well, so a payment shows the moment
+        // it is confirmed - not only once membershipRecordPortalYears() or the backfill
+        // migration has copied it into member_payment_years.
+        $stmt = $pdo->query("SELECT member_profile_id, year FROM member_payment_years
+                             UNION
+                             SELECT member_profile_id, YEAR(created_at) FROM payments
+                             WHERE status = 'paid' AND member_profile_id IS NOT NULL
+                             ORDER BY year");
         if (!$stmt) return [];
     } catch (Throwable $e) {
         error_log('Membership years unavailable: ' . $e->getMessage());

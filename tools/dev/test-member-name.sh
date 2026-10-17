@@ -51,10 +51,13 @@ r=$(post "$ADMIN" "members/$P/years" '{"year":2026,"paidOn":"2026-02-16","amount
 check "an admin marks 2026 paid"                         '"year":2026' "$r"
 check "with its date and source"                         '"paidOn":"2026-02-16"' "$r"
 check "the year tick shows in the members list"          "2026" "$(curl -s -b "$ADMIN" "${API}members" | /c/xampp/php/php.exe -r '$d=json_decode(stream_get_contents(STDIN),true); foreach(($d["members"]??$d) as $m) if(($m["membershipId"]??"")==="ReSok M/T9") echo json_encode($m["yearsPaid"]);')"
-check "the expiry becomes 31 December of that year"       "2026-12-31" "$(q "SELECT renewal_due FROM member_profiles WHERE id = $P")"
+check "the expiry is 12 months from the date paid"         "2027-02-16" "$(q "SELECT renewal_due FROM member_profiles WHERE id = $P")"
 post "$ADMIN" "members/$P/years" '{"year":2024,"paidOn":"2024-03-01"}' >/dev/null
-check "an older year never moves the expiry earlier"     "2026-12-31" "$(q "SELECT renewal_due FROM member_profiles WHERE id = $P")"
+check "an older year never moves the expiry earlier"     "2027-02-16" "$(q "SELECT renewal_due FROM member_profiles WHERE id = $P")"
 post "$ADMIN" "members/$P/years/2024/remove" '{}' >/dev/null
+post "$ADMIN" "members/$P/years/2026/remove" '{}' >/dev/null; q "UPDATE member_profiles SET renewal_due = NULL WHERE id = $P"
+post "$ADMIN" "members/$P/years" '{"year":2026}' >/dev/null
+check "with no date paid, the end of that year"           "2026-12-31" "$(q "SELECT renewal_due FROM member_profiles WHERE id = $P")"
 r=$(post "$ADMIN" "members/$P/years" '{"year":2026}')
 check "the same year cannot be recorded twice"           'already recorded' "$r"
 r=$(post "$ADMIN" "members/$P/years" '{"year":2025,"paidOn":"2999-01-01"}')

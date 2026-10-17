@@ -460,6 +460,19 @@ function membershipDueFromYear(?int $lastPaidYear): ?string
 }
 
 /**
+ * The expiry a recorded payment gives: 12 months from the date paid (Moses, 17 Oct 2026:
+ * "use the dates they paid"). Without a date, the end of the year paid for.
+ */
+function membershipDueFromPayment(?string $paidOn, int $year): string
+{
+    if ($paidOn) {
+        $d = DateTimeImmutable::createFromFormat('!Y-m-d', $paidOn);
+        if ($d) return $d->modify('+' . MEMBERSHIP_TERM_MONTHS . ' months')->format('Y-m-d');
+    }
+    return (string)membershipDueFromYear($year);
+}
+
+/**
  * What each member's standing would become if the register's years were applied.
  *
  * Deliberately a report rather than a write. Applying a rule like "active means paid for

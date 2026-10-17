@@ -33,9 +33,11 @@ SELECT mp.id, 2026, 5000.00, '2026-01-19', 'manual', 'Office register: paid 19.0
 FROM member_profiles mp
 WHERE mp.membership_id IN ('ReSoK M/106', 'ReSok M/106');
 
--- Expiry follows the year paid for: a membership year ends on 31 December
--- (membershipDueFromYear in lib/membership.php). Only ever moves a date later.
-UPDATE member_profiles
-SET renewal_due = '2026-12-31', membership_status = IF(membership_status = 'expired', 'active', membership_status)
-WHERE membership_id IN ('ReSok M/50', 'ReSoK M/106', 'ReSok M/106')
-  AND (renewal_due IS NULL OR renewal_due < '2026-12-31');
+-- Expiry is 12 months from the date paid (Moses, 17 Oct 2026): Valentine 2027-02-16,
+-- Beverly 2027-01-19. Taken from the payment recorded above; only ever moves a date later.
+UPDATE member_profiles mp
+JOIN member_payment_years y ON y.member_profile_id = mp.id AND y.year = 2026 AND y.paid_on IS NOT NULL
+SET mp.renewal_due = DATE_ADD(y.paid_on, INTERVAL 12 MONTH),
+    mp.membership_status = IF(mp.membership_status = 'expired', 'active', mp.membership_status)
+WHERE mp.membership_id IN ('ReSok M/50', 'ReSoK M/106', 'ReSok M/106')
+  AND (mp.renewal_due IS NULL OR mp.renewal_due < DATE_ADD(y.paid_on, INTERVAL 12 MONTH));

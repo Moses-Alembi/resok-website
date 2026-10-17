@@ -4628,9 +4628,10 @@ Respiratory Society of Kenya");
             $pdo->prepare("INSERT INTO member_payment_years (member_profile_id, year, amount, currency, paid_on, receipt, method, source, note, recorded_by)
                            VALUES (?, ?, ?, 'KES', ?, ?, NULL, 'manual', 'Recorded by an administrator', ?)")
                 ->execute([(int)$m[1], $year, $amount === null ? null : (float)$amount, $paidOn ?: null, $receipt ?: null, (int)$user['userId']]);
-            // The membership then runs to the end of that year (membershipDueFromYear), never
-            // moving an expiry earlier; a lapsed member who has paid is a member again.
-            $due = membershipDueFromYear($year);
+            // The membership then runs 12 months from the date paid (the end of that year when
+            // no date is given), never moving an expiry earlier; a lapsed member who has paid
+            // is a member again.
+            $due = membershipDueFromPayment($paidOn ?: null, $year);
             $pdo->prepare("UPDATE member_profiles SET renewal_due = ?, membership_status = IF(membership_status = 'expired', 'active', membership_status)
                            WHERE id = ? AND (renewal_due IS NULL OR renewal_due < ?)")
                 ->execute([$due, (int)$m[1], $due]);

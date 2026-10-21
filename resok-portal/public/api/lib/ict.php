@@ -211,6 +211,10 @@ function ictDiff(array $before, array $after): array
     $nowIs = [];
     foreach ($after as $key => $value) {
         $old = $before[$key] ?? null;
+        // Nested values (an asset's holder, its history) are not fields anyone edits, and
+        // casting an array to string is a warning - which, with display_errors on, landed in
+        // the middle of the JSON reply and broke every asset edit on the laptop.
+        if (is_array($value) || is_array($old)) continue;
         // Loose comparison on purpose: a form posts "5" where the database holds int 5, and
         // recording that as a change would fill the log with edits nobody made.
         if ((string)$old !== (string)$value) {

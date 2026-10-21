@@ -183,6 +183,18 @@
     .burger{display:inline-flex}
     .grid2,.grid3{grid-template-columns:1fr}
     main{padding:20px 16px 60px}
+    /* As the shared admin shell does (css/admin-shell.css): on a phone the topbar keeps the
+       menu, the logo, the avatar and the essential icons, and drops the words beside them,
+       which were squeezing everything into a jumble. */
+    .brand-text,.user-meta{display:none}
+    #fullscreenToggle{display:none}
+    .topbar{padding:0 12px}
+    .topbar-right{gap:4px}
+    .user-chip{margin-left:2px;padding:0}
+  }
+  @media(max-width:400px){
+    .topbar-left{gap:8px}
+    .topbar .icon-btn{width:34px;height:34px}
   }
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
@@ -206,6 +218,13 @@
   .scan-card dd{margin:0}
   .scan-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
   .scan-missing{border:1px dashed var(--line);border-radius:10px;padding:14px;font-size:13.5px}
+  .scan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .scan-grid .btn{justify-content:center;padding:11px 10px}
+  .scan-form{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .scan-form h4{font-size:14.5px;margin:0 0 4px}
+  .scan-form .lbl{margin-top:10px}
+  .scan-ok{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;background:var(--ok-bg);color:var(--ok)}
+  .scan-err{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;background:var(--crit-bg);color:var(--crit)}
 </style>
 </head>
 <body>
@@ -1940,7 +1959,164 @@
     }
   }
 
-  // Who has it and where - the two questions a scan is for - first, then the way in.
+  // A small form inside the scan sheet, under the asset card. One open at a time.
+  function scanActionForm(title, fields, submitLabel, onSubmit) {
+    const old = document.getElementById('scanForm');
+    if (old) old.remove();
+    const form = make('form', 'scan-form');
+    form.id = 'scanForm';
+    form.appendChild(make('h4', null, title));
+    fields.forEach((f) => {
+      const label = make('label', 'lbl', f.label);
+      label.htmlFor = f.id;
+      let input;
+      if (f.options) {
+        input = document.createElement('select');
+        f.options.forEach((o) => {
+          const opt = document.createElement('option');
+          const [value, text] = Array.isArray(o) ? o : [o, o.charAt(0).toUpperCase() + o.slice(1).replace(/_/g, ' ')];
+          opt.value = value; opt.textContent = text;
+          if (value === f.value) opt.selected = true;
+          input.appendChild(opt);
+        });
+      } else if (f.type === 'textarea') {
+        input = document.createElement('textarea');
+        input.rows = 2;
+      } else {
+        input = document.createElement('input');
+        input.type = f.type || 'text';
+      }
+      if (!f.options && f.value) input.value = f.value;
+      if (f.placeholder) input.placeholder = f.placeholder;
+      if (f.required) input.required = true;
+      input.className = 'in';
+      input.id = f.id;
+      form.append(label, input);
+    });
+    const row = make('div', 'scan-actions');
+    const go = make('button', 'btn btn-primary', submitLabel);
+    go.type = 'submit';
+    const cancel = make('button', 'btn btn-secondary', 'Cancel');
+    cancel.type = 'button';
+    cancel.addEventListener('click', () => form.remove());
+    row.append(go, cancel);
+    form.appendChild(row);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      go.disabled = true;
+      const msg = form.querySelector('.scan-err');
+      if (msg) msg.remove();
+      try {
+        await onSubmit();
+      } catch (error) {
+        form.appendChild(make('div', 'scan-err', error.message || 'That could not be saved.'));
+      }
+      go.disabled = false;
+    });
+    el('scanResult').appendChild(form);
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const first = form.querySelector('input,select,textarea');
+    if (first) first.focus();
+  }
+
+  // After any change: redraw the card from the server's copy, say what happened, refresh the list.
+  function scanSaved(asset, message) {
+    scanShowAsset(asset);
+    el('scanResult').insertBefore(make('div', 'scan-ok', message), el('scanResult').firstChild);
+    loadAssets();
+  }
+
+  const scanPost = (a, action, body) => api('/api/ict/assets/' + a.id + '/' + action, { method: 'POST', body: JSON.stringify(body) });
+  const scanPatch = (a, body) => api('/api/ict/assets/' + a.id, { method: 'PATCH', body: JSON.stringify(body) });
+
+  function scanChangeUser(a) {
+    scanActionForm('Change user — from ' + a.holder.name, [
+      { id: 'sfName', label: 'New holder', placeholder: 'Full name', required: true },
+      { id: 'sfEmail', label: 'Email (optional)', type: 'email', placeholder: 'Links it to their portal account' },
+      { id: 'sfDept', label: 'Department', value: a.holder.department || a.department || '' },
+      { id: 'sfCondition', label: 'Condition at handover', options: CONDITIONS, value: a.condition },
+      { id: 'sfNotes', label: 'Notes', type: 'textarea' }
+    ], 'Hand over', async () => {
+      const data = await scanPost(a, 'transfer', {
+        holderName: el('sfName').value.trim(), holderEmail: el('sfEmail').value.trim(),
+        department: el('sfDept').value.trim(), condition: el('sfCondition').value, notes: el('sfNotes').value.trim()
+      });
+      scanSaved(data.asset, 'Handed over from ' + a.holder.name + ' to ' + data.asset.holder.name + '.');
+    });
+  }
+
+  function scanAssign(a) {
+    scanActionForm('Assign ' + a.assetTag, [
+      { id: 'sfName', label: 'Received by', placeholder: 'Full name', required: true },
+      { id: 'sfEmail', label: 'Email (optional)', type: 'email', placeholder: 'Links it to their portal account' },
+      { id: 'sfDept', label: 'Department', value: a.department || '' },
+      { id: 'sfCondition', label: 'Condition when issued', options: CONDITIONS, value: a.condition },
+      { id: 'sfNotes', label: 'Notes', type: 'textarea' }
+    ], 'Assign', async () => {
+      const data = await scanPost(a, 'assign', {
+        holderName: el('sfName').value.trim(), holderEmail: el('sfEmail').value.trim(),
+        department: el('sfDept').value.trim(), conditionOut: el('sfCondition').value, notes: el('sfNotes').value.trim()
+      });
+      scanSaved(data.asset, 'Assigned to ' + data.asset.holder.name + '.');
+    });
+  }
+
+  function scanReturn(a) {
+    scanActionForm('Return from ' + a.holder.name, [
+      { id: 'sfCondition', label: 'Condition on return', options: CONDITIONS, value: a.condition },
+      { id: 'sfNotes', label: 'Notes', type: 'textarea' }
+    ], 'Record return', async () => {
+      const data = await scanPost(a, 'return', { conditionIn: el('sfCondition').value, notes: el('sfNotes').value.trim() });
+      scanSaved(data.asset, data.asset.status === 'maintenance'
+        ? 'Returned. Sent to maintenance because of its condition.'
+        : 'Returned and available again.');
+    });
+  }
+
+  function scanMove(a) {
+    scanActionForm('Move ' + a.assetTag, [
+      { id: 'sfLocation', label: 'Location', value: a.location || '', placeholder: 'e.g. Nairobi office' },
+      { id: 'sfDept', label: 'Department', value: a.department || '' }
+    ], 'Save', async () => {
+      const data = await scanPatch(a, { location: el('sfLocation').value.trim(), department: el('sfDept').value.trim() });
+      scanSaved(data.asset, 'Location updated.');
+    });
+  }
+
+  // "Assigned" is not offered: it follows from having a holder, and is set by Assign.
+  function scanStatus(a) {
+    const statuses = ['available', 'maintenance', 'damaged', 'lost', 'retired', 'disposed']
+      .map((s) => [s, s === 'maintenance' ? 'Under maintenance' : s.charAt(0).toUpperCase() + s.slice(1)]);
+    if (a.status === 'assigned') statuses.unshift(['assigned', 'Assigned (in use)']);
+    scanActionForm('Status of ' + a.assetTag, [
+      { id: 'sfStatus', label: 'Status', options: statuses, value: a.status },
+      { id: 'sfCondition', label: 'Condition', options: CONDITIONS, value: a.condition }
+    ], 'Save', async () => {
+      const data = await scanPatch(a, { status: el('sfStatus').value, condition: el('sfCondition').value });
+      scanSaved(data.asset, 'Status saved.');
+    });
+  }
+
+  function scanRepair(a) {
+    scanActionForm('Log a repair or check', [
+      { id: 'sfDate', label: 'Date', type: 'date', value: new Date().toISOString().slice(0, 10) },
+      { id: 'sfKind', label: 'Type', options: ['repair', 'preventive', 'inspection', 'upgrade', 'decommission'], value: 'repair' },
+      { id: 'sfResult', label: 'Result', options: ['resolved', 'unresolved', 'replaced', 'written_off'], value: 'resolved' },
+      { id: 'sfProblem', label: 'Problem', type: 'textarea' },
+      { id: 'sfWork', label: 'Work done', type: 'textarea' },
+      { id: 'sfTech', label: 'Technician or vendor' },
+      { id: 'sfCost', label: 'Cost (KES)', type: 'number' }
+    ], 'Save', async () => {
+      const data = await scanPost(a, 'maintenance', {
+        performedOn: el('sfDate').value, kind: el('sfKind').value, result: el('sfResult').value,
+        problem: el('sfProblem').value.trim(), workDone: el('sfWork').value.trim(),
+        technician: el('sfTech').value.trim(), cost: el('sfCost').value
+      });
+      scanSaved(data.asset, 'Recorded.');
+    });
+  }
+
+  // Who has it and where - the two questions a scan is for - first, then what to do about it.
   function scanShowAsset(a) {
     scanHint('Found it.');
     const card = make('div', 'scan-card');
@@ -1956,14 +2132,33 @@
     row('Serial', a.serialNumber);
     card.appendChild(dl);
 
-    const actions = make('div', 'scan-actions');
-    const open = make('button', 'btn btn-primary');
-    open.type = 'button';
-    open.innerHTML = '<i class="fas fa-up-right-from-square"></i> Open record';
-    open.title = 'Assign, return, record maintenance or edit';
-    open.addEventListener('click', () => { scanClose(); openAsset(a.id); });
-    actions.append(open, scanAgainButton());
-    el('scanResult').replaceChildren(card, actions);
+    const button = (icon, text, onClick, primary) => {
+      const b = make('button', 'btn ' + (primary ? 'btn-primary' : 'btn-secondary'));
+      b.type = 'button';
+      b.innerHTML = '<i class="fas ' + icon + '"></i> ';
+      b.appendChild(document.createTextNode(text));
+      b.addEventListener('click', onClick);
+      return b;
+    };
+    const closed = ['retired', 'disposed', 'lost'].includes(a.status);
+    const grid = make('div', 'scan-grid');
+    if (a.holder) {
+      grid.append(button('fa-people-arrows', 'Change user', () => scanChangeUser(a), true),
+                  button('fa-rotate-left', 'Return', () => scanReturn(a)));
+    } else if (!closed) {
+      grid.append(button('fa-user-plus', 'Assign', () => scanAssign(a), true));
+    }
+    grid.append(
+      button('fa-location-dot', 'Move', () => scanMove(a)),
+      button('fa-circle-half-stroke', 'Status', () => scanStatus(a)),
+      button('fa-screwdriver-wrench', 'Log repair', () => scanRepair(a)),
+      button('fa-pen', 'Edit details', () => { scanClose(); assetEdit(a); }),
+      button('fa-up-right-from-square', 'Full record', () => { scanClose(); openAsset(a.id); })
+    );
+    const again = scanAgainButton();
+    again.style.gridColumn = '1 / -1';
+    grid.appendChild(again);
+    el('scanResult').replaceChildren(card, grid);
   }
 
   // Not on the list: offer to add it with the tag already filled in.

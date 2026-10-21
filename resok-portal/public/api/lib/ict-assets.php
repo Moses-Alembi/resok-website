@@ -490,6 +490,67 @@ function ictAssetReturn(PDO $pdo, int $assetId, array $data, ?int $adminUserId):
     return [ictAssetFind($pdo, $assetId), null];
 }
 
+/**
+ * Hands an asset straight from its current holder to someone else - "change user".
+ *
+ * A return followed by an assignment, in one transaction. Done as two requests from a phone
+ * in a corridor, a dropped connection between them leaves the item recorded as on the shelf
+ * when it is in somebody's bag. The old holder's row is closed with the handover noted, so
+ * the chain of custody reads straight through.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function ictAssetTransfer(PDO $pdo, int $assetId, array $data, ?int $adminUserId): array
+{
+    if (!ictAssetsEnsureTables($pdo)) return [null, 'The asset tables are not available.'];
+
+    $asset = ictAssetFind($pdo, $assetId);
+    if (!$asset) return [null, 'That asset no longer exists.'];
+    if (!$asset['holder']) return [null, 'Nobody is holding this, so assign it instead.'];
+
+    $name = trim((string)($data['holderName'] ?? ''));
+    if ($name === '') return [null, 'Who is receiving it?'];
+    $email = trim((string)($data['holderEmail'] ?? ''));
+    if (strcasecmp($name, (string)$asset['holder']['name']) === 0
+        && strcasecmp($email, (string)($asset['holder']['email'] ?? '')) === 0) {
+        return [null, 'It is already with ' . $asset['holder']['name'] . '.'];
+    }
+
+    $condition = in_array($data['condition'] ?? '', ICT_CONDITIONS, true)
+        ? (string)$data['condition'] : $asset['condition'];
+    $notes = mb_substr(trim((string)($data['notes'] ?? '')), 0, 4000) ?: null;
+
+    $userId = null;
+    if ($email !== '') {
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1');
+        $stmt->execute([strtolower($email)]);
+        if ($found = $stmt->fetch()) $userId = (int)$found['id'];
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('UPDATE ict_assignments
+                       SET returned_at = NOW(), received_by = ?, condition_in = ?, return_notes = ?
+                       WHERE id = ?')
+            ->execute([$adminUserId, $condition, 'Handed over to ' . mb_substr($name, 0, 160),
+                       (int)$asset['holder']['assignmentId']]);
+        $pdo->prepare('INSERT INTO ict_assignments
+                        (asset_id, holder_user_id, holder_name, holder_email, department,
+                         assigned_at, assigned_by, condition_out, handover_notes)
+                       VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?)')
+            ->execute([$assetId, $userId, mb_substr($name, 0, 160), $email ?: null,
+                       mb_substr(trim((string)($data['department'] ?? '')), 0, 120) ?: null,
+                       $adminUserId, $condition, $notes]);
+        $pdo->prepare("UPDATE ict_assets SET status = 'assigned', `condition` = ? WHERE id = ?")
+            ->execute([$condition, $assetId]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return [null, 'Nothing was changed: ' . $e->getMessage()];
+    }
+    return [ictAssetFind($pdo, $assetId), null];
+}
+
 /** Everything currently held by one person - what to run when someone leaves. */
 function ictAssetsHeldBy(PDO $pdo, string $email): array
 {

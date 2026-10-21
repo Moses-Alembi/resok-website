@@ -3520,6 +3520,21 @@ Respiratory Society of Kenya");
         respond(200, ['asset' => $asset]);
     }
 
+    // Change user: straight from one holder to the next, in one step.
+    if (preg_match('#^ict/assets/(\d+)/transfer$#', $route, $m) && $method === 'POST') {
+        $user = auth($config);
+        requireModule('ictAssetTransfer', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.assign');
+
+        $was = ictAssetFind($pdo, (int)$m[1]);
+        [$asset, $error] = ictAssetTransfer($pdo, (int)$m[1], input(), (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        ictAudit($pdo, (int)$user['userId'], 'asset_transferred', 'asset', (string)$asset['id'],
+                 $asset['assetTag'] . ' from ' . ($was['holder']['name'] ?? 'unknown') . ' to ' . $asset['holder']['name'],
+                 ['holder' => $was['holder']['name'] ?? null], ['holder' => $asset['holder']['name']]);
+        respond(200, ['asset' => $asset]);
+    }
+
     // ----- ICT: maintenance -----------------------------------------------------------------
 
     if (preg_match('#^ict/assets/(\d+)/maintenance$#', $route, $m) && $method === 'POST') {

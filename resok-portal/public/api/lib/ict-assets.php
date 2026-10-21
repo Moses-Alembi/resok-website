@@ -233,6 +233,32 @@ function ictAssetFindByTag(PDO $pdo, string $tag): ?array
     return $row ? ictAssetFind($pdo, (int)$row['id']) : null;
 }
 
+/**
+ * The scanner's lookup: whatever the barcode reader or a person typed, matched to a tag.
+ *
+ * The register's stickers carry six-digit numbers (000009). A reader returns them as
+ * printed, but someone typing from a worn sticker writes "9" or "0009", so an all-digit
+ * value also matches any tag that is the same number once leading zeros are dropped.
+ * Spaces are removed first: some readers return the human-readable line with gaps in it.
+ */
+function ictAssetFindByScan(PDO $pdo, string $scanned): ?array
+{
+    if (!ictAssetsEnsureTables($pdo)) return null;
+    $tag = preg_replace('/\s+/', '', trim($scanned));
+    if ($tag === '' || strlen($tag) > 40) return null;
+
+    $found = ictAssetFindByTag($pdo, $tag);
+    if ($found || !ctype_digit($tag)) return $found;
+
+    $number = ltrim($tag, '0');
+    $stmt = $pdo->prepare("SELECT id FROM ict_assets
+                           WHERE asset_tag REGEXP '^[0-9]+$' AND TRIM(LEADING '0' FROM asset_tag) = ?
+                           ORDER BY id LIMIT 1");
+    $stmt->execute([$number]);
+    $row = $stmt->fetch();
+    return $row ? ictAssetFind($pdo, (int)$row['id']) : null;
+}
+
 /* ------------------------------------------------------------------------------------- */
 
 function ictAssetWritableFields(): array

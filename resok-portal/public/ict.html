@@ -185,6 +185,27 @@
     main{padding:20px 16px 60px}
   }
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  /* Tag scanner: a full-screen sheet on a phone, a centred panel on a desk. */
+  .scan-sheet{position:fixed;inset:0;z-index:80;background:rgba(5,10,20,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+  .scan-sheet[hidden]{display:none}
+  .scan-box{background:var(--card);color:var(--text-dark);border:1px solid var(--line);border-radius:14px;width:100%;max-width:460px;max-height:100%;overflow:auto;padding:18px}
+  .scan-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .scan-head h2{font-size:17px;margin:0}
+  .scan-cam{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:4/3}
+  .scan-cam video{width:100%;height:100%;object-fit:cover;display:block}
+  .scan-cam .aim{position:absolute;left:10%;right:10%;top:34%;bottom:34%;border:2px solid rgba(255,255,255,.85);border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
+  .scan-hint{font-size:12.5px;color:var(--muted);margin:8px 0 12px}
+  .scan-manual{display:flex;gap:8px}
+  .scan-result{margin-top:14px}
+  .scan-card{border:1px solid var(--line);border-radius:10px;padding:14px}
+  .scan-card .tag{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+  .scan-card h3{font-size:16px;margin:2px 0 10px}
+  .scan-card dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:13.5px}
+  .scan-card dt{color:var(--muted);font-weight:600}
+  .scan-card dd{margin:0}
+  .scan-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .scan-missing{border:1px dashed var(--line);border-radius:10px;padding:14px;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -378,11 +399,29 @@
           <select class="in" id="assetCategoryFilter" style="width:auto;min-width:130px">
             <option value="">Any category</option>
           </select>
+          <button class="btn btn-secondary" id="assetScanBtn" type="button"><i class="fas fa-barcode"></i> Scan tag</button>
           <button class="btn btn-primary" id="assetNewBtn" type="button"><i class="fas fa-plus"></i> Add asset</button>
         </div>
         <div class="scroll"><div id="assetList"></div></div>
       </div>
 
+
+      <!-- Tag scanner -->
+      <div class="scan-sheet" id="scanSheet" hidden role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+        <div class="scan-box">
+          <div class="scan-head">
+            <h2 id="scanTitle"><i class="fas fa-barcode"></i> Scan an asset tag</h2>
+            <button class="btn btn-ghost" id="scanCloseBtn" type="button" aria-label="Close"><i class="fas fa-xmark"></i></button>
+          </div>
+          <div class="scan-cam" id="scanCam"><video id="scanVideo" playsinline muted></video><div class="aim"></div></div>
+          <p class="scan-hint" id="scanHint">Point the camera at the barcode on the tag.</p>
+          <form class="scan-manual" id="scanManualForm" autocomplete="off">
+            <input class="in" id="scanManual" inputmode="numeric" maxlength="40" placeholder="Or type the tag number, e.g. 000009" aria-label="Tag number" />
+            <button class="btn btn-primary" type="submit">Find</button>
+          </form>
+          <div class="scan-result" id="scanResult" aria-live="polite"></div>
+        </div>
+      </div>
       <!-- Add / edit -->
       <div class="panel" id="assetFormPanel" hidden>
         <h2 id="assetFormTitle">Add an asset</h2>
@@ -1787,6 +1826,194 @@
   });
 
   el('adCloseBtn').addEventListener('click', () => { el('assetDetailPanel').hidden = true; currentAsset = null; });
+  /* ---------------- tag scanner ----------------
+   * The stickers carry a linear barcode with the tag number under it (000009). The phone's
+   * own BarcodeDetector is used where it exists (Chrome on Android); iPhones have none, so
+   * ZXing is loaded on first use instead. Every common 1D format is accepted because the
+   * printer's symbology is not recorded anywhere, and typing the number always works.
+   */
+  const SCAN_FORMATS = ['code_128', 'code_39', 'code_93', 'codabar', 'itf', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'data_matrix'];
+  let scanStop = null;
+  let scanBusy = false;
+  let zxingLoading = null;
+
+  function loadZxing() {
+    if (window.ZXing) return Promise.resolve();
+    if (!zxingLoading) {
+      zxingLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'js/vendor/zxing-library-0.21.3.js';
+        s.onload = resolve;
+        s.onerror = () => { zxingLoading = null; reject(new Error('Scanner could not load.')); };
+        document.head.appendChild(s);
+      });
+    }
+    return zxingLoading;
+  }
+
+  function scanHalt() {
+    if (scanStop) { try { scanStop(); } catch (e) { /* already stopped */ } }
+    scanStop = null;
+  }
+
+  function scanHint(text) { el('scanHint').textContent = text; }
+
+  async function scanStartCamera() {
+    scanHalt();
+    scanBusy = false;
+    el('scanCam').hidden = false;
+    const video = el('scanVideo');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      el('scanCam').hidden = true;
+      scanHint('This browser cannot use the camera here. Type the tag number below.');
+      return;
+    }
+    scanHint('Point the camera at the barcode on the tag.');
+    try {
+      if ('BarcodeDetector' in window) {
+        const supported = await window.BarcodeDetector.getSupportedFormats();
+        const formats = SCAN_FORMATS.filter((f) => supported.includes(f));
+        if (formats.length) {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+          video.srcObject = stream;
+          await video.play();
+          const detector = new window.BarcodeDetector({ formats });
+          let alive = true;
+          scanStop = () => { alive = false; stream.getTracks().forEach((t) => t.stop()); video.srcObject = null; };
+          const tick = async () => {
+            if (!alive) return;
+            try {
+              const codes = await detector.detect(video);
+              if (codes.length && codes[0].rawValue) { scanFound(codes[0].rawValue); return; }
+            } catch (e) { /* a frame that failed to decode; try the next */ }
+            setTimeout(tick, 180);
+          };
+          tick();
+          return;
+        }
+      }
+      await loadZxing();
+      const hints = new Map();
+      hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
+      const reader = new window.ZXing.BrowserMultiFormatReader(hints, 200);
+      scanStop = () => reader.reset();
+      reader.decodeFromVideoDevice(null, video, (result) => { if (result) scanFound(result.getText()); });
+    } catch (error) {
+      el('scanCam').hidden = true;
+      scanHint(error && error.name === 'NotAllowedError'
+        ? 'Camera access was refused. Allow the camera for this site in your browser settings, or type the tag number below.'
+        : 'The camera could not start. Type the tag number below.');
+    }
+  }
+
+  function scanFound(raw) {
+    if (scanBusy) return;
+    scanBusy = true;
+    scanHalt();
+    el('scanCam').hidden = true;
+    if (navigator.vibrate) navigator.vibrate(60);
+    scanLookup(raw);
+  }
+
+  function scanAgainButton() {
+    const b = make('button', 'btn btn-secondary');
+    b.type = 'button';
+    b.innerHTML = '<i class="fas fa-barcode"></i> Scan another';
+    b.addEventListener('click', () => { el('scanResult').replaceChildren(); el('scanManual').value = ''; scanStartCamera(); });
+    return b;
+  }
+
+  async function scanLookup(raw) {
+    const tag = String(raw || '').replace(/\s+/g, '');
+    if (!tag) return;
+    const box = el('scanResult');
+    box.replaceChildren(make('p', 'scan-hint', 'Looking up ' + tag + '…'));
+    try {
+      const data = await api('/api/ict/assets/by-tag?tag=' + encodeURIComponent(tag));
+      scanShowAsset(data.asset);
+    } catch (error) {
+      if (error.status === 404) scanShowMissing(tag);
+      else {
+        box.replaceChildren(make('p', 'scan-missing', error.message || 'Could not look that tag up.'));
+        box.appendChild(scanAgainButton());
+      }
+    }
+  }
+
+  // Who has it and where - the two questions a scan is for - first, then the way in.
+  function scanShowAsset(a) {
+    scanHint('Found it.');
+    const card = make('div', 'scan-card');
+    card.appendChild(make('div', 'tag', 'TAG ' + a.assetTag));
+    card.appendChild(make('h3', null, a.name || 'Asset'));
+    const dl = make('dl');
+    const row = (k, v) => { dl.appendChild(make('dt', null, k)); dl.appendChild(make('dd', null, v || '—')); };
+    row('Held by', a.holder ? a.holder.name + (a.holder.department ? ' · ' + a.holder.department : '') : 'Nobody (not assigned)');
+    if (a.holder) row('Since', fmtDate(a.holder.since));
+    row('Location', [a.location, a.department].filter(Boolean).join(' · '));
+    row('Status', a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : '');
+    row('Condition', a.condition);
+    row('Serial', a.serialNumber);
+    card.appendChild(dl);
+
+    const actions = make('div', 'scan-actions');
+    const open = make('button', 'btn btn-primary');
+    open.type = 'button';
+    open.innerHTML = '<i class="fas fa-up-right-from-square"></i> Open record';
+    open.title = 'Assign, return, record maintenance or edit';
+    open.addEventListener('click', () => { scanClose(); openAsset(a.id); });
+    actions.append(open, scanAgainButton());
+    el('scanResult').replaceChildren(card, actions);
+  }
+
+  // Not on the list: offer to add it with the tag already filled in.
+  function scanShowMissing(tag) {
+    scanHint('This tag is not on the list yet.');
+    const box = make('div', 'scan-missing');
+    box.appendChild(make('strong', null, 'Tag ' + tag + ' is not on the asset list.'));
+    box.appendChild(make('p', 'scan-hint', 'Check the number on the sticker. If it is right, add the item now.'));
+    const actions = make('div', 'scan-actions');
+    const add = make('button', 'btn btn-primary');
+    add.type = 'button';
+    add.innerHTML = '<i class="fas fa-plus"></i> Add this asset';
+    add.addEventListener('click', () => {
+      scanClose();
+      assetResetForm();
+      el('assetFormPanel').hidden = false;
+      el('aTag').value = tag;
+      el('assetFormPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el('aName').focus();
+    });
+    actions.append(add, scanAgainButton());
+    el('scanResult').replaceChildren(box, actions);
+  }
+
+  function scanOpen() {
+    el('scanSheet').hidden = false;
+    el('scanResult').replaceChildren();
+    el('scanManual').value = '';
+    scanStartCamera();
+  }
+
+  function scanClose() {
+    scanHalt();
+    el('scanSheet').hidden = true;
+  }
+
+  el('assetScanBtn').addEventListener('click', scanOpen);
+  el('scanCloseBtn').addEventListener('click', scanClose);
+  el('scanSheet').addEventListener('click', (e) => { if (e.target === el('scanSheet')) scanClose(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el('scanSheet').hidden) scanClose(); });
+  el('scanManualForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = el('scanManual').value.trim();
+    if (!value) { el('scanManual').focus(); return; }
+    scanBusy = true;
+    scanHalt();
+    el('scanCam').hidden = true;
+    scanLookup(value);
+  });
+
   el('assetNewBtn').addEventListener('click', () => { assetResetForm(); el('assetFormPanel').hidden = false; });
   el('assetCancelBtn').addEventListener('click', assetResetForm);
 

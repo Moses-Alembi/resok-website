@@ -3440,12 +3440,30 @@ Respiratory Society of Kenya");
      * One asset with its whole history. This is what a QR scan opens, so it accepts either
      * the numeric id or the tag printed on the sticker.
      */
+    /*
+     * The tag scanner: GET ict/assets/by-tag?tag=000009. Its own route, because the register's
+     * tags are all digits and the route below reads an all-digit value as a row id. A 404
+     * carries the cleaned tag back, so the page can offer to add it.
+     */
+    if ($route === 'ict/assets/by-tag' && $method === 'GET') {
+        $user = auth($config);
+        requireModule('ictAssetFindByScan', 'lib/ict-assets.php');
+        ictRequire($pdo, $user, $config, 'assets.view');
+
+        $tag = preg_replace('/\s+/', '', trim((string)($_GET['tag'] ?? '')));
+        if ($tag === '') respond(400, ['error' => 'Scan or type a tag number.']);
+        $asset = ictAssetFindByScan($pdo, $tag);
+        if (!$asset) respond(404, ['error' => 'That tag is not on the asset list yet.', 'tag' => mb_substr($tag, 0, 40)]);
+        respond(200, ['asset' => $asset]);
+    }
+
     if (preg_match('#^ict/assets/([A-Za-z0-9-]+)$#', $route, $m) && $method === 'GET') {
         $user = auth($config);
         requireModule('ictAssetFind', 'lib/ict-assets.php');
         ictRequire($pdo, $user, $config, 'assets.view');
 
-        $asset = ctype_digit($m[1])
+        // A leading zero means a sticker number (000009), never a row id.
+        $asset = ctype_digit($m[1]) && $m[1][0] !== '0'
             ? ictAssetFind($pdo, (int)$m[1])
             : ictAssetFindByTag($pdo, $m[1]);
         if (!$asset) respond(404, ['error' => 'No asset with that tag or id.']);

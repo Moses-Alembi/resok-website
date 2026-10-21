@@ -1159,8 +1159,12 @@ $route = trim($_GET['route'] ?? '', '/');
 // The browser helper (portal-state.js api()) URL-encodes the whole route, so a page asking
 // for 'ict/tickets&status=open' arrives as one route string with the filters inside it, and
 // matched no route at all. Anything after the first '&' is read as query parameters instead.
-if (strpos($route, '&') !== false) {
-    [$route, $routeQuery] = explode('&', $route, 2);
+// So is anything after a '?': callers naturally write 'ict/assets/by-tag?tag=000009', and the
+// encoding turned that into a route ending in '?tag=000009' that answered 404 - which the
+// tag scanner reported as "not on the asset list" for a tag that was.
+if (preg_match('/[?&]/', $route, $sep, PREG_OFFSET_CAPTURE)) {
+    $routeQuery = substr($route, $sep[0][1] + 1);
+    $route = substr($route, 0, $sep[0][1]);
     parse_str($routeQuery, $routeParams);
     foreach ($routeParams as $key => $value) {
         if (!array_key_exists($key, $_GET)) $_GET[$key] = $value;

@@ -763,6 +763,7 @@ function memberRow(PDO $pdo, int $userId): ?array {
     $stmt = $pdo->prepare('SELECT mp.*, u.email, u.email_verified FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.user_id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
+    if ($row) $row['member_since'] = memberSinceYear($pdo, (int)$row['id']);
     return $row ?: null;
 }
 
@@ -770,7 +771,36 @@ function memberRowByProfileId(PDO $pdo, int $profileId): ?array {
     $stmt = $pdo->prepare('SELECT mp.*, u.email, u.email_verified FROM member_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.id = ? LIMIT 1');
     $stmt->execute([$profileId]);
     $row = $stmt->fetch();
+    if ($row) $row['member_since'] = memberSinceYear($pdo, (int)$row['id']);
     return $row ?: null;
+}
+
+/**
+ * The first year a member paid for, as printed under "Member since" on the card.
+ *
+ * The register of paid years is the authority - it reaches back before the portal existed.
+ * A member with no register row falls back to the year of their first confirmed portal
+ * payment. Kept as its own guarded query rather than a join in memberRow, because memberRow
+ * sits under sign-in: a missing years table must cost the card a date, never the login.
+ */
+function memberSinceYear(PDO $pdo, int $profileId): ?int {
+    try {
+        $stmt = $pdo->prepare('SELECT MIN(year) FROM member_payment_years WHERE member_profile_id = ?');
+        $stmt->execute([$profileId]);
+        $year = $stmt->fetchColumn();
+        if ($year) return (int)$year;
+    } catch (Throwable $e) {
+        error_log('Member-since lookup (register) failed: ' . $e->getMessage());
+    }
+    try {
+        $stmt = $pdo->prepare("SELECT MIN(YEAR(created_at)) FROM payments WHERE member_profile_id = ? AND status = 'paid'");
+        $stmt->execute([$profileId]);
+        $year = $stmt->fetchColumn();
+        return $year ? (int)$year : null;
+    } catch (Throwable $e) {
+        error_log('Member-since lookup (payments) failed: ' . $e->getMessage());
+        return null;
+    }
 }
 
 function mapMember(?array $row): ?array {
@@ -806,6 +836,8 @@ function mapMember(?array $row): ?array {
         'membershipId' => $row['membership_id'],
         'cpdPoints' => (int)$row['cpd_points'],
         'renewalDue' => $row['renewal_due'],
+        // Only set where the row came through memberRow / memberRowByProfileId; lists skip it.
+        'memberSince' => isset($row['member_since']) ? (int)$row['member_since'] : null,
         'reviewReason' => $row['review_reason'],
         // What the dates actually mean today - whether the member is current, due, inside
         // grace or lapsed, and whether benefits apply. Computed rather than read from the

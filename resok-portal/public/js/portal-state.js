@@ -2,8 +2,10 @@
   const SELF_SRC = document.currentScript ? document.currentScript.src : "";
   const STORAGE_KEY = "resok_portal_state";
   const TOKEN_KEY = "token";
-  const CARD_ASSET_VERSION = "20260904-blue-bg";
-  const CARD_BACKGROUND_PATH = `assets/img/membership-card-bg.png?v=${CARD_ASSET_VERSION}`;
+  const CARD_ASSET_VERSION = "20261021-silver";
+  const CARD_LOGO_PATH = `assets/img/logo.png?v=${CARD_ASSET_VERSION}`;
+  const CARD_FONT_PATH = `assets/fonts/montserrat-600-latin.woff2?v=${CARD_ASSET_VERSION}`;
+  const CARD_BARCODE_PATH = `js/vendor/jsbarcode-code128-3.11.6.js?v=${CARD_ASSET_VERSION}`;
 
   function defaultState() {
     return {
@@ -191,6 +193,7 @@
       status: member.membershipStatus || member.status || "payment_required",
       cpdPoints: Number(member.cpdPoints || 0),
       renewalDue: member.renewalDue || "Pending payment",
+      memberSince: member.memberSince || "",
       reviewReason: member.reviewReason || ""
     });
     return saveState(state);
@@ -458,102 +461,251 @@
     return blobToDataUrl(await response.blob());
   }
 
-  // The artwork already carries the logo, so only the background and the member's photo
-  // need inlining for a downloaded card to render on its own, away from the site.
-  async function membershipCardImageAssets(member = getState().member) {
-    const background = await imageToDataUrl(CARD_BACKGROUND_PATH).catch(() => absoluteAssetUrl(CARD_BACKGROUND_PATH));
-    const photo = member.profileImageUrl
-      ? await imageToDataUrl(member.profileImageUrl).catch(() => member.profileImageUrl)
-      : "";
-    return { background, photo };
+  // The card is drawn entirely in code - no background artwork - so everything a downloaded
+  // copy needs is inlined: the logo, the number font and the barcode bars. Without that, a
+  // saved card would open on the member's phone with a missing logo and a fallback font.
+  function loadScriptOnce(src, globalName) {
+    if (window[globalName]) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Could not load card component."));
+      document.head.appendChild(script);
+    });
   }
 
-  function validThruLabel(value) {
-    const raw = String(value || "").trim();
-    if (!raw || /pending/i.test(raw)) return "MM/YY";
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime())) {
-      return `${String(parsed.getMonth() + 1).padStart(2, "0")}/${String(parsed.getFullYear()).slice(-2)}`;
-    }
-    const match = raw.match(/(\d{4})[-/](\d{1,2})/);
-    if (match) return `${String(match[2]).padStart(2, "0")}/${match[1].slice(-2)}`;
-    return raw;
+  async function membershipCardImageAssets() {
+    const [logo, font] = await Promise.all([
+      imageToDataUrl(CARD_LOGO_PATH).catch(() => absoluteAssetUrl(CARD_LOGO_PATH)),
+      imageToDataUrl(CARD_FONT_PATH).catch(() => ""),
+      loadScriptOnce(absoluteAssetUrl(CARD_BARCODE_PATH), "JsBarcode").catch(() => null)
+    ]);
+    return { logo, font };
+  }
+
+  // "28 FEB 2027" rather than 02/27, which reads as a different date in different places.
+  function cardDateLabel(value) {
+    const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return "—";
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    return `${Number(match[3])} ${months[Number(match[2]) - 1]} ${match[1]}`;
+  }
+
+  // Title, first name, middle initials, surname - "DR AMANI K. ODHIAMBO".
+  function cardName(member) {
+    const middle = String(member.middleName || "").split(/\s+/).filter(Boolean).map((part) => `${part[0]}.`).join(" ");
+    return [member.title, member.firstName, middle, member.surname].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() || "ReSoK Member";
+  }
+
+  // A small seeded generator: the same membership number always grows the same airway tree,
+  // and no two numbers grow the same one.
+  function cardSeed(text) {
+    let h = 1779033703 ^ text.length;
+    for (let i = 0; i < text.length; i++) { h = Math.imul(h ^ text.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+    return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
   }
 
   /**
-   * Draws a member's card on the ReSoK card artwork.
+   * Draws a member's silver e-card: an engraved sea of wave bands, a ribbon carrying the
+   * Society's vision, an engraved pair of lungs whose airway tree is grown from the
+   * membership number, and a Code 128 barcode of that number.
    *
-   * Every coordinate below was measured from the design (Mmebership Card-01), by masking
-   * its sample text and reading back the pixel bounds - so generated text lands where the
-   * designer put it rather than where it looked about right. Baselines are the bottom of
-   * the measured ink; the design has no photo, so there is no photo slot to fill.
-   *
-   *   category    ink y 285-327, x 32-962, centred     -> baseline 327, centre 506
-   *   membership  ink y 390-441, x 56-456, left        -> baseline 441, x 56
-   *   VALID/THRU  ink y 384-441, x 638-736, two lines  -> baselines 409 and 441
-   *   valid thru  ink y 396-426, x 768-910             -> baseline 426, x 768
-   *   name        ink y 558-600, x 248-791, centred    -> baseline 600, centre 506
+   * Every id is prefixed, because the card sits inline on pages that have ids of their own.
    */
   function membershipCardSvg(member = getState().member, assets = {}) {
     const esc = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[char]));
-    const name = (memberName(member) || "ReSoK Member").toUpperCase();
+    const SANS = "'Segoe UI', Arial, sans-serif";
+    const NUM = "ResokCardNum, Montserrat, 'Segoe UI', Arial, sans-serif";
+    const INK = "#3a4247", LABEL = "#5e686d", ETCH = "#8a959b";
+    const P = "rcard-";
     const membershipId = member.membershipId || "Pending";
-    const category = (member.category || "Member").toUpperCase();
-    const validThru = validThruLabel(member.renewalDue || "Annual");
-    const backgroundSrc = assets.background || absoluteAssetUrl(CARD_BACKGROUND_PATH);
-
-    // The card is a fixed size but names are not. Rather than let a long name run off the
-    // edge, shrink it until the estimated width fits - the ratios are per-family averages
-    // for capitals, which is close enough at these sizes and needs no text measurement.
+    const name = esc(cardName(member).toUpperCase());
+    const category = esc((member.category || "Member").toUpperCase());
+    const since = esc(member.memberSince || "—");
+    const validThru = esc(cardDateLabel(member.renewalDue));
+    const micro = esc(`RESPIRATORY SOCIETY OF KENYA ✦ ${membershipId.toUpperCase()} ✦ `);
+    const rand = cardSeed(membershipId);
     const fit = (text, size, maxWidth, ratio, spacing = 0) => {
-      const width = (chars, px) => chars * px * ratio + Math.max(0, chars - 1) * spacing;
       let px = size;
-      while (px > 14 && width(text.length, px) > maxWidth) px -= 1;
+      while (px > 16 && text.length * px * ratio + (text.length - 1) * spacing > maxWidth) px -= 1;
       return px;
     };
+    const line = (points) => points.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+    const range = (from, to, step) => { const out = []; for (let v = from; v <= to; v += step) out.push(v); return out; };
 
-    const SERIF = "Georgia, 'Times New Roman', 'Nimbus Roman', serif";
-    const TECHNO = "Consolas, 'Courier New', 'DejaVu Sans Mono', monospace";
+    // Engraved sea: each band is painted over the one above, so the crests overlap.
+    let sea = "";
+    const seaXs = range(-20, 1032, 8);
+    for (let row = -1; row < 638 / 36 + 2; row++) {
+      const y0 = row * 36, ph = row * 1.7, wl = 120 + (row % 3) * 18, amp = 12 + (row % 2) * 4;
+      const at = (x, k) => y0 + k * 4.2 + Math.sin(x / wl * Math.PI * 2 + ph) * amp * (1 - k * .04);
+      sea += `<path d="${line(seaXs.map((x) => [x, at(x, 0)]))} L1032 ${y0 + 90} L-20 ${y0 + 90} Z" fill="url(#${P}metal)"/>`;
+      for (let k = 0; k < 9; k++) {
+        sea += `<path d="${line(seaXs.map((x) => [x, at(x, k)]))}" fill="none" stroke="${k % 2 ? ETCH : "#ffffff"}" stroke-width="${k % 2 ? .8 : 1.2}" opacity="${k % 2 ? .45 : .85}"/>`;
+      }
+    }
 
-    const categorySize = fit(category, 56, 930, 0.62, 1);
-    const idSize = fit(membershipId, 52, 400, 0.62, 2);
-    const nameSize = fit(name, 46, 700, 0.62, 3);
+    // The ribbon, and the Society's vision engraved along it.
+    const top = (x) => 152 + Math.sin(x / 150 + .6) * 18 - x * .035;
+    const rx = range(-20, 720, 8);
+    const edgeT = line(rx.map((x) => [x, top(x)]));
+    const edgeB = line(rx.map((x) => [x, top(x) + 50]));
+    const ribbonShape = `${edgeT} ${rx.slice().reverse().map((x) => `L${x} ${(top(x) + 50).toFixed(1)}`).join(" ")} Z`;
+    const stripes = range(-20, 720, 2.6).map((x) => `<line x1="${x.toFixed(1)}" y1="${top(x).toFixed(1)}" x2="${(x - 7).toFixed(1)}" y2="${(top(x) + 50).toFixed(1)}" stroke="${INK}" stroke-width=".6" opacity=".38"/>`).join("");
+    const vision = "HEALTHY LUNGS FOR ALL PEOPLE IN KENYA AND BEYOND";
+    const visionText = (fill, shift) => `<text font-family="${NUM}" font-size="17" font-weight="600" letter-spacing="2.2" text-anchor="middle"${shift}><textPath href="#${P}ribbonText" startOffset="52%" fill="${fill}">${vision}</textPath></text>`;
 
-    // The photo goes in the clear band between the "MEMBERSHIP CARD" title and the category
-    // line - the only space on this artwork that no text occupies. A card with no photo
-    // simply omits it rather than showing an "upload" placeholder, so an unfinished profile
-    // still produces a card worth carrying.
-    const photoSrc = assets.photo || member.profileImageUrl || "";
-    const photo = photoSrc
-      ? `<defs><clipPath id="memberPhoto"><circle cx="856" cy="196" r="84"/></clipPath></defs>
-  <circle cx="856" cy="196" r="87" fill="#ffffff" opacity=".9"/>
-  <image href="${esc(photoSrc)}" x="772" y="112" width="168" height="168" preserveAspectRatio="xMidYMid slice" clip-path="url(#memberPhoto)"/>`
-      : "";
+    // Engraved lungs: outline, hatched shading, windpipe rings and the member's airway tree.
+    const leftLung = "M-70 165 C-140 150 -215 250 -240 380 C-262 480 -262 560 -235 585 C-190 602 -110 576 -52 592 C-38 520 -36 330 -44 250 C-48 205 -54 178 -70 165 Z";
+    const rightLung = "M70 165 C140 150 215 250 240 380 C262 480 262 560 235 585 C190 602 120 580 78 592 C96 522 58 462 46 400 C38 330 48 205 70 165 Z";
+    const lungPaths = typeof Path2D === "function" ? [new Path2D(leftLung), new Path2D(rightLung)] : [];
+    const probe = document.createElement("canvas").getContext("2d");
+    const inLung = (x, y) => !lungPaths.length || lungPaths.some((p) => probe.isPointInPath(p, x, y));
+    const hatch = range(140, 610, 4.4).map((y) => `<path d="${line(range(-270, 270, 8).map((x) => [x, y + Math.sin(x / 28 + y / 40) * 3 + Math.abs(x) * .05]))}" fill="none" stroke="${INK}" stroke-width="1"/>`).join("");
+    let tree = "";
+    const seg = (x1, y1, x2, y2, w) => { tree += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="#ffffff" stroke-width="${w.toFixed(2)}" stroke-linecap="round"/>`; };
+    const branch = (x, y, angle, len, w, depth) => {
+      if (depth > 7 || len < 8) return;
+      const a = angle * Math.PI / 180, x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+      if (depth > 1 && !inLung(x2, y2)) return;
+      seg(x, y, x2, y2, w);
+      const spread = 18 + rand() * 14, pull = (90 - angle) * .15;
+      branch(x2, y2, angle - spread + pull, len * (.72 + rand() * .12), w * .72, depth + 1);
+      branch(x2, y2, angle + spread + pull, len * (.72 + rand() * .12), w * .72, depth + 1);
+    };
+    seg(0, 236, -72, 296, 9); seg(0, 236, 72, 296, 9);
+    branch(-72, 296, 112 + rand() * 10, 66, 6.5, 1); branch(72, 296, 68 - rand() * 10, 66, 6.5, 1);
+    branch(-60, 286, 160 + rand() * 10, 44, 5, 2); branch(60, 286, 20 - rand() * 10, 44, 5, 2);
+    branch(-52, 280, 232 + rand() * 12, 50, 5, 2); branch(52, 280, -52 - rand() * 12, 50, 5, 2);
+    const rings = range(40, 231, 11).map((y) => `<path d="M-17 ${y} Q0 ${y + 6} 17 ${y}" fill="none" stroke="${INK}" stroke-width="2"/>`).join("");
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="1012" height="645" viewBox="0 0 1012 645">
-  <image href="${esc(backgroundSrc)}" x="0" y="0" width="1012" height="645" preserveAspectRatio="xMidYMid slice"/>
-  ${photo}
-  <text x="506" y="327" text-anchor="middle" font-family="${SERIF}" font-size="${categorySize}" font-weight="700" letter-spacing="1" fill="#ffffff">${esc(category)}</text>
-  <text x="56" y="441" font-family="${TECHNO}" font-size="${idSize}" font-weight="700" letter-spacing="2" fill="#ffffff">${esc(membershipId)}</text>
-  <text x="736" y="409" text-anchor="end" font-family="${SERIF}" font-size="26" font-weight="700" letter-spacing="1" fill="#ffffff">VALID</text>
-  <text x="736" y="441" text-anchor="end" font-family="${SERIF}" font-size="26" font-weight="700" letter-spacing="1" fill="#ffffff">THRU</text>
-  <text x="768" y="426" font-family="${TECHNO}" font-size="42" font-weight="700" letter-spacing="2" fill="#ffffff">${esc(validThru)}</text>
-  <text x="506" y="600" text-anchor="middle" font-family="${TECHNO}" font-size="${nameSize}" font-weight="700" letter-spacing="3" fill="#ffffff">${esc(name)}</text>
+    // Barcode of the membership number, drawn by JsBarcode when it loaded. A card without it
+    // is still a valid card, so a failed load leaves the space empty rather than failing.
+    let barcode = "";
+    if (window.JsBarcode && member.membershipId) {
+      try {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        window.JsBarcode(el, membershipId.toUpperCase(), { format: "CODE128", displayValue: false, width: 1.7, height: 36, margin: 0, background: "transparent", lineColor: INK });
+        const w = parseFloat(el.getAttribute("width")) || 0, x = 430 - w / 2;
+        barcode = `<rect x="${(x - 10).toFixed(1)}" y="556" width="${(w + 20).toFixed(1)}" height="48" rx="6" fill="#ffffff" opacity=".7"/>
+  <g transform="translate(${x.toFixed(1)} 562)">${el.innerHTML}</g>`;
+      } catch (error) {
+        console.warn("Card barcode skipped:", error.message);
+      }
+    }
+
+    // Raised lettering: a light edge below and a dark edge above.
+    const emboss = (x, y, text, attrs) => `<text x="${x + 1.2}" y="${y + 1.6}" ${attrs} fill="#ffffff" opacity=".95">${text}</text>
+  <text x="${x - .8}" y="${y - 1}" ${attrs} fill="#000000" opacity=".22">${text}</text>
+  <text x="${x}" y="${y}" ${attrs} fill="url(#${P}inkText)">${text}</text>`;
+
+    const fontFace = assets.font ? `<style>@font-face{font-family:ResokCardNum;src:url(${assets.font}) format("woff2");font-weight:600;}</style>` : "";
+    const logoSrc = esc(assets.logo || absoluteAssetUrl(CARD_LOGO_PATH));
+    const nameSize = fit(name, 50, 840, .74, 2);
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="1012" height="638" viewBox="0 0 1012 638">
+  ${fontFace}
+  <defs>
+    <linearGradient id="${P}metal" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1012" y2="638">
+      <stop offset="0" stop-color="#eef1f2"/><stop offset=".25" stop-color="#d3d9dc"/><stop offset=".45" stop-color="#f2f4f5"/>
+      <stop offset=".7" stop-color="#c9d0d4"/><stop offset="1" stop-color="#e2e6e8"/>
+    </linearGradient>
+    <linearGradient id="${P}sheen" x1="0" y1="0" x2="1" y2=".65">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset=".26" stop-color="#ffffff" stop-opacity=".05"/><stop offset=".34" stop-color="#ffffff" stop-opacity=".6"/>
+      <stop offset=".42" stop-color="#ffffff" stop-opacity=".05"/><stop offset=".55" stop-color="#9aa6ad" stop-opacity=".18"/><stop offset=".74" stop-color="#ffffff" stop-opacity=".35"/>
+      <stop offset=".86" stop-color="#9aa6ad" stop-opacity=".12"/><stop offset="1" stop-color="#ffffff" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="${P}inkText" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a6469"/><stop offset="1" stop-color="#2b3236"/></linearGradient>
+    <linearGradient id="${P}ribbonFade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".05" stop-color="#fff"/><stop offset=".94" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <mask id="${P}ribbonMask"><rect x="-20" y="0" width="760" height="638" fill="url(#${P}ribbonFade)"/></mask>
+    <clipPath id="${P}card"><rect width="1012" height="638" rx="36"/></clipPath>
+    <clipPath id="${P}ribbonClip"><path d="${ribbonShape}"/></clipPath>
+    <clipPath id="${P}lungClip"><path d="${leftLung}"/><path d="${rightLung}"/></clipPath>
+    <path id="${P}ribbonText" d="${line(rx.map((x) => [x, top(x) + 35]))}"/>
+    <path id="${P}micro" d="M927 22 L927 616"/>
+  </defs>
+
+  <g clip-path="url(#${P}card)">
+    <rect width="1012" height="638" fill="url(#${P}metal)"/>
+    <g opacity=".8">${sea}</g>
+    <rect width="1012" height="638" fill="url(#${P}sheen)"/>
+    <g mask="url(#${P}ribbonMask)">
+      <path d="${ribbonShape}" fill="url(#${P}metal)"/>
+      <g clip-path="url(#${P}ribbonClip)">${stripes}</g>
+      <path d="${edgeT}" fill="none" stroke="#ffffff" stroke-width="2"/><path d="${edgeT}" fill="none" stroke="${INK}" stroke-width="1" opacity=".45" transform="translate(0 2.5)"/>
+      <path d="${edgeB}" fill="none" stroke="${INK}" stroke-width="1.2" opacity=".5"/><path d="${edgeB}" fill="none" stroke="#ffffff" stroke-width="1.6" transform="translate(0 2)"/>
+      ${visionText("#ffffff", "")}
+      ${visionText("#4a5459", ' transform="translate(-1.2 -1.6)"')}
+    </g>
+    <g transform="translate(735 88) scale(.66)">
+      <g opacity=".56"><g clip-path="url(#${P}lungClip)">${hatch}</g>
+        <path d="${leftLung}" fill="none" stroke="${INK}" stroke-width="3"/><path d="${rightLung}" fill="none" stroke="${INK}" stroke-width="3"/>
+        <path d="M-18 28 L-18 236 M18 28 L18 236" stroke="${INK}" stroke-width="3"/>${rings}</g>
+      <path d="${leftLung}" fill="none" stroke="#ffffff" stroke-width="2" transform="translate(2 2.5)" opacity=".9"/>
+      <path d="${rightLung}" fill="none" stroke="#ffffff" stroke-width="2" transform="translate(2 2.5)" opacity=".9"/>
+      <g opacity=".95">${tree}</g>
+      <g opacity=".45" transform="translate(-1.6 -2)">${tree.replace(/#ffffff/g, INK)}</g>
+    </g>
+  </g>
+  <rect x="1.5" y="1.5" width="1009" height="635" rx="35" fill="none" stroke="#ffffff" stroke-width="2.5" opacity=".9"/>
+  <rect x="1.5" y="1.5" width="1009" height="635" rx="35" fill="none" stroke="#9aa4a9" stroke-width="1" opacity=".6"/>
+
+  <image href="${logoSrc}" x="44" y="34" width="330" height="88" preserveAspectRatio="xMinYMid meet"/>
+  ${emboss(900, 95, "MEMBERSHIP CARD", `text-anchor="end" font-family="${SANS}" font-size="23" font-weight="700" letter-spacing="5"`)}
+
+  <text x="60" y="242" font-family="${SANS}" font-size="16" font-weight="600" letter-spacing="3" fill="${LABEL}">MEMBERSHIP NO.</text>
+  ${emboss(58, 306, esc(membershipId), `font-family="${NUM}" font-size="58" font-weight="600" letter-spacing="5"`)}
+  <text x="60" y="370" font-family="${SANS}" font-size="14" font-weight="600" letter-spacing="3" fill="${LABEL}">MEMBER SINCE</text>
+  ${emboss(60, 408, since, `font-family="${NUM}" font-size="32" font-weight="600" letter-spacing="2"`)}
+  <text x="290" y="370" font-family="${SANS}" font-size="14" font-weight="600" letter-spacing="3" fill="${LABEL}">VALID THRU</text>
+  ${emboss(290, 408, validThru, `font-family="${NUM}" font-size="32" font-weight="600" letter-spacing="2"`)}
+
+  ${emboss(60, 500, name, `font-family="${NUM}" font-size="${nameSize}" font-weight="600" textLength="840" lengthAdjust="spacing"`)}
+  ${barcode}
+  <line x1="60" y1="548" x2="900" y2="548" stroke="#8a959b" stroke-width="1" opacity=".6"/>
+  <line x1="60" y1="549.5" x2="900" y2="549.5" stroke="#ffffff" stroke-width="1" opacity=".9"/>
+  <g font-family="${SANS}" font-size="16" font-weight="600" fill="${INK}">
+    <text x="60" y="584">www.resok.org</text>
+    <text x="900" y="584" text-anchor="end">+254 735 700 660  ·  info@resok.org</text>
+  </g>
+
+  <text font-family="${SANS}" font-size="7.6" font-weight="600" letter-spacing=".6" fill="#47527f"><textPath href="#${P}micro">${micro.repeat(5)}</textPath></text>
+  ${emboss(962, 340, category, `transform="rotate(90 962 340)" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="${fit(category, 26, 440, .72, 6)}" letter-spacing="6"`)}
 </svg>`;
   }
 
+  // Saved as a PNG, which every phone opens; the SVG it is drawn from is the fallback.
   async function downloadMembershipCard(member = getState().member) {
     if (!member.membershipId) throw new Error("Membership code is not available yet.");
     const assets = await membershipCardImageAssets(member);
-    const blob = new Blob([membershipCardSvg(member, assets)], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${member.membershipId}-membership-card.svg`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    const svg = membershipCardSvg(member, assets);
+    const save = (href, ext) => {
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = `${member.membershipId}-membership-card.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
+    const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    try {
+      const img = new Image();
+      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = svgUrl; });
+      const canvas = document.createElement("canvas");
+      canvas.width = 2024;
+      canvas.height = 1276;
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      const png = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!png) throw new Error("PNG export failed");
+      const pngUrl = URL.createObjectURL(png);
+      save(pngUrl, "png");
+      setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+    } catch {
+      save(svgUrl, "svg");
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(svgUrl), 1000);
+    }
   }
 
   function currentDateLabel() {

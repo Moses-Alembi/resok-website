@@ -178,15 +178,15 @@ $confirmUrl = selfUrl() . '?confirm=' . $token;
 $leaveUrl = selfUrl() . '?unsubscribe=' . $token;
 
 $text = "Hello,\n\n"
-    . "Someone - hopefully you - asked to receive the Respiratory Society of Kenya newsletter at this address.\n\n"
+    . "Thank you for signing up for the Respiratory Society of Kenya newsletter. Please confirm your email address to start receiving updates on CMEs, webinars, projects and announcements.\n\n"
     . "Confirm your subscription:\n{$confirmUrl}\n\n"
-    . "If this wasn't you, ignore this email and you won't be added.\n\n"
+    . "If you did not sign up, you can ignore this email and you will not be added.\n\n"
     . "Thanks,\nReSoK\n";
 $html = cardEmailHtml(
     'Confirm your subscription',
     'Hello,',
-    cardEmailParagraph('Someone - hopefully you - asked to receive the Respiratory Society of Kenya newsletter at this address: updates on CMEs, webinars, projects and announcements.')
-        . cardEmailParagraph("If this wasn't you, ignore this email and you won't be added.", true),
+    cardEmailParagraph('Thank you for signing up for the Respiratory Society of Kenya newsletter. Please confirm your email address to start receiving updates on CMEs, webinars, projects and announcements.')
+        . cardEmailParagraph('If you did not sign up, you can ignore this email and you will not be added.', true),
     'Confirm subscription',
     $confirmUrl,
     'Changed your mind? <a href="' . htmlspecialchars($leaveUrl, ENT_QUOTES) . '" style="color:#6b8f78;">Unsubscribe</a>.'

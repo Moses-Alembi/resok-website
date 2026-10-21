@@ -71,7 +71,7 @@
       });
     })();
   </script>
-  <script src="assets/js/site-forms.js" defer></script>
+  <script src="assets/js/site-forms.js?v=20261021-newsletter" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

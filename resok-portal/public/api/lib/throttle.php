@@ -57,6 +57,9 @@ const THROTTLE_RULES = [
     // The public contact form. Every send counts, not just failures: it mails info@resok.org,
     // so an unlimited form is a way to bury the secretariat's inbox.
     'contact'        => [3,  8,  3600, 3600],
+    // Newsletter signup. Each attempt emails the address typed in, so the limit protects
+    // that inbox as much as ours: 3 confirmation emails an hour to one address.
+    'newsletter'     => [3,  10, 3600, 3600],
 ];
 const THROTTLE_DEFAULT = [15, 40, 900, 900];
 

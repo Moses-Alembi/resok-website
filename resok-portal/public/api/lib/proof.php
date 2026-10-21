@@ -37,7 +37,7 @@ function proofProtectedRoute(string $route, string $method): bool
 {
     if ($method !== 'POST') return false;
     if (in_array($route, ['auth/login', 'auth/register', 'auth/register-learner', 'auth/forgot-password', 'auth/resend-verification',
-                          'auth/mfa/verify', 'abstracts/register', 'careers/apply', 'contact'], true)) {
+                          'auth/mfa/verify', 'abstracts/register', 'careers/apply', 'contact', 'newsletter'], true)) {
         return true;
     }
     return (bool)preg_match('#^events/[^/]+/token/request$#', $route);

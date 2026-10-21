@@ -1,8 +1,11 @@
 (function () {
   'use strict';
 
-  var NEWSLETTER_EMAIL = 'info@resok.org';
-  var NEWSLETTER_SUBJECT = 'ReSoK Newsletter Signup';
+  // The site root, worked out from this script's own address (…/assets/js/site-forms.js).
+  // Pages inside the portal load it too, and the site is served both at / and /resok-new/,
+  // so a bare relative path like 'newsletter.php' would point somewhere different on each.
+  var SELF = document.currentScript ? document.currentScript.src : '';
+  var ROOT = SELF ? SELF.replace(/assets\/js\/site-forms\.js(\?.*)?$/, '') : '';
 
   var proofLoading = null;
   function loadProof() {
@@ -10,7 +13,7 @@
     if (!proofLoading) {
       proofLoading = new Promise(function (resolve) {
         var s = document.createElement('script');
-        s.src = 'resok-portal/public/js/proof.js?v=20261017-proof';
+        s.src = ROOT + 'resok-portal/public/js/proof.js?v=20261017-proof';
         s.onload = function () { resolve(window.ResokProof || null); };
         s.onerror = function () { proofLoading = null; resolve(null); };
         document.head.appendChild(s);
@@ -38,6 +41,26 @@
     status.style.color = isError ? '#bc0b22' : '#087539';
   }
 
+  // The newsletter forms are a single row (box + arrow), so their message goes underneath
+  // the form rather than inside it, where it would be squeezed in beside the button.
+  function setStatusBelow(form, message, isError) {
+    var status = form.nextElementSibling;
+    if (!status || !status.hasAttribute('data-form-status')) {
+      status = document.createElement('p');
+      status.setAttribute('data-form-status', '');
+      status.setAttribute('role', 'status');
+      status.style.margin = '10px 0 0';
+      status.style.fontSize = '0.86rem';
+      status.style.fontWeight = '700';
+      status.style.lineHeight = '1.5';
+      form.insertAdjacentElement('afterend', status);
+    }
+    status.textContent = message;
+    status.style.color = isError ? '#e5484d' : '#3ecf74';
+  }
+
+  // Posts the address to newsletter.php, which emails a confirmation link. Nothing opens
+  // the visitor's email app any more.
   function handleNewsletterSubmit(event) {
     var form = event.target;
     if (!form.matches('.site-footer-subscribe, .home-newsletter-form')) return;
@@ -48,17 +71,41 @@
     var email = emailInput ? emailInput.value.trim() : '';
     if (!email || (emailInput && !emailInput.checkValidity())) {
       if (emailInput) emailInput.focus();
-      setStatus(form, 'Please enter a valid email address.', true);
+      setStatusBelow(form, 'Please enter a valid email address.', true);
       return;
     }
 
-    var body = 'Please add this email to the ReSoK newsletter list:%0D%0A%0D%0A' +
-      encodeURIComponent(email);
-    window.location.href = 'mailto:' + NEWSLETTER_EMAIL +
-      '?subject=' + encodeURIComponent(NEWSLETTER_SUBJECT) +
-      '&body=' + body;
+    var button = form.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    setStatusBelow(form, 'Signing you up...', false);
 
-    setStatus(form, 'Your email client should open so you can send the signup request.', false);
+    var body = new FormData();
+    body.append('email', email);
+    body.append('source', window.location.pathname);
+    fetch(ROOT + 'newsletter.php', { method: 'POST', body: body })
+      .then(function (response) {
+        // "Verifying your browser": load the solver only when the server asks for it.
+        if (response.status !== 428) return response;
+        return loadProof().then(function (proof) {
+          return proof ? proof.fetch(ROOT + 'newsletter.php', { method: 'POST', body: body }) : response;
+        });
+      })
+      .then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          return { ok: response.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok) throw new Error(result.data.error || 'Could not sign you up. Please try again.');
+        setStatusBelow(form, result.data.message || 'Almost done! Check your inbox to confirm your subscription.', false);
+        form.reset();
+      })
+      .catch(function (error) {
+        setStatusBelow(form, error.message || 'Could not sign you up. Please try again.', true);
+      })
+      .finally(function () {
+        if (button) button.disabled = false;
+      });
   }
 
   function handleContactSubmit(event) {

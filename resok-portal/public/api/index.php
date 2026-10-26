@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -414,6 +414,8 @@ function completeLogin(PDO $pdo, array $config, array $user): void
             // A member account with no membership record is an Academy learner.
             'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
             'isAuthor' => $isAuthor,
+            // Staff without a membership go to the staff home page rather than the Academy.
+            'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
             'email' => $user['email'],
             'role' => $user['role'],
             'membershipStatus' => $user['membership_status'],
@@ -2228,6 +2230,7 @@ Respiratory Society of Kenya");
             'user' => [
                 'id' => (int)$user['id'],
                 'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
+                'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
                 'email' => $user['email'],
                 'role' => $user['role'],
                 'membershipStatus' => $user['membership_status'],
@@ -4878,6 +4881,12 @@ Respiratory Society of Kenya");
     if (strpos($route, 'directory/') === 0) {
         requireModule('directoryHandle', 'lib/directory.php');
         directoryHandle($pdo, $config, $route, $method);
+    }
+
+    // Staff accounts: the staff home page, and adding and inviting staff (super admins).
+    if (strpos($route, 'staff/') === 0) {
+        requireModule('staffHandle', 'lib/staff.php');
+        staffHandle($pdo, $config, $route, $method);
     }
 
     // The newsletter list and sending to it (super admins). Signup itself is /newsletter.php.

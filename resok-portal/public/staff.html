@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff - ReSoK Portal</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee}
+    .top-inner{max-width:900px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
+    .top img{height:38px}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top a.out{margin-left:auto;font-size:13.5px;color:var(--red);font-weight:700;text-decoration:none}
+    main{max-width:900px;margin:0 auto;padding:22px 18px 60px;display:grid;gap:18px}
+    .panel{background:#fff;border-radius:12px;padding:22px;box-shadow:0 2px 12px rgba(16,24,40,.06);min-width:0}
+    h1{font-size:22px}
+    h2{font-size:17px;margin-bottom:6px}
+    .lede{color:var(--muted);font-size:14px;margin-top:4px}
+    input,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+    textarea{margin-top:10px;min-height:80px;resize:vertical}
+    .btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;background:var(--green);color:#fff;margin-top:12px}
+    .btn:disabled{opacity:.6;cursor:wait}
+    .note{border-radius:9px;padding:11px 14px;font-size:14px;margin:12px 0 0}
+    .note.ok{background:#ecfdf3;color:#05603a}.note.bad{background:#fef3f2;color:#b42318}
+    .row{display:flex;gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+    .row:last-child{border-bottom:0}
+    .row code{font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px}
+    .row .grow{flex:1;min-width:160px}
+    .hint{color:var(--muted);font-size:12.5px}
+    .empty{color:var(--muted);font-size:14px;padding:14px;border:1px dashed var(--line);border-radius:10px;text-align:center}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="top-inner">
+    <img src="assets/img/logo.png" alt="ReSoK" />
+    <span class="title">Staff</span>
+    <a class="out" href="#" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Sign out</a>
+  </div></header>
+  <main>
+    <section class="panel">
+      <h1 id="hello">Welcome</h1>
+      <p class="lede">Your ReSoK staff account. Report ICT problems here and follow them up, and see the equipment assigned to you.</p>
+      <div id="pageNote"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Report an ICT problem</h2>
+      <p class="lede" style="margin-bottom:12px">A laptop, the printer, email, the internet, the website or the portal. Say what went wrong; ICT will pick it up and you can follow it below.</p>
+      <form id="ticketForm" autocomplete="off">
+        <input id="subject" maxlength="200" required placeholder="e.g. The office printer is not printing" aria-label="What is wrong" />
+        <textarea id="description" placeholder="Anything that helps: which device, since when, any error message (optional)" aria-label="Details"></textarea>
+        <button class="btn" type="submit" id="ticketBtn"><i class="fas fa-paper-plane"></i> Report it</button>
+      </form>
+      <div id="ticketNote"></div>
+    </section>
+
+    <section class="panel">
+      <h2>What you have reported</h2>
+      <div id="tickets"><div class="empty">Loading&hellip;</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>Equipment assigned to you</h2>
+      <p class="lede" style="margin-bottom:8px">From the ICT asset register. If something here is not with you, or something you use is missing, report it above.</p>
+      <div id="assets"><div class="empty">Loading&hellip;</div></div>
+    </section>
+  </main>
+  <script src="js/portal-state.js?v=20261021-silver-card"></script>
+  <script>
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const say = (box, msg, kind) => { el(box).textContent = ''; if (msg) el(box).appendChild(make('div', 'note ' + kind, msg)); };
+    const fmtDate = (v) => { const d = new Date(String(v || '').replace(' ', 'T')); return isNaN(d) ? '' : d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }); };
+
+    el('logoutLink').addEventListener('click', (e) => { e.preventDefault(); window.ResokPortal.logout(); });
+
+    async function loadMe() {
+      try {
+        const me = await api('/api/staff/me');
+        if (me.name) el('hello').textContent = 'Welcome, ' + me.name.split(' ')[0];
+        const box = el('assets'); box.textContent = '';
+        if (!me.assets.length) { box.appendChild(make('div', 'empty', 'Nothing is assigned to you in the register.')); return; }
+        me.assets.forEach((a) => {
+          const row = make('div', 'row');
+          row.appendChild(make('code', null, a.assetTag));
+          row.appendChild(make('span', 'grow', a.name));
+          row.appendChild(make('span', 'hint', 'since ' + fmtDate(a.since)));
+          box.appendChild(row);
+        });
+      } catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/staff'); return; }
+        el('assets').textContent = '';
+        say('pageNote', error.status === 403 ? 'This page is for ReSoK staff. Your account is not on the staff list.' : (error.message || 'Could not load your page.'), 'bad');
+      }
+    }
+
+    async function loadTickets() {
+      const box = el('tickets');
+      try {
+        const data = await api('/api/ict/tickets');
+        box.textContent = '';
+        if (!data.tickets.length) { box.appendChild(make('div', 'empty', 'Nothing reported yet.')); return; }
+        data.tickets.forEach((t) => {
+          const row = make('div', 'row');
+          row.appendChild(make('code', null, t.reference));
+          row.appendChild(make('span', 'grow', t.subject));
+          row.appendChild(make('span', 'hint', t.status.replace(/_/g, ' ')));
+          box.appendChild(row);
+        });
+      } catch (error) {
+        box.textContent = '';
+        if (error.status !== 401) box.appendChild(make('div', 'empty', 'Could not load your reports just now.'));
+      }
+    }
+
+    el('ticketForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const subject = el('subject').value.trim();
+      if (!subject) return;
+      el('ticketBtn').disabled = true;
+      try {
+        const data = await api('/api/ict/tickets', { method: 'POST', body: JSON.stringify({ subject, description: el('description').value.trim() }) });
+        say('ticketNote', 'Reported as ' + data.ticket.reference + '. ICT will look into it; its status shows below.', 'ok');
+        el('ticketForm').reset();
+        loadTickets();
+      } catch (error) {
+        say('ticketNote', error.message || 'Could not report that just now.', 'bad');
+      }
+      el('ticketBtn').disabled = false;
+    });
+
+    loadMe();
+    loadTickets();
+  })();
+  </script>
+</body>
+</html>

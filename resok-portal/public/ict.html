@@ -152,6 +152,7 @@
   .notice.show{display:block}
   .notice.success{background:var(--ok-bg);color:var(--ok)}
   .notice.error{background:var(--crit-bg);color:var(--crit)}
+  .notice.warning{background:var(--warn-bg);color:var(--warn)}
 
   .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13.5px}
   .empty i{font-size:26px;color:var(--empty-icon);display:block;margin-bottom:10px}
@@ -902,6 +903,29 @@
       </p>
       <div id="staffNotice" class="notice"></div>
       <div class="panel"><div id="staffList"></div></div>
+
+      <h2 style="margin:26px 0 6px;font-size:18px">Staff accounts</h2>
+      <p class="lede">
+        Society staff who use the portal for work. A staff account can report ICT problems and
+        follow them, and see the equipment assigned to it &mdash; nothing else. Give anyone more
+        above, or on the Administrators page.
+      </p>
+      <div id="staffAcctNotice" class="notice"></div>
+      <div class="panel">
+        <label class="lbl" for="staffPaste">Add staff: paste names and emails, as copied from an email's To line, or one per line</label>
+        <textarea class="in" id="staffPaste" rows="4" placeholder="Anne Mwangi &lt;amwangi@resok.org&gt;, Juliet Ndunge &lt;jndunge@resok.org&gt;, ..."></textarea>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center">
+          <button class="btn btn-primary" id="staffAddBtn" type="button"><i class="fas fa-user-plus"></i> Add accounts</button>
+          <span class="muted" style="font-size:12.5px">No email is sent yet. Accounts that already exist keep their password and access.</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+          <div id="staffAcctCounts" class="muted" style="flex:1;min-width:200px"></div>
+          <button class="btn btn-secondary" id="staffInviteBtn" type="button"><i class="fas fa-paper-plane"></i> Send invites</button>
+        </div>
+        <div class="scroll"><div id="staffAcctList"></div></div>
+      </div>
     </section>
 
     <footer class="ict-footer">
@@ -3201,7 +3225,114 @@
     box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
   }
 
+  /* ---------------- staff accounts (lib/staff.php) ---------------- */
+  function staffAcctNotice(message, kind) {
+    const box = el('staffAcctNotice');
+    box.textContent = message || '';
+    box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
+  }
+  const STAFF_STATE = { active: ['Active', 's-ok'], invited: ['Invited', 's-warning'], not_invited: ['Not invited yet', 's-unknown'] };
+
+  function renderStaffAccounts(list) {
+    const counts = { active: 0, invited: 0, not_invited: 0 };
+    list.forEach((s) => { counts[s.state]++; });
+    el('staffAcctCounts').textContent = list.length
+      ? list.length + ' staff · ' + counts.active + ' active · ' + counts.invited + ' invited · ' + counts.not_invited + ' not invited yet'
+      : '';
+    el('staffInviteBtn').hidden = counts.not_invited === 0;
+    el('staffInviteBtn').lastChild.textContent = ' Send invites (' + Math.min(20, counts.not_invited) + ' of ' + counts.not_invited + ')';
+    const mount = el('staffAcctList');
+    mount.textContent = '';
+    if (!list.length) { mount.appendChild(make('div', 'empty', 'No staff accounts yet. Paste a list above.')); return; }
+    const table = make('table');
+    const hr = make('tr');
+    ['Name', 'Email', 'Account', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    const thead = make('thead'); thead.appendChild(hr); table.appendChild(thead);
+    const body = make('tbody');
+    list.forEach((s) => {
+      const tr = make('tr');
+      tr.appendChild(make('td', s.name ? null : 'muted', s.name || 'No name given'));
+      const em = make('td', null, s.email);
+      if (s.member) em.appendChild(make('div', 'muted', 'also a ReSoK member'));
+      if (s.role !== 'member') em.appendChild(make('div', 'muted', 'role: ' + s.role));
+      tr.appendChild(em);
+      const st = make('td');
+      const [label, tone] = STAFF_STATE[s.state];
+      st.appendChild(make('span', 'status ' + tone, label));
+      if (s.state === 'invited') st.appendChild(make('div', 'muted', 'sent ' + fmtDate(s.invitedAt)));
+      if (s.inviteError) st.appendChild(make('div', 'muted', 'last send failed: ' + s.inviteError));
+      tr.appendChild(st);
+      const act = make('td');
+      act.style.whiteSpace = 'nowrap';
+      if (s.state !== 'active') {
+        const b = make('button', 'btn btn-secondary', s.state === 'invited' ? 'Resend' : 'Invite');
+        b.type = 'button'; b.style.fontSize = '12px';
+        b.addEventListener('click', async () => {
+          b.disabled = true;
+          try {
+            renderStaffAccounts((await api('/api/staff/admin/' + s.userId + '/invite', { method: 'POST', body: '{}' })).staff);
+            staffAcctNotice('Invite sent to ' + s.email + '.', 'success');
+          } catch (error) { staffAcctNotice(error.message || 'Not sent.', 'error'); b.disabled = false; }
+        });
+        act.appendChild(b);
+      }
+      const rm = make('button', 'btn btn-ghost', 'Remove');
+      rm.type = 'button'; rm.style.cssText = 'font-size:12px;margin-left:6px';
+      rm.addEventListener('click', async () => {
+        if (!confirm('Take ' + (s.name || s.email) + ' off the staff list?\n\nTheir portal account stays; they just lose the staff page. An unused invite link stops working.')) return;
+        try {
+          renderStaffAccounts((await api('/api/staff/admin/' + s.userId + '/remove', { method: 'POST', body: '{}' })).staff);
+          staffAcctNotice((s.name || s.email) + ' is no longer on the staff list.', 'success');
+        } catch (error) { staffAcctNotice(error.message || 'Could not remove.', 'error'); }
+      });
+      act.appendChild(rm);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    mount.appendChild(table);
+  }
+
+  async function loadStaffAccounts() {
+    try { renderStaffAccounts((await api('/api/staff/admin')).staff); }
+    catch (error) { el('staffAcctList').textContent = ''; staffAcctNotice(error.message || 'Could not load staff accounts.', 'error'); }
+  }
+
+  el('staffAddBtn').addEventListener('click', async () => {
+    const list = el('staffPaste').value.trim();
+    if (!list) return;
+    el('staffAddBtn').disabled = true;
+    try {
+      const r = await api('/api/staff/admin/add', { method: 'POST', body: JSON.stringify({ list }) });
+      renderStaffAccounts(r.staff);
+      const parts = [];
+      if (r.added.length) parts.push(r.added.length + ' new account' + (r.added.length === 1 ? '' : 's') + ' created');
+      if (r.marked.length) parts.push(r.marked.length + ' existing account' + (r.marked.length === 1 ? '' : 's') + ' marked as staff (' + r.marked.join(', ') + ')');
+      if (r.already.length) parts.push(r.already.length + ' already on the list');
+      if (r.duplicates.length) parts.push('listed twice, added once: ' + r.duplicates.join(', '));
+      if (r.invalid.length) parts.push('not understood, skipped: ' + r.invalid.join(' | '));
+      staffAcctNotice(parts.join('. ') + '. No email has been sent.', r.invalid.length ? 'warning' : 'success');
+      if (!r.invalid.length) el('staffPaste').value = '';
+    } catch (error) { staffAcctNotice(error.message || 'Could not add them.', 'error'); }
+    el('staffAddBtn').disabled = false;
+  });
+
+  el('staffInviteBtn').addEventListener('click', async () => {
+    const n = el('staffInviteBtn').lastChild.textContent.match(/\((\d+) of/);
+    if (!confirm('Email ' + (n ? n[1] : 'the next') + ' staff a link to choose their password?')) return;
+    el('staffInviteBtn').disabled = true;
+    try {
+      const r = await api('/api/staff/admin/invite', { method: 'POST', body: JSON.stringify({ limit: 20 }) });
+      renderStaffAccounts(r.staff);
+      staffAcctNotice(r.sent.length + ' invite' + (r.sent.length === 1 ? '' : 's') + ' sent'
+        + (r.failed.length ? ', ' + r.failed.length + ' failed (' + r.failed.map((f) => f.email).join(', ') + ')' : '')
+        + (r.remaining ? '. ' + r.remaining + ' still to send: press again in a few minutes.' : '.'), r.failed.length ? 'warning' : 'success');
+    } catch (error) { staffAcctNotice(error.message || 'Could not send.', 'error'); }
+    el('staffInviteBtn').disabled = false;
+  });
+
   async function loadStaff() {
+    loadStaffAccounts();
     const mount = el('staffList');
     try {
       const [staffData, capsData] = await Promise.all([

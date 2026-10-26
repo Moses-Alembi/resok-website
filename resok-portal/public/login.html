@@ -406,12 +406,15 @@
       const isLearner = data.user?.isLearner === true;
       // An author (signed up to submit an abstract, not a member or learner) goes to their abstracts.
       const isAuthor = data.user?.isAuthor === true;
+      // Staff with no membership of their own go to the staff home page; a staff member who is
+      // also a ReSoK member keeps the member dashboard, which has the ICT report box too.
+      const isStaffOnly = data.user?.isStaff === true && !data.user?.membershipStatus;
       const next = safeNextPath();
-      const destination = isAdmin ? "admin-review" : next || (isAuthor ? "abstracts" : (isLearner ? "academy" : "dashboard"));
+      const destination = isAdmin ? "admin-review" : next || (isStaffOnly ? "staff" : (isAuthor ? "abstracts" : (isLearner ? "academy" : "dashboard")));
       showAlert(
         next && !isAdmin
           ? "Login successful. Taking you back..."
-          : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : (isAuthor ? "abstracts" : (isLearner ? "courses" : "dashboard"))}...`,
+          : `Login successful. Redirecting to your ${isAdmin ? "admin portal" : (isStaffOnly ? "staff page" : (isAuthor ? "abstracts" : (isLearner ? "courses" : "dashboard")))}...`,
         "success"
       );
       setTimeout(() => {

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Newsletter - ReSoK Admin</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root{--green:#087539;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    [hidden]{display:none!important}
+    .top{background:#fff;border-bottom:1px solid #eee}
+    .top-inner{max-width:1100px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
+    .top img{height:38px}
+    .top .title{font-weight:700;font-size:15px;color:#344054}
+    .top a.back{margin-left:auto;font-size:13.5px;color:var(--green);font-weight:700;text-decoration:none}
+    main{max-width:1100px;margin:0 auto;padding:22px 18px 60px;display:grid;gap:18px}
+    .panel{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 12px rgba(16,24,40,.06);min-width:0}
+    h1{font-size:22px}
+    h2{font-size:18px}
+    .lede{color:var(--muted);font-size:14.5px;margin-top:6px;max-width:80ch}
+    .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:16px}
+    .tile{border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+    .tile b{display:block;font-size:26px;line-height:1.2}
+    .tile span{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;align-items:center}
+    label{display:block;font-size:13px;font-weight:700;color:#344054;margin:14px 0 6px}
+    input[type=text],input[type=url],input[type=search],select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
+    textarea{min-height:220px;resize:vertical}
+    .two{display:grid;grid-template-columns:1fr 2fr;gap:12px}
+    @media (max-width:640px){.two{grid-template-columns:1fr}}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:14px;margin-top:14px}
+    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    .hint{color:var(--muted);font-size:12.5px}
+    .pill{display:inline-flex;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+    .confirmed,.sent{background:#ecfdf3;color:#05603a}.pending,.draft{background:#fff8e6;color:#93370d}.unsubscribed{background:#f2f4f7;color:#475467}
+    .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #d0d5dd;background:#fff;color:var(--ink);border-radius:8px;padding:8px 14px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none}
+    .btn.sm{padding:5px 10px;font-size:12.5px}
+    .btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+    .btn.danger{border-color:#f1b9c1;color:var(--red)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .empty{color:var(--muted);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px;margin-top:14px}
+    .note{border-radius:9px;padding:12px 14px;font-size:14px;margin-top:12px}
+    .note.ok{background:#ecfdf3;color:#05603a}.note.bad{background:#fef3f2;color:#b42318}.note.info{background:#eff8ff;color:#175cd3}
+    .bar{height:6px;background:#f2f4f7;border-radius:99px;overflow:hidden;margin-top:6px;min-width:120px}
+    .bar i{display:block;height:100%;background:var(--green)}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="top-inner">
+    <a href="admin-home"><img src="assets/img/logo.png" alt="ReSoK" /></a>
+    <span class="title">Newsletter</span>
+    <a class="back" href="admin-home"><i class="fas fa-arrow-left"></i> Admin suite</a>
+  </div></header>
+  <main>
+    <section class="panel">
+      <h1>Newsletter</h1>
+      <p class="lede">People who signed up through the newsletter box on resok.org. An address is only on the list once its owner has clicked the confirmation link, so nobody can be added here by hand. You can take someone off if they ask by email.</p>
+      <div class="tiles">
+        <div class="tile"><b id="nConfirmed">&ndash;</b><span>Subscribed</span></div>
+        <div class="tile"><b id="nPending">&ndash;</b><span>Waiting to confirm</span></div>
+        <div class="tile"><b id="nGone">&ndash;</b><span>Unsubscribed</span></div>
+      </div>
+      <div id="note"></div>
+    </section>
+
+    <section class="panel">
+      <h2 id="formTitle">Write a newsletter</h2>
+      <p class="lede">Plain text: leave a blank line between paragraphs. Web addresses become links. Every copy ends with an unsubscribe link.</p>
+      <label for="subject">Subject</label>
+      <input type="text" id="subject" maxlength="200" placeholder="e.g. ReSoK CME: Interstitial lung disease, 14 November">
+      <label for="body">Message</label>
+      <textarea id="body" maxlength="20000" placeholder="Dear colleague,&#10;&#10;…"></textarea>
+      <div class="two">
+        <div><label for="ctaLabel">Button label (optional)</label><input type="text" id="ctaLabel" maxlength="60" placeholder="e.g. Register now"></div>
+        <div><label for="ctaUrl">Button link</label><input type="url" id="ctaUrl" maxlength="500" placeholder="https://www.resok.org/events"></div>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" id="saveBtn"><i class="fas fa-floppy-disk"></i> Save draft</button>
+        <button class="btn" type="button" id="testBtn"><i class="fas fa-paper-plane"></i> Send me a test</button>
+        <button class="btn primary" type="button" id="sendBtn"><i class="fas fa-bullhorn"></i> Send to subscribers</button>
+        <button class="btn" type="button" id="newBtn" hidden><i class="fas fa-plus"></i> New newsletter</button>
+      </div>
+      <p class="hint" id="pace" style="margin-top:10px"></p>
+      <div id="formNote"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Newsletters</h2>
+      <div id="campaigns"><div class="empty">Loading&hellip;</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>Subscribers</h2>
+      <div class="row">
+        <input type="search" id="q" placeholder="Search email" style="flex:1;min-width:200px;width:auto">
+        <select id="show" style="width:auto"><option value="">Everyone</option><option value="confirmed">Subscribed</option><option value="pending">Waiting to confirm</option><option value="unsubscribed">Unsubscribed</option></select>
+        <a class="btn" href="api/index.php?route=newsletter/admin/export"><i class="fas fa-file-csv"></i> Export subscribed (CSV)</a>
+      </div>
+      <div id="subscribers" class="table-wrap"></div>
+    </section>
+  </main>
+  <script src="js/portal-state.js?v=20261021-silver-card"></script>
+  <script>
+  (() => {
+    const api = (path, options) => window.ResokPortal.api(path, options);
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+    const el = (id) => document.getElementById(id);
+    const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const say = (box, msg, kind) => { el(box).textContent = ''; if (msg) el(box).appendChild(make('div', 'note ' + kind, msg)); };
+    const when = (s) => s ? new Date(s.replace(' ', 'T') + '+03:00').toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    const LABEL = { confirmed: 'Subscribed', pending: 'Waiting to confirm', unsubscribed: 'Unsubscribed', draft: 'Draft', sent: 'Sent' };
+    let data = null, editing = null;
+
+    async function load() {
+      try { data = await api('newsletter/admin'); render(); }
+      catch (error) {
+        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/newsletter-admin'); return; }
+        say('note', error.message, 'bad');
+      }
+    }
+
+    function render() {
+      el('nConfirmed').textContent = data.counts.confirmed;
+      el('nPending').textContent = data.counts.pending;
+      el('nGone').textContent = data.counts.unsubscribed;
+      const n = data.counts.confirmed;
+      el('sendBtn').innerHTML = '';
+      el('sendBtn').append(make('i', 'fas fa-bullhorn'), ' Send to ' + n + ' subscriber' + (n === 1 ? '' : 's'));
+      el('sendBtn').disabled = n === 0 || !data.canSend;
+      const hours = Math.ceil(n / Math.max(1, data.perHour));
+      el('pace').textContent = !data.canSend
+        ? 'Sending is off until data_encryption_key is set in config.local.php (it signs the unsubscribe links).'
+        : 'The mail server allows about ' + data.perHour + ' emails an hour, shared with abstract and conference emails. '
+          + (n > data.perHour ? 'A send to everyone takes about ' + hours + ' hours; the queue empties every 15 minutes.' : 'A send to everyone goes out within the hour.');
+      renderCampaigns();
+      renderSubscribers();
+    }
+
+    function fill(c) {
+      editing = c ? c.id : null;
+      el('subject').value = c ? c.subject : '';
+      el('body').value = c ? c.body : '';
+      el('ctaLabel').value = c && c.ctaLabel || '';
+      el('ctaUrl').value = c && c.ctaUrl || '';
+      el('formTitle').textContent = c ? 'Draft: ' + c.subject : 'Write a newsletter';
+      el('newBtn').hidden = !c;
+      say('formNote', '', '');
+    }
+
+    async function save() {
+      const body = { id: editing, subject: el('subject').value, body: el('body').value, ctaLabel: el('ctaLabel').value, ctaUrl: el('ctaUrl').value };
+      const r = await post('newsletter/admin/campaigns', body);
+      editing = r.campaign.id;
+      el('formTitle').textContent = 'Draft: ' + r.campaign.subject;
+      el('newBtn').hidden = false;
+      return r.campaign;
+    }
+
+    async function guard(btn, fn) {
+      btn.disabled = true;
+      try { await fn(); } catch (error) { say('formNote', error.message, 'bad'); }
+      finally { btn.disabled = false; if (data) render(); }
+    }
+
+    el('saveBtn').addEventListener('click', () => guard(el('saveBtn'), async () => {
+      await save(); say('formNote', 'Draft saved.', 'ok'); await load();
+    }));
+    el('testBtn').addEventListener('click', () => guard(el('testBtn'), async () => {
+      const c = await save();
+      const r = await post('newsletter/admin/campaigns/' + c.id + '/test');
+      say('formNote', 'Test sent to ' + r.to + '. Check it on your phone as well as your computer before sending.', 'ok');
+      await load();
+    }));
+    el('sendBtn').addEventListener('click', () => guard(el('sendBtn'), async () => {
+      const n = data.counts.confirmed;
+      const c = await save();
+      if (!confirm('Send "' + c.subject + '" to ' + n + ' subscriber' + (n === 1 ? '' : 's') + '?\n\nThis cannot be undone or changed once sent.')) { await load(); return; }
+      const r = await post('newsletter/admin/campaigns/' + c.id + '/send', { expected: n });
+      fill(null);
+      say('formNote', 'Queued for ' + r.queued + ' subscriber' + (r.queued === 1 ? '' : 's') + '. Progress shows under Newsletters.', 'ok');
+      await load();
+    }));
+    el('newBtn').addEventListener('click', () => fill(null));
+
+    function renderCampaigns() {
+      const box = el('campaigns'); box.textContent = '';
+      if (!data.campaigns.length) { box.appendChild(make('div', 'empty', 'No newsletters yet.')); return; }
+      const wrap = make('div', 'table-wrap'), t = make('table'), head = make('tr');
+      ['Subject', 'Status', 'Progress', ''].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      data.campaigns.forEach((c) => {
+        const tr = make('tr');
+        const s = make('td'); s.appendChild(make('b', null, c.subject));
+        s.appendChild(make('div', 'hint', c.status === 'sent' ? 'Sent ' + when(c.sentAt) : 'Last saved ' + when(c.updatedAt))); tr.appendChild(s);
+        const st = make('td'); st.appendChild(make('span', 'pill ' + c.status, LABEL[c.status])); tr.appendChild(st);
+        const pr = make('td');
+        if (c.progress) {
+          const p = c.progress, total = Math.max(1, c.recipients);
+          pr.appendChild(make('div', null, p.sent + ' of ' + c.recipients + ' delivered to the mail server'));
+          const bar = make('div', 'bar'), fillBar = make('i'); fillBar.style.width = Math.min(100, Math.round(100 * p.sent / total)) + '%'; bar.appendChild(fillBar); pr.appendChild(bar);
+          const extra = [p.waiting ? p.waiting + ' waiting' : '', p.failed ? p.failed + ' failed' : ''].filter(Boolean).join(' · ');
+          if (extra) pr.appendChild(make('div', 'hint', extra));
+        }
+        tr.appendChild(pr);
+        const act = make('td');
+        if (c.status === 'draft') {
+          const open = make('button', 'btn sm', 'Open'); open.type = 'button';
+          open.addEventListener('click', () => { fill(c); el('subject').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+          const del = make('button', 'btn sm danger', 'Delete'); del.type = 'button'; del.style.marginLeft = '6px';
+          del.addEventListener('click', async () => {
+            if (!confirm('Delete the draft "' + c.subject + '"?')) return;
+            try { await post('newsletter/admin/campaigns/' + c.id + '/delete'); if (editing === c.id) fill(null); await load(); }
+            catch (error) { say('note', error.message, 'bad'); }
+          });
+          act.append(open, del);
+        }
+        tr.appendChild(act);
+        t.appendChild(tr);
+      });
+      wrap.appendChild(t); box.appendChild(wrap);
+    }
+
+    function renderSubscribers() {
+      const q = el('q').value.trim().toLowerCase(), show = el('show').value;
+      const list = data.subscribers.filter((s) => (!show || s.status === show) && (!q || s.email.includes(q)));
+      const box = el('subscribers'); box.textContent = '';
+      if (!list.length) { box.appendChild(make('div', 'empty', data.subscribers.length ? 'Nobody matches.' : 'Nobody has signed up yet.')); return; }
+      const t = make('table'), head = make('tr');
+      ['Email', 'Status', 'Signed up', 'From page', ''].forEach((h) => head.appendChild(make('th', null, h)));
+      t.appendChild(head);
+      list.forEach((s) => {
+        const tr = make('tr');
+        tr.appendChild(make('td', null, s.email));
+        const st = make('td'); st.appendChild(make('span', 'pill ' + s.status, LABEL[s.status]));
+        if (s.status === 'confirmed') st.appendChild(make('div', 'hint', 'Confirmed ' + when(s.confirmedAt)));
+        if (s.status === 'unsubscribed') st.appendChild(make('div', 'hint', when(s.unsubscribedAt)));
+        tr.appendChild(st);
+        tr.appendChild(make('td', null, when(s.createdAt)));
+        tr.appendChild(make('td', 'hint', s.source || ''));
+        const act = make('td');
+        if (s.status !== 'unsubscribed') {
+          const b = make('button', 'btn sm danger', 'Unsubscribe'); b.type = 'button';
+          b.addEventListener('click', async () => {
+            if (!confirm('Take ' + s.email + ' off the newsletter list?')) return;
+            try { await post('newsletter/admin/subscribers/' + s.id + '/unsubscribe'); say('note', s.email + ' has been unsubscribed.', 'ok'); await load(); }
+            catch (error) { say('note', error.message, 'bad'); }
+          });
+          act.appendChild(b);
+        }
+        tr.appendChild(act);
+        t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+    el('q').addEventListener('input', renderSubscribers);
+    el('show').addEventListener('change', renderSubscribers);
+    load();
+  })();
+  </script>
+</body>
+</html>

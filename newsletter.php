@@ -7,6 +7,7 @@ declare(strict_types=1);
  *   POST email=...              record the address and email a confirmation link
  *   GET  ?confirm=TOKEN         the link in that email: the address is now subscribed
  *   GET  ?unsubscribe=TOKEN     leave the list
+ *   GET  ?leave=ID.SIGNATURE    leave the list, from the link in a newsletter (see lib/newsletter.php)
  *
  * Double opt-in on purpose. Anyone can type anyone's address into a footer box, so an
  * address only joins the list once its owner clicks the link - which is also the consent
@@ -53,21 +54,9 @@ function db(array $config): PDO {
     // Same timezone pairing as the portal API and contact.php.
     date_default_timezone_set('Africa/Nairobi');
     $pdo->exec("SET time_zone = '+03:00'");
-    // Created on first use, like the portal's other tables; nothing to run by hand.
-    $pdo->exec("CREATE TABLE IF NOT EXISTS newsletter_subscribers (
-        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        email VARCHAR(254) NOT NULL,
-        token_hash CHAR(64) NOT NULL,
-        status ENUM('pending','confirmed','unsubscribed') NOT NULL DEFAULT 'pending',
-        source VARCHAR(120) NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        confirmed_at DATETIME NULL,
-        unsubscribed_at DATETIME NULL,
-        last_sent_at DATETIME NULL,
-        PRIMARY KEY (id),
-        UNIQUE KEY newsletter_subscribers_email (email),
-        UNIQUE KEY newsletter_subscribers_token (token_hash)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Created on first use, like the portal's other tables; nothing to run by hand. The
+    // definition lives with the admin side, in lib/newsletter.php.
+    if (!newsletterEnsureTables($pdo)) throw new RuntimeException('Newsletter tables unavailable');
     return $pdo;
 }
 
@@ -83,8 +72,32 @@ function selfUrl(): string {
 $configPath = __DIR__ . '/resok-portal/public/api/config.php';
 if (!file_exists($configPath)) respond(500, ['error' => 'The newsletter signup is not configured yet. Please email info@resok.org.']);
 $config = require $configPath;
+require_once __DIR__ . '/resok-portal/public/api/lib/newsletter.php';
 
 // ---- Links from the confirmation email ----------------------------------------------------
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['leave'])) {
+    // Signed rather than a token, because only the hash of each subscriber's token is kept.
+    $leave = (string)$_GET['leave'];
+    if (!preg_match('/^(\d{1,10})\.([a-f0-9]{32})$/', $leave, $m) || newsletterSigningKey($config) === '') {
+        page(400, 'Link not recognised', 'This link is incomplete. Please open it straight from the email, or write to info@resok.org.');
+    }
+    try {
+        $pdo = db($config);
+        $stmt = $pdo->prepare('SELECT id, email FROM newsletter_subscribers WHERE id = ? LIMIT 1');
+        $stmt->execute([(int)$m[1]]);
+        $row = $stmt->fetch();
+        if (!$row || !hash_equals(newsletterLeaveSignature($config, (int)$row['id'], (string)$row['email']), $m[2])) {
+            page(404, 'Link not recognised', 'This link is not valid. Please open it straight from the email, or write to info@resok.org.');
+        }
+        $pdo->prepare("UPDATE newsletter_subscribers SET status = 'unsubscribed', unsubscribed_at = NOW() WHERE id = ? AND status <> 'unsubscribed'")
+            ->execute([(int)$row['id']]);
+        page(200, "You've been unsubscribed", 'You will no longer receive the ReSoK newsletter. You can sign up again at any time on resok.org.');
+    } catch (Throwable $error) {
+        error_log('Newsletter leave link failed: ' . $error->getMessage());
+        page(500, 'Something went wrong', 'Please try the link again in a few minutes, or email info@resok.org.');
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $confirm = (string)($_GET['confirm'] ?? '');

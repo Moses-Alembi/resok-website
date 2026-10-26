@@ -1468,7 +1468,11 @@ function absMailPump(PDO $pdo, array $config, int $max = 20): array
                 $ok = false;
                 $error = null;
                 try {
-                    $ok = (new SimpleMailer($config))->send((string)$m['to_email'], (string)$m['subject'], (string)$m['text_body'], [], $m['html_body'] ?: null);
+                    $mailer = new SimpleMailer($config);
+                    // A newsletter queues its own single archive copy (lib/newsletter.php); one
+                    // per subscriber would bury the archive inbox.
+                    if ($m['template'] === 'newsletter') $mailer->withoutArchiveCopy();
+                    $ok = $mailer->send((string)$m['to_email'], (string)$m['subject'], (string)$m['text_body'], [], $m['html_body'] ?: null);
                     if (!$ok) $error = 'The mail server did not accept the message.';
                 } catch (Throwable $e) {
                     $error = mb_substr($e->getMessage(), 0, 500);

@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -4820,6 +4820,12 @@ Respiratory Society of Kenya");
         directoryHandle($pdo, $config, $route, $method);
     }
 
+    // The newsletter list and sending to it (super admins). Signup itself is /newsletter.php.
+    if (strpos($route, 'newsletter/') === 0) {
+        requireModule('newsletterHandle', 'lib/newsletter.php');
+        newsletterHandle($pdo, $config, $route, $method);
+    }
+
     // Staff recruitment: public vacancies and applications, and the recruiters' side.
     if (strpos($route, 'careers/') === 0) {
         requireModule('careersHandle', 'lib/careers.php');
@@ -5373,9 +5379,9 @@ Respiratory Society of Kenya");
             if ($sub === 'emails' && $method === 'GET') {
                 $needAdmin();
                 $q = $pdo->prepare("SELECT id, template, to_email, subject, status, error, attempts, created_at, sent_at FROM abs_emails
-                                    WHERE (event_id = ? OR event_id IS NULL) AND status IN ('queued','sending','failed') ORDER BY id DESC LIMIT 300");
+                                    WHERE (event_id = ? OR event_id IS NULL) AND template <> 'newsletter' AND status IN ('queued','sending','failed') ORDER BY id DESC LIMIT 300");
                 $q->execute([$eventId]);
-                $counts = $pdo->prepare("SELECT status, COUNT(*) AS n FROM abs_emails WHERE event_id = ? OR event_id IS NULL GROUP BY status");
+                $counts = $pdo->prepare("SELECT status, COUNT(*) AS n FROM abs_emails WHERE (event_id = ? OR event_id IS NULL) AND template <> 'newsletter' GROUP BY status");
                 $counts->execute([$eventId]);
                 respond(200, ['emails' => $q->fetchAll(), 'counts' => array_column($counts->fetchAll(), 'n', 'status'),
                               'hourlyLimit' => absMailHourlyLimit($config)]);

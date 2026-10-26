@@ -76,6 +76,33 @@ require_once __DIR__ . '/resok-portal/public/api/lib/newsletter.php';
 
 // ---- Links from the confirmation email ----------------------------------------------------
 
+// A PDF newsletter and the picture of its first page, as linked from the email. The key is
+// random and new for every upload, so nobody can guess a newsletter before it is sent.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && (isset($_GET['pdf']) || isset($_GET['cover']))) {
+    $isPdf = isset($_GET['pdf']);
+    $key = (string)($isPdf ? $_GET['pdf'] : $_GET['cover']);
+    if (!preg_match('/^[a-f0-9]{32}$/', $key)) page(404, 'Newsletter not found', 'This link is incomplete. Please open it straight from the email.');
+    try {
+        $stmt = db($config)->prepare('SELECT pdf_name, pdf_ready, cover_ready FROM newsletter_campaigns WHERE pdf_key = ? LIMIT 1');
+        $stmt->execute([$key]);
+        $row = $stmt->fetch();
+    } catch (Throwable $error) {
+        error_log('Newsletter file lookup failed: ' . $error->getMessage());
+        page(500, 'Something went wrong', 'Please try the link again in a few minutes.');
+    }
+    $file = newsletterDir($config) . '/' . $key . ($isPdf ? '.pdf' : '.jpg');
+    if (!$row || !$row['pdf_ready'] || (!$isPdf && !$row['cover_ready']) || !is_file($file)) {
+        page(404, 'Newsletter not found', 'This newsletter is no longer available. Visit resok.org for the latest from ReSoK.');
+    }
+    header('Content-Type: ' . ($isPdf ? 'application/pdf' : 'image/jpeg'));
+    header('Content-Length: ' . filesize($file));
+    // The file behind a key never changes (a new upload gets a new key), so it can be cached.
+    header('Cache-Control: public, max-age=604800');
+    if ($isPdf) header('Content-Disposition: inline; filename="' . str_replace('"', '', (string)$row['pdf_name']) . '"');
+    readfile($file);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['leave'])) {
     // Signed rather than a token, because only the hash of each subscriber's token is kept.
     $leave = (string)$_GET['leave'];

@@ -59,7 +59,7 @@ absent "pending addresses are not" "nl-p@resok.local" "$CSV"
 absent "unsubscribed addresses are not" "nl-u@resok.local" "$CSV"
 
 echo "Drafts"
-check "a subject is required" "subject and a message" "$(post "$SUPER" newsletter/admin/campaigns '{"subject":"","body":"x"}')"
+check "a subject is required" "Write a subject" "$(post "$SUPER" newsletter/admin/campaigns '{"subject":"","body":"x"}')"
 check "a button needs a link" "both a label and a link" "$(post "$SUPER" newsletter/admin/campaigns '{"subject":"S","body":"B","ctaLabel":"Go"}')"
 check "the link must be https" "https://" "$(post "$SUPER" newsletter/admin/campaigns '{"subject":"S","body":"B","ctaLabel":"Go","ctaUrl":"javascript:alert(1)"}')"
 R=$(post "$SUPER" newsletter/admin/campaigns '{"subject":"Test CME","body":"Dear colleague,\n\nJoin us at https://www.resok.org/events.\n\nThanks","ctaLabel":"Register","ctaUrl":"https://www.resok.org/events"}')
@@ -100,6 +100,58 @@ D=$(post "$SUPER" newsletter/admin/campaigns '{"subject":"Scrap","body":"x"}' | 
 check "deleting a draft" "\"ok\":true" "$(post "$SUPER" newsletter/admin/campaigns/$D/delete)"
 check "deleting a sent one is refused" "already been sent" "$(post "$SUPER" newsletter/admin/campaigns/$ID/delete)"
 
+echo "PDF newsletters"
+TMP=$(mktemp -d)
+# A real-looking PDF of about 2.5 MB, so it arrives in three pieces.
+{ printf '%%PDF-1.4\n'; head -c 2600000 /dev/zero | tr '\0' 'x' | fold -w 100 | sed 's/^/% /'; printf '\n%%%%EOF\n'; } > "$TMP/news.pdf"
+{ printf '%%PDF-1.4\n1 0 obj << /S /JavaScript /JS (app.alert(1)) >> endobj\n'; head -c 2000 /dev/zero | tr '\0' 'x'; printf '\n%%%%EOF\n'; } > "$TMP/bad.pdf"
+COVER="assets/img/events/2026-09-28-infectious-lung-disorders/poster.jpg"
+upload() {   # upload <campaign id> <file>  -> prints the finish response
+    local id="$1" f="$2" size off=0 n=0
+    size=$(stat -c %s "$f")
+    post "$SUPER" "newsletter/admin/campaigns/$id/pdf-start" "{\"fileName\":\"$(basename "$f")\",\"size\":$size}" >/dev/null
+    while [ $off -lt $size ]; do
+        dd if="$f" bs=1048576 skip=$n count=1 status=none > "$TMP/piece"
+        curl -s -b "$SUPER" -X POST --max-time 30 "${API}newsletter/admin/campaigns/$id/pdf-chunk&offset=$off" -H 'Content-Type: application/octet-stream' --data-binary "@$TMP/piece" >/dev/null
+        off=$((off + $(stat -c %s "$TMP/piece"))); n=$((n+1))
+    done
+    post "$SUPER" "newsletter/admin/campaigns/$id/pdf-finish"
+}
+P=$(post "$SUPER" newsletter/admin/campaigns '{"subject":"October newsletter","body":""}' | json campaign.id)
+check "a draft with no message and no PDF cannot be tested" "message or upload a PDF" "$(post "$SUPER" newsletter/admin/campaigns/$P/test)"
+check "a PDF over the limit is refused up front" "under 20 MB" "$(post "$SUPER" newsletter/admin/campaigns/$P/pdf-start '{"fileName":"big.pdf","size":30000000}')"
+check "only PDFs are accepted" "Upload a PDF" "$(post "$SUPER" newsletter/admin/campaigns/$P/pdf-start '{"fileName":"news.docx","size":5000}')"
+check "a PDF with a script is refused" "scripts or embedded files" "$(upload $P "$TMP/bad.pdf")"
+R=$(upload $P "$TMP/news.pdf")
+check "a large PDF arrives in pieces and is accepted" '"ready":true' "$R"
+KEY=$(sql "SELECT pdf_key FROM newsletter_campaigns WHERE id=$P")
+check "the stored PDF is byte-for-byte the upload" "$(md5sum < "$TMP/news.pdf" | cut -c1-32)" "$(curl -s "$SITE/newsletter.php?pdf=$KEY" | md5sum | cut -c1-32)"
+check "it is served as a PDF" "application/pdf" "$(curl -s -o /dev/null -w '%{content_type}' "$SITE/newsletter.php?pdf=$KEY")"
+check "a made-up key is not found" "404" "$(curl -s -o /dev/null -w '%{http_code}' "$SITE/newsletter.php?pdf=0123456789abcdef0123456789abcdef")"
+check "a cover that is not a JPEG is refused" "preview picture" "$(curl -s -b "$SUPER" -X POST "${API}newsletter/admin/campaigns/$P/cover" -H 'Content-Type: image/jpeg' --data-binary "@$TMP/bad.pdf")"
+check "the first-page picture is accepted" '"cover":true' "$(curl -s -b "$SUPER" -X POST "${API}newsletter/admin/campaigns/$P/cover" -H 'Content-Type: image/jpeg' --data-binary "@$COVER")"
+check "and served as an image" "image/jpeg" "$(curl -s -o /dev/null -w '%{content_type}' "$SITE/newsletter.php?cover=$KEY")"
+sql "INSERT INTO newsletter_subscribers (email, token_hash, status, confirmed_at) VALUES ('nl-c@resok.local', SHA2('c',256), 'confirmed', NOW())"
+N=$(sql "SELECT COUNT(*) FROM newsletter_subscribers WHERE status='confirmed'")
+check "a PDF newsletter with no message can be sent" "\"queued\":$N" "$(post "$SUPER" newsletter/admin/campaigns/$P/send "{\"expected\":$N}")"
+HTML=$(sql "SELECT html_body FROM abs_emails WHERE to_email = 'nl-c@resok.local' AND dedupe_key LIKE 'nl:$P:%'")
+TEXT=$(sql "SELECT text_body FROM abs_emails WHERE to_email = 'nl-c@resok.local' AND dedupe_key LIKE 'nl:$P:%'")
+check "the email shows the first page" "newsletter.php?cover=$KEY" "$HTML"
+check "with a button that opens the PDF" "Read the newsletter" "$HTML"
+check "the plain-text version links the PDF" "newsletter.php?pdf=$KEY" "$TEXT"
+check "nothing is attached" "0" "$(sql "SELECT COUNT(*) FROM abs_emails WHERE dedupe_key LIKE 'nl:$P:%' AND html_body LIKE '%Content-Disposition: attachment%'")"
+check "a sent newsletter's PDF cannot be replaced" "already been sent" "$(post "$SUPER" newsletter/admin/campaigns/$P/pdf-start '{"fileName":"x.pdf","size":5000}')"
+D=$(post "$SUPER" newsletter/admin/campaigns '{"subject":"Scrap PDF","body":"x"}' | json campaign.id)
+upload $D "$TMP/news.pdf" >/dev/null
+DKEY=$(sql "SELECT pdf_key FROM newsletter_campaigns WHERE id=$D")
+post "$SUPER" newsletter/admin/campaigns/$D/delete >/dev/null
+check "deleting a draft deletes its PDF" "404" "$(curl -s -o /dev/null -w '%{http_code}' "$SITE/newsletter.php?pdf=$DKEY")"
+rm -rf "$TMP"
+
+# The test newsletters' files, then the rows.
+for k in $(sql "SELECT pdf_key FROM newsletter_campaigns WHERE pdf_key IS NOT NULL"); do
+    rm -f "$(dirname "$0")/../../resok-portal/uploads/newsletters/$k".*
+done
 # Leave the queue as it was: the test rows were addressed to made-up local addresses.
 sql "DELETE FROM abs_emails WHERE template = 'newsletter'; DELETE FROM newsletter_campaigns;
 DELETE FROM newsletter_subscribers WHERE email LIKE 'nl-%@resok.local'; DELETE FROM users WHERE email = 'nl-admin@resok.local';"

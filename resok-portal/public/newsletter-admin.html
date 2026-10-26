@@ -49,6 +49,10 @@
     .note.ok{background:#ecfdf3;color:#05603a}.note.bad{background:#fef3f2;color:#b42318}.note.info{background:#eff8ff;color:#175cd3}
     .bar{height:6px;background:#f2f4f7;border-radius:99px;overflow:hidden;margin-top:6px;min-width:120px}
     .bar i{display:block;height:100%;background:var(--green)}
+    .pdfbox{border:1px dashed #d0d5dd;border-radius:10px;padding:14px}
+    .pdf-ready{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .pdf-ready img{width:120px;border:1px solid var(--line);border-radius:6px;background:#f2f4f7;min-height:60px}
+    .pdf-ready > div{flex:1;min-width:200px}
   </style>
 </head>
 <body>
@@ -74,9 +78,28 @@
       <p class="lede">Plain text: leave a blank line between paragraphs. Web addresses become links. Every copy ends with an unsubscribe link.</p>
       <label for="subject">Subject</label>
       <input type="text" id="subject" maxlength="200" placeholder="e.g. ReSoK CME: Interstitial lung disease, 14 November">
-      <label for="body">Message</label>
+      <label for="pdfInput">Designed newsletter (PDF, optional)</label>
+      <div class="pdfbox">
+        <div id="pdfEmpty">
+          <input type="file" id="pdfInput" accept="application/pdf,.pdf">
+          <p class="hint" style="margin-top:6px">Up to 20 MB. It is not attached: the email shows the first page as a picture, with a button that opens the PDF on resok.org. That keeps it out of spam folders and quick to send.</p>
+        </div>
+        <div id="pdfProgress" hidden><div class="bar" style="max-width:360px"><i id="pdfBar" style="width:0"></i></div><p class="hint" id="pdfText" style="margin-top:6px"></p></div>
+        <div id="pdfReady" class="pdf-ready" hidden>
+          <img id="pdfCover" alt="First page of the PDF">
+          <div>
+            <b id="pdfName"></b>
+            <p class="hint" id="pdfMeta"></p>
+            <div class="row" style="margin-top:10px">
+              <a class="btn sm" id="pdfView" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> Open PDF</a>
+              <button class="btn sm danger" type="button" id="pdfRemove">Remove PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <label for="body" id="bodyLabel">Message</label>
       <textarea id="body" maxlength="20000" placeholder="Dear colleague,&#10;&#10;…"></textarea>
-      <div class="two">
+      <div class="two" id="ctaFields">
         <div><label for="ctaLabel">Button label (optional)</label><input type="text" id="ctaLabel" maxlength="60" placeholder="e.g. Register now"></div>
         <div><label for="ctaUrl">Button link</label><input type="url" id="ctaUrl" maxlength="500" placeholder="https://www.resok.org/events"></div>
       </div>
@@ -150,17 +173,118 @@
       el('ctaUrl').value = c && c.ctaUrl || '';
       el('formTitle').textContent = c ? 'Draft: ' + c.subject : 'Write a newsletter';
       el('newBtn').hidden = !c;
+      showPdf(c && c.pdf);
       say('formNote', '', '');
+    }
+
+    const mb = (n) => (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + ' MB';
+    function showPdf(pdf) {
+      const ready = !!(pdf && pdf.ready);
+      el('pdfEmpty').hidden = ready;
+      el('pdfReady').hidden = !ready;
+      el('pdfProgress').hidden = true;
+      el('pdfInput').value = '';
+      // With a PDF, the email's button opens it, and the message is an optional introduction.
+      el('ctaFields').hidden = ready;
+      el('bodyLabel').textContent = ready ? 'Short introduction above the picture (optional)' : 'Message';
+      if (!ready) return;
+      el('pdfName').textContent = pdf.name;
+      el('pdfMeta').textContent = mb(pdf.bytes) + (pdf.cover ? '' : ' · no preview picture: the email will show a button only');
+      el('pdfView').href = pdf.url;
+      el('pdfCover').hidden = !pdf.cover;
+      if (pdf.cover) el('pdfCover').src = pdf.url.replace('?pdf=', '?cover=');
     }
 
     async function save() {
       const body = { id: editing, subject: el('subject').value, body: el('body').value, ctaLabel: el('ctaLabel').value, ctaUrl: el('ctaUrl').value };
+      if (el('ctaFields').hidden) Object.assign(body, { ctaLabel: '', ctaUrl: '' });   // a PDF brings its own button
       const r = await post('newsletter/admin/campaigns', body);
       editing = r.campaign.id;
       el('formTitle').textContent = 'Draft: ' + r.campaign.subject;
       el('newBtn').hidden = false;
       return r.campaign;
     }
+
+    // pdf.js draws the first page for the email's picture; loaded only when a PDF is chosen.
+    let pdfjsReady = null;
+    function loadPdfjs() {
+      if (!pdfjsReady) pdfjsReady = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+        s.crossOrigin = 'anonymous'; s.referrerPolicy = 'no-referrer';
+        s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; resolve(window.pdfjsLib); };
+        s.onerror = () => { pdfjsReady = null; reject(new Error('pdf.js did not load')); };
+        document.head.appendChild(s);
+      });
+      return pdfjsReady;
+    }
+    async function firstPageJpeg(file) {
+      const lib = await loadPdfjs();
+      const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      const page = await doc.getPage(1);
+      const base = page.getViewport({ scale: 1 });
+      const view = page.getViewport({ scale: 1000 / base.width });   // 1000px wide: sharp on phones, small to send
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(view.width); canvas.height = Math.round(view.height);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: view }).promise;
+      return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    }
+
+    async function uploadPdf(file) {
+      if (!/\.pdf$/i.test(file.name)) throw new Error('Choose a PDF file.');
+      if (file.size > 20 * 1048576) throw new Error('The PDF is ' + mb(file.size) + '; the limit is 20 MB. In Canva, tick "Compress file" when downloading.');
+      if (!el('subject').value.trim()) throw new Error('Write the subject first, then choose the PDF.');
+      const c = await save();
+      const base = 'newsletter/admin/campaigns/' + c.id;
+      el('pdfEmpty').hidden = true; el('pdfProgress').hidden = false;
+      const start = await post(base + '/pdf-start', { fileName: file.name, size: file.size });
+      let offset = 0;
+      while (offset < file.size) {
+        const piece = file.slice(offset, offset + start.chunkBytes);
+        let tries = 0;
+        for (;;) {
+          const res = await fetch('api/index.php?route=' + base + '/pdf-chunk&offset=' + offset, {
+            method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/octet-stream' }, body: piece });
+          const body = await res.json().catch(() => ({}));
+          if (res.ok) { offset = body.received; break; }
+          if (res.status === 409 && typeof body.received === 'number') { offset = body.received; break; }
+          if (++tries >= 4 || res.status === 400 || res.status === 401 || res.status === 403) throw new Error(body.error || 'The upload stopped. Please try again.');
+          await new Promise((r) => setTimeout(r, 1500 * tries));   // a dropped connection: wait and resend
+        }
+        el('pdfBar').style.width = Math.round(100 * offset / file.size) + '%';
+        el('pdfText').textContent = 'Uploading ' + mb(offset) + ' of ' + mb(file.size);
+      }
+      el('pdfText').textContent = 'Checking the PDF…';
+      let r = await post(base + '/pdf-finish');
+      el('pdfText').textContent = 'Making the preview picture…';
+      try {
+        const jpeg = await firstPageJpeg(file);
+        const res = await fetch('api/index.php?route=' + base + '/cover', {
+          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) r = body;
+      } catch (e) { /* the newsletter still works with a button only; showPdf says so */ }
+      showPdf(r.campaign.pdf);
+    }
+
+    el('pdfInput').addEventListener('change', () => {
+      const file = el('pdfInput').files[0];
+      if (!file) return;
+      guard(el('pdfInput'), async () => {
+        try { await uploadPdf(file); say('formNote', 'PDF ready. Send yourself a test to see the email.', 'ok'); }
+        catch (e) { el('pdfEmpty').hidden = false; el('pdfProgress').hidden = true; el('pdfInput').value = ''; throw e; }
+        await load();
+      });
+    });
+    el('pdfRemove').addEventListener('click', () => guard(el('pdfRemove'), async () => {
+      if (!editing || !confirm('Remove the PDF from this newsletter?')) return;
+      const r = await post('newsletter/admin/campaigns/' + editing + '/pdf-remove');
+      showPdf(r.campaign.pdf);
+      await load();
+    }));
 
     async function guard(btn, fn) {
       btn.disabled = true;

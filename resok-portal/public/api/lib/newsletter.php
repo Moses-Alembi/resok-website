@@ -18,10 +18,20 @@ declare(strict_types=1);
  *    abstract and conference emails that people are waiting for. A large list goes out over
  *    a few hours; the cron empties the queue every 15 minutes.
  *
+ * A newsletter can also be a designed PDF. The PDF is not attached: it is kept on the site
+ * and the email shows its first page as a picture, linked to the PDF, with a button. Sent
+ * as an attachment, every copy would carry the whole file - slower to send, heavier on the
+ * host's limits, and far more likely to be filed as spam. The picture is made in the
+ * administrator's browser with pdf.js, because the host has no image tools for PDFs.
+ *
  * 3. Every newsletter carries its own unsubscribe link. Subscribers' tokens are stored only
  *    as hashes, so that link is signed instead (newsletterLeaveUrl) and newsletter.php checks
  *    the signature. The archive inbox gets one copy per newsletter, not one per subscriber.
  */
+
+const NEWSLETTER_PDF_MAX_BYTES = 20 * 1024 * 1024;
+const NEWSLETTER_CHUNK_BYTES = 1024 * 1024;
+const NEWSLETTER_COVER_MAX_BYTES = 3 * 1024 * 1024;
 
 function newsletterEnsureTables(PDO $pdo): bool
 {
@@ -49,6 +59,12 @@ function newsletterEnsureTables(PDO $pdo): bool
             body MEDIUMTEXT NOT NULL,
             cta_label VARCHAR(60) NULL,
             cta_url VARCHAR(500) NULL,
+            pdf_key CHAR(32) NULL,
+            pdf_name VARCHAR(200) NULL,
+            pdf_bytes INT UNSIGNED NULL,
+            pdf_received INT UNSIGNED NOT NULL DEFAULT 0,
+            pdf_ready TINYINT(1) NOT NULL DEFAULT 0,
+            cover_ready TINYINT(1) NOT NULL DEFAULT 0,
             status ENUM('draft','sent') NOT NULL DEFAULT 'draft',
             recipients INT UNSIGNED NOT NULL DEFAULT 0,
             created_by INT UNSIGNED NULL,
@@ -56,8 +72,19 @@ function newsletterEnsureTables(PDO $pdo): bool
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             sent_at DATETIME NULL,
-            PRIMARY KEY (id)
+            PRIMARY KEY (id),
+            UNIQUE KEY newsletter_campaigns_pdf (pdf_key)
         )" . $tail);
+        // Tables made before PDF newsletters (26 Oct 2026) gain the columns.
+        $have = array_column($pdo->query('SHOW COLUMNS FROM newsletter_campaigns')->fetchAll(), 'Field');
+        if (!in_array('pdf_key', $have, true)) {
+            $pdo->exec('ALTER TABLE newsletter_campaigns ADD COLUMN pdf_key CHAR(32) NULL AFTER cta_url,
+                ADD COLUMN pdf_name VARCHAR(200) NULL AFTER pdf_key, ADD COLUMN pdf_bytes INT UNSIGNED NULL AFTER pdf_name,
+                ADD COLUMN pdf_received INT UNSIGNED NOT NULL DEFAULT 0 AFTER pdf_bytes,
+                ADD COLUMN pdf_ready TINYINT(1) NOT NULL DEFAULT 0 AFTER pdf_received,
+                ADD COLUMN cover_ready TINYINT(1) NOT NULL DEFAULT 0 AFTER pdf_ready,
+                ADD UNIQUE KEY newsletter_campaigns_pdf (pdf_key)');
+        }
         return $ready = true;
     } catch (Throwable $e) {
         error_log('Newsletter tables unavailable: ' . $e->getMessage());
@@ -94,6 +121,46 @@ function newsletterSiteUrl(array $config): string
     return (string)preg_replace('#/resok-portal/public$#', '', $base);
 }
 
+function newsletterPdfUrl(array $config, string $key): string
+{
+    return newsletterSiteUrl($config) . '/newsletter.php?pdf=' . $key;
+}
+
+/** Where PDFs and their cover pictures are kept: outside the web root, served by newsletter.php. */
+function newsletterDir(array $config): string
+{
+    $dir = rtrim((string)$config['upload_dir'], '/\\') . '/newsletters';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    return $dir;
+}
+
+function newsletterRemoveFiles(array $config, ?string $key): void
+{
+    if (!$key || !preg_match('/^[a-f0-9]{32}$/', $key)) return;
+    foreach (['.pdf', '.part', '.jpg'] as $ext) @unlink(newsletterDir($config) . '/' . $key . $ext);
+}
+
+/** Why a finished upload is not an acceptable PDF, or null when it is. */
+function newsletterPdfProblem(string $path): ?string
+{
+    $data = (string)@file_get_contents($path);
+    if (strncmp($data, '%PDF-', 5) !== 0) return 'That file is not a PDF.';
+    // The same line the careers CVs draw: a newsletter has no business running code or
+    // carrying other files inside it.
+    if (preg_match('#/(JavaScript|JS|Launch|EmbeddedFile)\b#', $data)) {
+        return 'This PDF contains scripts or embedded files, which are not accepted. Export it again as a plain PDF (in Canva: Share > Download > PDF Standard).';
+    }
+    return null;
+}
+
+/** The text a newsletter must have before it can be tested or sent, or an error. */
+function newsletterContentProblem(array $campaign): ?string
+{
+    if ($campaign['pdf_key'] && !$campaign['pdf_ready']) return 'The PDF has not finished uploading. Upload it again, or remove it.';
+    if (trim((string)$campaign['body']) === '' && !$campaign['pdf_ready']) return 'Write a message or upload a PDF.';
+    return null;
+}
+
 function newsletterText($value, int $max): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", is_scalar($value) ? (string)$value : '');
@@ -110,16 +177,22 @@ function newsletterRender(array $config, array $campaign, string $leaveUrl): arr
     $body = trim((string)$campaign['body']);
     $ctaLabel = trim((string)($campaign['cta_label'] ?? ''));
     $ctaUrl = trim((string)($campaign['cta_url'] ?? ''));
+    $pdf = !empty($campaign['pdf_ready']) ? newsletterPdfUrl($config, (string)$campaign['pdf_key']) : null;
+    if ($pdf !== null) {
+        // A PDF newsletter's button opens the PDF.
+        $ctaLabel = 'Read the newsletter';
+        $ctaUrl = $pdf;
+    }
     $hasCta = $ctaLabel !== '' && $ctaUrl !== '';
 
-    $text = $body . "\n\n";
-    if ($hasCta) $text .= $ctaLabel . ":\n" . $ctaUrl . "\n\n";
+    $text = $body !== '' ? $body . "\n\n" : '';
+    if ($hasCta) $text .= $ctaLabel . ($pdf !== null ? ' (PDF)' : '') . ":\n" . $ctaUrl . "\n\n";
     $text .= "--\nRespiratory Society of Kenya\nwww.resok.org\n\n"
            . "You are receiving this because you subscribed to the ReSoK newsletter.\n"
            . "Unsubscribe: " . $leaveUrl . "\n";
 
     $html = '';
-    foreach (preg_split("/\n{2,}/", $body) ?: [] as $para) {
+    foreach ($body === '' ? [] : (preg_split("/\n{2,}/", $body) ?: []) as $para) {
         $escaped = nl2br(htmlspecialchars($para, ENT_QUOTES));
         $escaped = (string)preg_replace_callback('#https?://[^\s<]+#i', static function ($m) {
             // A full stop or comma closing a sentence is not part of the address.
@@ -127,6 +200,12 @@ function newsletterRender(array $config, array $campaign, string $leaveUrl): arr
             return '<a href="' . $url . '" style="color:#087539;">' . $url . '</a>' . substr($m[0], strlen($url));
         }, $escaped);
         $html .= '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">' . $escaped . '</p>';
+    }
+    if ($pdf !== null && !empty($campaign['cover_ready'])) {
+        $cover = htmlspecialchars(newsletterSiteUrl($config) . '/newsletter.php?cover=' . $campaign['pdf_key'], ENT_QUOTES);
+        $html .= '<p style="margin:0;text-align:center;"><a href="' . htmlspecialchars($pdf, ENT_QUOTES) . '">'
+            . '<img src="' . $cover . '" width="496" alt="' . htmlspecialchars($subject . ' - open the newsletter', ENT_QUOTES) . '"'
+            . ' style="display:block;width:100%;max-width:496px;height:auto;margin:0 auto;border:1px solid #e4e7ec;border-radius:6px;"></a></p>';
     }
     $html = brandedEmailHtml($subject, $html, $hasCta ? $ctaLabel : null, $hasCta ? $ctaUrl : null);
     $footer = '<p style="margin:14px auto 0;max-width:520px;text-align:center;font-size:12px;line-height:1.6;color:#98a2b3;">'
@@ -161,6 +240,8 @@ function newsletterCampaignShape(PDO $pdo, array $r): array
     return [
         'id' => (int)$r['id'], 'subject' => $r['subject'], 'body' => $r['body'],
         'ctaLabel' => $r['cta_label'], 'ctaUrl' => $r['cta_url'], 'status' => $r['status'],
+        'pdf' => $r['pdf_key'] ? ['name' => $r['pdf_name'], 'bytes' => (int)$r['pdf_bytes'], 'ready' => (bool)$r['pdf_ready'],
+                                  'cover' => (bool)$r['cover_ready'], 'url' => '../../newsletter.php?pdf=' . $r['pdf_key']] : null,
         'recipients' => (int)$r['recipients'], 'createdAt' => $r['created_at'], 'updatedAt' => $r['updated_at'], 'sentAt' => $r['sent_at'],
         'progress' => $r['status'] === 'sent' ? newsletterProgress($pdo, (int)$r['id']) : null,
     ];
@@ -173,7 +254,7 @@ function newsletterSaveDraft(PDO $pdo, array $data, int $userId, ?int &$id): ?st
     $body = newsletterText($data['body'] ?? '', 20000);
     $ctaLabel = newsletterText($data['ctaLabel'] ?? '', 60);
     $ctaUrl = newsletterText($data['ctaUrl'] ?? '', 500);
-    if ($subject === '' || $body === '') return 'Write a subject and a message.';
+    if ($subject === '') return 'Write a subject.';
     if (($ctaLabel === '') !== ($ctaUrl === '')) return 'A button needs both a label and a link, or neither.';
     if ($ctaUrl !== '' && !preg_match('#^https://[^\s]+$#i', $ctaUrl)) return 'The button link must be a full https:// address.';
     $subject = (string)preg_replace('/\s+/', ' ', $subject);
@@ -300,6 +381,81 @@ function newsletterHandle(PDO $pdo, array $config, string $route, string $method
         respond(200, ['campaign' => newsletterCampaignShape($pdo, newsletterCampaignRow($pdo, $id))]);
     }
 
+    // A designed PDF, sent in 1 MB pieces so a large file gets past the host's upload limit,
+    // then its first page as a picture (made in the browser) for the email.
+    if (preg_match('#^newsletter/admin/campaigns/(\d+)/(pdf-start|pdf-chunk|pdf-finish|pdf-remove|cover)$#', $route, $m) && $method === 'POST') {
+        $campaign = newsletterCampaignRow($pdo, (int)$m[1]);
+        if (!$campaign) respond(404, ['error' => 'That newsletter no longer exists.']);
+        if ($campaign['status'] !== 'draft') respond(400, ['error' => 'This newsletter has already been sent.']);
+        $id = (int)$campaign['id'];
+        $key = (string)$campaign['pdf_key'];
+        $dir = newsletterDir($config);
+
+        if ($m[2] === 'pdf-start') {
+            $data = input();
+            $name = newsletterText($data['fileName'] ?? '', 200);
+            $size = (int)($data['size'] ?? 0);
+            if (!preg_match('/\.pdf$/i', $name)) respond(400, ['error' => 'Upload a PDF file.']);
+            if ($size < 100 || $size > NEWSLETTER_PDF_MAX_BYTES) {
+                respond(400, ['error' => 'The PDF must be under ' . (NEWSLETTER_PDF_MAX_BYTES >> 20) . ' MB. In Canva, choose "Compress file" when downloading.']);
+            }
+            // A new key for every upload, so a link to an earlier version never shows the new one.
+            newsletterRemoveFiles($config, $key);
+            $key = bin2hex(random_bytes(16));
+            $pdo->prepare('UPDATE newsletter_campaigns SET pdf_key = ?, pdf_name = ?, pdf_bytes = ?, pdf_received = 0, pdf_ready = 0, cover_ready = 0 WHERE id = ?')
+                ->execute([$key, preg_replace('/[^\w .()\-]/u', '_', $name), $size, $id]);
+            respond(200, ['chunkBytes' => NEWSLETTER_CHUNK_BYTES]);
+        }
+        if ($m[2] === 'pdf-remove') {
+            newsletterRemoveFiles($config, $key);
+            $pdo->prepare('UPDATE newsletter_campaigns SET pdf_key = NULL, pdf_name = NULL, pdf_bytes = NULL, pdf_received = 0, pdf_ready = 0, cover_ready = 0 WHERE id = ?')
+                ->execute([$id]);
+            respond(200, ['campaign' => newsletterCampaignShape($pdo, newsletterCampaignRow($pdo, $id))]);
+        }
+        if ($key === '') respond(400, ['error' => 'Start the PDF upload first.']);
+
+        if ($m[2] === 'pdf-chunk') {
+            $offset = (int)($_GET['offset'] ?? -1);
+            $received = (int)$campaign['pdf_received'];
+            if ($campaign['pdf_ready']) respond(400, ['error' => 'This PDF is already uploaded.']);
+            if ($offset !== $received) respond(409, ['error' => 'Out of order.', 'received' => $received]);
+            $bytes = (string)file_get_contents('php://input', false, null, 0, NEWSLETTER_CHUNK_BYTES + 1);
+            $len = strlen($bytes);
+            if ($len === 0 || $len > NEWSLETTER_CHUNK_BYTES) respond(400, ['error' => 'Each piece must be between 1 byte and 1 MB.']);
+            if ($offset + $len > (int)$campaign['pdf_bytes']) respond(400, ['error' => 'The file is larger than announced.']);
+            if (file_put_contents($dir . '/' . $key . '.part', $bytes, FILE_APPEND | LOCK_EX) !== $len) {
+                respond(500, ['error' => 'The server could not store the upload.']);
+            }
+            $pdo->prepare('UPDATE newsletter_campaigns SET pdf_received = pdf_received + ? WHERE id = ? AND pdf_received = ?')->execute([$len, $id, $offset]);
+            respond(200, ['received' => $offset + $len]);
+        }
+        if ($m[2] === 'pdf-finish') {
+            $part = $dir . '/' . $key . '.part';
+            if ((int)$campaign['pdf_received'] !== (int)$campaign['pdf_bytes'] || @filesize($part) !== (int)$campaign['pdf_bytes']) {
+                respond(400, ['error' => 'The upload is incomplete. Please try again.']);
+            }
+            $problem = newsletterPdfProblem($part);
+            if ($problem) {
+                newsletterRemoveFiles($config, $key);
+                $pdo->prepare('UPDATE newsletter_campaigns SET pdf_key = NULL, pdf_name = NULL, pdf_bytes = NULL, pdf_received = 0 WHERE id = ?')->execute([$id]);
+                respond(400, ['error' => $problem]);
+            }
+            rename($part, $dir . '/' . $key . '.pdf');
+            $pdo->prepare('UPDATE newsletter_campaigns SET pdf_ready = 1 WHERE id = ?')->execute([$id]);
+            respond(200, ['campaign' => newsletterCampaignShape($pdo, newsletterCampaignRow($pdo, $id))]);
+        }
+        // cover: the first page as a JPEG, drawn by pdf.js in the administrator's browser.
+        if (!$campaign['pdf_ready']) respond(400, ['error' => 'Upload the PDF first.']);
+        $bytes = (string)file_get_contents('php://input', false, null, 0, NEWSLETTER_COVER_MAX_BYTES + 1);
+        $info = $bytes !== '' && strlen($bytes) <= NEWSLETTER_COVER_MAX_BYTES ? @getimagesizefromstring($bytes) : false;
+        if (!$info || $info[2] !== IMAGETYPE_JPEG || $info[0] < 200 || $info[0] > 2000) {
+            respond(400, ['error' => 'The preview picture could not be made. The newsletter will go out with a button only.']);
+        }
+        file_put_contents($dir . '/' . $key . '.jpg', $bytes, LOCK_EX);
+        $pdo->prepare('UPDATE newsletter_campaigns SET cover_ready = 1 WHERE id = ?')->execute([$id]);
+        respond(200, ['campaign' => newsletterCampaignShape($pdo, newsletterCampaignRow($pdo, $id))]);
+    }
+
     if (preg_match('#^newsletter/admin/campaigns/(\d+)/(test|send|delete)$#', $route, $m) && $method === 'POST') {
         $campaign = newsletterCampaignRow($pdo, (int)$m[1]);
         if (!$campaign) respond(404, ['error' => 'That newsletter no longer exists.']);
@@ -307,8 +463,12 @@ function newsletterHandle(PDO $pdo, array $config, string $route, string $method
 
         if ($m[2] === 'delete') {
             $pdo->prepare("DELETE FROM newsletter_campaigns WHERE id = ? AND status = 'draft'")->execute([(int)$campaign['id']]);
+            newsletterRemoveFiles($config, $campaign['pdf_key']);
             respond(200, ['ok' => true]);
         }
+
+        $problem = newsletterContentProblem($campaign);
+        if ($problem) respond(400, ['error' => $problem]);
 
         if ($m[2] === 'test') {
             // Straight to the administrator, not through the queue: they are waiting to look at it.

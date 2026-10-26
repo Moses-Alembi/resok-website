@@ -189,9 +189,14 @@
         before voting opens.
       </p>
       <div style="display:grid;gap:14px;margin-top:20px;max-width:720px">
+        <label><span>Who votes</span>
+          <select class="in" id="nElectorate">
+            <option value="members">Members: a board election</option>
+            <option value="staff">Staff only: a welfare election</option>
+          </select></label>
         <label><span>Title</span><input class="in" id="nTitle" placeholder="ReSoK Board Election 2027" /></label>
         <label><span>Description</span><textarea class="in" id="nDescription" rows="3"></textarea></label>
-        <label><span>Membership judged on</span><input class="in" id="nCutoff" type="date" /></label>
+        <label id="nCutoffWrap"><span>Membership judged on</span><input class="in" id="nCutoff" type="date" /></label>
         <div class="grid2">
           <label><span>Nominations open</span><input class="in" id="nNomOpen" type="datetime-local" /></label>
           <label><span>Nominations close</span><input class="in" id="nNomClose" type="datetime-local" /></label>
@@ -249,20 +254,25 @@
 
       <section class="panel">
         <h2>Electoral roll</h2>
-        <p class="lede">
+        <p class="lede" id="rollLedeStaff" hidden>
+          A staff welfare election: the roll is every active member of staff who can sign in,
+          drawn once and frozen. Staff who have not yet set their password are left off and
+          counted below &mdash; send them their invite, then draw the roll again.
+        </p>
+        <p class="lede" id="rollLedeMembers">
           Drawn once and frozen. Only members who paid for the year chosen <em>and</em> can sign
           in reach it &mdash; an entry for somebody who cannot open the portal is not an
           entitlement to vote, it is a turnout figure that can never be reached.
         </p>
         <div class="tiles" id="rollTiles" style="margin-top:16px"></div>
         <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-          <label style="max-width:190px"><span>Paid for year</span>
+          <label style="max-width:190px" id="rollYearWrap"><span>Paid for year</span>
             <input class="in" id="rollYear" type="number" min="2000" max="2100" value="2025" /></label>
           <button class="btn btn-primary" id="drawRoll" type="button"><i class="fas fa-list-check"></i> Draw the roll</button>
         </div>
         <div id="rollNotice"></div>
 
-        <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">
+        <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)" id="rollMembersBox">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
             <h3>Who is on it</h3>
             <button class="btn btn-ghost btn-sm" id="loadMembers" type="button">
@@ -418,7 +428,7 @@
           const grow = make('div', 'grow');
           grow.appendChild(make('strong', null, e.title));
           grow.appendChild(make('div', 'sub',
-            'Voting ' + fmt(e.opensAt) + ' — ' + fmt(e.closesAt)));
+            (e.electorate === 'staff' ? 'Staff welfare · ' : '') + 'Voting ' + fmt(e.opensAt) + ' — ' + fmt(e.closesAt)));
           row.appendChild(grow);
           row.appendChild(make('span', 'status s-' + e.status, e.status.replace(/_/g, ' ')));
           mount.appendChild(row);
@@ -433,6 +443,12 @@
     /* ---------------- create ---------------- */
     el('newBtn').addEventListener('click', () => { notice('newNotice', ''); show('New'); });
     el('nCancel').addEventListener('click', () => show('List'));
+    // A welfare election's voters are the active staff list, so there is no membership date.
+    el('nElectorate').addEventListener('change', () => {
+      const staff = el('nElectorate').value === 'staff';
+      el('nCutoffWrap').hidden = staff;
+      el('nTitle').placeholder = staff ? 'Staff Welfare Committee Election 2026' : 'ReSoK Board Election 2027';
+    });
     el('nCreate').addEventListener('click', async () => {
       const button = el('nCreate');
       button.disabled = true;
@@ -440,9 +456,10 @@
         const data = await api('/api/admin/elections', {
           method: 'POST',
           body: JSON.stringify({
+            electorate: el('nElectorate').value,
             title: el('nTitle').value.trim(),
             description: el('nDescription').value.trim(),
-            eligibilityCutoff: el('nCutoff').value,
+            eligibilityCutoff: el('nElectorate').value === 'staff' ? '' : el('nCutoff').value,
             nominationsOpenAt: el('nNomOpen').value,
             nominationsCloseAt: el('nNomClose').value,
             opensAt: el('nOpens').value,
@@ -566,24 +583,34 @@
       tile(roll.onRoll || 0, 'on the roll', (roll.onRoll || 0) > 0 ? 'ok' : 'warn');
       tile(roll.voted || 0, 'have voted');
       tile((roll.turnout || 0) + '%', 'turnout');
+      const staff = current.election.electorate === 'staff';
+      if (staff) tile(roll.eligibleButCannotSignIn || 0, 'staff not signed in yet', (roll.eligibleButCannotSignIn || 0) > 0 ? 'warn' : 'ok');
+      el('rollLedeStaff').hidden = !staff;
+      el('rollLedeMembers').hidden = staff;
+      el('rollYearWrap').hidden = staff;
+      // Hand corrections are for a members' roll; a staff roll follows the staff list.
+      el('rollMembersBox').hidden = staff;
       el('drawRoll').disabled = !!current.election.locked;
     }
 
     el('drawRoll').addEventListener('click', async () => {
       const year = Number(el('rollYear').value);
-      if (!window.confirm('Draw the roll for members who paid for ' + year
-          + '? This replaces any roll already drawn.')) return;
+      const staff = current.election.electorate === 'staff';
+      if (!window.confirm((staff ? 'Draw the roll from the active staff list?' : 'Draw the roll for members who paid for ' + year + '?')
+          + ' This replaces any roll already drawn.')) return;
       try {
         const data = await api('/api/admin/elections/' + current.election.id + '/roll', {
           method: 'POST', body: JSON.stringify({ paidYear: year })
         });
         const r = data.roll || {};
-        let message = r.onRoll + ' member(s) on the roll.';
+        let message = r.onRoll + (staff ? ' staff' : ' member(s)') + ' on the roll.';
         // The exclusions matter more than the total. A roll far smaller than the membership
         // is a warning, and the reason is what somebody can act on before voting opens.
         if (r.eligibleButCannotSignIn) {
-          message += ' ' + r.eligibleButCannotSignIn + ' paid member(s) are left off because '
-                   + 'they have never claimed their portal account.';
+          message += staff
+            ? ' ' + r.eligibleButCannotSignIn + ' member(s) of staff are left off because they have not set their password yet.'
+            : ' ' + r.eligibleButCannotSignIn + ' paid member(s) are left off because '
+              + 'they have never claimed their portal account.';
         }
         notice('rollNotice', message, r.eligibleButCannotSignIn ? 'warn' : 'ok');
         await openElection(current.election.id);

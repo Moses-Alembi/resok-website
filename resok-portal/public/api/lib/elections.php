@@ -82,6 +82,8 @@ function electionShape(array $row): array
         'slug'        => $row['slug'],
         'title'       => $row['title'],
         'description' => $row['description'],
+        // Who votes: the membership (board elections) or staff only (welfare elections).
+        'electorate'  => $row['electorate'] ?? 'members',
         'eligibilityCutoff' => $row['eligibility_cutoff'],
         'nominationsOpenAt'  => $row['nominations_open_at'] ?? null,
         'nominationsCloseAt' => $row['nominations_close_at'] ?? null,
@@ -99,21 +101,57 @@ function electionShape(array $row): array
 }
 
 /** @return list<array<string,mixed>> */
-function electionsList(PDO $pdo, bool $includeDrafts = false): array
+function electionsList(PDO $pdo, bool $includeDrafts = false, ?string $electorate = null): array
 {
     if (!electionsEnsureTables($pdo)) return [];
     $sql = 'SELECT * FROM elections';
+    // Members never see staff welfare elections, nor staff the board's: each list is one
+    // electorate's. Before migration-election-staff.sql there is no column and only members.
+    $where = [];
+    if ($electorate !== null && electionsHaveElectorate($pdo)) {
+        $where[] = $electorate === 'staff' ? "electorate = 'staff'" : "electorate = 'members'";
+    } elseif ($electorate === 'staff') {
+        return [];
+    }
     // Everything except a draft, because a draft is the only state members are not meant to
     // see. The nomination statuses were missing from this list when the phase was added,
     // which hid the election from exactly the people it was asking to nominate - the one
     // audience it existed for.
     if (!$includeDrafts) {
-        $sql .= " WHERE status IN ('nominations','nominations_closed','roll_published',
-                                   'open','closed','published')";
+        $where[] = "status IN ('nominations','nominations_closed','roll_published',
+                               'open','closed','published')";
     }
+    if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
     $sql .= ' ORDER BY opens_at DESC';
     $stmt = $pdo->query($sql);
     return $stmt ? array_map('electionShape', $stmt->fetchAll()) : [];
+}
+
+/** Whether this user may see staff welfare elections: active staff and super admins. */
+function electionStaffMayView(PDO $pdo, array $config, array $user): bool
+{
+    if (isSuperAdmin($user, $config)) return true;
+    return function_exists('staffIs') && staffIs($pdo, (int)$user['userId']);
+}
+
+/**
+ * Object-level check for one election. A staff welfare election is invisible to members -
+ * knowing its address is not enough - and the board's elections stay as they were.
+ */
+function electionVisibleTo(PDO $pdo, array $config, array $election, array $user): bool
+{
+    return $election['electorate'] !== 'staff' || electionStaffMayView($pdo, $config, $user);
+}
+
+/** Whether migration-election-staff.sql has been applied. */
+function electionsHaveElectorate(PDO $pdo): bool
+{
+    static $have = null;
+    if ($have === null) {
+        try { $have = (bool)$pdo->query("SHOW COLUMNS FROM elections LIKE 'electorate'")->fetch(); }
+        catch (Throwable $e) { $have = false; }
+    }
+    return $have;
 }
 
 function electionFind(PDO $pdo, string $key): ?array
@@ -195,6 +233,7 @@ function electionDrawRoll(PDO $pdo, int $electionId, int $paidYear): array
     if ($election['locked']) {
         return [null, 'Voting has already opened. The roll for this election is final.'];
     }
+    if ($election['electorate'] === 'staff') return electionDrawStaffRoll($pdo, $electionId);
 
     $pdo->beginTransaction();
     try {
@@ -228,6 +267,35 @@ function electionDrawRoll(PDO $pdo, int $electionId, int $paidYear): array
 }
 
 /**
+ * The roll for a staff welfare election: every active member of staff who can sign in,
+ * frozen the same way a members' roll is. Staff who have not yet set their password are left
+ * off and counted, so the officer can chase them before drawing again.
+ *
+ * @return array{0:?array,1:?string}
+ */
+function electionDrawStaffRoll(PDO $pdo, int $electionId): array
+{
+    if (!function_exists('staffPortalEnsureTables') || !staffPortalEnsureTables($pdo)) {
+        return [null, 'The staff list is not available on this server.'];
+    }
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('DELETE FROM election_roll WHERE election_id = ?')->execute([$electionId]);
+        $pdo->prepare("INSERT INTO election_roll
+                         (election_id, member_profile_id, user_id, name, membership_id, email, standing_at_cutoff)
+                       SELECT ?, NULL, u.id, COALESCE(NULLIF(s.full_name, ''), u.email), s.staff_number, u.email, 'staff'
+                       FROM staff_accounts s JOIN users u ON u.id = s.user_id
+                       WHERE s.active = 1 AND u.email_verified = 1")
+            ->execute([$electionId]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return [null, 'The roll was not drawn: ' . $e->getMessage()];
+    }
+    return [electionRollSummary($pdo, $electionId), null];
+}
+
+/**
  * Who is on the roll, who is missing, and why.
  *
  * The excluded counts matter more than the included one. A roll of 40 out of 89 is not a
@@ -249,6 +317,16 @@ function electionRollSummary(PDO $pdo, int $electionId, ?int $paidYear = null): 
     $out['onRoll'] = (int)($row['n'] ?? 0);
     $out['voted']  = (int)($row['v'] ?? 0);
     $out['turnout'] = $out['onRoll'] > 0 ? round($out['voted'] / $out['onRoll'] * 100, 1) : 0.0;
+
+    // A staff election's missing voters: active staff who have not set their password yet.
+    $election = electionFind($pdo, (string)$electionId);
+    if ($election && $election['electorate'] === 'staff') {
+        try {
+            $out['eligibleButCannotSignIn'] = (int)$pdo->query('SELECT COUNT(*) FROM staff_accounts s JOIN users u ON u.id = s.user_id
+                                                                 WHERE s.active = 1 AND u.email_verified = 0')->fetchColumn();
+        } catch (Throwable $e) { /* staff tables not deployed */ }
+        return $out;
+    }
 
     if ($paidYear !== null) {
         $stmt = $pdo->prepare(
@@ -543,9 +621,16 @@ function electionCreate(PDO $pdo, array $data, ?int $adminUserId): array
     $title = trim((string)($data['title'] ?? ''));
     if ($title === '') return [null, 'An election needs a title.'];
 
+    $electorate = (string)($data['electorate'] ?? 'members') === 'staff' ? 'staff' : 'members';
+    if ($electorate === 'staff' && !electionsHaveElectorate($pdo)) {
+        return [null, 'Staff elections need migration-election-staff.sql. Apply it on the Threat Assessment page first.'];
+    }
     $opens = trim((string)($data['opensAt'] ?? ''));
     $closes = trim((string)($data['closesAt'] ?? ''));
     $cutoff = trim((string)($data['eligibilityCutoff'] ?? ''));
+    // A staff roll is drawn from the staff list as it stands; there is no paid year to judge.
+    // The date is still recorded, as the day the electorate was decided.
+    if ($electorate === 'staff' && $cutoff === '') $cutoff = date('Y-m-d');
     foreach ([[$opens, 'opening'], [$closes, 'closing']] as [$value, $what]) {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2})?/', $value)) {
             return [null, 'Give a valid ' . $what . ' date and time.'];
@@ -598,7 +683,13 @@ function electionCreate(PDO $pdo, array $data, ?int $adminUserId): array
             'draft',
             $adminUserId,
         ]);
-    return [electionFind($pdo, (string)$pdo->lastInsertId()), null];
+    $id = (int)$pdo->lastInsertId();
+    // Set once, here. Changing who votes after posts and nominations exist would leave them
+    // belonging to the wrong electorate, so electionUpdate does not touch it.
+    if (electionsHaveElectorate($pdo)) {
+        $pdo->prepare('UPDATE elections SET electorate = ? WHERE id = ?')->execute([$electorate, $id]);
+    }
+    return [electionFind($pdo, (string)$id), null];
 }
 
 /** @return array{0:?array,1:?string} */
@@ -667,6 +758,18 @@ function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $can
     $name = trim((string)($data['name'] ?? ''));
     $memberId = isset($data['memberProfileId']) && $data['memberProfileId'] !== ''
         ? (int)$data['memberProfileId'] : null;
+    // Approving sends only the name and status. Without this, saving an existing candidate
+    // wrote member_profile_id = NULL, quietly turning an approved member into an "external"
+    // candidate; a staff nominee would lose their account the same way.
+    $existingUserId = null;
+    if ($candidateId && !array_key_exists('memberProfileId', $data)) {
+        $keep = $pdo->prepare('SELECT * FROM election_candidates WHERE id = ? AND position_id = ?');
+        $keep->execute([$candidateId, $positionId]);
+        if ($row = $keep->fetch()) {
+            $memberId = $row['member_profile_id'] !== null ? (int)$row['member_profile_id'] : null;
+            $existingUserId = isset($row['nominee_user_id']) && $row['nominee_user_id'] !== null ? (int)$row['nominee_user_id'] : null;
+        }
+    }
 
     if ($memberId) {
         $stmt = $pdo->prepare('SELECT mp.id, mp.membership_status, mp.renewal_due, mp.membership_id,
@@ -681,6 +784,20 @@ function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $can
         }
         if ($name === '') $name = (string)$member['full_name'];
         if (empty($data['membershipId'])) $data['membershipId'] = $member['membership_id'];
+    }
+
+    // A welfare election's candidates are staff: picked by account, never typed in or members.
+    $nomineeUserId = null;
+    if ($election['electorate'] === 'staff') {
+        if ($memberId) return [null, 'A staff election takes staff candidates, not member records.'];
+        $stmt = $pdo->prepare('SELECT s.user_id, s.full_name, s.staff_number, u.email FROM staff_accounts s JOIN users u ON u.id = s.user_id
+                               WHERE s.user_id = ? AND s.active = 1 LIMIT 1');
+        $stmt->execute([(int)($data['userId'] ?? $existingUserId ?? 0)]);
+        $staff = $stmt->fetch();
+        if (!$staff) return [null, 'Choose an active member of staff as the candidate.'];
+        $nomineeUserId = (int)$staff['user_id'];
+        if ($name === '') $name = (string)($staff['full_name'] ?: $staff['email']);
+        if (empty($data['membershipId'])) $data['membershipId'] = $staff['staff_number'];
     }
 
     if ($name === '') return [null, 'A candidate needs a name.'];
@@ -705,6 +822,9 @@ function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $can
                            manifesto = ?, photo = ?, status = ?, withdrawn_reason = ?
                        WHERE id = ? AND position_id = ?')
             ->execute(array_merge($fields, [$candidateId, $positionId]));
+        if ($nomineeUserId !== null) {
+            $pdo->prepare('UPDATE election_candidates SET nominee_user_id = ? WHERE id = ?')->execute([$nomineeUserId, $candidateId]);
+        }
     } else {
         $stmt = $pdo->prepare('SELECT COALESCE(MAX(ballot_order), 0) + 1 AS next
                                FROM election_candidates WHERE position_id = ?');
@@ -715,6 +835,9 @@ function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $can
                          manifesto, photo, status, withdrawn_reason, ballot_order)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute(array_merge([$positionId], $fields, [$next]));
+        if ($nomineeUserId !== null) {
+            $pdo->prepare('UPDATE election_candidates SET nominee_user_id = ? WHERE id = ?')->execute([$nomineeUserId, (int)$pdo->lastInsertId()]);
+        }
     }
     return [electionPositions($pdo, $electionId), null];
 }
@@ -1037,6 +1160,41 @@ function electionNominate(PDO $pdo, string $key, int $userId, array $data): arra
     $isSelf = false;
     $nomineeUserId = null;
 
+    if ($election['electorate'] === 'staff') {
+        // A welfare election is staff only: the nominee must be on this election's staff roll.
+        // Nobody from outside, and no member record involved.
+        $stmt = $pdo->prepare('SELECT user_id, name, membership_id FROM election_roll WHERE election_id = ? AND user_id = ? LIMIT 1');
+        $stmt->execute([(int)$election['id'], (int)($data['userId'] ?? 0)]);
+        $nominee = $stmt->fetch();
+        if (!$nominee) return [null, 'Choose a member of staff from the list. Only staff on the roll can stand.'];
+        $nomineeUserId = (int)$nominee['user_id'];
+        $dup = $pdo->prepare('SELECT id FROM election_candidates WHERE position_id = ? AND nominee_user_id = ? LIMIT 1');
+        $dup->execute([$positionId, $nomineeUserId]);
+        if ($dup->fetch()) return [null, $nominee['name'] . ' has already been nominated for ' . $position['title'] . '.'];
+        $isSelf = $nomineeUserId === $userId;
+        try {
+            $pdo->prepare('INSERT INTO election_candidates
+                            (position_id, member_profile_id, nominee_user_id, nominated_by_roll_id, nominated_at,
+                             accepted_at, name, membership_id, headline, status, ballot_order)
+                           VALUES (?, NULL, ?, ?, NOW(), ' . ($isSelf ? 'NOW()' : 'NULL') . ', ?, ?, ?, ?, 0)')
+                ->execute([$positionId, $nomineeUserId, $nominator['id'], mb_substr((string)$nominee['name'], 0, 160),
+                           $nominee['membership_id'], mb_substr(trim((string)($data['headline'] ?? '')), 0, 255) ?: null, 'nominated']);
+        } catch (Throwable $e) {
+            return [null, 'You have already nominated somebody for ' . $position['title'] . '.'];
+        }
+        if (!$isSelf && function_exists('staffNotify')) {
+            staffNotify($pdo, $nomineeUserId, 'election', 'You have been nominated for ' . $position['title'] . ' in ' . $election['title'] . '. Accept or decline it.',
+                        'elections?for=staff#' . $election['slug']);
+        }
+        return [[
+            'nominated' => true, 'name' => $nominee['name'], 'position' => $position['title'],
+            'external' => false, 'accepted' => $isSelf,
+            'message' => $isSelf
+                ? 'You have been nominated for ' . $position['title'] . '. The returning officer will confirm your candidacy.'
+                : $nominee['name'] . ' has been nominated for ' . $position['title'] . '. They will be asked to accept before their name goes on the ballot.',
+        ], null];
+    }
+
     if ($memberId > 0) {
         $stmt = $pdo->prepare('SELECT mp.id, mp.membership_status, mp.renewal_due, mp.membership_id,
                                       mp.user_id,
@@ -1137,7 +1295,8 @@ function electionRespondToNomination(PDO $pdo, int $candidateId, int $userId, bo
 {
     if (!electionsEnsureTables($pdo)) return [null, 'The election tables are not available.'];
 
-    $stmt = $pdo->prepare('SELECT c.*, p.title AS position_title, p.election_id, mp.user_id
+    $stmt = $pdo->prepare('SELECT c.*, p.title AS position_title, p.election_id,
+                                  COALESCE(c.nominee_user_id, mp.user_id) AS user_id
                            FROM election_candidates c
                            JOIN election_positions p ON p.id = c.position_id
                            LEFT JOIN member_profiles mp ON mp.id = c.member_profile_id
@@ -1177,7 +1336,7 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
     // whoever is reading. Accepting is the nominee's act alone, and a button offered to
     // somebody who cannot use it is a form that lies.
     $stmt = $pdo->prepare('SELECT c.*, p.title AS position_title,
-                                  r.name AS nominated_by, mp.user_id AS nominee_user_id
+                                  r.name AS nominated_by, COALESCE(c.nominee_user_id, mp.user_id) AS nominee_account
                            FROM election_candidates c
                            JOIN election_positions p ON p.id = c.position_id
                            LEFT JOIN election_roll r ON r.id = c.nominated_by_roll_id
@@ -1196,7 +1355,7 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
         'status'       => $c['status'],
         // Derived, never stored: a candidate with no member record is from outside the
         // membership. Two columns that must agree eventually disagree.
-        'external'     => empty($c['member_profile_id']),
+        'external'     => empty($c['member_profile_id']) && empty($c['nominee_user_id']),
         'email'        => $c['email'] ?? null,
         'phone'        => $c['phone'] ?? null,
         'organisation' => $c['organisation'] ?? null,
@@ -1206,14 +1365,14 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
         'accepted'     => !empty($c['accepted_at']),
         'acceptedAt'   => $c['accepted_at'],
         'mine'         => $viewerUserId !== null
-                          && (int)($c['nominee_user_id'] ?? 0) === $viewerUserId,
+                          && (int)($c['nominee_account'] ?? 0) === $viewerUserId,
         // What stops this nomination becoming a candidacy, so the officer sees the reason
         // rather than a name that will not approve and no explanation why.
         // A member accepts in the portal. Somebody from outside has no account to accept in,
         // so the officer has to reach them and record it - and the wording says which of
         // those two things is being waited on.
         'blocker'      => empty($c['accepted_at']) && $c['status'] === 'nominated'
-            ? (empty($c['member_profile_id'])
+            ? (empty($c['member_profile_id']) && empty($c['nominee_user_id'])
                 ? 'Contact them to confirm they will stand'
                 : 'Waiting for the nominee to accept')
             : null,
@@ -1231,12 +1390,14 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
 function electionNominatableMembers(PDO $pdo, int $electionId): array
 {
     if (!electionsEnsureTables($pdo)) return [];
-    $stmt = $pdo->prepare('SELECT r.member_profile_id, r.name, r.membership_id
+    $stmt = $pdo->prepare('SELECT r.member_profile_id, r.user_id, r.name, r.membership_id
                            FROM election_roll r WHERE r.election_id = ?
                            ORDER BY r.name');
     $stmt->execute([$electionId]);
+    // A staff voter has no member record; the form names them by account instead.
     return array_map(fn($r) => [
-        'memberProfileId' => (int)$r['member_profile_id'],
+        'memberProfileId' => $r['member_profile_id'] === null ? null : (int)$r['member_profile_id'],
+        'userId'          => (int)$r['user_id'],
         'name'            => $r['name'],
         'membershipId'    => $r['membership_id'],
     ], $stmt->fetchAll());
@@ -1495,6 +1656,9 @@ function electionRollAdd(PDO $pdo, int $electionId, int $memberProfileId, string
 {
     [$election, $error] = electionRequireUnlocked($pdo, $electionId);
     if ($error) return [null, $error];
+    if ($election['electorate'] === 'staff') {
+        return [null, 'A staff election takes its roll from the staff list. Update the staff list and draw the roll again.'];
+    }
 
     $reason = trim($reason);
     if ($reason === '') {
@@ -1545,6 +1709,9 @@ function electionRollRemove(PDO $pdo, int $electionId, int $memberProfileId, str
 {
     [$election, $error] = electionRequireUnlocked($pdo, $electionId);
     if ($error) return [null, $error];
+    if ($election['electorate'] === 'staff') {
+        return [null, 'A staff election takes its roll from the staff list. Update the staff list and draw the roll again.'];
+    }
 
     $reason = trim($reason);
     if ($reason === '') {

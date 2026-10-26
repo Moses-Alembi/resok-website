@@ -2817,11 +2817,18 @@ Respiratory Society of Kenya");
 
     // ----- Elections: members --------------------------------------------------------------
 
-    /** Elections a member can see. Drafts are never listed. */
+    /**
+     * Elections a member can see, or with ?electorate=staff the staff welfare elections - for
+     * staff and super admins only. Drafts are never listed.
+     */
     if ($route === 'elections' && $method === 'GET') {
         $user = auth($config);
         requireModule('electionsList', 'lib/elections.php');
-        respond(200, ['elections' => electionsList($pdo, false)]);
+        if (($_GET['electorate'] ?? '') === 'staff') {
+            if (!electionStaffMayView($pdo, $config, $user)) respond(403, ['error' => 'Welfare elections are for ReSoK staff.']);
+            respond(200, ['elections' => electionsList($pdo, false, 'staff')]);
+        }
+        respond(200, ['elections' => electionsList($pdo, false, 'members')]);
     }
 
     /**
@@ -2835,7 +2842,7 @@ Respiratory Society of Kenya");
         $user = auth($config);
         requireModule('electionFind', 'lib/elections.php');
         $election = electionFind($pdo, $m[1]);
-        if (!$election || $election['status'] === 'draft') respond(404, ['error' => 'No such election.']);
+        if (!$election || $election['status'] === 'draft' || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
         respond(200, [
             'election'  => $election,
             'positions' => electionPositions($pdo, (int)$election['id']),
@@ -2896,7 +2903,7 @@ Respiratory Society of Kenya");
         $user = auth($config);
         requireModule('electionNominations', 'lib/elections.php');
         $election = electionFind($pdo, $m[1]);
-        if (!$election || $election['status'] === 'draft') respond(404, ['error' => 'No such election.']);
+        if (!$election || $election['status'] === 'draft' || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
 
         $entry = electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']);
         respond(200, [
@@ -3007,12 +3014,15 @@ Respiratory Society of Kenya");
         $user = auth($config);
         requireModule('electionDrawRoll', 'lib/elections.php');
         requireSuperAdmin($user, $config);
+        $target = electionFind($pdo, $m[1]);
+        $isStaffElection = $target && $target['electorate'] === 'staff';
         $year = (int)(input()['paidYear'] ?? 0);
-        if ($year < 2000 || $year > 2100) respond(400, ['error' => 'Give the year membership must be paid for.']);
+        // A staff roll is the active staff list; only a members' roll is judged on a paid year.
+        if (!$isStaffElection && ($year < 2000 || $year > 2100)) respond(400, ['error' => 'Give the year membership must be paid for.']);
         [$summary, $error] = electionDrawRoll($pdo, (int)$m[1], $year);
         if ($error) respond(400, ['error' => $error]);
         logAdminAction($pdo, (int)$user['userId'], 'election_roll_drawn', null,
-                       'Election ' . $m[1] . ': ' . $summary['onRoll'] . ' voters, paid ' . $year);
+                       'Election ' . $m[1] . ': ' . $summary['onRoll'] . ' voters, ' . ($isStaffElection ? 'active staff' : 'paid ' . $year));
         respond(200, ['roll' => $summary]);
     }
 

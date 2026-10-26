@@ -99,7 +99,16 @@
 
   <div class="dashboard-container">
     <aside class="dashboard-sidebar">
-      <ul class="sidebar-nav">
+      <!-- Staff welfare elections (elections?for=staff) use this page with the staff menu. -->
+      <ul class="sidebar-nav" id="staffNav" hidden>
+        <li><a href="staff"><i class="fas fa-house"></i> Staff portal</a></li>
+        <li><a href="staff#announcements"><i class="fas fa-bullhorn"></i> Announcements</a></li>
+        <li><a href="staff#directory"><i class="fas fa-address-book"></i> Staff directory</a></li>
+        <li><a href="elections?for=staff" class="active"><i class="fas fa-check-to-slot"></i> Welfare elections</a></li>
+        <li class="sidebar-divider"></li>
+        <li><a href="#" class="sidebar-logout" id="staffLogout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+      </ul>
+      <ul class="sidebar-nav" id="memberNav">
         <li><a href="dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
         <li><a href="profile"><i class="fas fa-user"></i> My Profile</a></li>
         <li><a href="payment"><i class="fas fa-credit-card"></i> Payments</a></li>
@@ -116,8 +125,12 @@
     <main class="dashboard-main">
       <!-- ---------------- List ---------------- -->
       <section class="panel" id="viewList">
-        <h1>Elections</h1>
-        <p class="lede">
+        <h1 id="listTitle">Elections</h1>
+        <p class="lede" id="staffLede" hidden>
+          Staff welfare elections. Only ReSoK staff vote and stand. You can vote if you were on
+          the staff roll when it was drawn; nominations name colleagues from that roll.
+        </p>
+        <p class="lede" id="memberLede">
           ReSoK board elections. You can vote in an election if you were on the electoral roll
           when it was drawn &mdash; that is decided by your membership, not by when you sign in.
         </p>
@@ -153,7 +166,7 @@
               <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Post</span>
               <select id="nomPosition" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit"></select>
             </label>
-            <label>
+            <label id="nomKindRow">
               <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Who are you nominating?</span>
               <select id="nomKind" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit">
                 <option value="member">A ReSoK member</option>
@@ -162,7 +175,7 @@
             </label>
 
             <label id="nomMemberRow">
-              <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Member</span>
+              <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px" id="nomMemberLabel">Member</span>
               <select id="nomMember" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit"></select>
             </label>
 
@@ -251,6 +264,20 @@
    */
   (() => {
     const api = (path, options) => window.ResokPortal.api(path, options);
+    // Staff mode: the same page for staff welfare elections, which members never see.
+    const STAFF = new URLSearchParams(location.search).get('for') === 'staff';
+    if (STAFF) {
+      document.getElementById('staffNav').hidden = false;
+      document.getElementById('memberNav').hidden = true;
+      document.getElementById('listTitle').textContent = 'Welfare elections';
+      document.getElementById('staffLede').hidden = false;
+      document.getElementById('memberLede').hidden = true;
+      document.getElementById('nomKindRow').hidden = true;
+      document.getElementById('nomMemberLabel').textContent = 'Member of staff';
+      document.querySelector('.dashboard-logo').href = 'staff';
+      document.title = 'Welfare elections - ReSoK Staff Portal';
+      document.getElementById('staffLogout').addEventListener('click', (e) => { e.preventDefault(); window.ResokPortal.logout(); });
+    }
     const el = (id) => document.getElementById(id);
     const make = (tag, cls, text) => {
       const node = document.createElement(tag);
@@ -295,7 +322,7 @@
     async function loadList() {
       const mount = el('listBody');
       try {
-        const data = await api('/api/elections');
+        const data = await api('/api/elections' + (STAFF ? '&electorate=staff' : ''));
         mount.textContent = '';
         if (!(data.elections || []).length) {
           mount.appendChild(make('div', 'empty', 'No elections are running at the moment.'));
@@ -413,7 +440,7 @@
       });
       (nominations.members || []).forEach((member) => {
         const option = document.createElement('option');
-        option.value = String(member.memberProfileId);
+        option.value = String(STAFF ? member.userId : member.memberProfileId);
         option.textContent = member.name + (member.membershipId ? ' · ' + member.membershipId : '');
         members.appendChild(option);
       });
@@ -502,7 +529,7 @@
       const button = el('nomSubmit');
       button.disabled = true;
       notice('nomNotice', '');
-      const external = el('nomKind').value === 'external';
+      const external = !STAFF && el('nomKind').value === 'external';
       const payload = {
         positionId: Number(el('nomPosition').value),
         headline: el('nomHeadline').value.trim()
@@ -512,6 +539,8 @@
         payload.email = el('nomEmail').value.trim();
         payload.phone = el('nomPhone').value.trim();
         payload.organisation = el('nomOrg').value.trim();
+      } else if (STAFF) {
+        payload.userId = Number(el('nomMember').value);
       } else {
         payload.memberProfileId = Number(el('nomMember').value);
       }
@@ -816,12 +845,20 @@
 
     (async () => {
       try {
-        const me = await api('/api/members/me');
-        el('whoami').textContent = [me.title, me.firstName, me.surname].filter(Boolean).join(' ');
+        if (STAFF) {
+          const home = await api('/api/staff/home');
+          el('whoami').textContent = (home.me && (home.me.name || home.me.email)) || '';
+        } else {
+          const me = await api('/api/members/me');
+          el('whoami').textContent = [me.title, me.firstName, me.surname].filter(Boolean).join(' ');
+        }
       } catch (error) {
         if (error.status === 401) { window.location.href = 'login'; return; }
       }
-      loadList();
+      await loadList();
+      // A notification links straight to one election: elections?for=staff#<slug>.
+      const slug = decodeURIComponent(location.hash.replace('#', ''));
+      if (/^[A-Za-z0-9-]+$/.test(slug)) openElection(slug);
     })();
   })();
   </script>

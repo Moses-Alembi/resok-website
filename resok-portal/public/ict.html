@@ -223,6 +223,20 @@
   .scan-form{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
   .scan-form h4{font-size:14.5px;margin:0 0 4px}
   .scan-form .lbl{margin-top:10px}
+  /* Stock-take: the progress bar over the register, the tick in each row, the scan banner. */
+  .st-bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .st-bar .st-info{flex:1;min-width:220px}
+  .st-bar .st-name{font-weight:700}
+  .st-meter{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;margin-top:8px;max-width:420px}
+  .st-meter i{display:block;height:100%;background:var(--ok)}
+  .st-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .tick{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--ok-bg);color:var(--ok);font-weight:800}
+  .tick-none{display:inline-block;width:24px;height:24px;border-radius:50%;border:2px dashed var(--line)}
+  .scan-tick{display:flex;align-items:center;gap:12px;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:var(--ok-bg);color:var(--ok);font-weight:700}
+  .scan-tick .big{font-size:26px;line-height:1}
+  .scan-tick small{display:block;font-weight:600;opacity:.85}
+  .scan-tick.again{background:var(--bg);color:var(--text-dark)}
+  @media print{body *{visibility:hidden}#stocktakeReport,#stocktakeReport *{visibility:visible}#stocktakeReport{position:absolute;left:0;top:0;width:100%}#stocktakeReport .st-actions{display:none}}
   .scan-ok{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;background:var(--ok-bg);color:var(--ok)}
   .scan-err{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;background:var(--crit-bg);color:var(--crit)}
 </style>
@@ -401,6 +415,9 @@
 
       <div class="tiles" id="assetTiles"></div>
 
+      <div class="panel st-bar" id="stocktakeBar" hidden></div>
+      <div class="panel" id="stocktakeReport" hidden></div>
+
       <div class="panel">
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
           <input class="in" id="assetSearch" style="flex:1;min-width:190px"
@@ -417,6 +434,11 @@
           </select>
           <select class="in" id="assetCategoryFilter" style="width:auto;min-width:130px">
             <option value="">Any category</option>
+          </select>
+          <select class="in" id="assetSeenFilter" style="width:auto;min-width:130px" hidden>
+            <option value="">Seen or not</option>
+            <option value="seen">Seen ✓</option>
+            <option value="missing">Not seen yet</option>
           </select>
           <button class="btn btn-secondary" id="assetScanBtn" type="button"><i class="fas fa-barcode"></i> Scan tag</button>
           <button class="btn btn-primary" id="assetNewBtn" type="button"><i class="fas fa-plus"></i> Add asset</button>
@@ -931,6 +953,11 @@
     if (!value) return '—';
     const d = new Date(String(value).replace(' ', 'T'));
     return isNaN(d) ? String(value) : d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  const fmtTime = (value) => {
+    if (!value) return '—';
+    const d = new Date(String(value).replace(' ', 'T'));
+    return isNaN(d) ? String(value) : d.toLocaleString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
   const BAND_COLOUR = {
     expired: '#a01427', critical: '#a01427', warning: '#8a5a12',
@@ -1484,14 +1511,37 @@
       mount.appendChild(empty);
       return;
     }
+    const counting = !!(stocktake && stocktake.open);
+    const seenFilter = counting ? el('assetSeenFilter').value : '';
+    if (seenFilter) assets = assets.filter((a) => seenFilter === 'seen' ? !!a.verifiedAt : !a.verifiedAt);
+    if (!assets.length) {
+      mount.appendChild(make('div', 'empty', seenFilter === 'missing' ? 'Everything here has been seen ✓' : 'Nothing has been ticked yet.'));
+      return;
+    }
     const table = make('table');
     const head = make('thead'); const hr = make('tr');
-    ['Tag', 'Asset', 'Status', 'Held by', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    (counting ? ['Seen', 'Tag', 'Asset', 'Status', 'Held by', ''] : ['Tag', 'Asset', 'Status', 'Held by', ''])
+      .forEach((h) => hr.appendChild(make('th', null, h)));
     head.appendChild(hr); table.appendChild(head);
 
     const body = make('tbody');
     assets.forEach((a) => {
       const tr = make('tr');
+      if (counting) {
+        const seen = make('td');
+        if (a.verifiedAt) {
+          const t = make('span', 'tick', '✓');
+          t.title = 'Seen ' + fmtTime(a.verifiedAt);
+          t.setAttribute('aria-label', t.title);
+          seen.appendChild(t);
+        } else {
+          const t = make('span', 'tick-none');
+          t.title = 'Not seen yet';
+          t.setAttribute('aria-label', 'Not seen yet');
+          seen.appendChild(t);
+        }
+        tr.appendChild(seen);
+      }
       const tag = make('td');
       const code = make('code', null, a.assetTag);
       code.style.cssText = 'font-size:12.5px;background:var(--bg);padding:3px 7px;border-radius:5px';
@@ -1535,6 +1585,168 @@
     mount.appendChild(table);
   }
 
+  /* ---------------- stock-take ----------------
+   * Start one, walk round scanning stickers (each scan ticks the asset), finish it and get
+   * the list of what was not seen. lib/ict-assets.php explains the rules. */
+  let stocktake = null;
+  let stocktakeLast = undefined;   // the latest finished one, fetched once when none is open
+
+  function stocktakeButton(icon, text, cls, onClick) {
+    const b = make('button', 'btn ' + cls);
+    b.type = 'button';
+    b.innerHTML = '<i class="fas ' + icon + '"></i> ';
+    b.appendChild(document.createTextNode(text));
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  async function renderStocktake() {
+    const bar = el('stocktakeBar');
+    const counting = !!(stocktake && stocktake.open);
+    el('assetSeenFilter').hidden = !counting;
+    if (!counting) el('assetSeenFilter').value = '';
+    bar.textContent = '';
+    const info = make('div', 'st-info');
+    const actions = make('div', 'st-actions');
+
+    if (counting) {
+      info.appendChild(make('div', 'st-name', stocktake.name));
+      const left = stocktake.expected - stocktake.seen;
+      info.appendChild(make('div', 'muted', 'Seen ' + stocktake.seen + ' of ' + stocktake.expected
+        + (left > 0 ? ' · ' + left + ' still to find' : ' · everything found ✓')
+        + (stocktake.extra ? ' · ' + stocktake.extra + ' retired or lost item' + (stocktake.extra === 1 ? '' : 's') + ' turned up' : '')));
+      const meter = make('div', 'st-meter'); const fill = make('i');
+      fill.style.width = (stocktake.expected ? Math.round(100 * stocktake.seen / stocktake.expected) : 0) + '%';
+      meter.appendChild(fill); info.appendChild(meter);
+      actions.append(
+        stocktakeButton('fa-barcode', 'Scan to tick', 'btn-primary', scanOpen),
+        stocktakeButton('fa-eye-slash', 'Not seen yet', 'btn-secondary', () => { el('assetSeenFilter').value = 'missing'; loadAssets(); })
+      );
+      if (can('assets.manage')) actions.appendChild(stocktakeButton('fa-flag-checkered', 'Finish', 'btn-secondary', stocktakeFinish));
+    } else {
+      if (!can('assets.manage') && !stocktakeLast) { bar.hidden = true; return; }
+      if (stocktakeLast === undefined) {
+        try { stocktakeLast = ((await api('/api/ict/stocktake')).history || [])[0] || null; } catch (e) { stocktakeLast = null; }
+      }
+      info.appendChild(make('div', 'st-name', 'Stock-take'));
+      info.appendChild(make('div', 'muted', stocktakeLast
+        ? 'Last: ' + stocktakeLast.name + ', finished ' + fmtDate(stocktakeLast.finishedAt) + ': ' + stocktakeLast.seen + ' of ' + stocktakeLast.expected + ' seen.'
+        : 'Check the register against what is really there: start one, then scan every sticker you find.'));
+      if (stocktakeLast) actions.appendChild(stocktakeButton('fa-list-check', 'Last report', 'btn-secondary', () => stocktakeShowReport(stocktakeLast.id)));
+      if (can('assets.manage')) actions.appendChild(stocktakeButton('fa-play', 'Start stock-take', 'btn-primary', stocktakeStart));
+    }
+    bar.append(info, actions);
+    bar.hidden = false;
+  }
+
+  async function stocktakeStart() {
+    const suggested = 'Stock-take ' + new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' });
+    const name = prompt('Name this stock-take', suggested);
+    if (name === null) return;
+    try {
+      await api('/api/ict/stocktake', { method: 'POST', body: JSON.stringify({ name }) });
+      el('stocktakeReport').hidden = true;
+      await loadAssets();
+    } catch (error) { alert(error.message || 'Could not start the stock-take.'); }
+  }
+
+  async function stocktakeFinish() {
+    const left = stocktake.expected - stocktake.seen;
+    if (!confirm('Finish "' + stocktake.name + '"?\n\n' + stocktake.seen + ' of ' + stocktake.expected + ' seen.'
+      + (left ? ' The ' + left + ' not seen will be listed in the report. Nothing is marked lost automatically.' : ''))) return;
+    try {
+      const data = await api('/api/ict/stocktake/finish', { method: 'POST', body: '{}' });
+      stocktakeLast = data.report;
+      await loadAssets();
+      stocktakeRenderReport(data.report);
+    } catch (error) { alert(error.message || 'Could not finish the stock-take.'); }
+  }
+
+  async function stocktakeShowReport(id) {
+    try { stocktakeRenderReport((await api('/api/ict/stocktake/' + id)).report); }
+    catch (error) { alert(error.message || 'Could not load the report.'); }
+  }
+
+  function stocktakeRenderReport(r) {
+    const box = el('stocktakeReport');
+    box.textContent = '';
+    const head = make('div', 'st-bar');
+    const info = make('div', 'st-info');
+    info.appendChild(make('div', 'st-name', r.name + ': report'));
+    info.appendChild(make('div', 'muted', 'Started ' + fmtTime(r.startedAt) + (r.finishedAt ? ', finished ' + fmtTime(r.finishedAt) : '')
+      + '. Seen ' + r.seen + ' of ' + r.expected + '.'));
+    const actions = make('div', 'st-actions');
+    actions.append(
+      stocktakeButton('fa-print', 'Print', 'btn-secondary', () => window.print()),
+      stocktakeButton('fa-xmark', 'Close', 'btn-ghost', () => { box.hidden = true; })
+    );
+    head.append(info, actions);
+    box.appendChild(head);
+    if (!r.missing.length) {
+      box.appendChild(make('div', 'empty', 'Every asset was seen ✓'));
+    } else {
+      box.appendChild(make('p', 'muted', 'Not seen (' + r.missing.length + '). Check with the holder or the location, then update each record: mark it lost only once you are sure.'));
+      const table = make('table');
+      const hr = make('tr');
+      ['Tag', 'Asset', 'Should be with', 'Location', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+      const thead = make('thead'); thead.appendChild(hr); table.appendChild(thead);
+      const body = make('tbody');
+      r.missing.forEach((a) => {
+        const tr = make('tr');
+        tr.appendChild(make('td', null, a.assetTag));
+        tr.appendChild(make('td', null, a.name));
+        tr.appendChild(make('td', null, a.holder || 'Nobody (not assigned)'));
+        tr.appendChild(make('td', null, [a.location, a.department].filter(Boolean).join(' · ') || '—'));
+        const act = make('td');
+        const open = make('button', 'btn btn-secondary', 'Open'); open.type = 'button'; open.style.fontSize = '12px';
+        open.addEventListener('click', () => openAsset(a.id));
+        act.appendChild(open); tr.appendChild(act);
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
+      const scroll = make('div', 'scroll'); scroll.appendChild(table);
+      box.appendChild(scroll);
+    }
+    box.hidden = false;
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Called by the scanner for every asset it finds while a stock-take is open.
+  async function stocktakeTick(a) {
+    try {
+      const data = await api('/api/ict/stocktake/verify', { method: 'POST', body: JSON.stringify({ assetId: a.id }) });
+      stocktake = data.stocktake;
+      const banner = make('div', 'scan-tick' + (data.already ? ' again' : ''));
+      banner.appendChild(make('span', 'big', '✓'));
+      const text = make('div', null, data.already ? 'Already ticked' : 'Ticked for ' + stocktake.name);
+      text.appendChild(make('small', null, (data.already ? 'First seen ' + fmtTime(data.verifiedAt) + '. ' : '')
+        + 'Seen ' + stocktake.seen + ' of ' + stocktake.expected + '.'));
+      banner.appendChild(text);
+      const box = el('scanResult');
+      const next = scanAgainButton();
+      next.className = 'btn btn-primary';
+      next.style.cssText = 'width:100%;justify-content:center;padding:12px;margin-bottom:12px';
+      box.insertBefore(next, box.firstChild);
+      box.insertBefore(banner, box.firstChild);
+      if (can('assets.manage') && !data.already) {
+        const undo = make('button', 'btn btn-ghost', 'Wrong sticker? Untick');
+        undo.type = 'button'; undo.style.cssText = 'margin-left:auto;font-size:12px';
+        undo.addEventListener('click', async () => {
+          try {
+            stocktake = (await api('/api/ict/stocktake/unverify', { method: 'POST', body: JSON.stringify({ assetId: a.id }) })).stocktake;
+            banner.replaceChildren(make('div', null, 'Tick removed.'));
+            banner.classList.add('again');
+            loadAssets();
+          } catch (error) { alert(error.message || 'Could not remove the tick.'); }
+        });
+        banner.appendChild(undo);
+      }
+      loadAssets();
+    } catch (error) {
+      el('scanResult').insertBefore(make('div', 'scan-err', 'Not ticked: ' + (error.message || 'try again.')), el('scanResult').firstChild);
+    }
+  }
+
   async function loadAssets() {
     const params = new URLSearchParams();
     const search = el('assetSearch').value.trim();
@@ -1556,6 +1768,8 @@
         });
       }
       renderAssetTiles(data.summary || {});
+      stocktake = data.stocktake || null;
+      renderStocktake();
       renderAssets(data.assets || []);
     } catch (error) {
       el('assetList').textContent = '';
@@ -1950,6 +2164,7 @@
     try {
       const data = await api('/api/ict/assets/by-tag?tag=' + encodeURIComponent(tag));
       scanShowAsset(data.asset);
+      if (stocktake && stocktake.open) await stocktakeTick(data.asset);
     } catch (error) {
       if (error.status === 404) scanShowMissing(tag);
       else {
@@ -2246,6 +2461,7 @@
   });
   el('assetStatusFilter').addEventListener('change', loadAssets);
   el('assetCategoryFilter').addEventListener('change', loadAssets);
+  el('assetSeenFilter').addEventListener('change', loadAssets);
 
   /* ---------------- infrastructure ---------------- */
   function infraNotice(message, kind) {

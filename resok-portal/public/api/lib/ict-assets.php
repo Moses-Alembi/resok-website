@@ -645,3 +645,184 @@ function ictAssetsSummary(PDO $pdo): array
                                      WHERE next_due_on IS NOT NULL AND next_due_on <= CURDATE()"),
     ];
 }
+
+// ---------------------------------------------------------------------------------------
+// Stock-take
+// ---------------------------------------------------------------------------------------
+
+/*
+ * A physical check of the register: walk round, scan every sticker found, and the register
+ * ticks each one. Whatever is still unticked at the end is what nobody could find.
+ *
+ * One stock-take is open at a time. While it is, every scan through the tag scanner ticks
+ * the asset, whatever else the scan was for, so a check can happen in passing. Finishing
+ * keeps the record and lists the assets not seen; nothing is marked lost automatically,
+ * because "not found today" is often "in someone's bag", and that is for a person to decide.
+ *
+ * Retired, disposed and lost assets are not expected to be found, so they do not count
+ * towards the total. If one turns up and is scanned anyway, it is ticked all the same.
+ */
+const ICT_STOCKTAKE_EXCLUDED = ['retired', 'disposed', 'lost'];
+
+function ictStocktakeEnsureTables(PDO $pdo): bool
+{
+    static $ready = null;
+    if ($ready !== null) return $ready;
+    try {
+        // The same statements are in server/schema-ict-assets.sql; keep the two in step.
+        $tail = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+        $pdo->exec("CREATE TABLE IF NOT EXISTS ict_stocktakes (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            name VARCHAR(120) NOT NULL,
+            started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            started_by INT UNSIGNED NULL,
+            finished_at DATETIME NULL,
+            finished_by INT UNSIGNED NULL,
+            expected INT UNSIGNED NULL,
+            PRIMARY KEY (id),
+            KEY ict_stocktakes_open (finished_at)
+        )" . $tail);
+        $pdo->exec("CREATE TABLE IF NOT EXISTS ict_stocktake_scans (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            stocktake_id INT UNSIGNED NOT NULL,
+            asset_id INT UNSIGNED NOT NULL,
+            scanned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            scanned_by INT UNSIGNED NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY ict_stocktake_scans_once (stocktake_id, asset_id),
+            KEY ict_stocktake_scans_asset (asset_id)
+        )" . $tail);
+        return $ready = true;
+    } catch (Throwable $e) {
+        error_log('Stock-take tables unavailable: ' . $e->getMessage());
+        return $ready = false;
+    }
+}
+
+function ictStocktakeExpectedSql(string $alias = ''): string
+{
+    return $alias . "status NOT IN ('" . implode("','", ICT_STOCKTAKE_EXCLUDED) . "')";
+}
+
+/** The open stock-take with its progress, or null. */
+function ictStocktakeCurrent(PDO $pdo): ?array
+{
+    if (!ictStocktakeEnsureTables($pdo)) return null;
+    $row = $pdo->query('SELECT * FROM ict_stocktakes WHERE finished_at IS NULL ORDER BY id DESC LIMIT 1')->fetch();
+    return $row ? ictStocktakeShape($pdo, $row) : null;
+}
+
+function ictStocktakeShape(PDO $pdo, array $row): array
+{
+    $id = (int)$row['id'];
+    $open = $row['finished_at'] === null;
+    // While open, the total follows the register (an asset added mid-count counts); once
+    // finished, it is the number frozen at that moment.
+    $expected = $open
+        ? (int)$pdo->query('SELECT COUNT(*) FROM ict_assets WHERE ' . ictStocktakeExpectedSql())->fetchColumn()
+        : (int)$row['expected'];
+    $seen = $pdo->prepare('SELECT COUNT(*) FROM ict_stocktake_scans s JOIN ict_assets a ON a.id = s.asset_id
+                           WHERE s.stocktake_id = ? AND ' . ictStocktakeExpectedSql('a.'));
+    $seen->execute([$id]);
+    $seenExpected = (int)$seen->fetchColumn();
+    $all = $pdo->prepare('SELECT COUNT(*) FROM ict_stocktake_scans WHERE stocktake_id = ?');
+    $all->execute([$id]);
+    return [
+        'id' => $id, 'name' => $row['name'], 'open' => $open,
+        'startedAt' => $row['started_at'], 'finishedAt' => $row['finished_at'],
+        'expected' => $expected, 'seen' => $seenExpected,
+        'extra' => (int)$all->fetchColumn() - $seenExpected,   // retired or lost items that turned up
+    ];
+}
+
+/** @return array{0: ?array, 1: ?string} [stock-take, error] */
+function ictStocktakeStart(PDO $pdo, string $name, int $userId): array
+{
+    if (!ictStocktakeEnsureTables($pdo)) return [null, 'The stock-take tables could not be created.'];
+    if (ictStocktakeCurrent($pdo)) return [null, 'A stock-take is already open. Finish it before starting another.'];
+    $name = trim((string)preg_replace('/\s+/', ' ', $name));
+    if ($name === '') $name = 'Stock-take ' . date('j M Y');
+    $pdo->prepare('INSERT INTO ict_stocktakes (name, started_by) VALUES (?, ?)')->execute([mb_substr($name, 0, 120), $userId]);
+    return [ictStocktakeCurrent($pdo), null];
+}
+
+/**
+ * Ticks one asset in the open stock-take. Ticking twice keeps the first time, so the
+ * record says when it was first found.
+ *
+ * @return array{stocktake: ?array, verifiedAt: ?string, already: bool}
+ */
+function ictStocktakeVerify(PDO $pdo, int $assetId, int $userId): array
+{
+    $current = ictStocktakeCurrent($pdo);
+    if (!$current) return ['stocktake' => null, 'verifiedAt' => null, 'already' => false];
+    $insert = $pdo->prepare('INSERT IGNORE INTO ict_stocktake_scans (stocktake_id, asset_id, scanned_by) VALUES (?, ?, ?)');
+    $insert->execute([$current['id'], $assetId, $userId]);
+    $at = $pdo->prepare('SELECT scanned_at FROM ict_stocktake_scans WHERE stocktake_id = ? AND asset_id = ?');
+    $at->execute([$current['id'], $assetId]);
+    return ['stocktake' => ictStocktakeCurrent($pdo), 'verifiedAt' => $at->fetchColumn() ?: null, 'already' => $insert->rowCount() === 0];
+}
+
+/** Takes a tick off again, for a scan of the wrong sticker. */
+function ictStocktakeUnverify(PDO $pdo, int $assetId): ?array
+{
+    $current = ictStocktakeCurrent($pdo);
+    if (!$current) return null;
+    $pdo->prepare('DELETE FROM ict_stocktake_scans WHERE stocktake_id = ? AND asset_id = ?')->execute([$current['id'], $assetId]);
+    return ictStocktakeCurrent($pdo);
+}
+
+/** When each asset was ticked in a stock-take: [asset id => scanned_at]. */
+function ictStocktakeTicks(PDO $pdo, int $stocktakeId): array
+{
+    $stmt = $pdo->prepare('SELECT asset_id, scanned_at FROM ict_stocktake_scans WHERE stocktake_id = ?');
+    $stmt->execute([$stocktakeId]);
+    return array_column($stmt->fetchAll(), 'scanned_at', 'asset_id');
+}
+
+/** Freezes the count and returns the report. @return array{0: ?array, 1: ?string} */
+function ictStocktakeFinish(PDO $pdo, int $userId): array
+{
+    $current = ictStocktakeCurrent($pdo);
+    if (!$current) return [null, 'There is no open stock-take.'];
+    $pdo->prepare('UPDATE ict_stocktakes SET finished_at = NOW(), finished_by = ?, expected = ? WHERE id = ? AND finished_at IS NULL')
+        ->execute([$userId, $current['expected'], $current['id']]);
+    return [ictStocktakeReport($pdo, $current['id']), null];
+}
+
+/**
+ * The outcome of a stock-take: what was not seen, with who holds it and where it should be,
+ * which is what someone needs in hand to go and look.
+ *
+ * Assets added after a stock-take finished are not listed as missing from it.
+ */
+function ictStocktakeReport(PDO $pdo, int $id): ?array
+{
+    if (!ictStocktakeEnsureTables($pdo)) return null;
+    $stmt = $pdo->prepare('SELECT * FROM ict_stocktakes WHERE id = ?');
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+    if (!$row) return null;
+    $cutoff = $row['finished_at'] ?? date('Y-m-d H:i:s');
+    $missing = $pdo->prepare('SELECT a.id, a.asset_tag, a.name, a.status, a.location, a.department, h.holder_name
+                              FROM ict_assets a
+                              LEFT JOIN ict_assignments h ON h.asset_id = a.id AND h.returned_at IS NULL
+                              LEFT JOIN ict_stocktake_scans s ON s.asset_id = a.id AND s.stocktake_id = ?
+                              WHERE s.id IS NULL AND ' . ictStocktakeExpectedSql('a.') . ' AND a.created_at <= ?
+                              ORDER BY a.asset_tag');
+    $missing->execute([$id, $cutoff]);
+    return ictStocktakeShape($pdo, $row) + [
+        'missing' => array_map(static fn($r) => [
+            'id' => (int)$r['id'], 'assetTag' => $r['asset_tag'], 'name' => $r['name'], 'status' => $r['status'],
+            'location' => $r['location'], 'department' => $r['department'], 'holder' => $r['holder_name'],
+        ], $missing->fetchAll()),
+    ];
+}
+
+/** Finished stock-takes, newest first. */
+function ictStocktakeHistory(PDO $pdo, int $limit = 10): array
+{
+    if (!ictStocktakeEnsureTables($pdo)) return [];
+    $rows = $pdo->query('SELECT * FROM ict_stocktakes WHERE finished_at IS NOT NULL ORDER BY finished_at DESC LIMIT ' . (int)$limit)->fetchAll();
+    return array_map(static fn($r) => ictStocktakeShape($pdo, $r), $rows);
+}

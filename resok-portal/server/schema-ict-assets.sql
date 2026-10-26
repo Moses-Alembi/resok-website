@@ -135,3 +135,28 @@ CREATE TABLE IF NOT EXISTS ict_maintenance (
   CONSTRAINT ict_maintenance_asset_fk FOREIGN KEY (asset_id)
     REFERENCES ict_assets(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Stock-take (26 Oct 2026): a physical check of the register. lib/ict-assets.php creates
+-- these on first use as well; keep the two in step.
+CREATE TABLE IF NOT EXISTS ict_stocktakes (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_by INT UNSIGNED NULL,
+  finished_at DATETIME NULL,
+  finished_by INT UNSIGNED NULL,
+  expected INT UNSIGNED NULL,
+  PRIMARY KEY (id),
+  KEY ict_stocktakes_open (finished_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ict_stocktake_scans (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  stocktake_id INT UNSIGNED NOT NULL,
+  asset_id INT UNSIGNED NOT NULL,
+  scanned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  scanned_by INT UNSIGNED NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY ict_stocktake_scans_once (stocktake_id, asset_id),
+  KEY ict_stocktake_scans_asset (asset_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -3406,15 +3406,75 @@ Respiratory Society of Kenya");
         $user = auth($config);
         requireModule('ictAssetsList', 'lib/ict-assets.php');
         ictRequire($pdo, $user, $config, 'assets.view');
+        $assets = ictAssetsList($pdo, [
+            'search'   => trim((string)($_GET['search'] ?? '')),
+            'status'   => (string)($_GET['status'] ?? ''),
+            'category' => (string)($_GET['category'] ?? ''),
+        ]);
+        // During a stock-take, each row says whether its sticker has been scanned yet.
+        $stocktake = ictStocktakeCurrent($pdo);
+        if ($stocktake) {
+            $ticks = ictStocktakeTicks($pdo, $stocktake['id']);
+            foreach ($assets as &$a) $a['verifiedAt'] = $ticks[$a['id']] ?? null;
+            unset($a);
+        }
         respond(200, [
-            'assets'  => ictAssetsList($pdo, [
-                'search'   => trim((string)($_GET['search'] ?? '')),
-                'status'   => (string)($_GET['status'] ?? ''),
-                'category' => (string)($_GET['category'] ?? ''),
-            ]),
+            'assets'     => $assets,
             'summary'    => ictAssetsSummary($pdo),
             'categories' => ICT_ASSET_CATEGORIES,
+            'stocktake'  => $stocktake,
         ]);
+    }
+
+    // ----- ICT: stock-take (lib/ict-assets.php explains it) ------------------------------
+
+    if (strpos($route, 'ict/stocktake') === 0) {
+        $user = auth($config);
+        requireModule('ictStocktakeCurrent', 'lib/ict-assets.php');
+        $userId = (int)$user['userId'];
+
+        if ($route === 'ict/stocktake' && $method === 'GET') {
+            ictRequire($pdo, $user, $config, 'assets.view');
+            respond(200, ['current' => ictStocktakeCurrent($pdo), 'history' => ictStocktakeHistory($pdo)]);
+        }
+        if ($route === 'ict/stocktake' && $method === 'POST') {
+            ictRequire($pdo, $user, $config, 'assets.manage');
+            [$stocktake, $error] = ictStocktakeStart($pdo, (string)(input()['name'] ?? ''), $userId);
+            if ($error) respond(400, ['error' => $error]);
+            ictAudit($pdo, $userId, 'stocktake_started', 'stocktake', (string)$stocktake['id'], $stocktake['name']);
+            respond(201, ['stocktake' => $stocktake]);
+        }
+        // A tick records that the sticker was seen; it changes nothing about the asset, so
+        // anyone who can view the register can do the walking round.
+        if ($route === 'ict/stocktake/verify' && $method === 'POST') {
+            ictRequire($pdo, $user, $config, 'assets.view');
+            $asset = ictAssetFind($pdo, (int)(input()['assetId'] ?? 0));
+            if (!$asset) respond(404, ['error' => 'That asset is not on the register.']);
+            $result = ictStocktakeVerify($pdo, (int)$asset['id'], $userId);
+            if (!$result['stocktake']) respond(409, ['error' => 'No stock-take is open.']);
+            respond(200, $result);
+        }
+        if ($route === 'ict/stocktake/unverify' && $method === 'POST') {
+            ictRequire($pdo, $user, $config, 'assets.manage');
+            $stocktake = ictStocktakeUnverify($pdo, (int)(input()['assetId'] ?? 0));
+            if (!$stocktake) respond(409, ['error' => 'No stock-take is open.']);
+            respond(200, ['stocktake' => $stocktake]);
+        }
+        if ($route === 'ict/stocktake/finish' && $method === 'POST') {
+            ictRequire($pdo, $user, $config, 'assets.manage');
+            [$report, $error] = ictStocktakeFinish($pdo, $userId);
+            if ($error) respond(400, ['error' => $error]);
+            ictAudit($pdo, $userId, 'stocktake_finished', 'stocktake', (string)$report['id'],
+                     $report['name'] . ': ' . $report['seen'] . ' of ' . $report['expected'] . ' seen');
+            respond(200, ['report' => $report]);
+        }
+        if (preg_match('#^ict/stocktake/(\d+)$#', $route, $m) && $method === 'GET') {
+            ictRequire($pdo, $user, $config, 'assets.view');
+            $report = ictStocktakeReport($pdo, (int)$m[1]);
+            if (!$report) respond(404, ['error' => 'No such stock-take.']);
+            respond(200, ['report' => $report]);
+        }
+        respond(404, ['error' => 'Route not found']);
     }
 
     if ($route === 'ict/assets' && $method === 'POST') {

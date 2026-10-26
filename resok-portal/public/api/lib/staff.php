@@ -48,9 +48,11 @@ function staffEnsureTables(PDO $pdo): bool
 function staffIs(PDO $pdo, int $userId): bool
 {
     if (!staffEnsureTables($pdo)) return false;
-    $stmt = $pdo->prepare('SELECT 1 FROM staff_accounts WHERE user_id = ?');
+    $stmt = $pdo->prepare('SELECT * FROM staff_accounts WHERE user_id = ?');
     $stmt->execute([$userId]);
-    return (bool)$stmt->fetchColumn();
+    $row = $stmt->fetch();
+    // A deactivated member of staff (lib/staff-portal.php) is no longer staff.
+    return $row !== false && (!isset($row['active']) || (int)$row['active'] === 1);
 }
 
 /**
@@ -251,6 +253,12 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
         if (!$row) respond(403, ['error' => 'This account is not on the staff list.']);
         $assets = function_exists('ictAssetsHeldBy') ? ictAssetsHeldBy($pdo, (string)$user['email']) : [];
         respond(200, ['name' => $row['full_name'], 'email' => $user['email'], 'assets' => $assets]);
+    }
+
+    // Everything else that is not account administration is the staff intranet.
+    if (strpos($route, 'staff/admin') !== 0) {
+        requireModule('staffPortalHandle', 'lib/staff-portal.php');
+        staffPortalHandle($pdo, $config, $route, $method, $user);
     }
 
     requireSuperAdmin($user, $config);

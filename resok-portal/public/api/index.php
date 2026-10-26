@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -2662,6 +2662,11 @@ Respiratory Society of Kenya");
         if ($error) respond(400, ['error' => $error]);
         ictAudit($pdo, (int)$user['userId'], 'ticket_updated', 'ticket', (string)$ticket['id'],
                  $ticket['reference'] . ': ' . $ticket['status']);
+        // The person who reported it hears about changes made by someone else.
+        if (function_exists('staffNotifyByEmail') && strcasecmp((string)($ticket['requesterEmail'] ?? ''), (string)($user['email'] ?? '')) !== 0) {
+            staffNotifyByEmail($pdo, $ticket['requesterEmail'] ?? null, 'ticket',
+                'Your ICT ticket ' . $ticket['reference'] . ' was updated: ' . str_replace('_', ' ', (string)$ticket['status']), 'staff#helpdesk');
+        }
         respond(200, ['ticket' => $ticket]);
     }
 
@@ -3566,6 +3571,9 @@ Respiratory Society of Kenya");
         ictAudit($pdo, (int)$user['userId'], 'asset_assigned', 'asset', (string)$asset['id'],
                  $asset['assetTag'] . ' to ' . $asset['holder']['name'],
                  null, ['holder' => $asset['holder']['name']]);
+        if (function_exists('staffNotifyByEmail')) {
+            staffNotifyByEmail($pdo, $asset['holder']['email'] ?? null, 'asset', 'Issued to you: ' . $asset['assetTag'] . ' ' . $asset['name'], 'staff#equipment');
+        }
         respond(200, ['asset' => $asset]);
     }
 
@@ -3577,6 +3585,9 @@ Respiratory Society of Kenya");
         $was = ictAssetFind($pdo, (int)$m[1]);
         [$asset, $error] = ictAssetReturn($pdo, (int)$m[1], input(), (int)$user['userId']);
         if ($error) respond(400, ['error' => $error]);
+        if (function_exists('staffNotifyByEmail')) {
+            staffNotifyByEmail($pdo, $was['holder']['email'] ?? null, 'asset', 'Returned and taken off your list: ' . $asset['assetTag'] . ' ' . $asset['name'], 'staff#equipment');
+        }
         ictAudit($pdo, (int)$user['userId'], 'asset_returned', 'asset', (string)$asset['id'],
                  $asset['assetTag'] . ' from ' . ($was['holder']['name'] ?? 'unknown'),
                  ['condition' => $was['condition'] ?? null], ['condition' => $asset['condition']]);
@@ -3595,6 +3606,10 @@ Respiratory Society of Kenya");
         ictAudit($pdo, (int)$user['userId'], 'asset_transferred', 'asset', (string)$asset['id'],
                  $asset['assetTag'] . ' from ' . ($was['holder']['name'] ?? 'unknown') . ' to ' . $asset['holder']['name'],
                  ['holder' => $was['holder']['name'] ?? null], ['holder' => $asset['holder']['name']]);
+        if (function_exists('staffNotifyByEmail')) {
+            staffNotifyByEmail($pdo, $was['holder']['email'] ?? null, 'asset', 'Handed over to ' . $asset['holder']['name'] . ': ' . $asset['assetTag'] . ' ' . $asset['name'], 'staff#equipment');
+            staffNotifyByEmail($pdo, $asset['holder']['email'] ?? null, 'asset', 'Issued to you: ' . $asset['assetTag'] . ' ' . $asset['name'], 'staff#equipment');
+        }
         respond(200, ['asset' => $asset]);
     }
 
@@ -5448,9 +5463,9 @@ Respiratory Society of Kenya");
             if ($sub === 'emails' && $method === 'GET') {
                 $needAdmin();
                 $q = $pdo->prepare("SELECT id, template, to_email, subject, status, error, attempts, created_at, sent_at FROM abs_emails
-                                    WHERE (event_id = ? OR event_id IS NULL) AND template <> 'newsletter' AND status IN ('queued','sending','failed') ORDER BY id DESC LIMIT 300");
+                                    WHERE (event_id = ? OR event_id IS NULL) AND template NOT IN ('newsletter','staff-announcement') AND status IN ('queued','sending','failed') ORDER BY id DESC LIMIT 300");
                 $q->execute([$eventId]);
-                $counts = $pdo->prepare("SELECT status, COUNT(*) AS n FROM abs_emails WHERE (event_id = ? OR event_id IS NULL) AND template <> 'newsletter' GROUP BY status");
+                $counts = $pdo->prepare("SELECT status, COUNT(*) AS n FROM abs_emails WHERE (event_id = ? OR event_id IS NULL) AND template NOT IN ('newsletter','staff-announcement') GROUP BY status");
                 $counts->execute([$eventId]);
                 respond(200, ['emails' => $q->fetchAll(), 'counts' => array_column($counts->fetchAll(), 'n', 'status'),
                               'hourlyLimit' => absMailHourlyLimit($config)]);

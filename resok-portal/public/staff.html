@@ -4,141 +4,848 @@
   <meta charset="UTF-8" />
   <link rel="icon" href="favicon.jpg" type="image/jpeg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Staff - ReSoK Portal</title>
+  <title>Staff Portal - ReSoK</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
   <style>
-    :root{--green:#087539;--red:#bc0b22;--ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa}
+    :root{
+      --brand:#087539;--brand-ink:#05603a;--brand-soft:#ecfdf3;--accent:#bc0b22;
+      --ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa;--card:#fff;
+      --warn:#93370d;--warn-bg:#fff8e6;--bad:#b42318;--bad-bg:#fef3f2;--info:#175cd3;--info-bg:#eff8ff;
+      --radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)
+    }
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
     [hidden]{display:none!important}
-    .top{background:#fff;border-bottom:1px solid #eee}
-    .top-inner{max-width:900px;margin:0 auto;padding:0 18px;height:66px;display:flex;align-items:center;gap:14px}
-    .top img{height:38px}
-    .top .title{font-weight:700;font-size:15px;color:#344054}
-    .top a.out{margin-left:auto;font-size:13.5px;color:var(--red);font-weight:700;text-decoration:none}
-    main{max-width:900px;margin:0 auto;padding:22px 18px 60px;display:grid;gap:18px}
-    .panel{background:#fff;border-radius:12px;padding:22px;box-shadow:0 2px 12px rgba(16,24,40,.06);min-width:0}
-    h1{font-size:22px}
-    h2{font-size:17px;margin-bottom:6px}
-    .lede{color:var(--muted);font-size:14px;margin-top:4px}
-    input,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff}
-    textarea{margin-top:10px;min-height:80px;resize:vertical}
-    .btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;background:var(--green);color:#fff;margin-top:12px}
-    .btn:disabled{opacity:.6;cursor:wait}
-    .note{border-radius:9px;padding:11px 14px;font-size:14px;margin:12px 0 0}
-    .note.ok{background:#ecfdf3;color:#05603a}.note.bad{background:#fef3f2;color:#b42318}
-    .row{display:flex;gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;flex-wrap:wrap}
-    .row:last-child{border-bottom:0}
-    .row code{font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px}
-    .row .grow{flex:1;min-width:160px}
+    a{color:var(--brand)}
+    button{font:inherit}
+    .skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:100;background:#fff;padding:8px 12px;border-radius:8px}
+
+    /* Top bar */
+    .top{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--line)}
+    .top-inner{height:64px;display:flex;align-items:center;gap:12px;padding:0 16px}
+    .top img{height:36px}
+    .top .title{font-weight:700;color:#344054;font-size:15px}
+    .top .spacer{flex:1}
+    .icon-btn{position:relative;border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#344054}
+    .icon-btn:focus-visible,.btn:focus-visible,.side a:focus-visible{outline:3px solid #a6f4c5;outline-offset:2px}
+    .badge{position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:19px;height:19px;padding:0 5px;display:flex;align-items:center;justify-content:center}
+    .who{font-size:13.5px;color:#344054;font-weight:600;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .menu-btn{display:none}
+
+    /* Layout */
+    .layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 64px)}
+    .side{background:#fff;border-right:1px solid var(--line);padding:14px 10px;position:sticky;top:64px;height:calc(100vh - 64px);overflow:auto}
+    .side .sec{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:14px 10px 6px}
+    .side a{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;color:#344054;text-decoration:none;font-weight:600;font-size:14px}
+    .side a i{width:18px;text-align:center;color:#98a2b3}
+    .side a:hover{background:var(--bg)}
+    .side a.active{background:var(--brand-soft);color:var(--brand-ink)}
+    .side a.active i{color:var(--brand)}
+    .side .locked{display:flex;align-items:center;gap:10px;padding:10px;color:#98a2b3;font-weight:600;font-size:14px;cursor:default}
+    .side .locked i{width:18px;text-align:center}
+    .soon{margin-left:auto;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:#eef2f6;color:#667085;border-radius:999px;padding:2px 7px}
+    main{padding:22px 22px 60px;min-width:0;max-width:1100px}
+
+    /* Pieces */
+    h1{font-size:23px}
+    h2{font-size:17px}
+    .lede{color:var(--muted);font-size:14px;margin-top:4px;max-width:75ch}
+    .panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;min-width:0}
+    .stack{display:grid;gap:16px}
+    .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+    .tile{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;text-decoration:none;color:inherit;display:block}
+    .tile b{display:block;font-size:24px;line-height:1.2}
+    .tile span{font-size:13px;color:var(--muted)}
+    .tile.alert b{color:var(--accent)}
+    .head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid #d0d5dd;background:#fff;color:var(--ink);border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none}
+    .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+    .btn.danger{border-color:#f1b9c1;color:var(--bad)}
+    .btn.sm{padding:5px 10px;font-size:12.5px}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    label.f{display:block;font-size:13px;font-weight:700;color:#344054;margin:12px 0 5px}
+    input[type=text],input[type=search],input[type=tel],input[type=date],select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px 12px;font:inherit;font-size:14px;background:#fff;color:var(--ink)}
+    textarea{resize:vertical;min-height:90px}
+    .check{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:10px}
+    .note{border-radius:9px;padding:11px 14px;font-size:14px;margin-top:12px}
+    .note.ok{background:var(--brand-soft);color:var(--brand-ink)}.note.bad{background:var(--bad-bg);color:var(--bad)}.note.info{background:var(--info-bg);color:var(--info)}.note.warn{background:var(--warn-bg);color:var(--warn)}
+    .empty{color:var(--muted);font-size:14px;padding:18px;border:1px dashed var(--line);border-radius:10px;text-align:center}
+    .list-row{display:flex;gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+    .list-row:last-child{border-bottom:0}
+    .list-row .grow{flex:1;min-width:160px}
+    code.tag{font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px}
     .hint{color:var(--muted);font-size:12.5px}
-    .empty{color:var(--muted);font-size:14px;padding:14px;border:1px dashed var(--line);border-radius:10px;text-align:center}
+    .pill{display:inline-flex;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
+    .p-ok{background:var(--brand-soft);color:var(--brand-ink)}.p-warn{background:var(--warn-bg);color:var(--warn)}.p-muted{background:#f2f4f7;color:#475467}.p-info{background:var(--info-bg);color:var(--info)}.p-bad{background:var(--bad-bg);color:var(--bad)}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+    .ann{border-bottom:1px solid var(--line);padding:14px 0}
+    .ann:last-child{border-bottom:0}
+    .ann h3{font-size:16px;margin-bottom:4px}
+    .ann .body{white-space:pre-wrap;font-size:14.5px;margin-top:8px;color:#344054}
+    .ann.unread h3::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:middle}
+    .people{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+    .person{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;display:flex;gap:12px;min-width:0}
+    .avatar{flex:0 0 44px;height:44px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);font-weight:800;display:flex;align-items:center;justify-content:center}
+    .person .info{min-width:0}
+    .person .info b{display:block;overflow-wrap:anywhere}
+    .person .info div{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+    .dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:14px}
+    .dl dt{color:var(--muted);font-weight:600}
+    .bell-panel{position:absolute;right:16px;top:60px;width:min(380px,calc(100vw - 32px));background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(16,24,40,.16);z-index:50;max-height:70vh;overflow:auto}
+    .bell-panel .bp-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+    .bell-panel a.n{display:block;padding:11px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:13.5px}
+    .bell-panel a.n.unread{background:#f6fef9;font-weight:600}
+    .bell-panel a.n small{display:block;color:var(--muted);font-weight:400;margin-top:2px}
+
+    @media (max-width:900px){
+      .menu-btn{display:inline-flex}
+      .layout{grid-template-columns:1fr}
+      .side{position:fixed;left:0;top:64px;bottom:0;width:260px;height:auto;z-index:45;transform:translateX(-100%);transition:transform .2s;box-shadow:0 10px 30px rgba(16,24,40,.2)}
+      .side.open{transform:none}
+      .who{display:none}
+      main{padding:16px 16px 60px}
+      .grid2{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
+  <a class="skip" href="#main">Skip to content</a>
   <header class="top"><div class="top-inner">
+    <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
     <img src="assets/img/logo.png" alt="ReSoK" />
-    <span class="title">Staff</span>
-    <a class="out" href="#" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Sign out</a>
+    <span class="title">Staff Portal</span>
+    <span class="spacer"></span>
+    <span class="who" id="who"></span>
+    <button class="icon-btn" id="bellBtn" type="button" aria-label="Notifications" aria-expanded="false"><i class="fas fa-bell"></i><span class="badge" id="bellCount" hidden></span></button>
+    <button class="icon-btn" id="logoutBtn" type="button" aria-label="Sign out" title="Sign out"><i class="fas fa-sign-out-alt"></i></button>
   </div></header>
-  <main>
-    <section class="panel">
-      <h1 id="hello">Welcome</h1>
-      <p class="lede">Your ReSoK staff account. Report ICT problems here and follow them up, and see the equipment assigned to you.</p>
-      <div id="pageNote"></div>
-    </section>
+  <div class="bell-panel" id="bellPanel" hidden>
+    <div class="bp-head"><span>Notifications</span><button class="btn sm" id="bellAll" type="button">Mark all read</button></div>
+    <div id="bellList"></div>
+  </div>
 
-    <section class="panel">
-      <h2>Report an ICT problem</h2>
-      <p class="lede" style="margin-bottom:12px">A laptop, the printer, email, the internet, the website or the portal. Say what went wrong; ICT will pick it up and you can follow it below.</p>
-      <form id="ticketForm" autocomplete="off">
-        <input id="subject" maxlength="200" required placeholder="e.g. The office printer is not printing" aria-label="What is wrong" />
-        <textarea id="description" placeholder="Anything that helps: which device, since when, any error message (optional)" aria-label="Details"></textarea>
-        <button class="btn" type="submit" id="ticketBtn"><i class="fas fa-paper-plane"></i> Report it</button>
-      </form>
-      <div id="ticketNote"></div>
-    </section>
+  <div class="layout">
+    <nav class="side" id="side" aria-label="Staff portal">
+      <a href="#home" data-view="home"><i class="fas fa-house"></i> Home</a>
+      <a href="#announcements" data-view="announcements"><i class="fas fa-bullhorn"></i> Announcements</a>
+      <a href="#directory" data-view="directory"><i class="fas fa-address-book"></i> Staff directory</a>
+      <a href="#helpdesk" data-view="helpdesk"><i class="fas fa-headset"></i> ICT helpdesk</a>
+      <a href="#equipment" data-view="equipment"><i class="fas fa-laptop"></i> My equipment</a>
+      <a href="#profile" data-view="profile" data-needs-row><i class="fas fa-id-card"></i> My profile</a>
+      <span class="locked" title="Coming soon"><i class="fas fa-umbrella-beach"></i> Leave <span class="soon">Soon</span></span>
+      <span class="locked" title="Coming soon"><i class="fas fa-folder-open"></i> Documents &amp; policies <span class="soon">Soon</span></span>
+      <span class="locked" title="Coming soon"><i class="fas fa-list-check"></i> Tasks &amp; projects <span class="soon">Soon</span></span>
+      <span class="locked" title="Coming soon"><i class="fas fa-calendar-days"></i> Calendar <span class="soon">Soon</span></span>
+      <div id="manageNav" hidden>
+        <div class="sec">Manage</div>
+        <a href="#manage-announcements" data-view="manage-announcements" data-cap="announcements.publish"><i class="fas fa-pen-to-square"></i> Announcements</a>
+        <a href="#people" data-view="people" data-cap="staff.manage"><i class="fas fa-users-gear"></i> Staff records</a>
+        <a href="#departments" data-view="departments" data-cap="staff.manage"><i class="fas fa-sitemap"></i> Departments</a>
+        <a href="#permissions" data-view="permissions" data-super><i class="fas fa-user-shield"></i> Permissions</a>
+        <a href="#activity" data-view="activity" data-super><i class="fas fa-clock-rotate-left"></i> Activity log</a>
+        <a href="ict#staff" data-super><i class="fas fa-user-plus"></i> Add staff accounts</a>
+      </div>
+    </nav>
 
-    <section class="panel">
-      <h2>What you have reported</h2>
-      <div id="tickets"><div class="empty">Loading&hellip;</div></div>
-    </section>
+    <main id="main" tabindex="-1">
+      <div id="flash"></div>
 
-    <section class="panel">
-      <h2>Equipment assigned to you</h2>
-      <p class="lede" style="margin-bottom:8px">From the ICT asset register. If something here is not with you, or something you use is missing, report it above.</p>
-      <div id="assets"><div class="empty">Loading&hellip;</div></div>
-    </section>
-  </main>
+      <!-- Home -->
+      <section class="stack" data-panel="home">
+        <div>
+          <h1 id="hello">Welcome</h1>
+          <p class="lede" id="helloSub">Your ReSoK staff portal.</p>
+        </div>
+        <div class="tiles" id="homeTiles"></div>
+        <div class="grid2">
+          <div class="panel">
+            <div class="head"><h2>Latest announcements</h2><a class="btn sm" href="#announcements">All</a></div>
+            <div id="homeAnns"></div>
+          </div>
+          <div class="panel">
+            <div class="head"><h2>Notifications</h2></div>
+            <div id="homeNotes"></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="panel">
+            <div class="head"><h2>My open ICT tickets</h2><a class="btn sm" href="#helpdesk">Report a problem</a></div>
+            <div id="homeTickets"></div>
+          </div>
+          <div class="panel">
+            <div class="head"><h2>My equipment</h2><a class="btn sm" href="#equipment">Details</a></div>
+            <div id="homeAssets"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Announcements -->
+      <section class="stack" data-panel="announcements" hidden>
+        <div><h1>Announcements</h1><p class="lede">Notices for all staff, and for your department.</p></div>
+        <div class="panel">
+          <input type="search" id="annSearch" placeholder="Search announcements" aria-label="Search announcements">
+          <div id="annList" style="margin-top:8px"></div>
+        </div>
+      </section>
+
+      <!-- Directory -->
+      <section class="stack" data-panel="directory" hidden>
+        <div><h1>Staff directory</h1><p class="lede">Work contact details for ReSoK staff. Keep yours up to date under My profile.</p></div>
+        <div class="row">
+          <input type="search" id="dirSearch" placeholder="Search name, title, department or office" aria-label="Search the directory" style="flex:1;min-width:220px;width:auto">
+          <select id="dirDept" style="width:auto;min-width:170px" aria-label="Department"><option value="">All departments</option></select>
+        </div>
+        <div class="people" id="dirList"></div>
+      </section>
+
+      <!-- Helpdesk -->
+      <section class="stack" data-panel="helpdesk" hidden>
+        <div><h1>ICT helpdesk</h1><p class="lede">A laptop, the printer, email, the internet, the website or the portal: say what went wrong and ICT will pick it up.</p></div>
+        <div class="panel">
+          <form id="ticketForm" autocomplete="off">
+            <label class="f" for="tSubject">What is wrong?</label>
+            <input type="text" id="tSubject" maxlength="200" required placeholder="e.g. The office printer is not printing">
+            <label class="f" for="tDesc">Details (optional)</label>
+            <textarea id="tDesc" placeholder="Which device, since when, any error message"></textarea>
+            <button class="btn primary" type="submit" id="tBtn" style="margin-top:12px"><i class="fas fa-paper-plane"></i> Report it</button>
+          </form>
+          <div id="ticketNote"></div>
+        </div>
+        <div class="panel"><div class="head"><h2>What you have reported</h2></div><div id="ticketList"></div></div>
+      </section>
+
+      <!-- Equipment -->
+      <section class="stack" data-panel="equipment" hidden>
+        <div><h1>My equipment</h1><p class="lede">What the ICT asset register says is with you. If something is wrong here, report it on the helpdesk.</p></div>
+        <div class="panel"><div id="assetList"></div></div>
+      </section>
+
+      <!-- Profile -->
+      <section class="stack" data-panel="profile" hidden>
+        <div><h1>My profile</h1><p class="lede">Your work phone, office and a short bio appear in the staff directory. Your title, department and manager are kept by HR.</p></div>
+        <div class="grid2">
+          <div class="panel"><h2>Record</h2><dl class="dl" id="profileRecord" style="margin-top:12px"></dl></div>
+          <div class="panel">
+            <h2>Contact details</h2>
+            <form id="profileForm" autocomplete="off">
+              <label class="f" for="pPhone">Work phone</label><input type="tel" id="pPhone" maxlength="40" placeholder="+254 7…">
+              <label class="f" for="pOffice">Office or location</label><input type="text" id="pOffice" maxlength="120" placeholder="e.g. Nairobi secretariat">
+              <label class="f" for="pBio">Short bio (optional)</label><textarea id="pBio" maxlength="500" placeholder="What you work on"></textarea>
+              <button class="btn primary" type="submit" style="margin-top:12px">Save</button>
+            </form>
+            <div id="profileNote"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Manage announcements -->
+      <section class="stack" data-panel="manage-announcements" hidden>
+        <div><h1>Manage announcements</h1><p class="lede">Write a draft, then publish it to all staff or one department. Publishing notifies them in the portal, and by email if you tick it.</p></div>
+        <div class="panel">
+          <h2 id="maTitle">New announcement</h2>
+          <form id="maForm" autocomplete="off">
+            <input type="hidden" id="maId">
+            <label class="f" for="maT">Title</label><input type="text" id="maT" maxlength="200" required>
+            <label class="f" for="maB">Announcement</label><textarea id="maB" maxlength="20000" required style="min-height:160px" placeholder="Plain text. Leave a blank line between paragraphs."></textarea>
+            <label class="f" for="maD">Who is it for?</label><select id="maD"><option value="">All staff</option></select>
+            <label class="check"><input type="checkbox" id="maPin"> Pin to the top</label>
+            <label class="check"><input type="checkbox" id="maAck"> Ask staff to confirm they have read it</label>
+            <label class="check"><input type="checkbox" id="maEmail"> When published, also email it to them</label>
+            <div class="row" style="margin-top:14px">
+              <button class="btn" type="submit">Save draft</button>
+              <button class="btn" type="button" id="maNew" hidden>New announcement</button>
+            </div>
+          </form>
+          <div id="maNote"></div>
+        </div>
+        <div class="panel"><div class="table-wrap" id="maList"></div></div>
+      </section>
+
+      <!-- Staff records -->
+      <section class="stack" data-panel="people" hidden>
+        <div><h1>Staff records</h1><p class="lede">Titles, departments, reporting managers and staff numbers. Staff edit their own contact details; these fields are yours. Deactivating someone signs them out and removes their access at once.</p></div>
+        <div class="panel" id="personEdit" hidden>
+          <h2 id="peTitle"></h2>
+          <form id="peForm" autocomplete="off">
+            <div class="grid2">
+              <div><label class="f" for="peName">Full name</label><input type="text" id="peName" maxlength="160"></div>
+              <div><label class="f" for="peNumber">Staff number</label><input type="text" id="peNumber" maxlength="30"></div>
+              <div><label class="f" for="peJob">Job title</label><input type="text" id="peJob" maxlength="120"></div>
+              <div><label class="f" for="peDept">Department</label><select id="peDept"><option value="">None</option></select></div>
+              <div><label class="f" for="peMgr">Reports to</label><select id="peMgr"><option value="">Nobody</option></select></div>
+              <div><label class="f" for="peStart">Start date</label><input type="date" id="peStart"></div>
+            </div>
+            <div class="row" style="margin-top:14px">
+              <button class="btn primary" type="submit">Save</button>
+              <button class="btn" type="button" id="peCancel">Cancel</button>
+            </div>
+          </form>
+          <div id="peNote"></div>
+        </div>
+        <div class="panel">
+          <input type="search" id="pSearch" placeholder="Search staff" aria-label="Search staff">
+          <div class="table-wrap" id="peopleList" style="margin-top:10px"></div>
+        </div>
+      </section>
+
+      <!-- Departments -->
+      <section class="stack" data-panel="departments" hidden>
+        <div><h1>Departments</h1><p class="lede">Used for the directory, for reporting lines and to send announcements to one team.</p></div>
+        <div class="panel">
+          <form id="deptForm" class="row" autocomplete="off">
+            <input type="text" id="deptName" maxlength="120" placeholder="New department, e.g. Finance" aria-label="Department name" style="flex:1;min-width:200px;width:auto">
+            <button class="btn primary" type="submit">Add</button>
+          </form>
+          <div id="deptNote"></div>
+          <div class="table-wrap" id="deptList" style="margin-top:12px"></div>
+        </div>
+      </section>
+
+      <!-- Permissions -->
+      <section class="stack" data-panel="permissions" hidden>
+        <div><h1>Permissions</h1><p class="lede">Every member of staff can use the directory, announcements, the helpdesk and their own pages. Tick extra permissions here. Changes sign the person out so they take effect at once. Super administrators hold all of them.</p></div>
+        <div class="panel"><div class="table-wrap" id="permList"></div></div>
+      </section>
+
+      <!-- Activity -->
+      <section class="stack" data-panel="activity" hidden>
+        <div><h1>Activity log</h1><p class="lede">Permission changes, staff record changes, deactivations and announcements.</p></div>
+        <div class="panel"><div class="table-wrap" id="activityList"></div></div>
+      </section>
+    </main>
+  </div>
+
   <script src="js/portal-state.js?v=20261021-silver-card"></script>
   <script>
   (() => {
+    /*
+     * Everything from the server is written with textContent or created nodes, never innerHTML:
+     * announcements, names and bios are typed by people and shown to everyone else.
+     */
     const api = (path, options) => window.ResokPortal.api(path, options);
+    const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body || {}) });
     const el = (id) => document.getElementById(id);
     const make = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
     const say = (box, msg, kind) => { el(box).textContent = ''; if (msg) el(box).appendChild(make('div', 'note ' + kind, msg)); };
-    const fmtDate = (v) => { const d = new Date(String(v || '').replace(' ', 'T')); return isNaN(d) ? '' : d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }); };
+    const parseDate = (v) => new Date(String(v || '').replace(' ', 'T'));
+    const fmtDate = (v) => { const d = parseDate(v); return isNaN(d) ? '' : d.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }); };
+    const fmtWhen = (v) => { const d = parseDate(v); return isNaN(d) ? '' : d.toLocaleString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+    const initials = (name, email) => (name || email || '?').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+    const empty = (text) => make('div', 'empty', text);
 
-    el('logoutLink').addEventListener('click', (e) => { e.preventDefault(); window.ResokPortal.logout(); });
+    let home = null;
+    const can = (cap) => !!home && home.caps.includes(cap);
 
-    async function loadMe() {
-      try {
-        const me = await api('/api/staff/me');
-        if (me.name) el('hello').textContent = 'Welcome, ' + me.name.split(' ')[0];
-        const box = el('assets'); box.textContent = '';
-        if (!me.assets.length) { box.appendChild(make('div', 'empty', 'Nothing is assigned to you in the register.')); return; }
-        me.assets.forEach((a) => {
-          const row = make('div', 'row');
-          row.appendChild(make('code', null, a.assetTag));
-          row.appendChild(make('span', 'grow', a.name));
-          row.appendChild(make('span', 'hint', 'since ' + fmtDate(a.since)));
-          box.appendChild(row);
-        });
-      } catch (error) {
-        if (error.status === 401) { window.location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/staff'); return; }
-        el('assets').textContent = '';
-        say('pageNote', error.status === 403 ? 'This page is for ReSoK staff. Your account is not on the staff list.' : (error.message || 'Could not load your page.'), 'bad');
+    // ---------- navigation ----------
+    const views = Array.from(document.querySelectorAll('[data-panel]')).map((s) => s.dataset.panel);
+    const loaders = {};
+    function show(view) {
+      if (!views.includes(view)) view = 'home';
+      document.querySelectorAll('[data-panel]').forEach((s) => { s.hidden = s.dataset.panel !== view; });
+      document.querySelectorAll('.side a[data-view]').forEach((a) => a.classList.toggle('active', a.dataset.view === view));
+      el('side').classList.remove('open'); el('menuBtn').setAttribute('aria-expanded', 'false');
+      say('flash', '', '');
+      if (loaders[view]) loaders[view]();
+      window.scrollTo(0, 0);
+    }
+    function route() {
+      const hash = location.hash.replace('#', '');
+      const ann = hash.match(/^announcement-(\d+)$/);
+      if (ann) { show('announcements'); openAnnouncement(+ann[1]); return; }
+      show(hash || 'home');
+    }
+    window.addEventListener('hashchange', route);
+    el('menuBtn').addEventListener('click', () => {
+      const open = el('side').classList.toggle('open');
+      el('menuBtn').setAttribute('aria-expanded', String(open));
+    });
+    el('logoutBtn').addEventListener('click', () => window.ResokPortal.logout());
+
+    // ---------- notifications ----------
+    function renderBell(n) {
+      el('bellCount').hidden = !n.unread;
+      el('bellCount').textContent = n.unread > 99 ? '99+' : String(n.unread);
+      const list = el('bellList'); list.textContent = '';
+      if (!n.items.length) { list.appendChild(make('div', 'empty', 'Nothing yet.')); list.firstChild.style.margin = '12px'; return; }
+      n.items.forEach((item) => {
+        const a = make('a', 'n' + (item.read ? '' : ' unread'), item.title);
+        a.href = item.link || '#home';
+        a.appendChild(make('small', null, fmtWhen(item.createdAt)));
+        a.addEventListener('click', () => { if (!item.read) post('staff/notifications/read', { ids: [item.id] }).then(renderBell).catch(() => {}); el('bellPanel').hidden = true; });
+        list.appendChild(a);
+      });
+    }
+    el('bellBtn').addEventListener('click', async () => {
+      const panel = el('bellPanel');
+      panel.hidden = !panel.hidden;
+      el('bellBtn').setAttribute('aria-expanded', String(!panel.hidden));
+      if (!panel.hidden) { try { renderBell(await api('staff/notifications')); } catch (e) { /* keep the last list */ } }
+    });
+    el('bellAll').addEventListener('click', async () => { try { renderBell(await post('staff/notifications/read', { all: true })); loadHome(); } catch (e) { /* ignore */ } });
+    document.addEventListener('click', (e) => { if (!el('bellPanel').hidden && !el('bellPanel').contains(e.target) && !el('bellBtn').contains(e.target)) el('bellPanel').hidden = true; });
+
+    // ---------- home ----------
+    function tile(value, label, href, alert) {
+      const t = make('a', 'tile' + (alert ? ' alert' : ''));
+      t.href = href;
+      t.appendChild(make('b', null, String(value)));
+      t.appendChild(make('span', null, label));
+      return t;
+    }
+    function annRow(a, withBody) {
+      const box = make('div', 'ann' + (a.readAt ? '' : ' unread'));
+      box.id = 'ann-' + a.id;
+      const h = make('h3', null, a.title);
+      box.appendChild(h);
+      const meta = [fmtDate(a.publishedAt), a.author, a.audience ? 'for ' + a.audience : 'all staff'].filter(Boolean).join(' · ');
+      const m = make('div', 'hint', meta);
+      if (a.pinned) { const p = make('span', 'pill p-info', 'Pinned'); p.style.marginLeft = '8px'; m.appendChild(p); }
+      if (a.requiresAck) { const p = make('span', 'pill ' + (a.acknowledgedAt ? 'p-ok' : 'p-warn'), a.acknowledgedAt ? 'Confirmed' : 'Please confirm'); p.style.marginLeft = '8px'; m.appendChild(p); }
+      box.appendChild(m);
+      if (withBody) {
+        box.appendChild(make('div', 'body', a.body));
+        if (a.requiresAck && !a.acknowledgedAt) {
+          const b = make('button', 'btn primary sm', 'I have read this');
+          b.type = 'button'; b.style.marginTop = '10px';
+          b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { await post('staff/announcements/' + a.id + '/ack'); a.acknowledgedAt = new Date().toISOString(); box.replaceWith(annRow(a, true)); loadHome(true); }
+            catch (e) { b.disabled = false; say('flash', e.message, 'bad'); }
+          });
+          box.appendChild(b);
+        }
+      } else {
+        const link = make('a', null, 'Read');
+        link.href = '#announcement-' + a.id; link.style.fontSize = '13px';
+        box.appendChild(link);
       }
+      return box;
     }
 
-    async function loadTickets() {
-      const box = el('tickets');
+    async function loadHome(quiet) {
       try {
-        const data = await api('/api/ict/tickets');
-        box.textContent = '';
-        if (!data.tickets.length) { box.appendChild(make('div', 'empty', 'Nothing reported yet.')); return; }
-        data.tickets.forEach((t) => {
-          const row = make('div', 'row');
-          row.appendChild(make('code', null, t.reference));
-          row.appendChild(make('span', 'grow', t.subject));
-          row.appendChild(make('span', 'hint', t.status.replace(/_/g, ' ')));
-          box.appendChild(row);
-        });
+        home = await api('staff/home');
       } catch (error) {
-        box.textContent = '';
-        if (error.status !== 401) box.appendChild(make('div', 'empty', 'Could not load your reports just now.'));
+        if (error.status === 401) { location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/staff'); return; }
+        document.querySelectorAll('[data-panel]').forEach((s) => { s.hidden = true; });
+        say('flash', error.status === 403 ? 'This portal is for ReSoK staff. Your account is not on the staff list; ask the ICT office if you think it should be.' : (error.message || 'The staff portal could not load.'), 'bad');
+        return;
       }
-    }
+      const me = home.me || {};
+      const first = (me.name || '').split(' ')[0];
+      el('who').textContent = me.name || me.email || '';
+      if (!quiet) {
+        el('hello').textContent = first ? 'Welcome, ' + first : 'Welcome';
+        el('helloSub').textContent = [me.jobTitle, me.department].filter(Boolean).join(' · ') || 'Your ReSoK staff portal.';
+      }
+      // Manage menu: only what this person may use.
+      let anyManage = false;
+      document.querySelectorAll('#manageNav a').forEach((a) => {
+        const ok = a.hasAttribute('data-super') ? home.super : can(a.dataset.cap);
+        a.hidden = !ok; if (ok) anyManage = true;
+      });
+      el('manageNav').hidden = !anyManage;
+      document.querySelectorAll('[data-needs-row]').forEach((a) => { a.hidden = !home.onStaffList; });
+      renderBell(home.notifications);
 
+      const tiles = el('homeTiles'); tiles.textContent = '';
+      tiles.append(
+        tile(home.notifications.unread, 'Unread notifications', '#home', home.notifications.unread > 0),
+        tile(home.toAcknowledge, 'Notices to confirm', '#announcements', home.toAcknowledge > 0),
+        tile(home.assets.length, 'Items with me', '#equipment'),
+        tile(home.directoryCount, 'Staff in the directory', '#directory')
+      );
+      const anns = el('homeAnns'); anns.textContent = '';
+      if (!home.announcements.length) anns.appendChild(empty('No announcements yet.'));
+      home.announcements.forEach((a) => anns.appendChild(annRow(a, false)));
+      const notes = el('homeNotes'); notes.textContent = '';
+      if (!home.notifications.items.length) notes.appendChild(empty('Nothing new.'));
+      home.notifications.items.slice(0, 5).forEach((n) => {
+        const r = make('div', 'list-row');
+        const a = make('a', 'grow', n.title); a.href = n.link || '#home';
+        if (!n.read) a.style.fontWeight = '700';
+        r.append(a, make('span', 'hint', fmtWhen(n.createdAt)));
+        notes.appendChild(r);
+      });
+      const assets = el('homeAssets'); assets.textContent = '';
+      if (!home.assets.length) assets.appendChild(empty('Nothing is assigned to you in the register.'));
+      home.assets.slice(0, 5).forEach((a) => {
+        const r = make('div', 'list-row');
+        r.append(make('code', 'tag', a.assetTag), make('span', 'grow', a.name));
+        assets.appendChild(r);
+      });
+      loadTickets('homeTickets', true);
+    }
+    loaders.home = () => { if (home) loadHome(true); };
+
+    // ---------- announcements ----------
+    let annTimer = null;
+    async function loadAnnouncements() {
+      const box = el('annList');
+      try {
+        const q = el('annSearch').value.trim();
+        const data = await api('staff/announcements' + (q ? '&q=' + encodeURIComponent(q) : ''));
+        box.textContent = '';
+        if (!data.announcements.length) { box.appendChild(empty(q ? 'Nothing matches.' : 'No announcements yet.')); return; }
+        data.announcements.forEach((a) => box.appendChild(annRow(a, false)));
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'Could not load announcements.')); }
+    }
+    async function openAnnouncement(id) {
+      try {
+        const a = (await api('staff/announcements/' + id)).announcement;
+        const box = el('annList');
+        box.textContent = '';
+        const back = make('a', null, '← All announcements'); back.href = '#announcements'; back.style.fontSize = '13px';
+        box.append(back, annRow(a, true));
+        loadHome(true);
+      } catch (e) { say('flash', e.message || 'That announcement is not available.', 'bad'); }
+    }
+    loaders.announcements = () => { if (!/^#announcement-/.test(location.hash)) loadAnnouncements(); };
+    el('annSearch').addEventListener('input', () => { clearTimeout(annTimer); annTimer = setTimeout(loadAnnouncements, 300); });
+
+    // ---------- directory ----------
+    let dirTimer = null;
+    async function loadDirectory() {
+      const box = el('dirList');
+      try {
+        const q = el('dirSearch').value.trim();
+        const data = await api('staff/directory' + (q ? '&q=' + encodeURIComponent(q) : ''));
+        const sel = el('dirDept');
+        if (sel.options.length === 1) data.departments.forEach((d) => { const o = make('option', null, d.name); o.value = d.name; sel.appendChild(o); });
+        const dept = sel.value;
+        const people = data.people.filter((p) => !dept || p.department === dept);
+        box.textContent = '';
+        if (!people.length) { box.appendChild(empty('Nobody matches.')); return; }
+        people.forEach((p) => {
+          const card = make('div', 'person');
+          card.appendChild(make('div', 'avatar', initials(p.name, p.email)));
+          const info = make('div', 'info');
+          // With no name on record the address is the heading, linked, rather than shown twice.
+          const mail = make('a', null, p.email); mail.href = 'mailto:' + p.email;
+          if (p.name) {
+            info.appendChild(make('b', null, p.name));
+          } else {
+            const b = make('b'); b.appendChild(mail); info.appendChild(b);
+          }
+          const role = [p.jobTitle, p.department].filter(Boolean).join(' · ');
+          if (role) info.appendChild(make('div', null, role));
+          if (p.name) { const d1 = make('div'); d1.appendChild(mail); info.appendChild(d1); }
+          if (p.workPhone) { const tel = make('a', null, p.workPhone); tel.href = 'tel:' + p.workPhone.replace(/[^0-9+]/g, ''); const d2 = make('div'); d2.appendChild(tel); info.appendChild(d2); }
+          if (p.office) info.appendChild(make('div', null, p.office));
+          if (p.manager) info.appendChild(make('div', null, 'Reports to ' + p.manager));
+          if (p.bio) info.appendChild(make('div', null, p.bio));
+          card.appendChild(info);
+          box.appendChild(card);
+        });
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'Could not load the directory.')); }
+    }
+    loaders.directory = loadDirectory;
+    el('dirSearch').addEventListener('input', () => { clearTimeout(dirTimer); dirTimer = setTimeout(loadDirectory, 300); });
+    el('dirDept').addEventListener('change', loadDirectory);
+
+    // ---------- helpdesk ----------
+    const TICKET_TONE = { open: 'p-warn', in_progress: 'p-info', waiting: 'p-muted', resolved: 'p-ok', closed: 'p-muted' };
+    async function loadTickets(boxId, openOnly) {
+      const box = el(boxId);
+      try {
+        const data = await api('/api/ict/tickets' + (openOnly ? '&status=open' : ''));
+        box.textContent = '';
+        if (!data.tickets.length) { box.appendChild(empty(openOnly ? 'No open tickets.' : 'Nothing reported yet.')); return; }
+        data.tickets.slice(0, openOnly ? 5 : 100).forEach((t) => {
+          const r = make('div', 'list-row');
+          r.append(make('code', 'tag', t.reference), make('span', 'grow', t.subject),
+                   make('span', 'pill ' + (TICKET_TONE[t.status] || 'p-muted'), t.status.replace(/_/g, ' ')));
+          box.appendChild(r);
+        });
+      } catch (e) { box.textContent = ''; box.appendChild(empty('Could not load tickets just now.')); }
+    }
+    loaders.helpdesk = () => loadTickets('ticketList', false);
     el('ticketForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const subject = el('subject').value.trim();
+      const subject = el('tSubject').value.trim();
       if (!subject) return;
-      el('ticketBtn').disabled = true;
+      el('tBtn').disabled = true;
       try {
-        const data = await api('/api/ict/tickets', { method: 'POST', body: JSON.stringify({ subject, description: el('description').value.trim() }) });
-        say('ticketNote', 'Reported as ' + data.ticket.reference + '. ICT will look into it; its status shows below.', 'ok');
+        const data = await post('/api/ict/tickets', { subject, description: el('tDesc').value.trim() });
+        say('ticketNote', 'Reported as ' + data.ticket.reference + '. ICT will look into it, and you will be notified here when it changes.', 'ok');
         el('ticketForm').reset();
-        loadTickets();
-      } catch (error) {
-        say('ticketNote', error.message || 'Could not report that just now.', 'bad');
-      }
-      el('ticketBtn').disabled = false;
+        loadTickets('ticketList', false);
+      } catch (err) { say('ticketNote', err.message || 'Could not report that just now.', 'bad'); }
+      el('tBtn').disabled = false;
     });
 
-    loadMe();
-    loadTickets();
+    // ---------- equipment ----------
+    loaders.equipment = async () => {
+      if (!home) return;
+      const box = el('assetList'); box.textContent = '';
+      if (!home.assets.length) { box.appendChild(empty('Nothing is assigned to you in the register. If you use ReSoK equipment, report it on the helpdesk so ICT can record it.')); return; }
+      home.assets.forEach((a) => {
+        const r = make('div', 'list-row');
+        r.append(make('code', 'tag', a.assetTag), make('span', 'grow', a.name), make('span', 'hint', a.category ? a.category.replace(/_/g, ' ') : ''), make('span', 'hint', 'since ' + fmtDate(a.since)));
+        box.appendChild(r);
+      });
+    };
+
+    // ---------- profile ----------
+    loaders.profile = async () => {
+      try {
+        const p = (await api('staff/profile')).profile;
+        const dl = el('profileRecord'); dl.textContent = '';
+        [['Name', p.name], ['Email', p.email], ['Staff number', p.staffNumber], ['Job title', p.jobTitle], ['Department', p.department],
+         ['Reports to', p.manager], ['Start date', p.startDate ? fmtDate(p.startDate) : null]].forEach(([k, v]) => {
+          dl.append(make('dt', null, k), make('dd', v ? null : 'hint', v || 'Not recorded'));
+        });
+        el('pPhone').value = p.workPhone || ''; el('pOffice').value = p.office || ''; el('pBio').value = p.bio || '';
+      } catch (e) { say('profileNote', e.message, 'bad'); }
+    };
+    el('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await post('staff/profile', { workPhone: el('pPhone').value, office: el('pOffice').value, bio: el('pBio').value });
+        say('profileNote', 'Saved. The directory shows your new details.', 'ok');
+      } catch (err) { say('profileNote', err.message, 'bad'); }
+    });
+
+    // ---------- manage announcements ----------
+    let maDepartments = [];
+    function maFill(a) {
+      el('maId').value = a ? a.id : '';
+      el('maT').value = a ? a.title : ''; el('maB').value = a ? a.body : '';
+      el('maD').value = a && a.departmentId ? String(a.departmentId) : '';
+      el('maPin').checked = !!(a && a.pinned); el('maAck').checked = !!(a && a.requiresAck);
+      el('maTitle').textContent = a ? 'Edit: ' + a.title : 'New announcement';
+      el('maNew').hidden = !a;
+      say('maNote', '', '');
+    }
+    async function loadManageAnnouncements() {
+      const box = el('maList');
+      try {
+        const data = await api('staff/announcements&manage=1');
+        maDepartments = data.departments;
+        const sel = el('maD'); const keep = sel.value;
+        sel.length = 1;
+        maDepartments.forEach((d) => { const o = make('option', null, d.name); o.value = String(d.id); sel.appendChild(o); });
+        sel.value = keep;
+        box.textContent = '';
+        if (!data.announcements.length) { box.appendChild(empty('No announcements yet. Write the first one above.')); return; }
+        const t = make('table'); const hr = make('tr');
+        ['Announcement', 'Status', 'Read', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+        t.appendChild(hr);
+        const STATUS = { draft: ['Draft', 'p-warn'], published: ['Published', 'p-ok'], archived: ['Archived', 'p-muted'] };
+        data.announcements.forEach((a) => {
+          const tr = make('tr');
+          const c1 = make('td'); c1.appendChild(make('b', null, a.title));
+          c1.appendChild(make('div', 'hint', (a.audience ? 'For ' + a.audience : 'All staff') + (a.publishedAt ? ' · published ' + fmtDate(a.publishedAt) : ' · saved ' + fmtDate(a.updatedAt))));
+          tr.appendChild(c1);
+          const c2 = make('td'); c2.appendChild(make('span', 'pill ' + STATUS[a.status][1], STATUS[a.status][0])); tr.appendChild(c2);
+          tr.appendChild(make('td', 'hint', a.status === 'draft' ? '' : a.reads + ' read' + (a.requiresAck ? ', ' + a.acks + ' confirmed' : '')));
+          const c4 = make('td'); c4.style.whiteSpace = 'nowrap';
+          const btn = (label, cls, fn) => { const b = make('button', 'btn sm ' + cls, label); b.type = 'button'; b.style.marginRight = '6px'; b.addEventListener('click', fn); c4.appendChild(b); };
+          if (a.status !== 'archived') btn('Edit', '', () => { maFill(a); el('maT').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+          if (a.status === 'draft') {
+            btn('Publish', 'primary', async () => {
+              const email = el('maEmail').checked;
+              if (!confirm('Publish "' + a.title + '" to ' + (a.audience || 'all staff') + '?\n\n'
+                + (email ? 'They will be notified in the portal and by email.' : 'They will be notified in the portal only (the email box is not ticked).'))) return;
+              try { const r = await post('staff/announcements/' + a.id + '/publish', { email }); say('maNote', 'Published to ' + r.audience + ' staff' + (email ? ', with email.' : '.'), 'ok'); loadManageAnnouncements(); loadHome(true); }
+              catch (e) { say('maNote', e.message, 'bad'); }
+            });
+            btn('Delete', 'danger', async () => {
+              if (!confirm('Delete the draft "' + a.title + '"?')) return;
+              try { await post('staff/announcements/' + a.id + '/delete'); if (el('maId').value === String(a.id)) maFill(null); loadManageAnnouncements(); }
+              catch (e) { say('maNote', e.message, 'bad'); }
+            });
+          }
+          if (a.status === 'published') btn('Archive', 'danger', async () => {
+            if (!confirm('Archive "' + a.title + '"? It leaves the staff feed but stays on record.')) return;
+            try { await post('staff/announcements/' + a.id + '/archive'); loadManageAnnouncements(); loadHome(true); }
+            catch (e) { say('maNote', e.message, 'bad'); }
+          });
+          tr.appendChild(c4);
+          t.appendChild(tr);
+        });
+        box.appendChild(t);
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'Could not load.')); }
+    }
+    loaders['manage-announcements'] = loadManageAnnouncements;
+    el('maNew').addEventListener('click', () => maFill(null));
+    el('maForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const r = await post('staff/announcements', { id: el('maId').value || null, title: el('maT').value, body: el('maB').value,
+          departmentId: el('maD').value || null, pinned: el('maPin').checked, requiresAck: el('maAck').checked });
+        el('maId').value = r.id; el('maNew').hidden = false;
+        say('maNote', 'Saved. Publish it from the list below when it is ready.', 'ok');
+        loadManageAnnouncements();
+      } catch (err) { say('maNote', err.message, 'bad'); }
+    });
+
+    // ---------- staff records ----------
+    let people = [], depts = [];
+    async function loadPeople() {
+      try {
+        const data = await api('staff/people');
+        people = data.people; depts = data.departments;
+        renderPeople();
+      } catch (e) { el('peopleList').textContent = ''; el('peopleList').appendChild(empty(e.message)); }
+    }
+    function renderPeople() {
+      const q = el('pSearch').value.trim().toLowerCase();
+      const list = people.filter((p) => !q || [p.name, p.email, p.jobTitle, p.department, p.staffNumber].join(' ').toLowerCase().includes(q));
+      const box = el('peopleList'); box.textContent = '';
+      if (!list.length) { box.appendChild(empty(people.length ? 'Nobody matches.' : 'No staff yet. Add accounts from ICT, Staff & access.')); return; }
+      const t = make('table'); const hr = make('tr');
+      ['Name', 'Role', 'Reports to', 'Account', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+      t.appendChild(hr);
+      list.forEach((p) => {
+        const tr = make('tr');
+        const c1 = make('td'); c1.appendChild(make('b', null, p.name || 'No name given')); c1.appendChild(make('div', 'hint', [p.email, p.staffNumber].filter(Boolean).join(' · '))); tr.appendChild(c1);
+        tr.appendChild(make('td', null, [p.jobTitle, p.department].filter(Boolean).join(' · ') || '—'));
+        tr.appendChild(make('td', null, p.manager || '—'));
+        const c4 = make('td');
+        c4.appendChild(make('span', 'pill ' + (!p.active ? 'p-bad' : p.accountReady ? 'p-ok' : 'p-warn'), !p.active ? 'Deactivated' : p.accountReady ? 'Active' : 'Not signed in yet'));
+        tr.appendChild(c4);
+        const c5 = make('td'); c5.style.whiteSpace = 'nowrap';
+        const edit = make('button', 'btn sm', 'Edit'); edit.type = 'button'; edit.addEventListener('click', () => editPerson(p));
+        const tog = make('button', 'btn sm ' + (p.active ? 'danger' : ''), p.active ? 'Deactivate' : 'Reactivate'); tog.type = 'button'; tog.style.marginLeft = '6px';
+        tog.addEventListener('click', async () => {
+          if (p.active && !confirm('Deactivate ' + (p.name || p.email) + '? They are signed out at once and lose access to the staff portal.')) return;
+          try { await post('staff/people/' + p.userId + '/active', { active: !p.active }); loadPeople(); }
+          catch (e) { say('flash', e.message, 'bad'); }
+        });
+        c5.append(edit, tog); tr.appendChild(c5);
+        t.appendChild(tr);
+      });
+      box.appendChild(t);
+    }
+    function editPerson(p) {
+      el('personEdit').hidden = false;
+      el('peTitle').textContent = 'Edit ' + (p.name || p.email);
+      el('peForm').dataset.id = p.userId;
+      el('peName').value = p.name || ''; el('peNumber').value = p.staffNumber || ''; el('peJob').value = p.jobTitle || '';
+      el('peStart').value = p.startDate || '';
+      const dsel = el('peDept'); dsel.length = 1;
+      depts.filter((d) => d.active || d.id === p.departmentId).forEach((d) => { const o = make('option', null, d.name); o.value = String(d.id); dsel.appendChild(o); });
+      dsel.value = p.departmentId ? String(p.departmentId) : '';
+      const msel = el('peMgr'); msel.length = 1;
+      people.filter((x) => x.active && x.userId !== p.userId).forEach((x) => { const o = make('option', null, x.name || x.email); o.value = String(x.userId); msel.appendChild(o); });
+      msel.value = p.managerUserId ? String(p.managerUserId) : '';
+      say('peNote', '', '');
+      el('personEdit').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    el('peCancel').addEventListener('click', () => { el('personEdit').hidden = true; });
+    el('peForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await post('staff/people/' + el('peForm').dataset.id, { name: el('peName').value, staffNumber: el('peNumber').value, jobTitle: el('peJob').value,
+          departmentId: el('peDept').value || null, managerUserId: el('peMgr').value || null, startDate: el('peStart').value });
+        el('personEdit').hidden = true;
+        say('flash', 'Saved.', 'ok');
+        loadPeople();
+      } catch (err) { say('peNote', err.message, 'bad'); }
+    });
+    el('pSearch').addEventListener('input', renderPeople);
+    loaders.people = loadPeople;
+
+    // ---------- departments ----------
+    async function loadDepartments(list) {
+      const box = el('deptList');
+      try {
+        const data = list ? { departments: list } : await api('staff/departments');
+        box.textContent = '';
+        if (!data.departments.length) { box.appendChild(empty('No departments yet. Add the first one above.')); return; }
+        const t = make('table'); const hr = make('tr');
+        ['Department', 'Staff', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+        t.appendChild(hr);
+        data.departments.forEach((d) => {
+          const tr = make('tr');
+          const c1 = make('td', null, d.name); if (!d.active) c1.appendChild(make('span', 'pill p-muted', 'Closed')).style.marginLeft = '8px';
+          tr.append(c1, make('td', null, String(d.people)));
+          const c3 = make('td'); c3.style.whiteSpace = 'nowrap';
+          const ren = make('button', 'btn sm', 'Rename'); ren.type = 'button';
+          ren.addEventListener('click', async () => {
+            const name = prompt('New name for ' + d.name, d.name);
+            if (!name || name === d.name) return;
+            try { loadDepartments((await post('staff/departments', { id: d.id, name, active: d.active })).departments); } catch (e) { say('deptNote', e.message, 'bad'); }
+          });
+          const tog = make('button', 'btn sm', d.active ? 'Close' : 'Reopen'); tog.type = 'button'; tog.style.marginLeft = '6px';
+          tog.addEventListener('click', async () => {
+            try { loadDepartments((await post('staff/departments', { id: d.id, name: d.name, active: !d.active })).departments); } catch (e) { say('deptNote', e.message, 'bad'); }
+          });
+          c3.append(ren, tog); tr.appendChild(c3);
+          t.appendChild(tr);
+        });
+        box.appendChild(t);
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message)); }
+    }
+    loaders.departments = () => loadDepartments();
+    el('deptForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = el('deptName').value.trim();
+      if (!name) return;
+      try { loadDepartments((await post('staff/departments', { name })).departments); el('deptName').value = ''; say('deptNote', name + ' added.', 'ok'); }
+      catch (err) { say('deptNote', err.message, 'bad'); }
+    });
+
+    // ---------- permissions ----------
+    loaders.permissions = async () => {
+      const box = el('permList');
+      try {
+        const data = await api('staff/permissions');
+        const caps = Object.entries(data.capabilities);
+        box.textContent = '';
+        if (!data.people.length) { box.appendChild(empty('No active staff yet.')); return; }
+        const t = make('table'); const hr = make('tr');
+        hr.appendChild(make('th', null, 'Staff'));
+        caps.forEach(([key, label]) => { const th = make('th', null, label); th.title = key; hr.appendChild(th); });
+        hr.appendChild(make('th', null, ''));
+        t.appendChild(hr);
+        data.people.forEach((p) => {
+          const tr = make('tr');
+          const c1 = make('td'); c1.appendChild(make('b', null, p.name || p.email)); c1.appendChild(make('div', 'hint', p.email)); tr.appendChild(c1);
+          const boxes = caps.map(([key]) => {
+            const td = make('td'); const cb = make('input'); cb.type = 'checkbox'; cb.checked = p.caps.includes(key); cb.value = key;
+            cb.setAttribute('aria-label', key + ' for ' + (p.name || p.email));
+            td.appendChild(cb); tr.appendChild(td); return cb;
+          });
+          const td = make('td'); const save = make('button', 'btn sm primary', 'Save'); save.type = 'button';
+          save.addEventListener('click', async () => {
+            try { await post('staff/permissions/' + p.userId, { caps: boxes.filter((b) => b.checked).map((b) => b.value) }); say('flash', 'Permissions saved for ' + (p.name || p.email) + '. They have been signed out so the change applies now.', 'ok'); }
+            catch (e) { say('flash', e.message, 'bad'); }
+          });
+          td.appendChild(save); tr.appendChild(td);
+          t.appendChild(tr);
+        });
+        box.appendChild(t);
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message)); }
+    };
+
+    // ---------- activity ----------
+    loaders.activity = async () => {
+      const box = el('activityList');
+      try {
+        const data = await api('staff/audit');
+        box.textContent = '';
+        if (!data.entries.length) { box.appendChild(empty('Nothing recorded yet.')); return; }
+        const t = make('table'); const hr = make('tr');
+        ['When', 'Who', 'What'].forEach((h) => hr.appendChild(make('th', null, h)));
+        t.appendChild(hr);
+        data.entries.forEach((e) => {
+          const tr = make('tr');
+          tr.append(make('td', 'hint', fmtWhen(e.at)), make('td', null, e.actor || '—'), make('td', null, e.action.replace(/_/g, ' ') + (e.summary ? ': ' + e.summary : '')));
+          t.appendChild(tr);
+        });
+        box.appendChild(t);
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message)); }
+    };
+
+    loadHome().then(route);
   })();
   </script>
 </body>

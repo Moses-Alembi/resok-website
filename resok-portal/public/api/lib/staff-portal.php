@@ -475,8 +475,18 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         $ackStmt->execute([$me, $myDept ?? 0]);
         // Only staff confirm notices; a super admin looking in has nothing to confirm.
         $pending = $gate['row'] ? (int)$ackStmt->fetchColumn() : 0;
+        // A super admin looking in without a staff record is named from their member
+        // record, if they have one, rather than shown as a bare address.
+        $outsider = ['name' => null, 'email' => $user['email']];
+        if (!$gate['row']) {
+            try {
+                $mp = $pdo->prepare("SELECT TRIM(CONCAT_WS(' ', NULLIF(title,''), NULLIF(first_name,''), NULLIF(surname,''))) FROM member_profiles WHERE user_id = ? LIMIT 1");
+                $mp->execute([$me]);
+                $outsider['name'] = ($n = trim((string)$mp->fetchColumn())) !== '' ? $n : null;
+            } catch (Throwable $e) { /* no member record */ }
+        }
         respond(200, [
-            'me' => $gate['row'] ? staffRecord($pdo, $me) : ['name' => null, 'email' => $user['email']],
+            'me' => $gate['row'] ? staffRecord($pdo, $me) : $outsider,
             'onStaffList' => (bool)$gate['row'],
             'caps' => $gate['caps'], 'super' => $gate['super'],
             'announcements' => staffAnnouncementFeed($pdo, $me, $myDept, 5),

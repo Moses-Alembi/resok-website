@@ -30,7 +30,7 @@
     .icon-btn{position:relative;border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#344054}
     .icon-btn:focus-visible,.btn:focus-visible,.side a:focus-visible{outline:3px solid #a6f4c5;outline-offset:2px}
     .badge{position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:19px;height:19px;padding:0 5px;display:flex;align-items:center;justify-content:center}
-    .who{font-size:13.5px;color:#344054;font-weight:600;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .who{font-size:13.5px;color:#344054;font-weight:600;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .menu-btn{display:none}
 
     /* Layout */
@@ -142,6 +142,7 @@
     <span class="title">Staff Portal</span>
     <span class="spacer"></span>
     <span class="who" id="who"></span>
+    <a class="icon-btn" id="adminLink" href="admin-home" title="Admin suite" aria-label="Admin suite" hidden><i class="fas fa-user-shield"></i></a>
     <button class="icon-btn" id="bellBtn" type="button" aria-label="Notifications" aria-expanded="false"><i class="fas fa-bell"></i><span class="badge" id="bellCount" hidden></span></button>
     <button class="icon-btn" id="logoutBtn" type="button" aria-label="Sign out" title="Sign out"><i class="fas fa-sign-out-alt"></i></button>
   </div></header>
@@ -502,7 +503,9 @@
       }
       const me = home.me || {};
       const first = (me.name || '').split(' ')[0];
-      el('who').textContent = me.name || me.email || '';
+      el('who').textContent = (me.name || me.email || '') + (home.super && !home.onStaffList ? ' · Super admin' : '');
+      el('who').title = me.email || '';
+      el('adminLink').hidden = !home.super;
       if (!quiet) {
         el('hello').textContent = first ? 'Welcome, ' + first : 'Welcome';
         el('helloSub').textContent = [me.jobTitle, me.department].filter(Boolean).join(' · ') || 'Your ReSoK staff portal.';

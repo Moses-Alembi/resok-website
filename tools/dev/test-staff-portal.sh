@@ -114,6 +114,12 @@ check "with department and manager" '"department":"SPTEST Programmes","manager":
 absent "but never staff numbers" "RS-001" "$D"
 absent "nor start dates" "2025-02-01" "$D"
 check "search works" "Alice Staff" "$(get "$B" "staff/directory&q=Programme")"
+absent "personal (non-resok.org) addresses are never shown" "sp-a@resok.local" "$D"
+sql "INSERT INTO users (email,password_hash,email_verified,role) VALUES ('sp-work@resok.org','x',1,'member');
+     INSERT INTO staff_accounts (user_id, full_name) SELECT id, 'Wanja Work' FROM users WHERE email='sp-work@resok.org';"
+check "a work address on resok.org is shown" '"email":"sp-work@resok.org"' "$(get "$B" staff/directory)"
+absent "searching cannot find someone by a hidden address" "Alice Staff" "$(get "$B" "staff/directory&q=sp-a@")"
+sql "DELETE s FROM staff_accounts s JOIN users u ON u.id=s.user_id WHERE u.email='sp-work@resok.org'; DELETE FROM users WHERE email='sp-work@resok.org';"
 
 echo "Announcements"
 check "plain staff cannot write one" "403" "$(curl -s -o /dev/null -w '%{http_code}' -b "$A" -X POST -H 'Content-Type: application/json' -d '{"title":"SPTEST x","body":"y"}' "${API}staff/announcements")"

@@ -234,6 +234,20 @@ function staffText($value, int $max): ?string
     return $text === '' ? null : mb_substr($text, 0, $max);
 }
 
+/**
+ * The address shown in the directory: a work address on the Society's domain, or nothing.
+ * Many staff sign in with a personal Gmail; that is theirs, not something every colleague
+ * should be shown (Data Protection Act - seen on the live directory, 27 Oct 2026).
+ * 'staff_email_domain' in config overrides resok.org.
+ */
+function staffWorkEmail(string $email): ?string
+{
+    global $config;
+    $domain = strtolower(trim((string)($config['staff_email_domain'] ?? 'resok.org')));
+    $email = strtolower(trim($email));
+    return $domain !== '' && str_ends_with($email, '@' . $domain) ? $email : null;
+}
+
 /** Active staff for the directory: work details only. */
 function staffDirectory(PDO $pdo, string $search = ''): array
 {
@@ -246,15 +260,17 @@ function staffDirectory(PDO $pdo, string $search = ''): array
             WHERE s.active = 1';
     $args = [];
     if ($search !== '') {
-        $sql .= ' AND (s.full_name LIKE ? OR s.job_title LIKE ? OR d.name LIKE ? OR u.email LIKE ? OR s.office LIKE ?)';
+        // Searching by address matches work addresses only: a search must not reveal a hidden one.
+        $sql .= ' AND (s.full_name LIKE ? OR s.job_title LIKE ? OR d.name LIKE ? OR (u.email LIKE ? AND u.email LIKE ?) OR s.office LIKE ?)';
         $like = '%' . $search . '%';
-        $args = [$like, $like, $like, $like, $like];
+        $domain = strtolower(trim((string)($GLOBALS['config']['staff_email_domain'] ?? 'resok.org')));
+        $args = [$like, $like, $like, $like, '%@' . $domain, $like];
     }
-    $stmt = $pdo->prepare($sql . ' ORDER BY COALESCE(s.full_name, u.email) LIMIT 500');
+    $stmt = $pdo->prepare($sql . ' ORDER BY s.full_name IS NULL, s.full_name LIMIT 500');
     $stmt->execute($args);
     return array_map(static fn($r) => [
         'userId' => (int)$r['user_id'], 'name' => $r['full_name'], 'jobTitle' => $r['job_title'],
-        'department' => $r['department'], 'manager' => $r['manager_name'], 'email' => $r['email'],
+        'department' => $r['department'], 'manager' => $r['manager_name'], 'email' => staffWorkEmail((string)$r['email']),
         'workPhone' => $r['work_phone'], 'office' => $r['office'], 'bio' => $r['bio'],
     ], $stmt->fetchAll());
 }

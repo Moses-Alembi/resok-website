@@ -593,15 +593,19 @@
           card.appendChild(make('div', 'avatar', initials(p.name, p.email)));
           const info = make('div', 'info');
           // With no name on record the address is the heading, linked, rather than shown twice.
-          const mail = make('a', null, p.email); mail.href = 'mailto:' + p.email;
+          // Only a work (@resok.org) address comes back; a personal one is never shown here.
+          const mail = p.email ? make('a', null, p.email) : null;
+          if (mail) mail.href = 'mailto:' + p.email;
           if (p.name) {
             info.appendChild(make('b', null, p.name));
-          } else {
+          } else if (mail) {
             const b = make('b'); b.appendChild(mail); info.appendChild(b);
+          } else {
+            info.appendChild(make('b', null, 'Name not recorded'));
           }
           const role = [p.jobTitle, p.department].filter(Boolean).join(' · ');
           if (role) info.appendChild(make('div', null, role));
-          if (p.name) { const d1 = make('div'); d1.appendChild(mail); info.appendChild(d1); }
+          if (p.name && mail) { const d1 = make('div'); d1.appendChild(mail); info.appendChild(d1); }
           if (p.workPhone) { const tel = make('a', null, p.workPhone); tel.href = 'tel:' + p.workPhone.replace(/[^0-9+]/g, ''); const d2 = make('div'); d2.appendChild(tel); info.appendChild(d2); }
           if (p.office) info.appendChild(make('div', null, p.office));
           if (p.manager) info.appendChild(make('div', null, 'Reports to ' + p.manager));

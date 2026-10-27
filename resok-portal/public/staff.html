@@ -617,7 +617,8 @@
     async function loadTickets(boxId, openOnly) {
       const box = el(boxId);
       try {
-        const data = await api('/api/ict/tickets' + (openOnly ? '&status=open' : ''));
+        // reported=1: an ICT officer sees every ticket on the helpdesk; here, only their own.
+        const data = await api('/api/ict/tickets&reported=1' + (openOnly ? '&status=open' : ''));
         box.textContent = '';
         if (!data.tickets.length) { box.appendChild(empty(openOnly ? 'No open tickets.' : 'Nothing reported yet.')); return; }
         data.tickets.slice(0, openOnly ? 5 : 100).forEach((t) => {

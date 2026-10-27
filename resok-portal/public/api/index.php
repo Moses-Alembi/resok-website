@@ -2739,7 +2739,9 @@ Respiratory Society of Kenya");
             'status' => (string)($_GET['status'] ?? ''),
             'search' => trim((string)($_GET['search'] ?? '')),
         ];
-        if (!$isStaff) {
+        // ?reported=1: only what this person reported, even for ICT staff who see every
+        // ticket - the staff portal's "What you have reported" means exactly that.
+        if (!$isStaff || !empty($_GET['reported'])) {
             $filters['requester'] = (int)$user['userId'];
         } elseif (!empty($_GET['mine'])) {
             $filters['assignee'] = (int)$user['userId'];

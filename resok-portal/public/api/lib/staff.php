@@ -239,6 +239,111 @@ function staffSendBatch(PDO $pdo, array $config, int $limit): array
     return $result;
 }
 
+// ---------------------------------------------------------------------------------------
+// Asset holders. The register was imported with holders as typed names ("CHRISPHNE OKOTH",
+// "DENNIS GARURE"), so nothing tied an item to an account and "My equipment" was empty.
+// These suggest which account each name belongs to; nothing is linked until a super admin
+// confirms it, because a wrong guess would show one person's equipment to another.
+// ---------------------------------------------------------------------------------------
+
+const STAFF_NICKNAMES = ['BETTY' => 'BEATRICE', 'BETTIE' => 'BEATRICE', 'ANN' => 'ANNE', 'HILDA' => 'HILDAH', 'JACKY' => 'JACKLINE', 'JEFF' => 'GEOFFREY'];
+
+function staffNameTokens(string $name): array
+{
+    $clean = preg_replace('/[^A-Z ]+/', ' ', strtoupper($name));
+    return array_values(array_filter(explode(' ', (string)$clean), static fn($t) => strlen($t) >= 2));
+}
+
+/** How alike two name words are: 1 exact, less for a typo or a nickname, 0 otherwise. */
+function staffWordLike(string $a, string $b): float
+{
+    if ($a === $b) return 1.0;
+    if ((STAFF_NICKNAMES[$a] ?? null) === $b || (STAFF_NICKNAMES[$b] ?? null) === $a) return 0.9;
+    $len = min(strlen($a), strlen($b));
+    $d = levenshtein($a, $b);
+    if ($len >= 4 && $d === 1) return 0.9;
+    if ($len >= 6 && $d === 2) return 0.75;
+    return 0.0;
+}
+
+/** A holder name against one person: the share of its words found in their name (or, nameless, their email). */
+function staffNameScore(array $holder, string $name, string $email): float
+{
+    if (!$holder) return 0.0;
+    $words = staffNameTokens($name);
+    $local = strtoupper((string)strstr($email, '@', true));
+    $sum = 0.0;
+    foreach ($holder as $h) {
+        $best = 0.0;
+        foreach ($words as $w) $best = max($best, staffWordLike($h, $w));
+        if ($best < 0.75 && strlen($h) >= 4 && str_contains($local, $h)) $best = 0.8;
+        $sum += $best;
+    }
+    return $sum / count($holder);
+}
+
+/** Every name the register holds items under, with a suggested account for each. */
+function staffHolders(PDO $pdo, int $me): array
+{
+    $people = $pdo->query("SELECT s.user_id, COALESCE(s.full_name, '') AS name, u.email FROM staff_accounts s JOIN users u ON u.id = s.user_id
+                           WHERE s.active = 1 ORDER BY s.full_name IS NULL, s.full_name")->fetchAll();
+    // The super admin may hold equipment without being on the staff list (the ICT officer does).
+    $ids = array_map('intval', array_column($people, 'user_id'));
+    if (!in_array($me, $ids, true)) {
+        $self = $pdo->prepare("SELECT u.id AS user_id, COALESCE(TRIM(CONCAT_WS(' ', NULLIF(m.first_name, ''), NULLIF(m.surname, ''))), '') AS name, u.email
+                               FROM users u LEFT JOIN member_profiles m ON m.user_id = u.id WHERE u.id = ? LIMIT 1");
+        $self->execute([$me]);
+        if ($row = $self->fetch()) $people[] = $row + ['self' => true];
+    }
+    $rows = $pdo->query("SELECT h.holder_name, COUNT(*) AS n, MAX(h.holder_user_id) AS uid, COUNT(DISTINCT h.holder_user_id) AS uids, SUM(h.holder_user_id IS NULL) AS unlinked,
+                                GROUP_CONCAT(a.asset_tag ORDER BY a.asset_tag SEPARATOR ', ') AS tags
+                         FROM ict_assignments h JOIN ict_assets a ON a.id = h.asset_id
+                         WHERE h.returned_at IS NULL AND COALESCE(h.holder_name, '') <> ''
+                         GROUP BY h.holder_name ORDER BY h.holder_name")->fetchAll();
+    $out = [];
+    foreach ($rows as $r) {
+        $tokens = staffNameTokens($r['holder_name']);
+        $scores = [];
+        foreach ($people as $p) {
+            $s = staffNameScore($tokens, (string)$p['name'], (string)$p['email']);
+            if ($s > 0) $scores[(int)$p['user_id']] = $s;
+        }
+        arsort($scores);
+        $best = array_key_first($scores);
+        $top = $best === null ? 0 : $scores[$best];
+        $second = count($scores) > 1 ? array_values($scores)[1] : 0;
+        // "Sure" means every word matched, at least two words, and nobody else came close.
+        $confidence = $top >= 0.85 && count($tokens) >= 2 && $top - $second >= 0.3 ? 'sure' : ($top >= 0.5 ? 'maybe' : 'none');
+        $shared = str_contains($r['holder_name'], '/') || str_contains($r['holder_name'], '&');
+        $out[] = [
+            'holderName' => $r['holder_name'], 'items' => (int)$r['n'], 'tags' => mb_substr((string)$r['tags'], 0, 300),
+            'linkedUserId' => (int)$r['unlinked'] === 0 && (int)$r['uids'] === 1 ? (int)$r['uid'] : null,
+            'suggestedUserId' => $shared || $confidence === 'none' ? null : $best,
+            'confidence' => $shared ? 'shared' : $confidence,
+        ];
+    }
+    return ['holders' => $out, 'people' => array_map(static fn($p) => ['userId' => (int)$p['user_id'], 'name' => $p['name'] !== '' ? $p['name'] : null,
+        'email' => $p['email'], 'self' => !empty($p['self'])], $people)];
+}
+
+/** Ties every item currently held under one name to an account, and writes the name as the account has it. */
+function staffLinkHolder(PDO $pdo, string $holderName, int $userId, int $me, ?int &$count = 0): ?string
+{
+    $count = 0;
+    if (trim($holderName) === '') return 'Choose a holder name.';
+    $stmt = $pdo->prepare("SELECT u.id, u.email, COALESCE(NULLIF(s.full_name, ''), TRIM(CONCAT_WS(' ', NULLIF(m.first_name, ''), NULLIF(m.surname, '')))) AS name, s.user_id AS staff
+                           FROM users u LEFT JOIN staff_accounts s ON s.user_id = u.id AND s.active = 1 LEFT JOIN member_profiles m ON m.user_id = u.id WHERE u.id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    $p = $stmt->fetch();
+    if (!$p || ($p['staff'] === null && $userId !== $me)) return 'Link items only to someone on the staff list.';
+    $name = trim((string)$p['name']) !== '' ? trim((string)$p['name']) : $holderName;
+    $up = $pdo->prepare('UPDATE ict_assignments SET holder_user_id = ?, holder_email = ?, holder_name = ? WHERE returned_at IS NULL AND holder_name = ?');
+    $up->execute([$userId, $p['email'], $name, $holderName]);
+    $count = $up->rowCount();
+    logAdminAction($pdo, $me, 'asset_holder_linked', null, $holderName . ' -> ' . $p['email'] . ' (' . $count . ' items)');
+    return null;
+}
+
 function staffHandle(PDO $pdo, array $config, string $route, string $method): void
 {
     $user = auth($config);
@@ -295,6 +400,22 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
         $pdo->prepare('UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE id = ? AND email_verified = 0')->execute([$target]);
         logAdminAction($pdo, $userId, 'staff_removed', null, 'user #' . $target);
         respond(200, ['staff' => staffList($pdo)]);
+    }
+
+    // ----- linking the asset register's holder names to accounts -----
+    if ($route === 'staff/admin/holders' && $method === 'GET') {
+        respond(200, staffHolders($pdo, $userId));
+    }
+    if ($route === 'staff/admin/holders/link' && $method === 'POST') {
+        $data = input();
+        $links = isset($data['links']) && is_array($data['links']) ? $data['links'] : [['holderName' => $data['holderName'] ?? '', 'userId' => $data['userId'] ?? 0]];
+        $done = 0;
+        foreach (array_slice($links, 0, 200) as $l) {
+            $error = staffLinkHolder($pdo, (string)($l['holderName'] ?? ''), (int)($l['userId'] ?? 0), $userId, $n);
+            if ($error) respond(400, ['error' => $error]);
+            $done += $n;
+        }
+        respond(200, ['linked' => $done] + staffHolders($pdo, $userId));
     }
     respond(404, ['error' => 'Route not found']);
 }

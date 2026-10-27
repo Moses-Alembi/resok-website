@@ -926,6 +926,21 @@
         </div>
         <div class="scroll"><div id="staffAcctList"></div></div>
       </div>
+
+      <h2 style="margin:26px 0 6px;font-size:18px">Equipment holders</h2>
+      <p class="lede">
+        The asset register lists who holds each item by name, as it was typed. Link each name to the
+        person's staff account and their items appear under <em>My equipment</em> in the staff portal.
+        Suggestions are only suggestions: nothing is linked until you press Link.
+      </p>
+      <div id="holderNotice" class="notice"></div>
+      <div class="panel">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+          <div id="holderCounts" class="muted" style="flex:1;min-width:200px"></div>
+          <button class="btn btn-primary" id="holderSureBtn" type="button"><i class="fas fa-link"></i> Link all sure matches</button>
+        </div>
+        <div class="scroll"><div id="holderList"></div></div>
+      </div>
     </section>
 
     <footer class="ict-footer">
@@ -3331,8 +3346,73 @@
     el('staffInviteBtn').disabled = false;
   });
 
+  // ---- equipment holders: register names -> staff accounts ----
+  let holderData = null;
+  const holderNotice = (msg, tone) => { const n = el('holderNotice'); n.textContent = msg || ''; n.className = 'notice' + (msg ? ' show ' + tone : ''); };
+  const HOLDER_TONE = { sure: ['Sure match', 's-ok'], maybe: ['Check this', 's-warning'], none: ['No account found', 's-unknown'], shared: ['Shared by two people', 's-warning'] };
+  function renderHolders(d) {
+    holderData = d;
+    const people = d.people;
+    const label = (p) => (p.name || p.email) + (p.self ? ' (me)' : '') + (p.name ? ' · ' + p.email : '');
+    const linked = d.holders.filter((h) => h.linkedUserId).length;
+    const sure = d.holders.filter((h) => !h.linkedUserId && h.confidence === 'sure');
+    el('holderCounts').textContent = d.holders.length + ' names in the register · ' + linked + ' linked · ' + sure.length + ' sure matches waiting';
+    el('holderSureBtn').hidden = !sure.length;
+    const mount = el('holderList'); mount.textContent = '';
+    if (!d.holders.length) { mount.appendChild(make('div', 'empty', 'No items are assigned to anyone in the register.')); return; }
+    const table = make('table');
+    const hr = make('tr');
+    ['Name in the register', 'Items', 'Staff account', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+    const thead = make('thead'); thead.appendChild(hr); table.appendChild(thead);
+    const body = make('tbody');
+    d.holders.forEach((h) => {
+      const tr = make('tr');
+      const nm = make('td'); nm.appendChild(make('strong', null, h.holderName));
+      const [word, tone] = h.linkedUserId ? ['Linked', 's-ok'] : HOLDER_TONE[h.confidence];
+      nm.appendChild(make('div', null)).appendChild(make('span', 'status ' + tone, word));
+      tr.appendChild(nm);
+      const it = make('td', null, String(h.items)); it.title = h.tags; tr.appendChild(it);
+      const sel = make('select', 'in'); sel.style.minWidth = '240px';
+      const blank = make('option', null, h.confidence === 'shared' ? 'Split these items in the register first' : 'Choose a person…'); blank.value = ''; sel.appendChild(blank);
+      people.forEach((p) => { const o = make('option', null, label(p)); o.value = p.userId; sel.appendChild(o); });
+      sel.value = String(h.linkedUserId || h.suggestedUserId || '');
+      const sc = make('td'); sc.appendChild(sel); tr.appendChild(sc);
+      const act = make('td'); act.style.whiteSpace = 'nowrap';
+      const b = make('button', 'btn btn-secondary', h.linkedUserId ? 'Relink' : 'Link'); b.type = 'button'; b.style.fontSize = '12px';
+      b.addEventListener('click', async () => {
+        if (!sel.value) { holderNotice('Choose who "' + h.holderName + '" is first.', 'warning'); return; }
+        b.disabled = true;
+        try {
+          const r = await api('/api/staff/admin/holders/link', { method: 'POST', body: JSON.stringify({ holderName: h.holderName, userId: +sel.value }) });
+          renderHolders(r);
+          holderNotice(r.linked + ' item' + (r.linked === 1 ? '' : 's') + ' held by "' + h.holderName + '" now show under ' + sel.options[sel.selectedIndex].text.split(' · ')[0] + '.', 'success');
+        } catch (error) { holderNotice(error.message || 'Not linked.', 'error'); b.disabled = false; }
+      });
+      act.appendChild(b); tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    table.appendChild(body); mount.appendChild(table);
+  }
+  async function loadHolders() {
+    try { renderHolders(await api('/api/staff/admin/holders')); }
+    catch (error) { el('holderList').textContent = ''; holderNotice(error.message || 'Could not load the holders.', 'error'); }
+  }
+  el('holderSureBtn').addEventListener('click', async () => {
+    const sure = holderData.holders.filter((h) => !h.linkedUserId && h.confidence === 'sure');
+    const byId = Object.fromEntries(holderData.people.map((p) => [p.userId, p.name || p.email]));
+    if (!confirm('Link these ' + sure.length + ' names?\n\n' + sure.map((h) => h.holderName + '  ->  ' + byId[h.suggestedUserId]).join('\n'))) return;
+    el('holderSureBtn').disabled = true;
+    try {
+      const r = await api('/api/staff/admin/holders/link', { method: 'POST', body: JSON.stringify({ links: sure.map((h) => ({ holderName: h.holderName, userId: h.suggestedUserId })) }) });
+      renderHolders(r);
+      holderNotice(r.linked + ' items linked to their holders. Check the rest one by one.', 'success');
+    } catch (error) { holderNotice(error.message || 'Not linked.', 'error'); }
+    el('holderSureBtn').disabled = false;
+  });
+
   async function loadStaff() {
     loadStaffAccounts();
+    loadHolders();
     const mount = el('staffList');
     try {
       const [staffData, capsData] = await Promise.all([

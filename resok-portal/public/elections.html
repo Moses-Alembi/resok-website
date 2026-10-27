@@ -157,7 +157,7 @@
         <!-- Nominations -->
         <div id="eNominateBox" hidden style="margin-top:24px;border:1px solid var(--line);border-radius:11px;padding:20px">
           <h2>Nominate a candidate</h2>
-          <p class="lede" style="margin-bottom:16px">
+          <p class="lede" style="margin-bottom:16px" id="nomIntro">
             You may nominate one member for each post, and you may nominate yourself.
             Nominating someone else asks them to accept before their name goes on the ballot.
           </p>
@@ -274,6 +274,9 @@
       document.getElementById('memberLede').hidden = true;
       document.getElementById('nomKindRow').hidden = true;
       document.getElementById('nomMemberLabel').textContent = 'Member of staff';
+      document.getElementById('nomIntro').textContent = 'You may nominate one colleague for each post, and you may nominate yourself. '
+        + 'Nominating someone else asks them to accept before their name goes on the ballot.';
+      document.getElementById('nomHeadline').placeholder = 'e.g. Accounts, Nairobi office';
       document.querySelector('.dashboard-logo').href = 'staff';
       document.title = 'Welfare elections - ReSoK Staff Portal';
       document.getElementById('staffLogout').addEventListener('click', (e) => { e.preventDefault(); window.ResokPortal.logout(); });

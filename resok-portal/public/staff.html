@@ -103,7 +103,27 @@
     .bell-panel a.n.unread{background:#f6fef9;font-weight:600}
     .bell-panel a.n small{display:block;color:var(--muted);font-weight:400;margin-top:2px}
 
+    .field-open{border:2px solid var(--brand);background:var(--brand-soft)}
+    .rep-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:3px solid var(--brand);padding-bottom:12px;margin-bottom:14px}
+    .rep-head img{height:40px}
+    .rep-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
+    .rep-tiles div{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+    .rep-tiles b{display:block;font-size:20px}
+    .rep-tiles span{font-size:12px;color:var(--muted)}
+    .rep-day{margin-top:14px;font-weight:700;color:var(--brand-ink);border-bottom:1px solid var(--line);padding-bottom:4px}
+    .rep-item{padding:8px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+    .rep-item .sum{white-space:pre-wrap;color:#344054;margin-top:3px}
+    @media print{
+      body{background:#fff}
+      .top,.side,.bell-panel,#flash,[data-panel]:not([data-panel="field-reports"]),.no-print{display:none!important}
+      .layout{display:block}
+      main{padding:0;max-width:none}
+      .panel{box-shadow:none;padding:0}
+      .rep-item,.rep-tiles,.rep-head{break-inside:avoid}
+      a{color:inherit;text-decoration:none}
+    }
     @media (max-width:900px){
+      .rep-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
       .menu-btn{display:inline-flex}
       .layout{grid-template-columns:1fr}
       .side{position:fixed;left:0;top:64px;bottom:0;width:260px;height:auto;z-index:45;transform:translateX(-100%);transition:transform .2s;box-shadow:0 10px 30px rgba(16,24,40,.2)}
@@ -137,6 +157,8 @@
       <a href="#directory" data-view="directory"><i class="fas fa-address-book"></i> Staff directory</a>
       <a href="#helpdesk" data-view="helpdesk"><i class="fas fa-headset"></i> ICT helpdesk</a>
       <a href="#equipment" data-view="equipment"><i class="fas fa-laptop"></i> My equipment</a>
+      <a href="#field" data-view="field" data-needs-row><i class="fas fa-person-walking-luggage"></i> Field work</a>
+      <a href="#field-reports" data-view="field-reports"><i class="fas fa-chart-column"></i> Field reports</a>
       <a href="#profile" data-view="profile" data-needs-row><i class="fas fa-id-card"></i> My profile</a>
       <a href="elections?for=staff"><i class="fas fa-check-to-slot"></i> Welfare elections</a>
       <span class="locked" title="Coming soon"><i class="fas fa-umbrella-beach"></i> Leave <span class="soon">Soon</span></span>
@@ -225,6 +247,46 @@
       <section class="stack" data-panel="equipment" hidden>
         <div><h1>My equipment</h1><p class="lede">What the ICT asset register says is with you. If something is wrong here, report it on the helpdesk.</p></div>
         <div class="panel"><div id="assetList"></div></div>
+      </section>
+
+      <!-- Field work -->
+      <section class="stack" data-panel="field" hidden>
+        <div><h1>Field work</h1><p class="lede">Press <b>Check in</b> when you start an activity in the field and <b>Check out</b> when you finish. Your phone's location is recorded only at those two moments, if you allow it, never in between. Forgot? Log it afterwards below.</p></div>
+        <div class="panel" id="fieldNow"></div>
+        <div class="panel" id="fieldLogPanel">
+          <div class="head"><h2 id="fieldLogTitle">Log a past activity</h2><button class="btn sm" type="button" id="fieldLogCancel" hidden>Cancel editing</button></div>
+          <form id="fieldLogForm" autocomplete="off">
+            <input type="hidden" id="flId">
+            <div class="grid2">
+              <div><label class="f" for="flDate">Date</label><input type="date" id="flDate"></div>
+              <div class="grid2" style="gap:10px">
+                <div><label class="f" for="flStart">Start</label><input type="text" id="flStart" placeholder="09:00" inputmode="numeric" maxlength="5"></div>
+                <div><label class="f" for="flEnd">End</label><input type="text" id="flEnd" placeholder="13:30" inputmode="numeric" maxlength="5"></div>
+              </div>
+            </div>
+            <div id="flFields"></div>
+            <label class="f" for="flSummary">What was done</label>
+            <textarea id="flSummary" maxlength="4000" placeholder="e.g. Trained 18 health workers on spirometry at Kitui County Referral Hospital"></textarea>
+            <button class="btn primary" type="submit" id="flSave" style="margin-top:12px">Save activity</button>
+          </form>
+          <div id="fieldLogNote"></div>
+        </div>
+        <div class="panel"><div class="head"><h2>My recent field work</h2><a class="btn sm" href="#field-reports">My reports</a></div><div id="fieldRecent"></div></div>
+      </section>
+
+      <!-- Field reports -->
+      <section class="stack" data-panel="field-reports" hidden>
+        <div class="no-print"><h1>Field reports</h1><p class="lede">Daily, weekly and monthly reports of field work. You see your own; managers see their team; HR sees everyone.</p></div>
+        <div class="panel no-print">
+          <div class="row">
+            <select id="frPeriod" style="width:auto" aria-label="Period"><option value="day">Daily</option><option value="week" selected>Weekly</option><option value="month">Monthly</option></select>
+            <input type="date" id="frDate" style="width:auto" aria-label="Date in the period">
+            <select id="frPerson" style="width:auto;min-width:200px" aria-label="Staff member"></select>
+            <button class="btn primary" type="button" id="frView"><i class="fas fa-file-lines"></i> View report</button>
+            <button class="btn" type="button" id="frTeam" hidden><i class="fas fa-users"></i> Team summary</button>
+          </div>
+        </div>
+        <div class="panel" id="frBox"><div class="empty">Choose a period and a person, then View report.</div></div>
       </section>
 
       <!-- Profile -->
@@ -845,6 +907,237 @@
         box.appendChild(t);
       } catch (e) { box.textContent = ''; box.appendChild(empty(e.message)); }
     };
+
+    // ---------- field work (lib/staff-field.php) ----------
+    let field = null;
+    const hm = (m) => m == null ? '' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
+    const clock = (v) => { const d = parseDate(v); return isNaN(d) ? '' : d.toTimeString().slice(0, 5); };
+    const mapLink = (p, label) => { const a = make('a', null, label); a.href = 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng; a.target = '_blank'; a.rel = 'noopener'; return a; };
+    const today = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);   // Nairobi date
+
+    // The phone's position once, or null if the person declines or the phone cannot tell.
+    const position = () => new Promise((resolve) => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+        () => resolve(null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    });
+
+    function describeFields(prefix, values) {
+      const v = values || {};
+      const wrap = make('div');
+      const grid = make('div', 'grid2');
+      const field2 = (label, input) => { const d = make('div'); const l = make('label', 'f', label); l.htmlFor = input.id; d.append(l, input); return d; };
+      const type = make('select'); type.id = prefix + 'Type';
+      Object.entries(field.types).forEach(([k, lab]) => { const o = make('option', null, lab); o.value = k; type.appendChild(o); });
+      type.value = v.type || 'outreach';
+      const title = make('input'); title.type = 'text'; title.id = prefix + 'Title'; title.maxLength = 200; title.placeholder = 'e.g. Asthma awareness talk'; title.value = v.title || '';
+      const place = make('input'); place.type = 'text'; place.id = prefix + 'Place'; place.maxLength = 160; place.placeholder = 'Facility, school or village'; place.value = v.place || '';
+      const county = make('select'); county.id = prefix + 'County';
+      const blank = make('option', null, 'Choose…'); blank.value = ''; county.appendChild(blank);
+      field.counties.forEach((c) => { const o = make('option', null, c); o.value = c; county.appendChild(o); });
+      county.value = v.county || '';
+      const project = make('input'); project.type = 'text'; project.id = prefix + 'Project'; project.maxLength = 120; project.placeholder = 'Optional'; project.value = v.project || '';
+      grid.append(field2('Type of activity', type), field2('What it is', title), field2('Place', place), field2('County', county));
+      wrap.append(grid, field2('Project', project));
+      return wrap;
+    }
+    const describeValues = (prefix) => ({ activityType: el(prefix + 'Type').value, title: el(prefix + 'Title').value, place: el(prefix + 'Place').value,
+      county: el(prefix + 'County').value, project: el(prefix + 'Project').value });
+    const iconButton = (cls, icon, text) => { const b = make('button', cls); b.type = 'button'; const i = make('i', 'fas ' + icon); b.append(i, ' ' + text); return b; };
+
+    function renderFieldNow() {
+      const box = el('fieldNow'); box.textContent = ''; box.classList.toggle('field-open', !!field.open);
+      if (field.open) {
+        const a = field.open;
+        box.appendChild(make('h2', null, 'Checked in: ' + a.title));
+        box.appendChild(make('p', 'hint', a.typeLabel + ' · since ' + clock(a.startedAt) + (a.place ? ' · ' + a.place : '') + (a.county ? ', ' + a.county : '')
+          + (a.checkin ? ' · location recorded' : ' · no location recorded')));
+        const lab = make('label', 'f', 'What was done'); lab.htmlFor = 'coSummary';
+        const sum = make('textarea'); sum.id = 'coSummary'; sum.maxLength = 4000; sum.placeholder = 'Who you met, what you did, what came of it';
+        const btn = iconButton('btn primary', 'fa-flag-checkered', 'Check out'); btn.style.marginTop = '12px';
+        const note = make('div'); note.id = 'coNote';
+        btn.addEventListener('click', async () => {
+          if (!sum.value.trim()) { say('coNote', 'Write a short summary first.', 'bad'); return; }
+          btn.disabled = true; say('coNote', 'Recording your location…', 'info');
+          const pos = await position();
+          try { await post('staff/field/checkout', { summary: sum.value, position: pos }); await loadField(); say('fieldLogNote', pos ? 'Checked out.' : 'Checked out, without a location. Allow location next time.', 'ok'); }
+          catch (e) { say('coNote', e.message, 'bad'); btn.disabled = false; }
+        });
+        box.append(lab, sum, btn, note);
+        return;
+      }
+      box.appendChild(make('h2', null, 'Start an activity'));
+      box.appendChild(describeFields('ci'));
+      const btn = iconButton('btn primary', 'fa-location-dot', 'Check in'); btn.style.marginTop = '12px';
+      const note = make('div'); note.id = 'ciNote';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; say('ciNote', 'Recording your location…', 'info');
+        const pos = await position();
+        try { await post('staff/field/checkin', Object.assign(describeValues('ci'), { position: pos })); await loadField(); }
+        catch (e) { say('ciNote', e.message, 'bad'); btn.disabled = false; }
+      });
+      box.append(btn, note);
+    }
+
+    function resetLogForm() {
+      el('flId').value = ''; el('fieldLogTitle').textContent = 'Log a past activity'; el('fieldLogCancel').hidden = true;
+      ['flDate', 'flStart', 'flEnd'].forEach((id) => { el(id).disabled = false; });
+      el('flDate').value = today(); el('flStart').value = ''; el('flEnd').value = ''; el('flSummary').value = '';
+      el('flFields').replaceChildren(describeFields('fl'));
+      el('flSave').textContent = 'Save activity';
+    }
+    function editActivity(a) {
+      el('flId').value = a.id; el('fieldLogTitle').textContent = 'Correct: ' + a.title; el('fieldLogCancel').hidden = false;
+      el('flDate').value = a.date; el('flStart').value = a.startedAt ? clock(a.startedAt) : ''; el('flEnd').value = a.endedAt ? clock(a.endedAt) : '';
+      // When it happened is the system's record; only the description is corrected.
+      ['flDate', 'flStart', 'flEnd'].forEach((id) => { el(id).disabled = true; });
+      el('flFields').replaceChildren(describeFields('fl', a)); el('flSummary').value = a.summary || '';
+      el('flSave').textContent = 'Save correction';
+      el('fieldLogPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    el('fieldLogCancel').addEventListener('click', resetLogForm);
+    el('fieldLogForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = el('flId').value;
+      const body = Object.assign(describeValues('fl'), { summary: el('flSummary').value });
+      try {
+        if (id) await post('staff/field/' + id, body);
+        else await post('staff/field/log', Object.assign(body, { date: el('flDate').value, startTime: el('flStart').value.trim(), endTime: el('flEnd').value.trim() }));
+        say('fieldLogNote', id ? 'Correction saved.' : 'Activity logged.', 'ok');
+        el('flId').value = '';
+        await loadField();
+      } catch (err) { say('fieldLogNote', err.message, 'bad'); }
+    });
+
+    function activityRow(a, mine) {
+      const box = make('div', 'rep-item');
+      const head = make('div');
+      head.appendChild(make('b', null, a.title));
+      head.appendChild(document.createTextNode(' · ' + a.typeLabel));
+      if (a.source === 'logged') { const p = make('span', 'pill p-muted', 'logged later'); p.style.marginLeft = '6px'; head.appendChild(p); }
+      if (a.status === 'in_progress') { const p = make('span', 'pill p-warn', 'checked in'); p.style.marginLeft = '6px'; head.appendChild(p); }
+      box.appendChild(head);
+      const meta = make('div', 'hint');
+      meta.append([fmtDate(a.date), a.startedAt ? clock(a.startedAt) + (a.endedAt ? '–' + clock(a.endedAt) : '') : '', a.minutes != null ? hm(a.minutes) : '',
+        [a.place, a.county].filter(Boolean).join(', '), a.project ? 'Project: ' + a.project : ''].filter(Boolean).join(' · '));
+      if (a.checkin) { meta.append(' · '); meta.appendChild(mapLink(a.checkin, 'check-in on map')); }
+      if (a.checkout) { meta.append(' · '); meta.appendChild(mapLink(a.checkout, 'check-out on map')); }
+      box.appendChild(meta);
+      if (a.summary) box.appendChild(make('div', 'sum', a.summary));
+      if (mine && a.status === 'completed') {
+        const row = make('div', 'row no-print'); row.style.marginTop = '6px';
+        const ed = make('button', 'btn sm', 'Correct'); ed.type = 'button'; ed.addEventListener('click', () => editActivity(a));
+        row.appendChild(ed);
+        const del = make('button', 'btn sm danger', 'Delete'); del.type = 'button';
+        del.addEventListener('click', async () => {
+          if (!confirm('Delete "' + a.title + '"? Only entries made today can be deleted.')) return;
+          try { await post('staff/field/' + a.id + '/delete'); await loadField(); } catch (e) { say('fieldLogNote', e.message, 'bad'); }
+        });
+        row.appendChild(del);
+        box.appendChild(row);
+      }
+      return box;
+    }
+
+    async function loadField() {
+      try { field = await api('staff/field'); }
+      catch (e) { say('flash', e.message || 'Field work could not load.', 'bad'); return; }
+      renderFieldNow();
+      if (!el('flId').value) resetLogForm();
+      const box = el('fieldRecent'); box.textContent = '';
+      if (!field.recent.length) box.appendChild(empty('Nothing recorded yet. Check in at your next field activity.'));
+      field.recent.forEach((a) => box.appendChild(activityRow(a, true)));
+    }
+    loaders.field = loadField;
+
+    async function loadFieldReports() {
+      if (!field) { try { field = await api('staff/field'); } catch (e) { say('flash', e.message, 'bad'); return; } }
+      if (!el('frDate').value) el('frDate').value = today();
+      const sel = el('frPerson'); const keep = sel.value; sel.textContent = '';
+      field.people.forEach((p) => { const o = make('option', null, p.me ? p.name + ' (me)' : p.name); o.value = p.userId; sel.appendChild(o); });
+      if (keep) sel.value = keep;
+      el('frTeam').hidden = field.people.length < 2;
+      sel.hidden = field.people.length < 2;
+    }
+    loaders['field-reports'] = loadFieldReports;
+
+    function reportHeader(title, sub) {
+      const head = make('div', 'rep-head');
+      const left = make('div');
+      const logo = make('img'); logo.src = 'assets/img/logo.png'; logo.alt = 'ReSoK';
+      left.appendChild(logo);
+      const right = make('div'); right.style.textAlign = 'right';
+      right.appendChild(make('b', null, title));
+      right.appendChild(make('div', 'hint', sub));
+      head.append(left, right);
+      return head;
+    }
+    function printButtons(box, csvUrl) {
+      const row = make('div', 'row no-print'); row.style.marginBottom = '10px';
+      const pr = iconButton('btn', 'fa-print', 'Print / Save as PDF');
+      pr.addEventListener('click', () => window.print());
+      row.appendChild(pr);
+      if (csvUrl) { const a = make('a', 'btn'); a.href = csvUrl; a.append(make('i', 'fas fa-file-csv'), ' Download CSV'); row.appendChild(a); }
+      box.appendChild(row);
+    }
+    const PERIOD_WORD = { day: 'Daily', week: 'Weekly', month: 'Monthly' };
+
+    el('frView').addEventListener('click', async () => {
+      const box = el('frBox');
+      const q = 'period=' + el('frPeriod').value + '&date=' + el('frDate').value + '&userId=' + (el('frPerson').value || '');
+      try {
+        const r = await api('staff/field/report&' + q);
+        box.textContent = '';
+        printButtons(box);
+        box.appendChild(reportHeader(PERIOD_WORD[r.period] + ' field report', r.label));
+        const who = make('div');
+        who.appendChild(make('h2', null, r.person.name));
+        who.appendChild(make('div', 'hint', [r.person.jobTitle, r.person.department, r.person.manager ? 'reports to ' + r.person.manager : '', r.person.staffNumber].filter(Boolean).join(' · ')));
+        box.appendChild(who);
+        const t = r.totals;
+        const tiles = make('div', 'rep-tiles');
+        [[t.activities, 'Activities'], [t.daysInField, t.daysInField === 1 ? 'Day in the field' : 'Days in the field'], [t.minutes ? hm(t.minutes) : '0h 00m', 'Time recorded'], [t.counties.length, t.counties.length === 1 ? 'County' : 'Counties']]
+          .forEach(([n, l]) => { const d = make('div'); d.append(make('b', null, String(n)), make('span', null, l)); tiles.appendChild(d); });
+        box.appendChild(tiles);
+        const bits = [];
+        if (Object.keys(t.byType).length) bits.push('By type: ' + Object.entries(t.byType).map(([k, n]) => k + ' ' + n).join(', '));
+        if (t.counties.length) bits.push('Counties: ' + t.counties.join(', '));
+        if (t.loggedLater) bits.push(t.loggedLater + ' logged later (no location)');
+        if (t.stillOpen) bits.push(t.stillOpen + ' not yet checked out');
+        bits.forEach((b) => box.appendChild(make('p', 'hint', b)));
+        if (!r.activities.length) { box.appendChild(empty('No field work recorded in this period.')); return; }
+        let day = '';
+        r.activities.forEach((a) => {
+          if (a.date !== day) { day = a.date; box.appendChild(make('div', 'rep-day', parseDate(a.date).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))); }
+          box.appendChild(activityRow(a, false));
+        });
+        box.appendChild(make('p', 'hint', 'Generated ' + new Date().toLocaleString('en-KE') + ' from the ReSoK staff portal. Locations are recorded only at check-in and check-out.'));
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'The report could not be made.')); }
+    });
+
+    el('frTeam').addEventListener('click', async () => {
+      const box = el('frBox');
+      const q = 'period=' + el('frPeriod').value + '&date=' + el('frDate').value;
+      try {
+        const r = await api('staff/field/team&' + q);
+        box.textContent = '';
+        printButtons(box, 'api/index.php?route=staff/field/team&' + q + '&csv=1');
+        box.appendChild(reportHeader(PERIOD_WORD[r.period] + ' field summary: team', r.label));
+        const wrap = make('div', 'table-wrap'); const t = make('table'); const hr = make('tr');
+        ['Staff', 'Activities', 'Days in the field', 'Time', 'Counties', 'Logged later'].forEach((h) => hr.appendChild(make('th', null, h)));
+        t.appendChild(hr);
+        r.team.forEach((p) => {
+          const tr = make('tr');
+          tr.append(make('td', null, p.name), make('td', null, String(p.activities)), make('td', null, String(p.daysInField)),
+            make('td', null, p.minutes ? hm(p.minutes) : '–'), make('td', null, p.counties || '–'), make('td', null, String(p.loggedLater)));
+          if (!p.activities) tr.style.color = 'var(--muted)';
+          t.appendChild(tr);
+        });
+        wrap.appendChild(t); box.appendChild(wrap);
+        box.appendChild(make('p', 'hint', 'Choose a person and View report for the details of each activity.'));
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'The summary could not be made.')); }
+    });
 
     loadHome().then(route);
   })();

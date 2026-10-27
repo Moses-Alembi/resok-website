@@ -460,6 +460,12 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
     $me = (int)$user['userId'];
     $myDept = $gate['row'] && $gate['row']['department_id'] !== null ? (int)$gate['row']['department_id'] : null;
 
+    // Field work and its reports (lib/staff-field.php), behind the same gate.
+    if (strpos($route, 'staff/field') === 0) {
+        requireModule('fieldHandle', 'lib/staff-field.php');
+        fieldHandle($pdo, $config, $route, $method, $user, $gate);
+    }
+
     // ----- home -----
     if ($route === 'staff/home' && $method === 'GET') {
         $assets = function_exists('ictAssetsHeldBy') ? ictAssetsHeldBy($pdo, (string)$user['email']) : [];

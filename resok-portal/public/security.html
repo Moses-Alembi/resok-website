@@ -274,10 +274,10 @@
           <div id="pkList" style="margin-top:10px"></div>
           <div class="mfa-row" style="margin-top:12px" id="pkAddRow">
             <input class="mfa-in" id="pkName" maxlength="80" placeholder="Name this device, e.g. My iPhone" style="min-width:230px" />
-            <input class="mfa-in" id="pkCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="App code" style="width:120px;letter-spacing:.2em;text-align:center" />
+            <input class="mfa-in" id="pkCode" autocomplete="one-time-code" maxlength="24" placeholder="App or recovery code" style="width:190px;text-align:center" />
             <button class="btn" id="pkAddBtn" type="button"><i class="fas fa-face-smile"></i> Add face or fingerprint</button>
           </div>
-          <p style="color:var(--muted);font-size:12.5px;margin-top:6px">Adding one asks for the current code from your authenticator app, so a stolen session cannot add its own.</p>
+          <p style="color:var(--muted);font-size:12.5px;margin-top:6px">Adding one asks for the current code from your authenticator app, or one of your recovery codes (it is then used up), so a stolen session cannot add its own.</p>
         </div>
       </div>
     </section>
@@ -569,7 +569,7 @@
     el("pkAddBtn").addEventListener("click", async () => {
       const button = el("pkAddBtn");
       const code = el("pkCode").value.trim();
-      if (!/^\d{6}$/.test(code)) { pkNotice("Enter the current 6-digit code from your authenticator app.", "warn"); return; }
+      if (code.replace(/[\s-]/g, "").length < 6) { pkNotice("Enter the current 6-digit code from your authenticator app, or one of your recovery codes.", "warn"); return; }
       button.disabled = true;
       pkNotice("Follow your device's prompt: look at it, or touch the fingerprint sensor.", "");
       try {

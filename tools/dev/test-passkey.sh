@@ -73,6 +73,13 @@ check "the same challenge cannot be used twice" "too long or was already used" "
 check "adding is in the security log" "passkey_added" "$(sql "SELECT event_type FROM security_events WHERE user_id=$UID1 AND event_type='passkey_added' LIMIT 1")"
 check "a session with no app code cannot add one" "401" "$(curl -s -o /dev/null -w '%{http_code}' -X POST "${API}auth/passkey/register/options" -H 'Content-Type: application/json' -d '{}')"
 
+echo "Adding with a recovery code instead of the app"
+REC=$($PHP -r 'chdir($argv[1]); require "lib/mfa.php"; $r = mfaGenerateRecoveryCodes(); echo json_encode($r);' "$CFG")
+RHASH=$(echo "$REC" | json hashed); RCODE=$(echo "$REC" | $PHP -r 'echo json_decode(stream_get_contents(STDIN), true)["plain"][0];')
+sql "UPDATE users SET mfa_recovery='$RHASH' WHERE id=$UID1"
+check "a recovery code is accepted in place of the app code" '"challenge"' "$(post "$JAR" auth/passkey/register/options "{\"code\":\"$RCODE\"}")"
+check "and is used up: the same one is refused" "code was not correct" "$(post "$JAR" auth/passkey/register/options "{\"code\":\"$RCODE\"}")"
+
 echo "Signing in with it"
 J2=$TMP/s2.jar
 R=$(login pk-admin@resok.local "$J2")

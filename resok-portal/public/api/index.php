@@ -2322,10 +2322,20 @@ Respiratory Society of Kenya");
         if ($route === 'auth/passkey/register/options' && $method === 'POST') {
             if ((int)($acct['mfa_enabled'] ?? 0) !== 1) respond(400, ['error' => 'Turn on two-factor with an authenticator app first. A face or fingerprint is added on top of it.']);
             throttleCheck($pdo, $config, 'login', 'mfa:' . $userId);
-            if (!mfaVerifyCode((string)cryptoDecrypt($config, (string)$acct['mfa_secret']), (string)(input()['code'] ?? ''))) {
+            // The app's current code, or one recovery code (used up, as at sign-in): either
+            // proves the person holds the account's existing second factor.
+            $code = (string)(input()['code'] ?? '');
+            $ok = mfaVerifyCode((string)cryptoDecrypt($config, (string)$acct['mfa_secret']), $code);
+            if (!$ok && strlen(trim($code)) >= 8) {
+                $rec = $pdo->prepare('SELECT mfa_recovery FROM users WHERE id = ?');
+                $rec->execute([$userId]);
+                $ok = mfaConsumeRecoveryCode($pdo, $userId, (string)$rec->fetchColumn(), $code);
+                if ($ok) securityLog($pdo, $config, 'mfa_recovery_used', 'warning', 'mfa', 'to add a passkey', $userId);
+            }
+            if (!$ok) {
                 throttleFailure($pdo, $config, 'login', 'mfa:' . $userId);
-                securityLog($pdo, $config, 'passkey_add_refused', 'warning', 'mfa', 'Wrong app code', $userId);
-                respond(401, ['error' => 'That code was not correct. Enter the current code from your authenticator app.']);
+                securityLog($pdo, $config, 'passkey_add_refused', 'warning', 'mfa', 'Wrong code', $userId);
+                respond(401, ['error' => 'That code was not correct. Enter the current code from your authenticator app, or one of your recovery codes.']);
             }
             $existing = $pdo->prepare('SELECT credential_id FROM user_passkeys WHERE user_id = ?');
             $existing->execute([$userId]);

@@ -115,7 +115,7 @@
     .rep-item .sum{white-space:pre-wrap;color:#344054;margin-top:3px}
     @media print{
       body{background:#fff}
-      .top,.side,.bell-panel,#flash,[data-panel]:not([data-panel="field-reports"]),.no-print{display:none!important}
+      .top,.side,.bell-panel,#flash,.no-print{display:none!important}
       .layout{display:block}
       main{padding:0;max-width:none}
       .panel{box-shadow:none;padding:0}
@@ -160,6 +160,10 @@
       <a href="#equipment" data-view="equipment"><i class="fas fa-laptop"></i> My equipment</a>
       <a href="#field" data-view="field" data-needs-row><i class="fas fa-person-walking-luggage"></i> Field work</a>
       <a href="#field-reports" data-view="field-reports"><i class="fas fa-chart-column"></i> Field reports</a>
+      <a href="#timesheets" data-view="timesheets" data-needs-row><i class="fas fa-business-time"></i> Timesheets</a>
+      <a href="#procurement" data-view="procurement"><i class="fas fa-cart-shopping"></i> Purchase requests</a>
+      <a href="#appraisals" data-view="appraisals"><i class="fas fa-star-half-stroke"></i> Appraisals</a>
+      <a href="#payslips" data-view="payslips" data-needs-row><i class="fas fa-file-invoice-dollar"></i> My payslips</a>
       <a href="#profile" data-view="profile" data-needs-row><i class="fas fa-id-card"></i> My profile</a>
       <a href="elections?for=staff"><i class="fas fa-check-to-slot"></i> Welfare elections</a>
       <span class="locked" title="Coming soon"><i class="fas fa-umbrella-beach"></i> Leave <span class="soon">Soon</span></span>
@@ -170,6 +174,7 @@
         <div class="sec">Manage</div>
         <a href="#manage-announcements" data-view="manage-announcements" data-cap="announcements.publish"><i class="fas fa-pen-to-square"></i> Announcements</a>
         <a href="#people" data-view="people" data-cap="staff.manage"><i class="fas fa-users-gear"></i> Staff records</a>
+        <a href="#payroll" data-view="payroll" data-cap="payroll.manage payroll.approve"><i class="fas fa-money-check-dollar"></i> Payroll</a>
         <a href="#departments" data-view="departments" data-cap="staff.manage"><i class="fas fa-sitemap"></i> Departments</a>
         <a href="#permissions" data-view="permissions" data-super><i class="fas fa-user-shield"></i> Permissions</a>
         <a href="#activity" data-view="activity" data-super><i class="fas fa-clock-rotate-left"></i> Activity log</a>
@@ -289,6 +294,13 @@
         </div>
         <div class="panel" id="frBox"><div class="empty">Choose a period and a person, then View report.</div></div>
       </section>
+
+      <!-- Timesheets, procurement, appraisals, payslips and payroll: built by js/staff-*.js -->
+      <section class="stack" data-panel="timesheets" hidden></section>
+      <section class="stack" data-panel="procurement" hidden></section>
+      <section class="stack" data-panel="appraisals" hidden></section>
+      <section class="stack" data-panel="payslips" hidden></section>
+      <section class="stack" data-panel="payroll" hidden></section>
 
       <!-- Profile -->
       <section class="stack" data-panel="profile" hidden>
@@ -422,6 +434,8 @@
       const hash = location.hash.replace('#', '');
       const ann = hash.match(/^announcement-(\d+)$/);
       if (ann) { show('announcements'); openAnnouncement(+ann[1]); return; }
+      // The module scripts claim their own links, e.g. #procurement-12 or #appraisal-4.
+      for (const claim of moduleRoutes) if (claim(hash)) return;
       show(hash || 'home');
     }
     window.addEventListener('hashchange', route);
@@ -513,7 +527,7 @@
       // Manage menu: only what this person may use.
       let anyManage = false;
       document.querySelectorAll('#manageNav a').forEach((a) => {
-        const ok = a.hasAttribute('data-super') ? home.super : can(a.dataset.cap);
+        const ok = a.hasAttribute('data-super') ? home.super : (a.dataset.cap || '').split(' ').some(can);
         a.hidden = !ok; if (ok) anyManage = true;
       });
       el('manageNav').hidden = !anyManage;
@@ -527,6 +541,12 @@
         tile(home.assets.length, 'Items with me', '#equipment'),
         tile(home.directoryCount, 'Staff in the directory', '#directory')
       );
+      // Decisions waiting in the other modules, only when there are some.
+      const todo = home.todo || {};
+      if (todo.timesheets) tiles.appendChild(tile(todo.timesheets, 'Timesheets to approve', '#timesheet-approvals', true));
+      if (todo.procurement) tiles.appendChild(tile(todo.procurement, 'Purchase requests to decide', '#procurement-queue', true));
+      if (todo.appraisals) tiles.appendChild(tile(todo.appraisals, 'Appraisal steps for you', '#appraisals', true));
+      if (todo.payroll) tiles.appendChild(tile(todo.payroll, 'Payroll to approve', '#payroll', true));
       const anns = el('homeAnns'); anns.textContent = '';
       if (!home.announcements.length) anns.appendChild(empty('No announcements yet.'));
       home.announcements.forEach((a) => anns.appendChild(annRow(a, false)));
@@ -1147,8 +1167,36 @@
       } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'The summary could not be made.')); }
     });
 
+    // ---------- shared with the module scripts (js/staff-*.js) ----------
+    const moduleRoutes = [];
+    const h = (tag, attrs, ...kids) => {
+      const n = document.createElement(tag);
+      Object.entries(attrs || {}).forEach(([k, v]) => {
+        if (v == null || v === false) return;
+        if (k === 'class') n.className = v;
+        else if (k === 'text') n.textContent = v;
+        else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+        else if (k === 'style') n.style.cssText = v;
+        else if (k in n) n[k] = v;
+        else n.setAttribute(k, v === true ? '' : v);
+      });
+      kids.flat().forEach((c) => { if (c != null && c !== false) n.append(c instanceof Node ? c : String(c)); });
+      return n;
+    };
+    window.StaffPortal = {
+      api, post, el, make, say, h, empty, parseDate, fmtDate, fmtWhen, iconButton, reportHeader, printButtons, show,
+      loaders, routes: moduleRoutes, home: () => home, can, refreshHome: () => loadHome(true),
+      panel: (name) => document.querySelector('[data-panel="' + name + '"]'),
+      ksh: (n) => 'KSh ' + Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      hours: (mins) => (Math.round((mins || 0) / 15) / 4).toLocaleString('en-KE', { maximumFractionDigits: 2 }),
+    };
+
     loadHome().then(route);
   })();
   </script>
+  <script src="js/staff-timesheets.js?v=20261027-hr"></script>
+  <script src="js/staff-procurement.js?v=20261027-hr"></script>
+  <script src="js/staff-appraisals.js?v=20261027-hr"></script>
+  <script src="js/staff-payroll.js?v=20261027-hr"></script>
 </body>
 </html>

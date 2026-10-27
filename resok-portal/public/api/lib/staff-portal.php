@@ -29,6 +29,9 @@ declare(strict_types=1);
  * 5. Every permission change, record change, deactivation and announcement action is written
  *    to staff_audit.
  *
+ * Timesheets, payroll, procurement and appraisals live in lib/staff-timesheet.php,
+ * staff-payroll.php, staff-procurement.php and staff-appraisal.php.
+ *
  * Leave, documents and policies, tasks and projects, and the calendar are not built: they
  * need the Society's HR policy and a decision on Microsoft 365, and show as "coming soon".
  */
@@ -36,6 +39,9 @@ declare(strict_types=1);
 const STAFF_CAPABILITIES = [
     'staff.manage'          => 'Manage staff records, departments and reporting managers',
     'announcements.publish' => 'Write and publish staff announcements',
+    'payroll.manage'        => 'Run payroll: pay records, monthly runs and payslips (sees everyone\'s pay)',
+    'payroll.approve'       => 'Approve a payroll run that someone else prepared',
+    'procurement.approve'   => 'Finance approval of purchase requests, suppliers and purchase orders',
 ];
 
 function staffPortalEnsureTables(PDO $pdo): bool
@@ -482,6 +488,19 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         fieldHandle($pdo, $config, $route, $method, $user, $gate);
     }
 
+    // Timesheets, payroll, procurement and appraisals, each in its own file behind the same gate.
+    foreach ([
+        'staff/timesheets' => ['timesheetHandle', 'lib/staff-timesheet.php'],
+        'staff/payroll'    => ['payrollHandle', 'lib/staff-payroll.php'],
+        'staff/procurement'=> ['procurementHandle', 'lib/staff-procurement.php'],
+        'staff/appraisals' => ['appraisalHandle', 'lib/staff-appraisal.php'],
+    ] as $prefix => [$fn, $file]) {
+        if (strpos($route, $prefix) === 0) {
+            requireModule($fn, $file);
+            $fn($pdo, $config, $route, $method, $user, $gate);
+        }
+    }
+
     // ----- home -----
     if ($route === 'staff/home' && $method === 'GET') {
         $assets = function_exists('ictAssetsHeldBy') ? ictAssetsHeldBy($pdo, (string)$user['email']) : [];
@@ -510,6 +529,13 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
             'notifications' => staffNotifications($pdo, $me, 8),
             'assets' => $assets,
             'directoryCount' => (int)$pdo->query('SELECT COUNT(*) FROM staff_accounts WHERE active = 1')->fetchColumn(),
+            // Decisions waiting for this person in the other modules.
+            'todo' => [
+                'timesheets' => function_exists('timesheetTodo') && timesheetEnsureTables($pdo) ? timesheetTodo($pdo, $gate, $me) : 0,
+                'procurement' => function_exists('procurementTodo') ? procurementTodo($pdo, $gate, $me) : 0,
+                'appraisals' => function_exists('appraisalTodo') ? appraisalTodo($pdo, $gate, $me) : 0,
+                'payroll' => function_exists('payrollTodo') ? payrollTodo($pdo, $gate, $me) : 0,
+            ],
         ]);
     }
 

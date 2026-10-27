@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'passkey', 'migrate'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -348,6 +348,34 @@ function issueAuthCookie(string $token): void {
  *
  * @return never
  */
+/**
+ * The end of a successful second factor, whichever it was (app code, recovery code or
+ * passkey): the session cookie and what the login page needs to route the person.
+ */
+function mfaGrantSession(PDO $pdo, array $config, int $userId, array $extra = []): void
+{
+    $stmt = $pdo->prepare('SELECT u.id, u.email, u.role, mp.membership_status, mp.membership_id, mp.cpd_points
+                             FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.id = ? LIMIT 1');
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    if (!$user) respond(401, ['error' => 'That sign-in attempt is no longer valid.']);
+    $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
+    issueAuthCookie($loginToken);
+    respond(200, $extra + [
+        'token' => $loginToken,
+        'user' => [
+            'id' => (int)$user['id'],
+            'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
+            'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
+            'email' => $user['email'],
+            'role' => $user['role'],
+            'membershipStatus' => $user['membership_status'],
+            'membershipId' => $user['membership_id'],
+            'cpdPoints' => (int)($user['cpd_points'] ?? 0)
+        ]
+    ]);
+}
+
 function completeLogin(PDO $pdo, array $config, array $user): void
 {
     // Second factor. The password is only the first step for anyone whose account can
@@ -371,10 +399,15 @@ function completeLogin(PDO $pdo, array $config, array $user): void
         // a password alone would not be enough.
         requireModule('mfaIssueChallenge', 'lib/mfa.php');
         securityLog($pdo, $config, 'mfa_challenge_issued', 'info', 'login', null, (int)$user['id']);
+        // A passkey (face or fingerprint) can stand in for the code; the page offers it only
+        // when this account has one.
+        $hasPasskey = function_exists('passkeyCount') && passkeyCount($pdo, (int)$user['id']) > 0;
         respond(200, [
             'mfaRequired' => true,
             'challenge' => mfaIssueChallenge($config, (int)$user['id']),
-            'message' => 'Enter the 6-digit code from your authenticator app.',
+            'passkey' => $hasPasskey,
+            'message' => $hasPasskey ? 'Use your face or fingerprint, or enter the code from your authenticator app.'
+                                     : 'Enter the 6-digit code from your authenticator app.',
         ]);
     }
     // A staff account that has not enrolled gets a session, but one that reaches only the
@@ -2222,22 +2255,116 @@ Respiratory Society of Kenya");
         securityLog($pdo, $config, $usedRecovery ? 'mfa_recovery_used' : 'mfa_success',
             $usedRecovery ? 'warning' : 'info', 'login', null, (int)$user['id']);
 
-        $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
-        issueAuthCookie($loginToken);
-        respond(200, [
-            'token' => $loginToken,
-            'usedRecoveryCode' => $usedRecovery,
-            'user' => [
-                'id' => (int)$user['id'],
-                'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
-                'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
-                'email' => $user['email'],
-                'role' => $user['role'],
-                'membershipStatus' => $user['membership_status'],
-                'membershipId' => $user['membership_id'],
-                'cpdPoints' => (int)($user['cpd_points'] ?? 0)
-            ]
-        ]);
+        mfaGrantSession($pdo, $config, (int)$user['id'], ['usedRecoveryCode' => $usedRecovery]);
+    }
+
+    // ----- Passkeys: face or fingerprint as the second factor (lib/passkey.php) -----
+
+    // Sign-in, step 1: the password step's challenge token in, the device's challenge out.
+    if ($route === 'auth/passkey/login/options' && $method === 'POST') {
+        requireModule('passkeyIssueChallenge', 'lib/passkey.php');
+        requireModule('mfaVerifyChallenge', 'lib/mfa.php');
+        $userId = mfaVerifyChallenge($config, (string)(input()['challenge'] ?? ''));
+        if (!$userId) respond(401, ['error' => 'That sign-in attempt expired. Please log in again.']);
+        if (!passkeyEnsureTables($pdo)) respond(503, ['error' => 'Passkeys are unavailable on this server.']);
+        throttleCheck($pdo, $config, 'login', 'mfa:' . $userId);
+        $creds = $pdo->prepare('SELECT credential_id FROM user_passkeys WHERE user_id = ?');
+        $creds->execute([$userId]);
+        $ids = $creds->fetchAll(PDO::FETCH_COLUMN);
+        if (!$ids) respond(400, ['error' => 'This account has no face or fingerprint sign-in. Use the code from your app.']);
+        respond(200, ['publicKey' => [
+            'challenge' => passkeyIssueChallenge($pdo, $userId, 'login'),
+            'rpId' => passkeyRpId($config),
+            'allowCredentials' => array_map(static fn($id) => ['type' => 'public-key', 'id' => $id], $ids),
+            'userVerification' => 'required',
+            'timeout' => 60000,
+        ]]);
+    }
+
+    // Sign-in, step 2: the device's signed answer in, a session out.
+    if ($route === 'auth/passkey/login/verify' && $method === 'POST') {
+        requireModule('passkeyVerifyAssertion', 'lib/passkey.php');
+        requireModule('mfaVerifyChallenge', 'lib/mfa.php');
+        $data = input();
+        $userId = mfaVerifyChallenge($config, (string)($data['challenge'] ?? ''));
+        if (!$userId) respond(401, ['error' => 'That sign-in attempt expired. Please log in again.']);
+        if (!passkeyEnsureTables($pdo)) respond(503, ['error' => 'Passkeys are unavailable on this server.']);
+        throttleCheck($pdo, $config, 'login', 'mfa:' . $userId);
+        $why = null;
+        $name = passkeyVerifyAssertion($pdo, $config, $userId, is_array($data['credential'] ?? null) ? $data['credential'] : [], $why);
+        if ($name === null) {
+            throttleFailure($pdo, $config, 'login', 'mfa:' . $userId);
+            securityLog($pdo, $config, 'passkey_failed', 'warning', 'login', (string)$why, $userId);
+            respond(401, ['error' => 'Your face or fingerprint sign-in was not accepted. Try again, or use the code from your app.']);
+        }
+        throttleSuccess($pdo, $config, 'login', 'mfa:' . $userId);
+        securityLog($pdo, $config, 'passkey_success', 'info', 'login', $name, $userId);
+        mfaGrantSession($pdo, $config, $userId, ['usedPasskey' => true]);
+    }
+
+    if (strpos($route, 'auth/passkey') === 0) {
+        requireModule('passkeyRegister', 'lib/passkey.php');
+        requireModule('mfaVerifyCode', 'lib/mfa.php');
+        $user = auth($config);
+        $userId = (int)$user['userId'];
+        if (!passkeyEnsureTables($pdo) || !mfaEnsureColumns($pdo)) respond(503, ['error' => 'Passkeys are unavailable on this server.']);
+        $account = $pdo->prepare('SELECT email, password_hash, mfa_enabled, mfa_secret FROM users WHERE id = ? LIMIT 1');
+        $account->execute([$userId]);
+        $acct = $account->fetch() ?: [];
+
+        if ($route === 'auth/passkey/list' && $method === 'GET') {
+            respond(200, ['passkeys' => passkeyList($pdo, $userId), 'available' => (int)($acct['mfa_enabled'] ?? 0) === 1]);
+        }
+
+        // Adding one: two-factor must already be on, and a current app code proves that the
+        // person at the keyboard holds the account's existing second factor - a stolen
+        // session alone cannot add a face of its own.
+        if ($route === 'auth/passkey/register/options' && $method === 'POST') {
+            if ((int)($acct['mfa_enabled'] ?? 0) !== 1) respond(400, ['error' => 'Turn on two-factor with an authenticator app first. A face or fingerprint is added on top of it.']);
+            throttleCheck($pdo, $config, 'login', 'mfa:' . $userId);
+            if (!mfaVerifyCode((string)cryptoDecrypt($config, (string)$acct['mfa_secret']), (string)(input()['code'] ?? ''))) {
+                throttleFailure($pdo, $config, 'login', 'mfa:' . $userId);
+                securityLog($pdo, $config, 'passkey_add_refused', 'warning', 'mfa', 'Wrong app code', $userId);
+                respond(401, ['error' => 'That code was not correct. Enter the current code from your authenticator app.']);
+            }
+            $existing = $pdo->prepare('SELECT credential_id FROM user_passkeys WHERE user_id = ?');
+            $existing->execute([$userId]);
+            respond(200, ['publicKey' => [
+                'challenge' => passkeyIssueChallenge($pdo, $userId, 'register'),
+                'rp' => ['id' => passkeyRpId($config), 'name' => 'ReSoK Portal'],
+                'user' => ['id' => b64url(hash('sha256', 'resok-user|' . $userId, true)), 'name' => (string)$acct['email'], 'displayName' => (string)$acct['email']],
+                'pubKeyCredParams' => [['type' => 'public-key', 'alg' => PASSKEY_ALG_ES256], ['type' => 'public-key', 'alg' => PASSKEY_ALG_RS256]],
+                'authenticatorSelection' => ['userVerification' => 'required', 'residentKey' => 'preferred'],
+                'excludeCredentials' => array_map(static fn($id) => ['type' => 'public-key', 'id' => $id], $existing->fetchAll(PDO::FETCH_COLUMN)),
+                'attestation' => 'none',
+                'timeout' => 120000,
+            ]]);
+        }
+        if ($route === 'auth/passkey/register/verify' && $method === 'POST') {
+            $data = input();
+            $name = trim((string)preg_replace('/\s+/', ' ', (string)($data['name'] ?? '')));
+            $name = mb_substr($name !== '' ? $name : 'This device', 0, 80);
+            [$added, $error] = passkeyRegister($pdo, $config, $userId, is_array($data['credential'] ?? null) ? $data['credential'] : [], $name);
+            if ($error) {
+                securityLog($pdo, $config, 'passkey_add_failed', 'info', 'mfa', $error, $userId);
+                respond(400, ['error' => $error]);
+            }
+            securityLog($pdo, $config, 'passkey_added', 'warning', 'mfa', $name, $userId);
+            respond(200, ['added' => $added, 'passkeys' => passkeyList($pdo, $userId)]);
+        }
+        // Removing one needs the password, as turning two-factor off does.
+        if (preg_match('#^auth/passkey/(\d+)/delete$#', $route, $m) && $method === 'POST') {
+            if (!password_verify((string)(input()['password'] ?? ''), (string)($acct['password_hash'] ?? ''))) {
+                securityLog($pdo, $config, 'passkey_remove_refused', 'warning', 'mfa', 'Wrong password', $userId);
+                respond(401, ['error' => 'That password was not correct.']);
+            }
+            $del = $pdo->prepare('DELETE FROM user_passkeys WHERE id = ? AND user_id = ?');
+            $del->execute([(int)$m[1], $userId]);
+            if ($del->rowCount() === 0) respond(404, ['error' => 'No such passkey on your account.']);
+            securityLog($pdo, $config, 'passkey_removed', 'warning', 'mfa', 'passkey #' . (int)$m[1], $userId);
+            respond(200, ['passkeys' => passkeyList($pdo, $userId)]);
+        }
+        respond(404, ['error' => 'Route not found']);
     }
 
     // Enrolment. The secret is generated but not activated until a code proves the app
@@ -2323,6 +2450,10 @@ Respiratory Society of Kenya");
         }
         $pdo->prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, mfa_recovery = NULL WHERE id = ?')
             ->execute([(int)$user['userId']]);
+        // A passkey is a second factor on top of the app; with two-factor off it goes too.
+        if (function_exists('passkeyEnsureTables') && passkeyEnsureTables($pdo)) {
+            $pdo->prepare('DELETE FROM user_passkeys WHERE user_id = ?')->execute([(int)$user['userId']]);
+        }
         securityLog($pdo, $config, 'mfa_disabled', 'warning', 'mfa', null, (int)$user['userId']);
         respond(200, ['enabled' => false]);
     }

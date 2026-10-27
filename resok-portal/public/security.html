@@ -93,6 +93,7 @@
     .notice{margin-top:16px;padding:12px 14px;border-radius:6px;font-size:13.5px;background:var(--notice-bad-bg);color:var(--notice-bad-fg);border:1px solid var(--notice-bad-line)}
     .notice.ok{background:var(--notice-ok-bg);color:var(--notice-ok-fg);border-color:var(--notice-ok-line)}
     .notice.warn{background:var(--notice-warn-bg);color:var(--notice-warn-fg);border-color:var(--notice-warn-line)}
+    .notice.bad{background:var(--notice-bad-bg);color:var(--notice-bad-fg);border-color:var(--notice-bad-line)}
     .btn.ghost{background:var(--surface);color:var(--text-dark);border:1px solid var(--line)}
     .btn.danger{background:var(--surface);color:var(--fail);border:1px solid var(--notice-bad-line)}
     .btn:disabled{opacity:.55;cursor:not-allowed}
@@ -259,6 +260,25 @@
             <button class="btn ghost" id="mfaDisableCancel" type="button">Keep it on</button>
           </div>
         </div>
+
+        <!-- Passkeys: face or fingerprint instead of typing the code (api/lib/passkey.php) -->
+        <div id="pkBox" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+          <h3 style="font-size:15.5px">Face or fingerprint sign-in</h3>
+          <p style="color:var(--muted);font-size:13.5px;margin-top:6px;max-width:64ch">
+            Sign in by looking at your phone or laptop (Face ID, Windows Hello, Android face or fingerprint
+            unlock) instead of typing the code. Your face never leaves your device: it checks you and signs
+            for you, and the portal only checks that signature. Your password is still asked first, and
+            your authenticator app and recovery codes keep working as a backup.
+          </p>
+          <div id="pkNotice" class="notice" hidden></div>
+          <div id="pkList" style="margin-top:10px"></div>
+          <div class="mfa-row" style="margin-top:12px" id="pkAddRow">
+            <input class="mfa-in" id="pkName" maxlength="80" placeholder="Name this device, e.g. My iPhone" style="min-width:230px" />
+            <input class="mfa-in" id="pkCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="App code" style="width:120px;letter-spacing:.2em;text-align:center" />
+            <button class="btn" id="pkAddBtn" type="button"><i class="fas fa-face-smile"></i> Add face or fingerprint</button>
+          </div>
+          <p style="color:var(--muted);font-size:12.5px;margin-top:6px">Adding one asks for the current code from your authenticator app, so a stolen session cannot add its own.</p>
+        </div>
       </div>
     </section>
 
@@ -420,6 +440,7 @@
             + " \u00b7 " + status.recoveryRemaining + " recovery code"
             + (status.recoveryRemaining === 1 ? "" : "s") + " unused.";
           mfaShow("mfaOn");
+          loadPasskeys();
         } else {
           mfaShow("mfaOff");
         }
@@ -488,6 +509,91 @@
     });
 
     el("mfaCodesDone").addEventListener("click", () => { mfaNotice(""); loadMfa(); });
+
+    /* ---------- passkeys (api/lib/passkey.php) ---------- */
+    const pkFromB64 = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+    const pkToB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    function pkNotice(message, kind) {
+      const box = el("pkNotice");
+      box.textContent = message || "";
+      box.className = "notice" + (kind ? " " + kind : "");
+      box.hidden = !message;
+    }
+    function pkRender(list) {
+      const mount = el("pkList");
+      mount.textContent = "";
+      if (!list.length) {
+        const none = document.createElement("div");
+        none.style.cssText = "font-size:13.5px;color:var(--muted)";
+        none.textContent = "No face or fingerprint added yet.";
+        mount.appendChild(none);
+        return;
+      }
+      list.forEach((p) => {
+        const row = document.createElement("div");
+        row.className = "mfa-row";
+        row.style.cssText = "justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px";
+        const info = document.createElement("div");
+        const name = document.createElement("strong");
+        name.textContent = p.name;
+        const sub = document.createElement("div");
+        sub.style.cssText = "font-size:12.5px;color:var(--muted)";
+        const fmt = (v) => v ? new Date(String(v).replace(" ", "T")).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" }) : "never";
+        sub.textContent = "Added " + fmt(p.createdAt) + " · last used " + fmt(p.lastUsedAt);
+        info.append(name, sub);
+        const rm = document.createElement("button");
+        rm.className = "btn danger";
+        rm.type = "button";
+        rm.textContent = "Remove";
+        rm.addEventListener("click", async () => {
+          const password = window.prompt("Remove \"" + p.name + "\"? Confirm with your password.");
+          if (!password) return;
+          try {
+            const r = await window.ResokPortal.api("/api/auth/passkey/" + p.id + "/delete", { method: "POST", body: JSON.stringify({ password }) });
+            pkRender(r.passkeys);
+            pkNotice("Removed. That device can no longer sign in with a face or fingerprint.", "ok");
+          } catch (error) { pkNotice(error.message || "Not removed.", "bad"); }
+        });
+        row.append(info, rm);
+        mount.appendChild(row);
+      });
+    }
+    async function loadPasskeys() {
+      if (!window.PublicKeyCredential) {
+        el("pkAddRow").hidden = true;
+        pkNotice("This browser cannot use face or fingerprint sign-in. Open this page in a recent Chrome, Edge or Safari.", "warn");
+      }
+      try { pkRender((await window.ResokPortal.api("/api/auth/passkey/list")).passkeys); }
+      catch (error) { pkNotice(error.message || "Could not read your passkeys.", "bad"); }
+    }
+    el("pkAddBtn").addEventListener("click", async () => {
+      const button = el("pkAddBtn");
+      const code = el("pkCode").value.trim();
+      if (!/^\d{6}$/.test(code)) { pkNotice("Enter the current 6-digit code from your authenticator app.", "warn"); return; }
+      button.disabled = true;
+      pkNotice("Follow your device's prompt: look at it, or touch the fingerprint sensor.", "");
+      try {
+        const opts = (await window.ResokPortal.api("/api/auth/passkey/register/options", { method: "POST", body: JSON.stringify({ code }) })).publicKey;
+        const cred = await navigator.credentials.create({ publicKey: {
+          challenge: pkFromB64(opts.challenge), rp: opts.rp, timeout: opts.timeout, attestation: opts.attestation,
+          user: { id: pkFromB64(opts.user.id), name: opts.user.name, displayName: opts.user.displayName },
+          pubKeyCredParams: opts.pubKeyCredParams, authenticatorSelection: opts.authenticatorSelection,
+          excludeCredentials: opts.excludeCredentials.map((c) => ({ type: c.type, id: pkFromB64(c.id) })),
+        } });
+        const r = await window.ResokPortal.api("/api/auth/passkey/register/verify", { method: "POST", body: JSON.stringify({
+          name: el("pkName").value.trim(),
+          credential: { clientDataJSON: pkToB64(cred.response.clientDataJSON), attestationObject: pkToB64(cred.response.attestationObject) },
+        }) });
+        el("pkName").value = ""; el("pkCode").value = "";
+        pkRender(r.passkeys);
+        pkNotice("Added. Next time you sign in, choose \"Use face or fingerprint\" instead of typing the code.", "ok");
+      } catch (error) {
+        pkNotice(error && error.name === "NotAllowedError" ? "Cancelled, or the device did not confirm it was you. Try again."
+          : error && error.name === "InvalidStateError" ? "This device already has a face or fingerprint sign-in for your account."
+          : (error.message || "It was not added."), "bad");
+      }
+      button.disabled = false;
+    });
 
     el("mfaCopyCodes").addEventListener("click", async () => {
       const codes = [...el("mfaCodeList").children].map((n) => n.textContent).join("\n");

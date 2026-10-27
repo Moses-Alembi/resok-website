@@ -268,6 +268,10 @@
           </div>
         </div>
         <button id="mfaBtn" class="login-btn" type="submit">Verify</button>
+        <!-- Shown only when the account has a passkey: the device checks the face or
+             fingerprint and signs for it; the portal never sees either. -->
+        <button id="passkeyBtn" class="login-btn" type="button" hidden
+                style="margin-top:10px;background:#fff;color:#087539;border:2px solid #087539">Use face or fingerprint</button>
         <div class="forgot-row" style="margin-top:18px">
           <a href="#" id="mfaCancel">Use a different account</a>
         </div>
@@ -388,6 +392,7 @@
         pendingChallenge = data.challenge;
         form.hidden = true;
         document.getElementById("mfaForm").hidden = false;
+        document.getElementById("passkeyBtn").hidden = !(data.passkey && window.PublicKeyCredential);
         document.getElementById("mfaCode").focus();
         showAlert(data.message || "Enter the code from your authenticator app.", "success");
         return;
@@ -456,6 +461,47 @@
       } finally {
         btn.disabled = false;
         btn.textContent = "Verify";
+      }
+    });
+
+    // Passkey sign-in (api/lib/passkey.php). The browser shows the device's own face or
+    // fingerprint prompt; what comes back is a signature, checked on the server.
+    const fromB64url = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+    const toB64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    function routeAfterSecondFactor(result) {
+      window.ResokPortal.login(result.user?.email || "", result.user, result.token);
+      const isAdmin = result.user?.role === "admin";
+      const next = safeNextPath();
+      const staffOnly = result.user?.isStaff === true && !result.user?.membershipStatus;
+      setTimeout(() => {
+        window.location.href = isAdmin ? "admin-review" : (next || (staffOnly ? "staff" : (result.user?.isLearner === true ? "academy" : "dashboard")));
+      }, 650);
+    }
+    document.getElementById("passkeyBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("passkeyBtn");
+      btn.disabled = true;
+      btn.textContent = "Waiting for your device...";
+      try {
+        const opts = await window.ResokPortal.api("/api/auth/passkey/login/options", { method: "POST", body: JSON.stringify({ challenge: pendingChallenge }) });
+        const pk = opts.publicKey;
+        const cred = await navigator.credentials.get({ publicKey: {
+          challenge: fromB64url(pk.challenge), rpId: pk.rpId, timeout: pk.timeout, userVerification: pk.userVerification,
+          allowCredentials: pk.allowCredentials.map((c) => ({ type: c.type, id: fromB64url(c.id) })),
+        } });
+        const result = await window.ResokPortal.api("/api/auth/passkey/login/verify", { method: "POST", body: JSON.stringify({
+          challenge: pendingChallenge,
+          credential: { id: toB64url(cred.rawId), clientDataJSON: toB64url(cred.response.clientDataJSON),
+                        authenticatorData: toB64url(cred.response.authenticatorData), signature: toB64url(cred.response.signature) },
+        }) });
+        showAlert("Verified. Signing you in...", "success");
+        routeAfterSecondFactor(result);
+      } catch (error) {
+        showAlert(error && error.name === "NotAllowedError"
+          ? "Face or fingerprint sign-in was cancelled or timed out. Try again, or enter the code from your app."
+          : (error.message || "Face or fingerprint sign-in did not work. Use the code from your app."));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Use face or fingerprint";
       }
     });
 

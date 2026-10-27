@@ -58,6 +58,7 @@ check "a staff election is created without a membership date" '"electorate":"sta
 EID=$(jint "$R" id); SLUG=$(sql "SELECT slug FROM elections WHERE id=$EID")
 POS=$(jint "$(post "$OFFICER" "admin/elections/$EID/positions" '{"title":"Welfare Chair","seats":1,"maxChoices":1}')" id)
 [ -z "$POS" ] && POS=$(sql "SELECT id FROM election_positions WHERE election_id=$EID LIMIT 1")
+sql "UPDATE staff_accounts SET staff_number='WF-002' WHERE user_id=$B_ID"
 R=$(post "$OFFICER" "admin/elections/$EID/roll" '{}')
 check "its roll needs no paid year" '"onRoll":' "$R"
 check "only active staff who can sign in are on it" "2" "$(sql "SELECT COUNT(*) FROM election_roll WHERE election_id=$EID AND email LIKE 'wf-%'")"
@@ -83,6 +84,12 @@ check "nobody from outside can be nominated" "Only staff on the roll" "$(post "$
 check "Wanjiku nominates Baraka" '"accepted":false' "$(post "$A" "elections/$SLUG/nominate" "{\"positionId\":$POS,\"userId\":$B_ID}")"
 check "Baraka is told in the staff portal" "nominated for Welfare Chair" "$(get "$B" staff/notifications)"
 CID=$(sql "SELECT c.id FROM election_candidates c WHERE c.position_id=$POS AND c.nominee_user_id=$B_ID")
+echo "Staff see only what they need"
+NA=$(get "$A" "elections/$SLUG/nominations")
+absent "colleagues' staff numbers are not sent" "WF-002" "$NA"
+check "the nominator is hidden from the nominator's colleagues" '"nominatedBy":null' "$(get "$MEMBER" "elections/$SLUG/nominations" ; get "$A" "elections/$SLUG/nominations")"
+check "the nominee sees who nominated them" '"nominatedBy":"Wanjiku Staff"' "$(get "$B" "elections/$SLUG/nominations")"
+check "the officer still sees the staff number" "WF-002" "$(sql "SELECT membership_id FROM election_roll WHERE election_id=$EID AND user_id=$B_ID")"
 check "the nomination is his to answer" '"mine":true' "$(get "$B" "elections/$SLUG/nominations")"
 check "Wanjiku cannot accept it for him" "not yours" "$(post "$A" "elections/nominations/$CID/accept")"
 check "Baraka accepts" '"accepted":true' "$(post "$B" "elections/nominations/$CID/accept")"

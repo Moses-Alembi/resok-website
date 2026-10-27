@@ -2986,13 +2986,13 @@ Respiratory Society of Kenya");
         requireModule('electionFind', 'lib/elections.php');
         $election = electionFind($pdo, $m[1]);
         if (!$election || $election['status'] === 'draft' || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
-        respond(200, [
+        respond(200, electionForVoters($election, [
             'election'  => $election,
             'positions' => electionPositions($pdo, (int)$election['id']),
             'voter'     => electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']),
             'results'   => $election['status'] === 'published'
                 ? electionResults($pdo, (int)$election['id']) : null,
-        ]);
+        ]));
     }
 
     /** The ballot paper, for a voter on the roll. */
@@ -3001,7 +3001,7 @@ Respiratory Society of Kenya");
         requireModule('electionBallotFor', 'lib/elections.php');
         [$ballot, $error] = electionBallotFor($pdo, $m[1], (int)$user['userId']);
         if ($error) respond(403, ['error' => $error]);
-        respond(200, $ballot);
+        respond(200, electionForVoters($ballot['election'], $ballot));
     }
 
     /**
@@ -3049,13 +3049,13 @@ Respiratory Society of Kenya");
         if (!$election || $election['status'] === 'draft' || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
 
         $entry = electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']);
-        respond(200, [
+        respond(200, electionForVoters($election, [
             'election'    => $election,
             'positions'   => electionPositions($pdo, (int)$election['id']),
             'canNominate' => $entry !== null && $election['nominationsOpen'],
             'members'     => $entry ? electionNominatableMembers($pdo, (int)$election['id']) : [],
             'nominations' => electionNominations($pdo, (int)$election['id'], (int)$user['userId']),
-        ]);
+        ]));
     }
 
     if (preg_match('#^elections/([A-Za-z0-9-]+)/nominate$#', $route, $m) && $method === 'POST') {

@@ -143,6 +143,30 @@ function electionVisibleTo(PDO $pdo, array $config, array $election, array $user
     return $election['electorate'] !== 'staff' || electionStaffMayView($pdo, $config, $user);
 }
 
+/**
+ * What staff see of a welfare election: only what they need to vote and nominate.
+ *
+ * A staff roll and staff candidates carry staff numbers in membership_id; those are HR
+ * details and never leave Staff records, so they are blanked here. And who nominated whom
+ * is shown only to the person nominated - colleagues have no need of it, and in a small
+ * workplace it is the kind of detail that causes friction. The returning officer still sees
+ * all of it in the admin. Board elections are passed through unchanged.
+ */
+function electionForVoters(array $election, array $payload): array
+{
+    if (($election['electorate'] ?? 'members') !== 'staff') return $payload;
+    foreach ($payload['positions'] ?? [] as $i => $p) {
+        foreach ($p['candidates'] ?? [] as $j => $c) $payload['positions'][$i]['candidates'][$j]['membershipId'] = null;
+    }
+    foreach ($payload['members'] ?? [] as $i => $mbr) $payload['members'][$i]['membershipId'] = null;
+    foreach ($payload['nominations'] ?? [] as $i => $n) {
+        $payload['nominations'][$i]['membershipId'] = null;
+        if (empty($n['mine'])) $payload['nominations'][$i]['nominatedBy'] = null;
+    }
+    if (isset($payload['voter']) && is_array($payload['voter'])) $payload['voter']['membershipId'] = null;
+    return $payload;
+}
+
 /** Whether migration-election-staff.sql has been applied. */
 function electionsHaveElectorate(PDO $pdo): bool
 {

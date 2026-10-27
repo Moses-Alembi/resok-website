@@ -1027,7 +1027,11 @@
   // its Fee Statement link stay open for the balance summary.
   // "directory" greys out the Find a Specialist listing panel on the profile page (15 Oct 2026).
   const LOCKED_FEATURES = isLocalPreview() ? [] : ["events", "elections", "card", "receipts", "statement", "directory"];
-  if (LOCKED_FEATURES.includes(pageName())) {
+  // Staff welfare elections share the elections page (elections?for=staff) but are not part
+  // of the members' launch lock: without this, staff - and a super admin, who has no
+  // membership for the dashboard to show - were sent dashboard -> Academy (27 Oct 2026).
+  const staffElections = pageName() === "elections" && new URLSearchParams(location.search).get("for") === "staff";
+  if (LOCKED_FEATURES.includes(pageName()) && !staffElections) {
     window.location.replace("dashboard");
   }
   window.ResokPortal.isFeatureLocked = (name) => LOCKED_FEATURES.includes(name);

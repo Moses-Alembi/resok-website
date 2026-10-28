@@ -132,9 +132,13 @@
       main{padding:16px 16px 60px}
       .grid2{grid-template-columns:1fr}
     }
+    /* Nothing shows until the server has said who this is: a signed-out visitor goes straight to
+       login instead of seeing an empty portal first. Shown anyway after 8s if anything stalls. */
+    body.booting{visibility:hidden;animation:staff-reveal 0s 8s forwards}
+    @keyframes staff-reveal{to{visibility:visible}}
   </style>
 </head>
-<body>
+<body class="booting">
   <a class="skip" href="#main">Skip to content</a>
   <header class="top"><div class="top-inner">
     <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
@@ -515,11 +519,14 @@
       try {
         home = await api('staff/home');
       } catch (error) {
-        if (error.status === 401) { location.href = 'login?next=' + encodeURIComponent('/resok-portal/public/staff'); return; }
+        // replace(), so Back does not return to a page that only redirects again.
+        if (error.status === 401) { location.replace('login?next=' + encodeURIComponent('/resok-portal/public/staff')); return; }
+        document.body.classList.remove('booting');
         document.querySelectorAll('[data-panel]').forEach((s) => { s.hidden = true; });
         say('flash', error.status === 403 ? 'This portal is for ReSoK staff. Your account is not on the staff list; ask the ICT office if you think it should be.' : (error.message || 'The staff portal could not load.'), 'bad');
         return;
       }
+      document.body.classList.remove('booting');
       const me = home.me || {};
       const first = (me.name || '').split(' ')[0];
       el('who').textContent = (me.name || me.email || '') + (home.super && !home.onStaffList ? ' · Super admin' : '');

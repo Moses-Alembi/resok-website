@@ -89,6 +89,11 @@ return [
     'security_digest_to' => config_value($local, 'security_digest_to', 'RESOK_SECURITY_DIGEST_TO', null),
     // Proxy ranges, beyond Cloudflare's, whose forwarded visitor address may be believed.
     'trusted_proxy_ranges' => config_list($local, 'trusted_proxy_ranges', 'RESOK_TRUSTED_PROXY_RANGES'),
+    // Staff sign-in rules (lib/staff-geo.php). edge_secret must equal the X-Resok-Edge header
+    // Cloudflare's Transform Rule adds; once set, staff requests without it are refused.
+    // staff_geo => 'off' is the break-glass switch for the location and working-hours rules.
+    'edge_secret' => (string)config_value($local, 'edge_secret', 'RESOK_EDGE_SECRET', ''),
+    'staff_geo' => (string)config_value($local, 'staff_geo', 'RESOK_STAFF_GEO', ''),
     // "Verifying your browser" before sign-in, sign-up and the public forms (lib/proof.php).
     // Off until switched on. Bits: each extra one doubles the work; 16 is about a second on
     // a mid-range phone.

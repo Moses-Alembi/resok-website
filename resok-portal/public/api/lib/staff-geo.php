@@ -683,6 +683,20 @@ function geoHandle(PDO $pdo, array $config, string $route, string $method, array
             'canDecide' => $broad,
             'isSuper' => $gate['super'],
             'edgeSecret' => !empty($config['edge_secret']),
+            // Set-up checks for super admins: what Cloudflare is actually sending on this request,
+            // so edge_secret is only put in the config once the header is seen arriving.
+            'cloudflare' => !$gate['super'] ? null : (static function () use ($config) {
+                $got = (string)($_SERVER['HTTP_X_RESOK_EDGE'] ?? '');
+                $want = (string)($config['edge_secret'] ?? '');
+                return [
+                    'country' => (string)($_SERVER['HTTP_CF_IPCOUNTRY'] ?? ''),
+                    'region' => (string)($_SERVER['HTTP_CF_REGION'] ?? ''),
+                    'city' => (string)($_SERVER['HTTP_CF_IPCITY'] ?? ''),
+                    'edgeHeader' => $got === '' ? 'missing' : ($want === '' ? 'arriving' : (hash_equals($want, $got) ? 'matches' : 'different')),
+                    // The last characters only, to confirm the right value was pasted.
+                    'edgeTail' => $got === '' ? null : substr($got, -5),
+                ];
+            })(),
         ];
         if ($broad) {
             $out['recent'] = $list("r.status <> 'pending'", []);

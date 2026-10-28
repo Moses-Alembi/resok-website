@@ -132,10 +132,25 @@
       h('p', { class: 'hint', text: d.edgeSecret
         ? 'Cloudflare check is set up: connections that do not come through Cloudflare are refused.'
         : 'The Cloudflare secret header is not set up yet, so a connection that goes round Cloudflare is only logged. Set edge_secret in config.local.php and the matching Transform Rule in Cloudflare.' }),
+      d.cloudflare ? cloudflareChecks(d.cloudflare, d.edgeSecret) : null,
       h('div', { class: 'grid2' }, fld('Outside Kenya', country), fld('Outside counties of operation', county), fld('Outside working hours', hours),
         fld('Working hours from', from), fld('Working hours to', to)),
       h('div', { style: 'margin-top:10px' }, h('label', { class: 'f', text: 'Working days' }), dayBoxes),
       h('div', { class: 'row', style: 'margin-top:12px' }, btn), msg);
+  }
+
+  // What Cloudflare sent on this very request: for checking the set-up, step by step.
+  function cloudflareChecks(c, configured) {
+    const row = (label, ok, text) => h('tr', null, h('th', { text: label }),
+      h('td', null, h('span', { class: 'pill ' + (ok ? 'p-ok' : 'p-warn'), text: ok ? 'OK' : 'Not yet' }), ' ', text));
+    const edge = { missing: 'Not arriving. Add the Request Header Transform rule in Cloudflare.',
+      arriving: 'Arriving (ends ...' + (c.edgeTail || '') + '). Now add edge_secret to config.local.php.',
+      matches: 'Arriving and matches config.local.php. Connections that go round Cloudflare are refused.',
+      different: 'Arriving, but it does NOT match edge_secret in config.local.php (ends ...' + (c.edgeTail || '') + '). Fix one of them now: staff cannot sign in.' }[c.edgeHeader];
+    return h('div', { class: 'table-wrap', style: 'margin:10px 0 14px' }, h('table', null,
+      row('Country (always on)', !!c.country, c.country || 'Missing: is the site behind Cloudflare?'),
+      row('Visitor location headers', !!c.region, c.region ? [c.region, c.city].filter(Boolean).join(', ') : 'Missing. Turn on "Add visitor location headers" in Managed Transforms.'),
+      row('Secret header X-Resok-Edge', c.edgeHeader === 'matches' || (c.edgeHeader === 'arriving' && !configured), edge)));
   }
 
   S.loaders.location = load;

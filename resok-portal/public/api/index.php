@@ -2150,6 +2150,11 @@ Respiratory Society of Kenya");
     }
 
     if ($route === 'auth/login' && $method === 'POST') {
+        // Only through api/login.php on the live server, where Cloudflare rate-limits that path.
+        // The laptop's test suites still call it here.
+        if (!defined('RESOK_LOGIN_ENTRY') && !(function_exists('geoLocalRequest') && geoLocalRequest())) {
+            respond(404, ['error' => 'Sign in at the login page.']);
+        }
         $data = input();
         $stmt = $pdo->prepare(
             'SELECT u.id, u.email, u.password_hash, u.email_verified, u.role, mp.membership_status, mp.membership_id, mp.cpd_points

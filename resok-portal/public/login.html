@@ -368,7 +368,7 @@
       loginBtn.textContent = "Logging in...";
 
       try {
-        const response = await (window.ResokPortal?.proofFetch || fetch)("api/index.php?route=auth/login", {
+        const response = await (window.ResokPortal?.proofFetch || fetch)("api/login.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           // Screening fields. window.ResokPortal is loaded above; the fallback keeps login

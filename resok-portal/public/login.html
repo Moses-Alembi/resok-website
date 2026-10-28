@@ -276,10 +276,30 @@
           <a href="#" id="mfaCancel">Use a different account</a>
         </div>
       </form>
+
+      <!-- A staff account refused for where it is (api/lib/staff-geo.php). The person has
+           already passed the password and the second factor; this asks a super admin. -->
+      <form id="geoForm" method="post" action="javascript:void(0)" hidden>
+        <p id="geoWhy" style="margin:0 0 16px;font-size:.92rem;line-height:1.55;"></p>
+        <div id="geoFields">
+          <div class="field">
+            <label for="geoTo" style="display:block;font-size:.85rem;font-weight:700;margin-bottom:6px">Last day you need access</label>
+            <div class="input-wrap"><input id="geoTo" type="date" required /></div>
+          </div>
+          <div class="field">
+            <label for="geoReason" style="display:block;font-size:.85rem;font-weight:700;margin-bottom:6px">Why</label>
+            <div class="input-wrap"><input id="geoReason" type="text" maxlength="500" placeholder="e.g. ERS congress in Vienna" required /></div>
+          </div>
+          <button id="geoBtn" class="login-btn" type="submit">Ask for access</button>
+        </div>
+        <div class="forgot-row" style="margin-top:18px">
+          <a href="login" id="geoBack">Back to sign in</a>
+        </div>
+      </form>
     </section>
   </main>
 
-  <script src="js/portal-state.js?v=20261028-viewas"></script>
+  <script src="js/portal-state.js?v=20261028-staffsec"></script>
   <script src="js/google-signin.js?v=20261005-phase4"></script>
   <script>
     const form = document.getElementById("loginForm");
@@ -370,6 +390,7 @@
           data = {};
         }
 
+        if (data.geoBlocked) { showGeoRequest(data); return; }
         if (!response.ok) throw new Error(data.error || "Invalid email or password.");
         finishLogin(data, email);
       } catch (error) {
@@ -434,7 +455,7 @@
         purpose: safeNextPath().includes("/abstracts") ? "abstracts" : "login",
         onStart: () => showAlert("Signing you in with Google...", "success"),
         onResult: (data) => finishLogin(data, ""),
-        onError: (error) => showAlert(error.message || "Google sign-in did not work. Please try again."),
+        onError: (error) => error?.payload?.geoBlocked ? showGeoRequest(error.payload) : showAlert(error.message || "Google sign-in did not work. Please try again."),
       });
     }
 
@@ -457,6 +478,7 @@
           window.location.href = isAdmin ? "admin-review" : (next || (result.user?.isLearner === true ? "academy" : "dashboard"));
         }, result.usedRecoveryCode ? 1600 : 650);
       } catch (error) {
+        if (error.payload?.geoBlocked) { showGeoRequest(error.payload); return; }
         showAlert(error.message || "That code was not correct.");
       } finally {
         btn.disabled = false;
@@ -496,6 +518,7 @@
         showAlert("Verified. Signing you in...", "success");
         routeAfterSecondFactor(result);
       } catch (error) {
+        if (error?.payload?.geoBlocked) { showGeoRequest(error.payload); return; }
         showAlert(error && error.name === "NotAllowedError"
           ? "Face or fingerprint sign-in was cancelled or timed out. Try again, or enter the code from your app."
           : (error.message || "Face or fingerprint sign-in did not work. Use the code from your app."));
@@ -504,6 +527,46 @@
         btn.textContent = "Use face or fingerprint";
       }
     });
+
+    // ----- Refused for location (staff accounts; api/lib/staff-geo.php) -----
+    let geoToken = "";
+    function showGeoRequest(payload) {
+      geoToken = payload.requestToken || "";
+      form.hidden = true;
+      document.getElementById("mfaForm").hidden = true;
+      document.getElementById("geoForm").hidden = false;
+      document.getElementById("geoWhy").textContent = payload.error || "Your account cannot be used from here.";
+      document.getElementById("geoFields").hidden = !geoToken;
+      const today = new Date().toISOString().slice(0, 10);
+      const to = document.getElementById("geoTo");
+      to.min = today;
+      if (!to.value) to.value = today;
+      clearAlert();
+    }
+    document.getElementById("geoForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const btn = document.getElementById("geoBtn");
+      btn.disabled = true;
+      try {
+        const r = await window.ResokPortal.api("/api/auth/geo-request", { method: "POST", body: JSON.stringify({
+          token: geoToken, toDate: document.getElementById("geoTo").value, reason: document.getElementById("geoReason").value.trim(),
+          fromDate: new Date().toISOString().slice(0, 10) }) });
+        document.getElementById("geoFields").hidden = true;
+        showAlert(r.message || "Request sent.", "success");
+      } catch (error) {
+        showAlert(error.message || "The request could not be sent.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    // Sent here from another page whose session was refused mid-way.
+    if (new URLSearchParams(location.search).get("blocked") === "geo") {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem("resok_geo") || "null");
+        sessionStorage.removeItem("resok_geo");
+        if (saved) showGeoRequest(saved);
+      } catch { /* nothing saved */ }
+    }
 
     document.getElementById("mfaCancel").addEventListener("click", (event) => {
       event.preventDefault();

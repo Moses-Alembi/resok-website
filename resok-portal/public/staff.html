@@ -164,6 +164,7 @@
       <a href="#procurement" data-view="procurement"><i class="fas fa-cart-shopping"></i> Purchase requests</a>
       <a href="#appraisals" data-view="appraisals"><i class="fas fa-star-half-stroke"></i> Appraisals</a>
       <a href="#payslips" data-view="payslips" data-needs-row><i class="fas fa-file-invoice-dollar"></i> My payslips</a>
+      <a href="#location" data-view="location"><i class="fas fa-location-dot"></i> Location access</a>
       <a href="#profile" data-view="profile" data-needs-row><i class="fas fa-id-card"></i> My profile</a>
       <a href="elections?for=staff"><i class="fas fa-check-to-slot"></i> Welfare elections</a>
       <span class="locked" title="Coming soon"><i class="fas fa-umbrella-beach"></i> Leave <span class="soon">Soon</span></span>
@@ -301,6 +302,7 @@
       <section class="stack" data-panel="appraisals" hidden></section>
       <section class="stack" data-panel="payslips" hidden></section>
       <section class="stack" data-panel="payroll" hidden></section>
+      <section class="stack" data-panel="location" hidden></section>
 
       <!-- Profile -->
       <section class="stack" data-panel="profile" hidden>
@@ -356,6 +358,9 @@
               <div><label class="f" for="peDept">Department</label><select id="peDept"><option value="">None</option></select></div>
               <div><label class="f" for="peMgr">Reports to</label><select id="peMgr"><option value="">Nobody</option></select></div>
               <div><label class="f" for="peStart">Start date</label><input type="date" id="peStart"></div>
+              <div><label class="f" for="peCounties">Counties of operation</label>
+                <select id="peCounties" multiple size="6" aria-describedby="peCountiesHint"></select>
+                <p class="hint" id="peCountiesHint">Where they may sign in from. Hold Ctrl (or Cmd) to pick more than one. None chosen means anywhere in Kenya.</p></div>
             </div>
             <div class="row" style="margin-top:14px">
               <button class="btn primary" type="submit">Save</button>
@@ -397,7 +402,7 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js?v=20261028-viewas"></script>
+  <script src="js/portal-state.js?v=20261028-staffsec"></script>
   <script>
   (() => {
     /*
@@ -778,11 +783,11 @@
     });
 
     // ---------- staff records ----------
-    let people = [], depts = [];
+    let people = [], depts = [], counties = [];
     async function loadPeople() {
       try {
         const data = await api('staff/people');
-        people = data.people; depts = data.departments;
+        people = data.people; depts = data.departments; counties = data.counties || [];
         renderPeople();
       } catch (e) { el('peopleList').textContent = ''; el('peopleList').appendChild(empty(e.message)); }
     }
@@ -821,6 +826,8 @@
       el('peForm').dataset.id = p.userId;
       el('peName').value = p.name || ''; el('peNumber').value = p.staffNumber || ''; el('peJob').value = p.jobTitle || '';
       el('peStart').value = p.startDate || '';
+      const csel = el('peCounties'); csel.length = 0;
+      counties.forEach((c) => { const o = make('option', null, c); o.value = c; o.selected = (p.workCounties || []).includes(c); csel.appendChild(o); });
       const dsel = el('peDept'); dsel.length = 1;
       depts.filter((d) => d.active || d.id === p.departmentId).forEach((d) => { const o = make('option', null, d.name); o.value = String(d.id); dsel.appendChild(o); });
       dsel.value = p.departmentId ? String(p.departmentId) : '';
@@ -835,7 +842,8 @@
       e.preventDefault();
       try {
         await post('staff/people/' + el('peForm').dataset.id, { name: el('peName').value, staffNumber: el('peNumber').value, jobTitle: el('peJob').value,
-          departmentId: el('peDept').value || null, managerUserId: el('peMgr').value || null, startDate: el('peStart').value });
+          departmentId: el('peDept').value || null, managerUserId: el('peMgr').value || null, startDate: el('peStart').value,
+          workCounties: Array.from(el('peCounties').selectedOptions).map((o) => o.value) });
         el('personEdit').hidden = true;
         say('flash', 'Saved.', 'ok');
         loadPeople();
@@ -1198,5 +1206,6 @@
   <script src="js/staff-procurement.js?v=20261027-hr"></script>
   <script src="js/staff-appraisals.js?v=20261027-hr"></script>
   <script src="js/staff-payroll.js?v=20261027-hr"></script>
+  <script src="js/staff-location.js?v=20261028-staffsec"></script>
 </body>
 </html>

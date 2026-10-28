@@ -38,11 +38,13 @@ $active = $activeNav ?? '';
             <a href="resok-portal/public/" class="mobile-action mobile-action-member"><i class="fas fa-user-plus" aria-hidden="true"></i>Become a Member</a>
             <a href="contact.html#donate" class="mobile-action mobile-action-donate"><i class="fas fa-heart" aria-hidden="true"></i>Donate</a>
             <a href="resok-portal/public/login" class="mobile-action mobile-action-login"><i class="fas fa-user" aria-hidden="true"></i>Login</a>
+            <a href="resok-portal/public/staff" class="mobile-action mobile-action-login"><i class="fas fa-id-badge" aria-hidden="true"></i>Staff portal</a>
           </li>
         </ul>
         <div class="nav-actions">
-          <a href="resok-portal/public/login" class="nav-top-action"><i class="fas fa-user" aria-hidden="true"></i> Login</a>
-          <a href="contact.html#donate" class="nav-top-action"><i class="fas fa-heart" aria-hidden="true"></i> Donate</a>
+          <a href="resok-portal/public/login" class="nav-top-action" title="Member login" aria-label="Member login"><i class="fas fa-user" aria-hidden="true"></i> Login</a>
+          <a href="resok-portal/public/staff" class="nav-top-action" title="Staff portal" aria-label="Staff portal"><i class="fas fa-id-badge" aria-hidden="true"></i> Staff</a>
+          <a href="contact.html#donate" class="nav-top-action" title="Donate" aria-label="Donate"><i class="fas fa-heart" aria-hidden="true"></i> Donate</a>
           <a href="resok-portal/public/" class="nav-top-member">Become a Member</a>
         </div>
         <button class="hamburger" type="button" id="hamburger" aria-label="Toggle menu"><span></span><span></span><span></span></button>

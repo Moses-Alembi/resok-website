@@ -65,6 +65,9 @@ DirectoryIndex index.html
   RewriteCond %{ENV:RESOK_LOCAL} !=1
   RewriteRule ^(projects|sponsors|blog|post|knowledge|guidelines|patient-resources|learning)(\.html)?/?$ /coming-soon.html [R=302,L]
 
+  # resok.org/staff - the short address given to staff for their portal (28 Oct 2026).
+  RewriteRule ^staff/?$ /resok-portal/public/staff [R=302,L]
+
   # The KISLHC 2027 site is being built (16 Oct 2026). Everything under /kislhc2027 goes to
   # Coming Soon on the live server until it is ready; remove this rule to publish it. The
   # 2026 site at /kislhc is a separate upload and is not affected.

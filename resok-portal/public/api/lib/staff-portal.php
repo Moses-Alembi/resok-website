@@ -299,6 +299,8 @@ function staffRecord(PDO $pdo, int $userId): ?array
         'managerUserId' => $r['manager_user_id'] === null ? null : (int)$r['manager_user_id'], 'manager' => $r['manager_name'],
         'workPhone' => $r['work_phone'], 'office' => $r['office'], 'bio' => $r['bio'], 'startDate' => $r['start_date'],
         'active' => (bool)$r['active'], 'deactivatedAt' => $r['deactivated_at'],
+        // Where they may sign in from (lib/staff-geo.php); empty means anywhere in Kenya.
+        'workCounties' => array_values(array_filter(array_map('trim', explode(',', (string)($r['work_counties'] ?? ''))))),
         'accountReady' => (int)$r['email_verified'] === 1,
     ];
 }
@@ -355,6 +357,17 @@ function staffSaveRecord(PDO $pdo, int $userId, array $data): ?string
     }
     $pdo->prepare('UPDATE staff_accounts SET full_name = COALESCE(?, full_name), staff_number = ?, job_title = ?, department_id = ?, manager_user_id = ?, start_date = ? WHERE user_id = ?')
         ->execute([$name, $number, staffText($data['jobTitle'] ?? '', 120), $dept, $manager, $start, $userId]);
+    // Counties of operation, only when the form sends them: an older page leaves them alone.
+    if (array_key_exists('workCounties', $data) && function_exists('geoCounty') && geoEnsureTables($pdo)) {
+        $counties = [];
+        foreach ((array)$data['workCounties'] as $c) {
+            $n = geoCounty(is_scalar($c) ? (string)$c : '');
+            if ($n === null) return 'Choose counties from the list.';
+            $counties[$n] = true;
+        }
+        $pdo->prepare('UPDATE staff_accounts SET work_counties = ? WHERE user_id = ?')
+            ->execute([$counties ? implode(',', array_keys($counties)) : null, $userId]);
+    }
     return null;
 }
 
@@ -494,6 +507,7 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         'staff/payroll'    => ['payrollHandle', 'lib/staff-payroll.php'],
         'staff/procurement'=> ['procurementHandle', 'lib/staff-procurement.php'],
         'staff/appraisals' => ['appraisalHandle', 'lib/staff-appraisal.php'],
+        'staff/location'   => ['geoHandle', 'lib/staff-geo.php'],
     ] as $prefix => [$fn, $file]) {
         if (strpos($route, $prefix) === 0) {
             requireModule($fn, $file);
@@ -581,7 +595,9 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
     if ($route === 'staff/people' && $method === 'GET') {
         staffNeed($gate, 'staff.manage');
         $ids = $pdo->query('SELECT s.user_id FROM staff_accounts s JOIN users u ON u.id = s.user_id ORDER BY s.active DESC, COALESCE(s.full_name, u.email)')->fetchAll(PDO::FETCH_COLUMN);
-        respond(200, ['people' => array_map(static fn($id) => staffRecord($pdo, (int)$id), $ids), 'departments' => staffDepartments($pdo, true)]);
+        if (function_exists('geoEnsureTables')) geoEnsureTables($pdo);   // the counties column
+        respond(200, ['people' => array_map(static fn($id) => staffRecord($pdo, (int)$id), $ids), 'departments' => staffDepartments($pdo, true),
+                      'counties' => defined('GEO_KENYA_COUNTIES') ? GEO_KENYA_COUNTIES : []]);
     }
     if (preg_match('#^staff/people/(\d+)(/active)?$#', $route, $m) && $method === 'POST') {
         staffNeed($gate, 'staff.manage');

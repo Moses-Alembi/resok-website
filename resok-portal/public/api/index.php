@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-payroll', 'staff-procurement', 'staff-appraisal', 'passkey', 'migrate', 'view-as'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-payroll', 'staff-procurement', 'staff-appraisal', 'staff-geo', 'passkey', 'migrate', 'view-as'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -359,6 +359,7 @@ function mfaGrantSession(PDO $pdo, array $config, int $userId, array $extra = []
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
     if (!$user) respond(401, ['error' => 'That sign-in attempt is no longer valid.']);
+    if (function_exists('geoGuardSignIn')) geoGuardSignIn($pdo, $config, (int)$user['id'], (string)$user['role']);
     $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
     issueAuthCookie($loginToken);
     respond(200, $extra + [
@@ -423,6 +424,8 @@ function completeLogin(PDO $pdo, array $config, array $user): void
                 : 'Staff account signed in without two-factor (require_staff_mfa is off)',
             (int)$user['id']);
     }
+    // Staff sign in from Kenya (and their counties) only, unless an exception is approved.
+    if (function_exists('geoGuardSignIn')) geoGuardSignIn($pdo, $config, (int)$user['id'], (string)$user['role']);
     $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
     issueAuthCookie($loginToken);
     // A non-member who signed up to submit an abstract, and never joined the Academy,
@@ -718,6 +721,8 @@ function auth(array $config): array {
             'mfaSetupRequired' => true,
         ]);
     }
+    // Staff location rules on every request, so a session taken abroad stops working too.
+    if (function_exists('geoGuardSession')) geoGuardSession(db($config), $config, $live);
 
     // Slide the window forward. The original `exp` is carried over untouched, so an active
     // session still ends at the absolute cap rather than renewing itself forever. Header
@@ -768,6 +773,8 @@ function authOptional(array $config): ?array {
     // A staff account that has not enrolled in two-factor reads as an ordinary member here,
     // so nothing privileged is reachable through a public page either.
     if (!empty($user['mfaSetupRequired'])) $user['role'] = 'member';
+    // A staff account outside where it may be used reads as nobody here.
+    if (empty($user['localDev']) && function_exists('geoCheck') && geoCheck(db($config), $config, (int)$user['userId'], (string)$user['role']) !== null) return null;
     return viewAsAct($config, withSuperAdminFlag($user, $config));
 }
 
@@ -2158,10 +2165,14 @@ Respiratory Society of Kenya");
         authThrottleCheck($pdo, $config, $loginEmail);
         $stmt->execute([$data['email'] ?? '']);
         $user = $stmt->fetch();
+        // Staff and admin accounts lock after three wrong passwords (lib/staff-geo.php).
+        if ($user && function_exists('geoLockCheck')) geoLockCheck($pdo, $config, $user);
         if (!$user || !password_verify($data['password'] ?? '', $user['password_hash'])) {
             authThrottleFailure($pdo, $config, $loginEmail);
+            if ($user && function_exists('geoLockFailure')) geoLockFailure($pdo, $config, $user);
             respond(401, ['error' => 'Invalid credentials']);
         }
+        if (function_exists('geoLockClear')) geoLockClear($pdo, (int)$user['id']);
         if (!$user['email_verified']) respond(403, ['error' => 'Please verify your email before logging in']);
         authThrottleSuccess($pdo, $config, $loginEmail);
 
@@ -2594,10 +2605,15 @@ Respiratory Society of Kenya");
         $data = input();
         if (empty($data['token']) || empty($data['password'])) respond(400, ['error' => 'Token and password are required']);
         if (!preg_match('/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,64}$/', $data['password'])) respond(400, ['error' => 'Password must be 8-64 characters and include uppercase, lowercase, and a number']);
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW() LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, email, role FROM users WHERE reset_token = ? AND reset_expires > NOW() LIMIT 1');
         $stmt->execute([$data['token']]);
         $user = $stmt->fetch();
         if (!$user) respond(400, ['error' => 'Invalid or expired reset link']);
+        // Staff and admin accounts need a longer password that is not in a public breach list.
+        if (function_exists('geoStaffPasswordProblem')
+            && ($problem = geoStaffPasswordProblem($pdo, (int)$user['id'], (string)$user['role'], (string)$user['email'], (string)$data['password'])) !== null) {
+            respond(400, ['error' => $problem]);
+        }
         // Completing a reset marks the address verified, because completing a reset is
         // exactly what verification tests: the link went to that mailbox and somebody who
         // could open it came back with the token. Without this the endpoint ends by saying
@@ -2607,11 +2623,19 @@ Respiratory Society of Kenya");
         $pdo->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL,
                        email_verified = 1 WHERE id = ?')
             ->execute([password_hash($data['password'], PASSWORD_DEFAULT), (int)$user['id']]);
+        // A reset proves the mailbox, so it also lifts a three-wrong-passwords lock.
+        if (function_exists('geoLockClear')) geoLockClear($pdo, (int)$user['id']);
         // Whoever knew the old password may already hold a session. A reset ends all of them.
         if (sessionRevokeAll($pdo, (int)$user['id'])) {
             securityLog($pdo, $config, 'sessions_revoked', 'info', 'password-reset', 'All sessions ended by a password reset', (int)$user['id']);
         }
         respond(200, ['message' => 'Password updated. You can now log in.']);
+    }
+
+    // A staff member refused for where they are asks for an exception (lib/staff-geo.php).
+    if ($route === 'auth/geo-request' && $method === 'POST' && function_exists('geoPublicRequest')) {
+        throttleCheck($pdo, $config, 'password-reset', 'geo-request');
+        geoPublicRequest($pdo, $config);
     }
 
     // A super administrator seeing the portal as one member (lib/view-as.php).

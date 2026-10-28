@@ -130,6 +130,12 @@
       if (response.status === 403 && data?.mfaSetupRequired && pageName() !== "two-factor-setup") {
         window.location.href = "two-factor-setup";
       }
+      // A staff session refused for where it is (api/lib/staff-geo.php): the login page
+      // explains and lets them ask ICT. The server has already ended the session.
+      if (response.status === 403 && data?.geoBlocked && pageName() !== "login") {
+        try { sessionStorage.setItem("resok_geo", JSON.stringify(data)); } catch { /* private mode */ }
+        window.location.href = "login?blocked=geo";
+      }
       // The status travels with the error. Without it every caller has to guess what went
       // wrong from the wording of a message written for a human, and "not signed in" and
       // "the server is not there" are opposite problems that need opposite handling.

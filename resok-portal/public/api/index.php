@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-payroll', 'staff-procurement', 'staff-appraisal', 'passkey', 'migrate'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-payroll', 'staff-procurement', 'staff-appraisal', 'passkey', 'migrate', 'view-as'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -660,7 +660,7 @@ function localDevPayload(array $config): ?array {
 function auth(array $config): array {
     // Localhost: a real login still wins; otherwise act as the local admin instead of a 401.
     $localDev = localDevPayload($config);
-    if ($localDev !== null) return withSuperAdminFlag(authOptionalToken($config) ?? $localDev, $config);
+    if ($localDev !== null) return viewAsAct($config, withSuperAdminFlag(authOptionalToken($config) ?? $localDev, $config));
 
     $fromCookie = true;
     $token = $_COOKIE['resok_token'] ?? '';
@@ -728,7 +728,15 @@ function auth(array $config): array {
         issueAuthCookie(token($refreshed, $config['jwt_secret'], (int)$payload['exp']));
     }
 
-    return withSuperAdminFlag($live, $config);
+    return viewAsAct($config, withSuperAdminFlag($live, $config));
+}
+
+/**
+ * The super administrator's "View as member" (lib/view-as.php): the member they are viewing,
+ * in place of themselves, when that is on. Unchanged when the module is not deployed.
+ */
+function viewAsAct(array $config, array $user): array {
+    return function_exists('viewAsApply') ? viewAsApply($config, $user) : $user;
 }
 
 /**
@@ -760,7 +768,7 @@ function authOptional(array $config): ?array {
     // A staff account that has not enrolled in two-factor reads as an ordinary member here,
     // so nothing privileged is reachable through a public page either.
     if (!empty($user['mfaSetupRequired'])) $user['role'] = 'member';
-    return withSuperAdminFlag($user, $config);
+    return viewAsAct($config, withSuperAdminFlag($user, $config));
 }
 
 /** The signed-in session's payload, or null - authOptional() without the localhost fallback. */
@@ -2099,6 +2107,7 @@ Respiratory Society of Kenya");
             sessionRevokeToken($pdo, (string)$current['jti'], (int)($current['exp'] ?? (time() + RESOK_SESSION_MAX_LIFETIME)));
         }
         clearAuthCookie();
+        if (function_exists('viewAsClearCookie')) viewAsClearCookie();
         respond(200, ['message' => 'Logged out']);
     }
 
@@ -2605,6 +2614,11 @@ Respiratory Society of Kenya");
         respond(200, ['message' => 'Password updated. You can now log in.']);
     }
 
+    // A super administrator seeing the portal as one member (lib/view-as.php).
+    if (strncmp($route, 'view-as/', 8) === 0 && function_exists('viewAsHandle')) {
+        viewAsHandle($pdo, $config, $route, $method);
+    }
+
     if ($route === 'members/me') {
         $user = auth($config);
         if ($method === 'GET') respond(200, mapMember(memberRow($pdo, (int)$user['userId'])) ?? []);
@@ -2626,6 +2640,7 @@ Respiratory Society of Kenya");
             if (!$sets) respond(400, ['error' => 'No profile fields provided']);
             $values[] = (int)$user['userId'];
             $pdo->prepare('UPDATE member_profiles SET ' . implode(', ', $sets) . ' WHERE user_id = ?')->execute($values);
+            if (function_exists('viewAsLogEdit')) viewAsLogEdit($pdo, $user, 'Profile edited for the member: ' . implode(', ', array_keys(array_intersect_key($allowed, $data))));
             respond(200, mapMember(memberRow($pdo, (int)$user['userId'])) ?? []);
         }
     }
@@ -4435,6 +4450,7 @@ Respiratory Society of Kenya");
 
         $profileImage = 'profile-images/' . $filename;
         $pdo->prepare('UPDATE member_profiles SET profile_image = ? WHERE user_id = ?')->execute([$profileImage, (int)$user['userId']]);
+        if (function_exists('viewAsLogEdit')) viewAsLogEdit($pdo, $user, 'Profile photo changed for the member');
         respond(200, mapMember(memberRow($pdo, (int)$user['userId'])) ?? []);
     }
 

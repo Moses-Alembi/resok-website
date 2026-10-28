@@ -504,7 +504,7 @@
   </div>
 
   <script src="js/admin-shell.js?v=20260924-roles3"></script>
-  <script src="js/portal-state.js?v=20261021-silver-card"></script>
+  <script src="js/portal-state.js?v=20261028-viewas"></script>
   <script>
     let members = [];
     // Which years the register covers, so the table knows what columns to draw. Comes from
@@ -807,6 +807,7 @@
           <button class="btn btn-danger" id="rejectBtn" ${hideDecision(selectedMember) ? "hidden" : ""}><i class="fas fa-xmark"></i> Reject</button>
           <button class="btn" id="welcomePacketBtn"><i class="fas fa-envelope"></i> Send welcome packet</button>
           ${selectedMember.emailVerified === false ? '<button class="btn" id="claimLinkBtn"><i class="fas fa-key"></i> Send claim link</button>' : ""}
+          ${whoami?.isSuperAdmin ? '<button class="btn" id="viewAsBtn" title="See the portal exactly as this member sees it, and correct their profile for them"><i class="fas fa-eye"></i> View as member</button>' : ""}
         </div>
         <h3 style="font-size:16px;margin:14px 0 8px">Years paid for</h3>
         <div id="memberYears" class="detail-empty" style="margin-bottom:8px">Loading&hellip;</div>
@@ -844,6 +845,19 @@
       document.getElementById("welcomePacketBtn").addEventListener("click", sendWelcomePacket);
       const claimLinkBtn = document.getElementById("claimLinkBtn");
       if (claimLinkBtn) claimLinkBtn.addEventListener("click", sendClaimLink);
+      const viewAsBtn = document.getElementById("viewAsBtn");
+      if (viewAsBtn) viewAsBtn.addEventListener("click", async () => {
+        if (!confirm(`View the portal as ${memberName(selectedMember)}?
+
+You will see exactly what they see for up to 30 minutes. You can correct their profile; payments, votes and everything else stay read-only. This is recorded in the audit log.`)) return;
+        viewAsBtn.disabled = true;
+        try {
+          await window.ResokPortal.viewAsStart(selectedMember.id);
+        } catch (error) {
+          viewAsBtn.disabled = false;
+          showNote(error.message || "Could not start View as.", "error");
+        }
+      });
       document.getElementById("cpdForm").addEventListener("submit", addCpdPoints);
       await loadPayments(selectedMember.id);
     }

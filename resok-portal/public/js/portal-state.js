@@ -970,7 +970,98 @@
     }, IDLE_TICK_MS);
   }
 
+  // ----- "View as member" (super administrators; api/lib/view-as.php) -------------------
+  // The server decides who each request acts as, from an httpOnly cookie this page cannot
+  // read. This flag only tells pages to ask (view-as/status) and show the banner; it grants
+  // nothing. The cached member in resok_portal_state is dropped on the way in and out, so
+  // neither person's details are ever shown as the other's.
+  const VIEW_AS_FLAG = "resok_viewas";
+
+  function viewAsFlag(on) {
+    try {
+      if (on === undefined) return localStorage.getItem(VIEW_AS_FLAG) === "1";
+      if (on) localStorage.setItem(VIEW_AS_FLAG, "1");
+      else localStorage.removeItem(VIEW_AS_FLAG);
+    } catch {
+      /* private mode - the banner just will not show */
+    }
+    return Boolean(on);
+  }
+
+  function resetCachedMember(email) {
+    const state = defaultState();
+    state.loggedIn = true;
+    // The profile page shows the sign-in email from here; the member's, not the admin's.
+    if (email) state.member.email = email;
+    saveState(state);
+  }
+
+  async function viewAsStart(profileId) {
+    const result = await api("/api/view-as/start", { method: "POST", body: JSON.stringify({ profileId }) });
+    viewAsFlag(true);
+    resetCachedMember(result.email);
+    window.location.href = result.goTo || "dashboard";
+  }
+
+  async function viewAsEnd() {
+    try {
+      await api("/api/view-as/end", { method: "POST", body: "{}" });
+    } finally {
+      viewAsFlag(false);
+      resetCachedMember();
+      window.location.href = "admin-review";
+    }
+  }
+
+  async function showViewAsBanner() {
+    if (!viewAsFlag()) return;
+    let status = null;
+    try {
+      status = await api("/api/view-as/status");
+    } catch {
+      return;
+    }
+    if (!status || !status.active) {
+      // Ended on its own (30 minutes, or the administrator signed out): forget it quietly.
+      viewAsFlag(false);
+      resetCachedMember();
+      return;
+    }
+    const bar = document.createElement("div");
+    bar.id = "viewAsBanner";
+    bar.setAttribute("role", "status");
+    bar.style.cssText =
+      "position:sticky;top:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:12px;flex-wrap:wrap;" +
+      "padding:10px 16px;background:#bc0b22;color:#fff;font-family:'Segoe UI',Tahoma,sans-serif;font-size:14px;line-height:1.4;" +
+      "box-shadow:0 2px 10px rgba(0,0,0,.2)";
+    const text = document.createElement("span");
+    text.style.cssText = "flex:1;min-width:220px";
+    const ends = new Date(status.endsAt * 1000).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const who = document.createElement("strong");
+    who.textContent = status.name;
+    text.append("Viewing the portal as ", who, ` (${status.email}). This is exactly what they see. Only their profile can be changed; every change is logged. Ends at ${ends}.`);
+    const exit = document.createElement("button");
+    exit.type = "button";
+    exit.textContent = "Exit view as";
+    exit.style.cssText =
+      "flex-shrink:0;border:0;border-radius:6px;padding:8px 14px;background:#fff;color:#bc0b22;font-weight:800;font-size:13px;cursor:pointer";
+    exit.addEventListener("click", () => {
+      exit.disabled = true;
+      viewAsEnd();
+    });
+    bar.append(text, exit);
+    document.body.prepend(bar);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", showViewAsBanner);
+  } else {
+    showViewAsBanner();
+  }
+
   window.ResokPortal = {
+    viewAsStart,
+    viewAsEnd,
     api,
     proofFetch,
     screeningFields,

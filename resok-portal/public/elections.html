@@ -23,6 +23,9 @@
     .sidebar-nav li a{display:flex;align-items:center;gap:12px;padding:14px 24px;color:#555;font-weight:500;font-size:14px;border-left:3px solid transparent;transition:all .2s}
     .sidebar-nav li a:hover,.sidebar-nav li a.active{background:rgba(0,147,46,0.08);color:var(--brand-primary);border-left-color:var(--brand-primary)}
     .sidebar-nav li a i{width:20px;text-align:center}
+    .sidebar-nav .staff-locked{display:flex;align-items:center;gap:12px;padding:14px 24px;color:#98a2b3;font-weight:500;font-size:14px;border-left:3px solid transparent;cursor:not-allowed;user-select:none}
+    .sidebar-nav .staff-locked i{width:20px;text-align:center}
+    .sidebar-nav .staff-locked .soon{margin-left:auto;padding:2px 7px;border-radius:999px;background:#eef2f7;color:#667085;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
     .sidebar-divider{height:1px;background:#eee;margin:12px 24px}
     .sidebar-logout{color:var(--brand-secondary)!important}
     .dashboard-main{display:flex;flex-direction:column;gap:24px;min-width:0}
@@ -102,8 +105,9 @@
       <!-- Staff welfare elections (elections?for=staff) use this page with the staff menu. -->
       <ul class="sidebar-nav" id="staffNav" hidden>
         <li><a href="staff"><i class="fas fa-house"></i> Staff portal</a></li>
-        <li><a href="staff#announcements"><i class="fas fa-bullhorn"></i> Announcements</a></li>
-        <li><a href="staff#directory"><i class="fas fa-address-book"></i> Staff directory</a></li>
+        <!-- Staff get welfare elections only for now (Moses, 29 Oct 2026); the rest is coming soon. -->
+        <li><span class="staff-locked" aria-disabled="true" title="Coming soon"><i class="fas fa-bullhorn"></i> Announcements <span class="soon">Soon</span></span></li>
+        <li><span class="staff-locked" aria-disabled="true" title="Coming soon"><i class="fas fa-address-book"></i> Staff directory <span class="soon">Soon</span></span></li>
         <li><a href="elections?for=staff" class="active"><i class="fas fa-check-to-slot"></i> Welfare elections</a></li>
         <li class="sidebar-divider"></li>
         <li><a href="#" class="sidebar-logout" id="staffLogout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>

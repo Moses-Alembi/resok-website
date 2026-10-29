@@ -44,6 +44,7 @@
     .side a.active i{color:var(--brand)}
     .side .locked{display:flex;align-items:center;gap:10px;padding:10px;color:#344054;font-weight:600;font-size:14px;cursor:default}
     .side .locked i{width:18px;text-align:center;color:#98a2b3}
+    .side .locked.greyed{color:#98a2b3;cursor:not-allowed;user-select:none}
     .soon{margin-left:auto;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:#eef2f6;color:#667085;border-radius:999px;padding:2px 7px}
     main{padding:22px 22px 60px;min-width:0;max-width:1100px}
 
@@ -195,6 +196,12 @@
         <div>
           <h1 id="hello">Welcome</h1>
           <p class="lede" id="helloSub">Your ReSoK staff portal.</p>
+        </div>
+        <div class="panel" id="homeLaunch" hidden>
+          <h2><i class="fas fa-check-to-slot"></i> Welfare elections</h2>
+          <p style="margin:8px 0 14px">Nominate colleagues and vote in the staff welfare elections.</p>
+          <a class="btn primary" href="elections?for=staff">Go to welfare elections</a>
+          <p class="hint" style="margin-top:14px">The rest of the staff portal is coming soon.</p>
         </div>
         <div class="tiles" id="homeTiles"></div>
         <div class="grid2">
@@ -445,7 +452,7 @@
     const views = Array.from(document.querySelectorAll('[data-panel]')).map((s) => s.dataset.panel);
     const loaders = {};
     function show(view) {
-      if (!views.includes(view)) view = 'home';
+      if (!views.includes(view) || staffLocked()) view = 'home';
       document.querySelectorAll('[data-panel]').forEach((s) => { s.hidden = s.dataset.panel !== view; });
       document.querySelectorAll('.side a[data-view]').forEach((a) => a.classList.toggle('active', a.dataset.view === view));
       el('side').classList.remove('open'); el('menuBtn').setAttribute('aria-expanded', 'false');
@@ -454,6 +461,7 @@
       window.scrollTo(0, 0);
     }
     function route() {
+      if (staffLocked()) { show('home'); return; }
       const hash = location.hash.replace('#', '');
       const ann = hash.match(/^announcement-(\d+)$/);
       if (ann) { show('announcements'); openAnnouncement(+ann[1]); return; }
@@ -559,6 +567,7 @@
       el('manageNav').hidden = !anyManage;
       document.querySelectorAll('[data-needs-row]').forEach((a) => { a.hidden = !home.onStaffList; });
       renderBell(home.notifications);
+      if (staffLocked()) { lockForStaff(); return; }
 
       const tiles = el('homeTiles'); tiles.textContent = '';
       tiles.append(
@@ -595,6 +604,26 @@
       loadTickets('homeTickets', true);
     }
     loaders.home = () => { if (home) loadHome(true); };
+
+    // ---------- launch lock ----------
+    // Staff get welfare elections only for now (Moses, 29 Oct 2026); everything else is greyed
+    // out as coming soon. Super admins keep the whole portal to set it up. To open a section
+    // to staff, take its view out of the lock here and in elections.html's staff menu.
+    const staffLocked = () => !!home && !home.super;
+    function lockForStaff() {
+      document.querySelectorAll('.side a').forEach((a) => {
+        if ((a.getAttribute('href') || '').startsWith('elections')) return;
+        const s = make('span', 'locked'); s.title = 'Coming soon'; s.setAttribute('aria-disabled', 'true');
+        s.innerHTML = a.innerHTML; s.appendChild(make('span', 'soon', 'Soon'));
+        s.hidden = a.hidden;
+        a.replaceWith(s);
+      });
+      document.querySelectorAll('.side .locked').forEach((s) => s.classList.add('greyed'));
+      el('manageNav').hidden = true;
+      el('bellBtn').hidden = true;
+      document.querySelectorAll('[data-panel="home"] > .tiles, [data-panel="home"] > .grid2').forEach((n) => { n.hidden = true; });
+      el('homeLaunch').hidden = false;
+    }
 
     // ---------- announcements ----------
     let annTimer = null;

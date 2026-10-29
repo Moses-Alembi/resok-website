@@ -35,7 +35,8 @@ function hrImportName(string $raw): string
 function hrImportTitle(string $raw): string
 {
     $raw = trim(preg_replace('/\s+/u', ' ', $raw) ?? '');
-    $raw = preg_replace('/\s*-\s*/u', ' - ', $raw) ?? $raw;
+    // "Project Officer -MERU" -> "Project Officer - MERU"; a hyphen inside a word ("Co-ordinator") stays.
+    $raw = preg_replace('/\s+-\s*|\s*-\s+/u', ' - ', $raw) ?? $raw;
     if ($raw !== '' && mb_strtoupper($raw) === $raw && preg_match('/\p{L}{5,}/u', $raw)) {
         $raw = mb_convert_case(mb_strtolower($raw), MB_CASE_TITLE);
     }
@@ -69,13 +70,18 @@ function hrImportParse(string $text): array
     return $rows;
 }
 
-/** Accounts a row can be matched to: staff, plus administrators (the ICT officer may not be on the staff list). */
-function hrImportPeople(PDO $pdo): array
+/**
+ * Accounts a row can be matched to: staff, plus administrators (the ICT officer may not be on
+ * the staff list) and the super admins named in config (Moses is on the HR list too).
+ */
+function hrImportPeople(PDO $pdo, array $config = []): array
 {
+    $supers = array_values(array_filter(array_map(static fn($e) => strtolower(trim((string)$e)), (array)($config['super_admins'] ?? []))));
+    $orSuper = $supers ? ' OR LOWER(u.email) IN (' . implode(',', array_map([$pdo, 'quote'], $supers)) . ')' : '';
     return $pdo->query("SELECT u.id AS user_id, COALESCE(NULLIF(s.full_name, ''), NULLIF(TRIM(CONCAT_WS(' ', NULLIF(m.first_name, ''), NULLIF(m.surname, ''))), ''), '') AS name,
                                u.email, s.user_id IS NOT NULL AS on_staff, s.staff_number, COALESCE(s.active, 1) AS active
                           FROM users u LEFT JOIN staff_accounts s ON s.user_id = u.id LEFT JOIN member_profiles m ON m.user_id = u.id
-                         WHERE s.user_id IS NOT NULL OR u.role = 'admin'
+                         WHERE s.user_id IS NOT NULL OR u.role = 'admin'$orSuper
                          ORDER BY name = '', name, u.email")->fetchAll();
 }
 
@@ -104,7 +110,7 @@ function hrImportHandle(PDO $pdo, array $config, string $route, string $method, 
     $rows = hrImportParse((string)($data['text'] ?? ''));
     if (!$rows) respond(400, ['error' => 'No rows found. Copy the Employee Number, Name and Job Title columns from the spreadsheet and paste them here.']);
     if (count($rows) > 300) respond(400, ['error' => 'That is more than 300 rows. Paste the employee list only.']);
-    $people = hrImportPeople($pdo);
+    $people = hrImportPeople($pdo, $config);
     $byId = [];
     foreach ($people as $p) $byId[(int)$p['user_id']] = $p;
 

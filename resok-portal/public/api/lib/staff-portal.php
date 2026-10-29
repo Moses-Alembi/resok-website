@@ -508,6 +508,7 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         'staff/procurement'=> ['procurementHandle', 'lib/staff-procurement.php'],
         'staff/appraisals' => ['appraisalHandle', 'lib/staff-appraisal.php'],
         'staff/location'   => ['geoHandle', 'lib/staff-geo.php'],
+        'staff/people/import' => ['hrImportHandle', 'lib/staff-hr-import.php'],
     ] as $prefix => [$fn, $file]) {
         if (strpos($route, $prefix) === 0) {
             requireModule($fn, $file);

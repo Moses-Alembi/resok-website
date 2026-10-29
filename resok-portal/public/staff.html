@@ -373,7 +373,21 @@
           </form>
           <div id="peNote"></div>
         </div>
+        <div class="panel" id="hrImport" hidden>
+          <h2>Load the HR employee list</h2>
+          <p class="hint">Copy the Employee Number, Name and Job Title columns from the spreadsheet and paste them here. Each row is matched to an account by name; check the matches before applying. The county comes from the job title, and a title naming none is HQ, Nairobi. Only people on this list can vote or stand in welfare elections.</p>
+          <textarea id="hrText" rows="8" aria-label="Employee list pasted from the spreadsheet" style="width:100%;margin-top:8px"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="btn primary" type="button" id="hrPreview">Check the list</button>
+            <button class="btn" type="button" id="hrClose">Close</button>
+          </div>
+          <div id="hrNote"></div>
+          <div class="table-wrap" id="hrRows" style="margin-top:10px"></div>
+          <div id="hrMissing"></div>
+          <div class="row" style="margin-top:10px" id="hrApplyRow" hidden><button class="btn primary" type="button" id="hrApply">Apply to staff records</button></div>
+        </div>
         <div class="panel">
+          <div class="row" style="margin-bottom:10px"><button class="btn" type="button" id="hrOpen"><i class="fas fa-file-import"></i> Load HR list</button></div>
           <input type="search" id="pSearch" placeholder="Search staff" aria-label="Search staff">
           <div class="table-wrap" id="peopleList" style="margin-top:10px"></div>
         </div>
@@ -858,6 +872,66 @@
     });
     el('pSearch').addEventListener('input', renderPeople);
     loaders.people = loadPeople;
+
+    // ---------- HR employee list (lib/staff-hr-import.php) ----------
+    let hrPreview = null;
+    el('hrOpen').addEventListener('click', () => { el('hrImport').hidden = false; el('hrText').focus(); });
+    el('hrClose').addEventListener('click', () => { el('hrImport').hidden = true; });
+    el('hrPreview').addEventListener('click', async () => {
+      say('hrNote', '', ''); el('hrRows').textContent = ''; el('hrMissing').textContent = ''; el('hrApplyRow').hidden = true;
+      try { hrPreview = await post('staff/people/import', { text: el('hrText').value }); renderHrPreview(); }
+      catch (e) { hrPreview = null; say('hrNote', e.message, 'bad'); }
+    });
+    function renderHrPreview() {
+      const d = hrPreview;
+      const t = make('table'); const hr = make('tr');
+      ['No.', 'From the list', 'Account', 'Counties'].forEach((h) => hr.appendChild(make('th', null, h)));
+      t.appendChild(hr);
+      d.rows.forEach((r) => {
+        const tr = make('tr'); tr.dataset.row = r.row;
+        tr.appendChild(make('td', null, r.number));
+        const c2 = make('td'); c2.appendChild(make('b', null, r.name)); c2.appendChild(make('div', 'hint', r.title)); tr.appendChild(c2);
+        const c3 = make('td');
+        const sel = make('select'); sel.className = 'hr-user'; sel.setAttribute('aria-label', 'Account for ' + r.name);
+        sel.appendChild(make('option', null, 'Not matched (skip)')).value = '';
+        d.people.forEach((p) => { const o = make('option', null, (p.name || p.email) + (p.name ? ' · ' + p.email : '') + (p.onStaff ? '' : ' (admin)')); o.value = String(p.userId); sel.appendChild(o); });
+        sel.value = r.userId ? String(r.userId) : '';
+        c3.appendChild(sel);
+        c3.appendChild(make('div', null)).appendChild(make('span', 'pill ' + (r.match === 'sure' ? 'p-ok' : r.match === 'check' ? 'p-warn' : 'p-bad'),
+          r.match === 'sure' ? 'Matched' : r.match === 'check' ? 'Check this match' : 'No account found'));
+        tr.appendChild(c3);
+        const c4 = make('td');
+        const inp = make('input'); inp.type = 'text'; inp.className = 'hr-counties'; inp.value = r.counties.join(', ');
+        inp.setAttribute('list', 'hrCountyList'); inp.setAttribute('aria-label', 'Counties for ' + r.name);
+        c4.appendChild(inp); tr.appendChild(c4);
+        t.appendChild(tr);
+      });
+      const dl = make('datalist'); dl.id = 'hrCountyList';
+      d.counties.forEach((c) => { dl.appendChild(make('option')).value = c; });
+      el('hrRows').append(dl, t);
+      const unsure = d.rows.filter((r) => r.match !== 'sure').length;
+      say('hrNote', d.rows.length + ' rows read. ' + (unsure ? unsure + ' need checking (amber or red).' : 'Every row matched an account.'), unsure ? 'warn' : 'ok');
+      if (d.notListed.length) {
+        el('hrMissing').appendChild(make('div', 'note warn', 'Active staff not matched to anyone on this list (' + d.notListed.length + '). They keep their portal access but cannot vote or stand in welfare elections: '
+          + d.notListed.map((p) => p.name || p.email).join(', ') + '.'));
+      }
+      el('hrApplyRow').hidden = false;
+    }
+    el('hrApply').addEventListener('click', async () => {
+      const choices = {};
+      el('hrRows').querySelectorAll('tr[data-row]').forEach((tr) => {
+        choices[tr.dataset.row] = { userId: +tr.querySelector('.hr-user').value || null,
+          counties: tr.querySelector('.hr-counties').value.split(',').map((s) => s.trim()).filter(Boolean) };
+      });
+      const n = Object.values(choices).filter((c) => c.userId).length;
+      if (!confirm('Update ' + n + ' staff records with their employee number, job title and counties from this list?')) return;
+      try {
+        const r = await post('staff/people/import', { text: el('hrText').value, choices, apply: true });
+        el('hrImport').hidden = true; el('hrRows').textContent = ''; el('hrMissing').textContent = ''; say('hrNote', '', '');
+        say('flash', r.message, 'ok');
+        loadPeople();
+      } catch (e) { say('hrNote', e.message, 'bad'); }
+    });
 
     // ---------- departments ----------
     async function loadDepartments(list) {

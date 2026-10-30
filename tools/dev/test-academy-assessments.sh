@@ -156,6 +156,25 @@ post "$CC" "$C/enrol" '{}' >/dev/null
 post "$CC" "academy/lessons/$LESSON/progress" '{"completed":true,"seconds":30}' >/dev/null
 check "an attempt draws the configured number"                 '2' "$(post "$CC" "$C/assessment/start" '{}' | grep -o '"prompt"' | wc -l | tr -d ' ')"
 
+echo "Starting twice at once (a double click):"
+# Hand in the open paper first, so the starts below have nothing to share and really race.
+CA=$(field attemptId "$(post "$CC" "$C/assessment/start" '{}')")
+post "$CC" "$C/assessment/submit" "{\"attemptId\":$CA,\"answers\":{}}" >/dev/null
+DUP=$(mktemp -d)
+# One curl sending all eight together: separate curl processes start too far apart on
+# Windows for the requests to overlap. Even so, the laptop's Apache did not overlap them
+# closely enough to show the race without the lock (30 Oct 2026): this proves simultaneous
+# starts behave, not that the lock in academyAssessmentStart() is what makes them.
+ARGS=()
+for n in 1 2 3 4 5 6 7 8; do
+    ARGS+=(-b "$CC" -X POST -H 'Content-Type: application/json' -d '{}' -o "$DUP/$n" "${API}$C/assessment/start" --next)
+done
+curl -s --parallel --parallel-immediate --parallel-max 8 --max-time 15 "${ARGS[@]::${#ARGS[@]}-1}"
+IDS=$(cat "$DUP"/* | grep -o '"attemptId":[0-9]*' | sort -u | wc -l | tr -d ' ')
+rm -rf "$DUP"
+check "eight starts at once share one attempt"                 '1' "$IDS"
+check "and only one paper is drawn"                            '1' "$(q "SELECT COUNT(*) FROM academy_attempts t JOIN academy_enrolments e ON e.id = t.enrolment_id JOIN users u ON u.id = e.user_id WHERE u.email = 'quiz-c@resok.local' AND t.submitted_at IS NULL" | tr -d '\r')"
+
 cleanup
 rm -f "$A" "$B" "$CC" "$PDF"
 echo

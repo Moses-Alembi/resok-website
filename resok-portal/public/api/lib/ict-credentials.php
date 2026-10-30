@@ -64,6 +64,7 @@ function ictCredentialShape(array $row): array
     }
     return [
         'id'            => (int)$row['id'],
+        'version'       => $row['updated_at'] ?? null,   // sent back on save (editConflictGuard)
         'name'          => $row['name'],
         'kind'          => $row['kind'],
         'provider'      => $row['provider'],

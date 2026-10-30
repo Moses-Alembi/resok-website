@@ -26,6 +26,9 @@ return [
     'db_pass' => config_value($local, 'db_pass', 'RESOK_DB_PASS', ''),
 
     'jwt_secret' => config_value($local, 'jwt_secret', 'RESOK_JWT_SECRET', ''),
+    // The key before a rotation, still accepted for a week so nobody is signed out
+    // (tokenSignedWith() in index.php). Empty except while rotating.
+    'jwt_secret_previous' => config_list($local, 'jwt_secret_previous', 'RESOK_JWT_SECRET_PREVIOUS'),
     'require_email_verification' => filter_var(config_value($local, 'require_email_verification', 'RESOK_REQUIRE_EMAIL_VERIFICATION', true), FILTER_VALIDATE_BOOLEAN),
 
     'smtp_host' => config_value($local, 'smtp_host', 'RESOK_SMTP_HOST', ''),

@@ -45,9 +45,15 @@ cleanup
 sql "DELETE FROM auth_attempts;
      INSERT INTO users (email,password_hash,email_verified,role) VALUES
        ('wf-a@resok.local','$HASH',1,'member'),('wf-b@resok.local','$HASH',1,'member'),
-       ('wf-new@resok.local','$HASH',0,'member'),('wf-member@resok.local','$HASH',1,'member');
+       ('wf-new@resok.local','$HASH',0,'member'),('wf-member@resok.local','$HASH',1,'member'),
+       ('wf-nonum@resok.local','$HASH',1,'member');
      INSERT INTO staff_accounts (user_id, full_name) SELECT id, CASE email WHEN 'wf-a@resok.local' THEN 'Wanjiku Staff'
-       WHEN 'wf-b@resok.local' THEN 'Baraka Staff' ELSE 'Not Yet Signed In' END FROM users WHERE email IN ('wf-a@resok.local','wf-b@resok.local','wf-new@resok.local');"
+       WHEN 'wf-b@resok.local' THEN 'Baraka Staff' WHEN 'wf-nonum@resok.local' THEN 'Not On HR List' ELSE 'Not Yet Signed In' END
+       FROM users WHERE email IN ('wf-a@resok.local','wf-b@resok.local','wf-new@resok.local','wf-nonum@resok.local');
+     -- The HR list's employee number is what puts staff on the welfare roll (29 Oct 2026).
+     UPDATE staff_accounts s JOIN users u ON u.id = s.user_id SET s.staff_number = CASE u.email
+       WHEN 'wf-a@resok.local' THEN 'WF-001' WHEN 'wf-new@resok.local' THEN 'WF-003' END
+       WHERE u.email IN ('wf-a@resok.local','wf-new@resok.local');"
 A_ID=$(sql "SELECT id FROM users WHERE email='wf-a@resok.local'")
 B_ID=$(sql "SELECT id FROM users WHERE email='wf-b@resok.local'")
 A=$(login wf-a@resok.local); B=$(login wf-b@resok.local); MEMBER=$(login wf-member@resok.local)
@@ -64,6 +70,7 @@ check "its roll needs no paid year" '"onRoll":' "$R"
 check "only active staff who can sign in are on it" "2" "$(sql "SELECT COUNT(*) FROM election_roll WHERE election_id=$EID AND email LIKE 'wf-%'")"
 check "staff who have not set a password are counted, not added" '"eligibleButCannotSignIn":' "$R"
 absent "no member is on a staff roll" "wf-member" "$(sql "SELECT GROUP_CONCAT(email) FROM election_roll WHERE election_id=$EID")"
+absent "nor staff without an employee number" "wf-nonum" "$(sql "SELECT GROUP_CONCAT(email) FROM election_roll WHERE election_id=$EID")"
 check "hand-adding a member to a staff roll is refused" "staff list" "$(post "$OFFICER" "admin/elections/$EID/roll/add" '{"memberProfileId":1,"reason":"test"}')"
 post "$OFFICER" "admin/elections/$EID/status" '{"status":"nominations"}' >/dev/null
 

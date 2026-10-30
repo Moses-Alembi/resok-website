@@ -61,7 +61,15 @@ function resok_gate_check(): array
         return $unavailable;
     }
 
+    // Sessions signed with the key before a rotation ('jwt_secret_previous', see
+    // tokenSignedWith() in the portal API) still open; the refresh below re-signs them.
     $payload = resok_gate_verify_token((string)($_COOKIE['resok_token'] ?? ''), $secret);
+    $oldKey = false;
+    foreach ((array)($config['jwt_secret_previous'] ?? []) as $previous) {
+        if ($payload !== null || strlen((string)$previous) < 32) continue;
+        $payload = resok_gate_verify_token((string)($_COOKIE['resok_token'] ?? ''), (string)$previous);
+        $oldKey = $payload !== null;
+    }
     if ($payload === null) return $anonymous;
 
     $userId = (int)($payload['userId'] ?? 0);
@@ -109,7 +117,7 @@ function resok_gate_check(): array
         return $unavailable;
     }
 
-    if ($idleFor >= RESOK_GATE_REFRESH_INTERVAL) {
+    if ($idleFor >= RESOK_GATE_REFRESH_INTERVAL || $oldKey) {
         resok_gate_refresh_cookie($payload, $secret);
     }
 

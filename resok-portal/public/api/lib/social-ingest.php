@@ -26,35 +26,81 @@ declare(strict_types=1);
  * rotated from the admin panel without a deploy.
  */
 
+/**
+ * The public address a URL's host resolves to, or an exception when it resolves to none, or
+ * to any private, loopback, link-local or reserved one (169.254.169.254, 127.0.0.1, 10.x...).
+ * Every address is checked, not just the first, since a host can list a public and a private
+ * address together and curl may pick either.
+ */
+function socialPublicAddress(string $url): string
+{
+    $host = (string)parse_url($url, PHP_URL_HOST);
+    $host = trim($host, '[]');
+    if ($host === '') throw new RuntimeException('No host in ' . $url);
+    if (filter_var($host, FILTER_VALIDATE_IP)) {
+        $ips = [$host];
+    } else {
+        $ips = [];
+        foreach ((array)@dns_get_record($host, DNS_A | DNS_AAAA) as $r) {
+            if (!empty($r['ip'])) $ips[] = $r['ip'];
+            if (!empty($r['ipv6'])) $ips[] = $r['ipv6'];
+        }
+        if (!$ips) $ips = (array)@gethostbynamel($host);
+    }
+    if (!$ips) throw new RuntimeException("$host could not be resolved.");
+    foreach ($ips as $ip) {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            throw new RuntimeException("$host points to a private address, so it was not fetched.");
+        }
+    }
+    return $ips[0];
+}
+
 function socialHttpGet(string $url, array $headers = [], int $timeout = 20): string
 {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT => $timeout,
-        CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_USERAGENT => 'ReSoK-site/1.0 (+https://www.resok.org)',
-        CURLOPT_HTTPHEADER => $headers,
-        // These calls carry API tokens and follow redirects, so the redirect is the risk:
-        // a redirect to file:// or gopher:// would read local files, and one to 169.254.x
-        // or localhost would reach services behind the firewall. Restricting the protocol
-        // on both the initial request and any redirect, and capping the chain, closes that
-        // without needing to resolve and vet every hop.
-        CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
-        CURLOPT_MAXREDIRS => 3,
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_SSL_VERIFYHOST => 2,
-    ]);
-    $body = curl_exec($ch);
-    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    curl_close($ch);
-    if ($body === false || $status >= 400) {
-        throw new RuntimeException($error !== '' ? $error : "HTTP $status from " . parse_url($url, PHP_URL_HOST));
+    // These calls carry API tokens and follow redirects, so the redirect is the risk: one to
+    // file:// or gopher:// would read local files, and one to 169.254.x or localhost would
+    // reach services behind the firewall. Redirects are followed here rather than by curl, so
+    // that every hop is HTTPS, resolves only to public addresses, and is then connected to at
+    // the very address that was checked (CURLOPT_RESOLVE), which a DNS answer that changes
+    // between the check and the connection cannot get round. (30 Oct 2026 audit, item 80:
+    // the protocol was restricted before, but an https redirect to an internal host was not.)
+    for ($hop = 0; $hop <= 3; $hop++) {
+        $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+        if ($scheme !== 'https' && !($hop === 0 && $scheme === 'http')) {
+            throw new RuntimeException('Only https addresses are fetched.');
+        }
+        $host = trim((string)parse_url($url, PHP_URL_HOST), '[]');
+        $port = (int)(parse_url($url, PHP_URL_PORT) ?: ($scheme === 'https' ? 443 : 80));
+        $ip = socialPublicAddress($url);
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_USERAGENT => 'ReSoK-site/1.0 (+https://www.resok.org)',
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_RESOLVE => [$host . ':' . $port . ':' . (str_contains($ip, ':') ? '[' . $ip . ']' : $ip)],
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ]);
+        $body = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $next = (string)curl_getinfo($ch, CURLINFO_REDIRECT_URL);
+        $error = curl_error($ch);
+        curl_close($ch);
+        if ($body !== false && $status >= 300 && $status < 400 && $next !== '') {
+            $url = $next;
+            continue;
+        }
+        if ($body === false || $status >= 400) {
+            throw new RuntimeException($error !== '' ? $error : "HTTP $status from " . $host);
+        }
+        return (string)$body;
     }
-    return (string)$body;
+    throw new RuntimeException('Too many redirects from ' . parse_url($url, PHP_URL_HOST));
 }
 
 /** @return array<int,array{externalId:string,title:?string,body:?string,permalink:?string,media:?string,mediaType:string,postedAt:?string}> */

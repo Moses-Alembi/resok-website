@@ -108,6 +108,7 @@ function ictInfraShape(array $row): array
     $health = ictInfraHealth($row['expires_on'] ?? null, (string)($row['status'] ?? 'active'));
     return [
         'id'             => (int)$row['id'],
+        'version'        => $row['updated_at'] ?? null,   // sent back on save (editConflictGuard)
         'kind'           => $row['kind'],
         'name'           => $row['name'],
         'provider'       => $row['provider'],

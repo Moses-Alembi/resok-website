@@ -1508,6 +1508,7 @@
   function assetResetForm() {
     el('assetForm').reset();
     el('aId').value = '';
+    el('aId').dataset.version = '';
     el('assetFormTitle').textContent = 'Add an asset';
     el('assetFormPanel').hidden = true;
   }
@@ -1518,6 +1519,7 @@
       el(id).value = (v === null || v === undefined) ? '' : v;
     });
     el('aId').value = asset.id;
+    el('aId').dataset.version = asset.version || '';   // a save from a stale copy is refused (editConflictGuard)
     el('aTag').value = asset.assetTag;
     el('assetFormTitle').textContent = 'Edit ' + asset.assetTag;
     el('assetFormPanel').hidden = false;
@@ -2474,6 +2476,7 @@
       const raw = el(inputId).value.trim();
       payload[key] = raw === '' ? null : raw;
     });
+    if (id && el('aId').dataset.version) payload.version = el('aId').dataset.version;
     if (!id && el('aTag').value.trim()) payload.assetTag = el('aTag').value.trim();
 
     const button = el('assetSaveBtn');
@@ -2519,6 +2522,7 @@
   function infraReset() {
     el('infraForm').reset();
     el('fId').value = '';
+    el('fId').dataset.version = '';
     el('fAuto').checked = false;
     el('infraFormTitle').textContent = 'Add a record';
     el('infraFormPanel').hidden = true;
@@ -2530,6 +2534,7 @@
       el(inputId).value = (value === null || value === undefined) ? '' : value;
     });
     el('fId').value = item.id;
+    el('fId').dataset.version = item.version || '';   // a save from a stale copy is refused (editConflictGuard)
     el('fAuto').checked = !!item.autoRenew;
     el('infraFormTitle').textContent = 'Edit: ' + item.name;
     el('infraFormPanel').hidden = false;
@@ -2621,6 +2626,7 @@
       // Empty means "clear it" for the nullable columns; the server leaves the rest alone.
       payload[key] = raw === '' ? null : raw;
     });
+    if (id && el('fId').dataset.version) payload.version = el('fId').dataset.version;
 
     const button = el('infraSaveBtn');
     button.disabled = true;
@@ -2662,6 +2668,7 @@
   function licReset() {
     el('licForm').reset();
     el('lId').value = '';
+    el('lId').dataset.version = '';
     el('lSeats').value = '0';
     el('lAutoRenew').checked = false;
     el('licFormTitle').textContent = 'Add a licence';
@@ -2674,6 +2681,7 @@
       el(id).value = (v === null || v === undefined) ? '' : v;
     });
     el('lId').value = l.id;
+    el('lId').dataset.version = l.version || '';   // a save from a stale copy is refused (editConflictGuard)
     el('lAutoRenew').checked = !!l.autoRenew;
     el('licFormTitle').textContent = 'Edit ' + l.name;
     el('licFormPanel').hidden = false;
@@ -2944,6 +2952,7 @@
       const raw = el(inputId).value.trim();
       payload[key] = raw === '' ? null : raw;
     });
+    if (id && el('lId').dataset.version) payload.version = el('lId').dataset.version;
     const button = el('licSaveBtn');
     button.disabled = true;
     try {
@@ -2978,6 +2987,7 @@
   function credReset() {
     el('credForm').reset();
     el('cId').value = '';
+    el('cId').dataset.version = '';
     el('cMfa').checked = false;
     el('cRotationMonths').value = '0';
     el('credFormTitle').textContent = 'Add an account';
@@ -2990,6 +3000,7 @@
       el(id).value = (v === null || v === undefined) ? '' : v;
     });
     el('cId').value = c.id;
+    el('cId').dataset.version = c.version || '';   // a save from a stale copy is refused (editConflictGuard)
     el('cMfa').checked = !!c.mfaEnabled;
     el('credFormTitle').textContent = 'Edit ' + c.name;
     el('credFormPanel').hidden = false;
@@ -3185,6 +3196,7 @@
       const raw = el(inputId).value.trim();
       payload[key] = raw === '' ? null : raw;
     });
+    if (id && el('cId').dataset.version) payload.version = el('cId').dataset.version;
 
     const button = el('credSaveBtn');
     button.disabled = true;

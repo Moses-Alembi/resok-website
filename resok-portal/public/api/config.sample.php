@@ -9,6 +9,9 @@ return [
     'db_pass' => 'replace_with_database_password',
 
     'jwt_secret' => 'replace_with_a_random_secret_of_at_least_32_characters',
+    // To change jwt_secret without signing everyone out: put the old value here, the new one
+    // above, and delete this line a week later.
+    // 'jwt_secret_previous' => 'the_old_jwt_secret',
     'require_email_verification' => true,
 
     // SMTP is optional: leave smtp_host blank to fall back to PHP's mail().

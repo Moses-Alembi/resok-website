@@ -43,6 +43,7 @@ function ictLicenseShape(array $row, int $seatsUsed = 0): array
     $total = (int)$row['seats_total'];
     return [
         'id'          => (int)$row['id'],
+        'version'     => $row['updated_at'] ?? null,   // sent back on save (editConflictGuard)
         'name'        => $row['name'],
         'vendor'      => $row['vendor'],
         'kind'        => $row['kind'],

@@ -93,6 +93,7 @@ function ictAssetShape(array $row, ?array $holder = null): array
     }
     return [
         'id'            => (int)$row['id'],
+        'version'       => $row['updated_at'] ?? null,   // sent back on save (editConflictGuard)
         'assetTag'      => $row['asset_tag'],
         'category'      => $row['category'],
         'name'          => $row['name'],

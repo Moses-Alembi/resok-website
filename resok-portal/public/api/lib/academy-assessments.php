@@ -240,6 +240,17 @@ function academyAssessmentStart(PDO $pdo, int $userId, string $courseKey): array
 
     $pdo->beginTransaction();
     try {
+        // Two starts at once (a double click, two tabs) both passed the checks above and each
+        // drew a paper, spending an extra attempt (30 Oct 2026 audit, item 39). Locking the
+        // enrolment makes the second wait, then look again, and find the first one's paper.
+        $pdo->prepare('SELECT id FROM academy_enrolments WHERE id = ? FOR UPDATE')->execute([(int)$enrolment['id']]);
+        $again = academyAssessmentStatus($pdo, $userId, $courseKey);
+        if ($again['openAttemptId'] || !$again['canStart']) {
+            $pdo->commit();
+            return $again['openAttemptId']
+                ? [academyAttemptPaper($pdo, (int)$again['openAttemptId'], $assessment, $course), null]
+                : [null, $again['reason']];
+        }
         $pdo->prepare('INSERT INTO academy_attempts (enrolment_id, assessment_id, started_at) VALUES (?, ?, NOW())')
             ->execute([(int)$enrolment['id'], $assessment['id']]);
         $attemptId = (int)$pdo->lastInsertId();

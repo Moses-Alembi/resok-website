@@ -1436,7 +1436,7 @@ function absMailHourlyLimit(array $config): int
 /**
  * Sends up to $max queued messages, never more than the hour's remaining budget. Each row is
  * claimed before it is sent, so two requests pumping at once cannot send the same message
- * twice. A message that fails is retried on later pumps, up to three attempts.
+ * twice. A message that fails is retried on later pumps, up to four attempts.
  *
  * @return array{sent:int, failed:int, waiting:int}
  */
@@ -1484,12 +1484,16 @@ function absMailPump(PDO $pdo, array $config, int $max = 20): array
                     $pdo->prepare("UPDATE abs_emails SET status = 'sent', error = NULL, sent_at = NOW() WHERE id = ?")->execute([(int)$m['id']]);
                     $result['sent']++;
                 } else {
-                    // Back in the queue until the third attempt fails, waiting 10 then 20 minutes
-                    // first, so a short outage at the mail server does not use up every try.
-                    $final = (int)$m['attempts'] >= 3;
+                    // Back in the queue until the fourth attempt fails, waiting 10, 40 then 160
+                    // minutes (30 Oct 2026 audit, item 13: was 10 then 20). The growing gap lets
+                    // an outage of a few hours at the mail server pass without using up every
+                    // try; the few random minutes stop a batch that failed together from all
+                    // retrying in the same pump and hitting the hourly limit at once.
+                    $final = (int)$m['attempts'] >= 4;
+                    $wait = 10 * (4 ** max(0, (int)$m['attempts'] - 1)) + random_int(0, 3);
                     $pdo->prepare('UPDATE abs_emails SET status = ?, error = ?, sent_at = NULL,
                                           next_attempt_at = NOW() + INTERVAL ? MINUTE WHERE id = ?')
-                        ->execute([$final ? 'failed' : 'queued', $error, 10 * (int)$m['attempts'], (int)$m['id']]);
+                        ->execute([$final ? 'failed' : 'queued', $error, $wait, (int)$m['id']]);
                     $result['failed']++;
                 }
             }

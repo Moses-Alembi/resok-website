@@ -268,6 +268,50 @@ function b64url(string $data): string {
     return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 }
 
+/**
+ * Refuses a save made from a stale copy of a record (30 Oct 2026 audit, item 36).
+ *
+ * The edit forms send back every field, so when two people had the same record open, the
+ * second Save silently undid the first. A form now sends the 'version' it loaded (the row's
+ * updated_at); if the row has changed since, the save is refused with 409 and the person is
+ * asked to reload. A request without a version (the asset scanner, older pages) is let
+ * through as before. updated_at counts seconds, so two saves within one second still race;
+ * that is far rarer than the minutes-long overlap this is for.
+ */
+function editConflictGuard(PDO $pdo, string $table, int $id, array $data): void {
+    $version = $data['version'] ?? null;
+    if (!is_string($version) || $version === '' || !preg_match('/^[a-z_]+$/', $table)) return;
+    $stmt = $pdo->prepare("SELECT updated_at FROM `$table` WHERE id = ? LIMIT 1");
+    $stmt->execute([$id]);
+    $current = $stmt->fetchColumn();
+    if ($current !== false && (string)$current !== $version) {
+        respond(409, [
+            'error' => 'Someone else changed this while you had it open. Reload it to see their changes, then make yours again.',
+            'conflict' => true,
+        ]);
+    }
+}
+
+/**
+ * Which key signed a session token: 'current', 'previous', or null when neither did.
+ *
+ * Changing jwt_secret used to sign everybody out at once (30 Oct 2026 audit, item 70). To
+ * rotate it now: move the old value into 'jwt_secret_previous' (a string, or a list) in
+ * config.local.php and put the new one in jwt_secret. Sessions signed with the old key keep
+ * working and are re-signed with the new one on their next request; after
+ * RESOK_SESSION_MAX_LIFETIME (7 days) none can be left, and the old key can be deleted.
+ * Short-lived things derived from the key (a view-as cookie, a staff location exception
+ * request, a two-factor challenge in progress) are not carried over and simply start again.
+ */
+function tokenSignedWith(string $body, string $sig, array $config): ?string {
+    if (hash_equals(b64url(hash_hmac('sha256', $body, (string)$config['jwt_secret'], true)), $sig)) return 'current';
+    foreach ((array)($config['jwt_secret_previous'] ?? []) as $previous) {
+        if (strlen((string)$previous) < 32) continue;
+        if (hash_equals(b64url(hash_hmac('sha256', $body, (string)$previous, true)), $sig)) return 'previous';
+    }
+    return null;
+}
+
 // Absolute cap on a session: even a member who never stops clicking has to log in again
 // after this. In practice the idle timeout below almost always ends the session first.
 const RESOK_SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60;
@@ -680,8 +724,8 @@ function auth(array $config): array {
         $token = $m[1];
     }
     [$body, $sig] = array_pad(explode('.', $token, 2), 2, '');
-    $expected = b64url(hash_hmac('sha256', $body, $config['jwt_secret'], true));
-    if (!$body || !$sig || !hash_equals($expected, $sig)) {
+    $signedWith = ($body && $sig) ? tokenSignedWith($body, $sig, $config) : null;
+    if ($signedWith === null) {
         respond(401, ['error' => 'Invalid token']);
     }
     $payload = json_decode(base64_decode(strtr($body, '-_', '+/')), true);
@@ -727,7 +771,7 @@ function auth(array $config): array {
     // Slide the window forward. The original `exp` is carried over untouched, so an active
     // session still ends at the absolute cap rather than renewing itself forever. Header
     // callers have no cookie to refresh - they just re-authenticate.
-    if ($fromCookie && $idleFor >= RESOK_SESSION_REFRESH_INTERVAL) {
+    if ($fromCookie && ($idleFor >= RESOK_SESSION_REFRESH_INTERVAL || $signedWith === 'previous')) {
         $refreshed = $payload;
         unset($refreshed['exp'], $refreshed['seen']);
         issueAuthCookie(token($refreshed, $config['jwt_secret'], (int)$payload['exp']));
@@ -791,9 +835,7 @@ function authOptionalToken(array $config): ?array {
         $token = $m[1];
     }
     [$body, $sig] = array_pad(explode('.', $token, 2), 2, '');
-    if (!$body || !$sig) return null;
-    $expected = b64url(hash_hmac('sha256', $body, $config['jwt_secret'], true));
-    if (!hash_equals($expected, $sig)) return null;
+    if (!$body || !$sig || tokenSignedWith($body, $sig, $config) === null) return null;
 
     $payload = json_decode(base64_decode(strtr($body, '-_', '+/')), true);
     if (!is_array($payload) || (($payload['exp'] ?? 0) < time())) return null;
@@ -2898,6 +2940,7 @@ Respiratory Society of Kenya");
         requireModule('ictLicenseUpdate', 'lib/ict-licenses.php');
         ictRequire($pdo, $user, $config, 'licenses.manage');
 
+        editConflictGuard($pdo, 'ict_licenses', (int)$m[1], input());
         [$licence, $errors, $before] = ictLicenseUpdate($pdo, (int)$m[1], input());
         if ($errors) {
             respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
@@ -2965,6 +3008,7 @@ Respiratory Society of Kenya");
         requireModule('ictCredentialUpdate', 'lib/ict-credentials.php');
         ictRequire($pdo, $user, $config, 'credentials.manage');
 
+        editConflictGuard($pdo, 'ict_credentials', (int)$m[1], input());
         [$credential, $errors, $before] = ictCredentialUpdate($pdo, (int)$m[1], input());
         if ($errors) {
             respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
@@ -3744,6 +3788,7 @@ Respiratory Society of Kenya");
         requireModule('ictAssetUpdate', 'lib/ict-assets.php');
         ictRequire($pdo, $user, $config, 'assets.manage');
 
+        editConflictGuard($pdo, 'ict_assets', (int)$m[1], input());
         [$asset, $errors, $before] = ictAssetUpdate($pdo, (int)$m[1], input());
         if ($errors) {
             respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);
@@ -3855,6 +3900,7 @@ Respiratory Society of Kenya");
         requireModule('ictInfraUpdate', 'lib/ict-infrastructure.php');
         ictRequire($pdo, $user, $config, 'infrastructure.manage');
 
+        editConflictGuard($pdo, 'ict_infrastructure', (int)$m[1], input());
         [$item, $errors, $before] = ictInfraUpdate($pdo, (int)$m[1], input());
         if ($errors) {
             respond(400, ['error' => $errors['_'] ?? 'Please check the highlighted fields.', 'fields' => $errors]);

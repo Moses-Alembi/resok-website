@@ -157,6 +157,23 @@ if ($pdo !== null) {
     } catch (Throwable $e) {
         $activity['error'] = $e->getMessage();
     }
+
+    // Emails that gave up after every retry (30 Oct 2026 audit, item 20). The queue kept
+    // them, but nobody was told, so a member could wait for a password link that never came.
+    // A week's worth is listed in every digest; they are resent from the Emails tab of
+    // abstracts-admin.html. A message still queued after a day means the pump has stopped.
+    // A resend is a new row, so a failure that a later copy delivered is left out.
+    try {
+        $failed = "FROM abs_emails a WHERE a.status = 'failed' AND a.created_at >= (NOW() - INTERVAL 7 DAY)
+                     AND NOT EXISTS (SELECT 1 FROM abs_emails b WHERE b.id > a.id AND b.status = 'sent'
+                                        AND b.to_email = a.to_email AND b.subject = a.subject)";
+        $activity['mailFailed'] = $pdo->query("SELECT a.template, a.to_email, a.error, a.created_at $failed ORDER BY a.id DESC LIMIT 10")->fetchAll();
+        $activity['mailFailedCount'] = (int)$pdo->query("SELECT COUNT(*) $failed")->fetchColumn();
+        $activity['mailStuck'] = (int)$pdo->query("SELECT COUNT(*) FROM abs_emails
+                                                WHERE status IN ('queued','sending') AND created_at < (NOW() - INTERVAL 1 DAY)")->fetchColumn();
+    } catch (Throwable $e) {
+        // No abs_emails table yet: nothing has been queued, so nothing has failed.
+    }
 }
 
 $counts = ['pass' => 0, 'warn' => 0, 'fail' => 0];
@@ -224,6 +241,28 @@ if (isset($activity['error'])) {
         foreach ($activity['notable'] as $r) {
             $line = date('j M H:i', strtotime((string)$r['created_at'])) . ' - ' . str_replace('_', ' ', $r['event_type'])
                 . ($r['detail'] ? ': ' . $r['detail'] : '');
+            $html .= '<li>' . $h($line) . '</li>';
+            $text .= "- {$line}\n";
+        }
+        $html .= '</ul>';
+    }
+}
+
+if (!empty($activity['mailFailedCount']) || !empty($activity['mailStuck'])) {
+    $html .= '<h2 style="font-size:16px;margin:20px 0 8px;">Emails not delivered</h2>';
+    $text .= "\nEMAILS NOT DELIVERED\n";
+    if (!empty($activity['mailStuck'])) {
+        $line = $activity['mailStuck'] . ' still waiting to send after a day. The mail pump may have stopped.';
+        $html .= $p . '<strong style="color:' . $colour['fail'] . '">' . $h($line) . '</strong></p>';
+        $text .= "{$line}\n";
+    }
+    if (!empty($activity['mailFailedCount'])) {
+        $line = $activity['mailFailedCount'] . ' gave up after four tries in the last 7 days. Resend from the Emails tab of abstracts-admin.html once the cause is fixed.';
+        $html .= $p . $h($line) . '</p><ul style="margin:0 0 12px;padding-left:18px;font-size:13px;">';
+        $text .= "{$line}\n";
+        foreach ($activity['mailFailed'] as $r) {
+            $line = date('j M H:i', strtotime((string)$r['created_at'])) . ' - ' . $r['template'] . ' to ' . $r['to_email']
+                . ($r['error'] ? ': ' . $r['error'] : '');
             $html .= '<li>' . $h($line) . '</li>';
             $text .= "- {$line}\n";
         }

@@ -190,4 +190,12 @@ Options -Indexes
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=RESOK_SECURE
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Content-Security-Policy "frame-ancestors 'self'"
+  # The full policy, in report-only mode (30 Oct 2026 audit, item 79): it blocks nothing,
+  # but browsers report what it would have blocked to api/csp-report.php, which lands in
+  # the security log. 'unsafe-inline' is there because the pages still carry inline
+  # scripts; even so, a script injected from any host not listed here would be reported
+  # (and, once enforced, refused). When the log has been quiet for a few weeks, rename the
+  # header to Content-Security-Policy and drop the frame-ancestors line above, which this
+  # one repeats. Adding a new outside service (a widget, an embed) means adding its host.
+  Header set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.googletagmanager.com https://accounts.google.com https://static.cloudflareinsights.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.google-analytics.com https://www.googletagmanager.com https://accounts.google.com https://cloudflareinsights.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com https://accounts.google.com https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /resok-portal/public/api/csp-report.php"
 </IfModule>

@@ -207,7 +207,7 @@
   .scan-head h2{font-size:17px;margin:0}
   .scan-cam{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:4/3}
   .scan-cam video{width:100%;height:100%;object-fit:cover;display:block}
-  .scan-cam .aim{position:absolute;left:10%;right:10%;top:34%;bottom:34%;border:2px solid rgba(255,255,255,.85);border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
+  .scan-cam .aim{position:absolute;left:34%;right:15%;top:50%;bottom:34%;border:2px solid rgba(255,255,255,.9);border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
   .scan-hint{font-size:12.5px;color:var(--muted);margin:8px 0 12px}
   .scan-manual{display:flex;gap:8px}
   .scan-result{margin-top:14px}
@@ -441,7 +441,7 @@
             <option value="seen">Seen ✓</option>
             <option value="missing">Not seen yet</option>
           </select>
-          <button class="btn btn-secondary" id="assetScanBtn" type="button"><i class="fas fa-barcode"></i> Scan tag</button>
+          <button class="btn btn-secondary" id="assetScanBtn" type="button"><i class="fas fa-hashtag"></i> Scan number</button>
           <button class="btn btn-primary" id="assetNewBtn" type="button"><i class="fas fa-plus"></i> Add asset</button>
         </div>
         <div class="scroll"><div id="assetList"></div></div>
@@ -452,7 +452,7 @@
       <div class="scan-sheet" id="scanSheet" hidden role="dialog" aria-modal="true" aria-labelledby="scanTitle">
         <div class="scan-box">
           <div class="scan-head">
-            <h2 id="scanTitle"><i class="fas fa-barcode"></i> Scan an asset tag</h2>
+            <h2 id="scanTitle"><i class="fas fa-hashtag"></i> Read the asset number</h2>
             <button class="btn btn-ghost" id="scanCloseBtn" type="button" aria-label="Close"><i class="fas fa-xmark"></i></button>
           </div>
           <div class="scan-cam" id="scanCam"><video id="scanVideo" playsinline muted></video><div class="aim"></div></div>
@@ -1660,7 +1660,7 @@
       fill.style.width = (stocktake.expected ? Math.round(100 * stocktake.seen / stocktake.expected) : 0) + '%';
       meter.appendChild(fill); info.appendChild(meter);
       actions.append(
-        stocktakeButton('fa-barcode', 'Scan to tick', 'btn-primary', scanOpen),
+        stocktakeButton('fa-hashtag', 'Read number to tick', 'btn-primary', scanOpen),
         stocktakeButton('fa-eye-slash', 'Not seen yet', 'btn-secondary', () => { el('assetSeenFilter').value = 'missing'; loadAssets(); })
       );
       if (can('assets.manage')) actions.appendChild(stocktakeButton('fa-flag-checkered', 'Finish', 'btn-secondary', stocktakeFinish));
@@ -2247,7 +2247,7 @@
   function scanAgainButton() {
     const b = make('button', 'btn btn-secondary');
     b.type = 'button';
-    b.innerHTML = '<i class="fas fa-barcode"></i> Scan another';
+    b.innerHTML = '<i class="fas fa-hashtag"></i> Scan another number';
     b.addEventListener('click', () => { el('scanResult').replaceChildren(); el('scanManual').value = ''; scanStartCamera(); });
     return b;
   }

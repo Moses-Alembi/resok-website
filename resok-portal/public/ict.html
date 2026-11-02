@@ -2102,11 +2102,10 @@
   el('adCloseBtn').addEventListener('click', () => { el('assetDetailPanel').hidden = true; currentAsset = null; });
   /* ---------------- tag scanner ----------------
    * The stickers carry a linear barcode with the tag number under it (000009). The phone's
-   * own BarcodeDetector is used where it exists (Chrome on Android); iPhones have none, so
-   * ZXing is loaded on first use instead. Every common 1D format is accepted because the
-   * printer's symbology is not recorded anywhere, and typing the number always works.
+   * ZXing handles the scan across browsers. Using the native detector first can leave some
+   * browsers stuck with an open camera that never decodes the asset label. Every common 1D
+   * format is accepted because the printer's symbology is not recorded anywhere.
    */
-  const SCAN_FORMATS = ['code_128', 'code_39', 'code_93', 'codabar', 'itf', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'data_matrix'];
   let scanStop = null;
   let scanBusy = false;
   let zxingLoading = null;
@@ -2144,33 +2143,14 @@
     }
     scanHint('Point the camera at the barcode on the tag.');
     try {
-      if ('BarcodeDetector' in window) {
-        const supported = await window.BarcodeDetector.getSupportedFormats();
-        const formats = SCAN_FORMATS.filter((f) => supported.includes(f));
-        if (formats.length) {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-          video.srcObject = stream;
-          await video.play();
-          const detector = new window.BarcodeDetector({ formats });
-          let alive = true;
-          scanStop = () => { alive = false; stream.getTracks().forEach((t) => t.stop()); video.srcObject = null; };
-          const tick = async () => {
-            if (!alive) return;
-            try {
-              const codes = await detector.detect(video);
-              if (codes.length && codes[0].rawValue) { scanFound(codes[0].rawValue); return; }
-            } catch (e) { /* a frame that failed to decode; try the next */ }
-            setTimeout(tick, 180);
-          };
-          tick();
-          return;
-        }
-      }
       await loadZxing();
       const hints = new Map();
       hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
       const reader = new window.ZXing.BrowserMultiFormatReader(hints, 200);
-      scanStop = () => reader.reset();
+      const scanTipTimer = setTimeout(() => {
+        scanHint('Still looking… hold the barcode steady, fill the frame, and reduce glare.');
+      }, 8000);
+      scanStop = () => { clearTimeout(scanTipTimer); reader.reset(); };
       reader.decodeFromVideoDevice(null, video, (result) => { if (result) scanFound(result.getText()); });
     } catch (error) {
       el('scanCam').hidden = true;

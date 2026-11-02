@@ -2144,14 +2144,16 @@
       // Read the digits line in the scanner guide, not the barcode bars above it.
       const crop = document.createElement('canvas');
       crop.width = Math.round(video.videoWidth * 0.8 * 3);
-      crop.height = Math.round(video.videoHeight * 0.12 * 3);
+      crop.height = Math.round(video.videoHeight * 0.1 * 3);
       const ctx = crop.getContext('2d', { willReadFrequently: true });
       ctx.filter = 'grayscale(1) contrast(1.7)';
-      ctx.drawImage(video, video.videoWidth * 0.1, video.videoHeight * 0.55,
-        video.videoWidth * 0.8, video.videoHeight * 0.12, 0, 0, crop.width, crop.height);
+      ctx.drawImage(video, video.videoWidth * 0.1, video.videoHeight * 0.59,
+        video.videoWidth * 0.8, video.videoHeight * 0.1, 0, 0, crop.width, crop.height);
       const result = await ocrWorker.recognize(crop);
-      const number = (result.data.text || '').replace(/\D/g, '').match(/\d{6}/);
-      if (number) scanFound(number[0]);
+      const number = (result.data.text || '').split(/\r?\n/)
+        .map((line) => line.replace(/\D/g, ''))
+        .find((line) => /^\d{6}$/.test(line));
+      if (number) scanFound(number);
     } catch (error) {
       if (ocrTimer) { clearInterval(ocrTimer); ocrTimer = null; }
       scanHint('Number reading could not load. Enter the six-digit tag number below.');
@@ -2214,11 +2216,16 @@
 
   function scanFound(raw) {
     if (scanBusy) return;
+    const tag = String(raw || '').replace(/\s/g, '');
+    if (!/^\d{6}$/.test(tag)) {
+      scanHint('That code is not a six-digit tag. Reading the printed number…');
+      return;
+    }
     scanBusy = true;
     scanHalt();
     el('scanCam').hidden = true;
     if (navigator.vibrate) navigator.vibrate(60);
-    scanLookup(raw);
+    scanLookup(tag);
   }
 
   function scanAgainButton() {

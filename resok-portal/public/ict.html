@@ -2109,6 +2109,56 @@
   let scanStop = null;
   let scanBusy = false;
   let zxingLoading = null;
+  let ocrLoading = null;
+  let ocrWorker = null;
+  let ocrTimer = null;
+  let ocrBusy = false;
+
+  function loadOcr() {
+    if (window.Tesseract) return Promise.resolve();
+    if (!ocrLoading) {
+      ocrLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+        s.onload = resolve;
+        s.onerror = () => { ocrLoading = null; reject(new Error('Text recognition could not load.')); };
+        document.head.appendChild(s);
+      });
+    }
+    return ocrLoading;
+  }
+
+  async function scanPrintedNumber(video) {
+    if (ocrBusy || scanBusy || !video.videoWidth) return;
+    ocrBusy = true;
+    try {
+      if (!ocrWorker) {
+        await loadOcr();
+        ocrWorker = await window.Tesseract.createWorker('eng', 1, {
+          workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
+          corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0',
+          langPath: 'https://tessdata.projectnaptha.com/4.0.0'
+        });
+        await ocrWorker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7' });
+      }
+      // Read the digits line in the scanner guide, not the barcode bars above it.
+      const crop = document.createElement('canvas');
+      crop.width = Math.round(video.videoWidth * 0.8 * 3);
+      crop.height = Math.round(video.videoHeight * 0.12 * 3);
+      const ctx = crop.getContext('2d', { willReadFrequently: true });
+      ctx.filter = 'grayscale(1) contrast(1.7)';
+      ctx.drawImage(video, video.videoWidth * 0.1, video.videoHeight * 0.55,
+        video.videoWidth * 0.8, video.videoHeight * 0.12, 0, 0, crop.width, crop.height);
+      const result = await ocrWorker.recognize(crop);
+      const number = (result.data.text || '').replace(/\D/g, '').match(/\d{6}/);
+      if (number) scanFound(number[0]);
+    } catch (error) {
+      if (ocrTimer) { clearInterval(ocrTimer); ocrTimer = null; }
+      scanHint('Number reading could not load. Enter the six-digit tag number below.');
+    } finally {
+      ocrBusy = false;
+    }
+  }
 
   function loadZxing() {
     if (window.ZXing) return Promise.resolve();
@@ -2125,6 +2175,7 @@
   }
 
   function scanHalt() {
+    if (ocrTimer) { clearInterval(ocrTimer); ocrTimer = null; }
     if (scanStop) { try { scanStop(); } catch (e) { /* already stopped */ } }
     scanStop = null;
   }
@@ -2141,17 +2192,18 @@
       scanHint('This browser cannot use the camera here. Type the tag number below.');
       return;
     }
-    scanHint('Point the camera at the barcode on the tag.');
+    scanHint('Center the printed six-digit number in the guide.');
     try {
       await loadZxing();
       const hints = new Map();
       hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
       const reader = new window.ZXing.BrowserMultiFormatReader(hints, 200);
       const scanTipTimer = setTimeout(() => {
-        scanHint('Still looking… hold the barcode steady, fill the frame, and reduce glare.');
+        scanHint('Reading the printed number… hold the tag steady and keep the digits in the guide.');
       }, 8000);
       scanStop = () => { clearTimeout(scanTipTimer); reader.reset(); };
       reader.decodeFromVideoDevice(null, video, (result) => { if (result) scanFound(result.getText()); });
+      ocrTimer = setInterval(() => scanPrintedNumber(video), 1800);
     } catch (error) {
       el('scanCam').hidden = true;
       scanHint(error && error.name === 'NotAllowedError'

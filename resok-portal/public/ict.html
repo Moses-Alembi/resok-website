@@ -456,7 +456,7 @@
             <button class="btn btn-ghost" id="scanCloseBtn" type="button" aria-label="Close"><i class="fas fa-xmark"></i></button>
           </div>
           <div class="scan-cam" id="scanCam"><video id="scanVideo" playsinline muted></video><div class="aim"></div></div>
-          <p class="scan-hint" id="scanHint">Point the camera at the barcode on the tag.</p>
+          <p class="scan-hint" id="scanHint">Center the six printed digits in the guide.</p>
           <form class="scan-manual" id="scanManualForm" autocomplete="off">
             <input class="in" id="scanManual" inputmode="numeric" maxlength="40" placeholder="Or type the tag number, e.g. 000009" aria-label="Tag number" />
             <button class="btn btn-primary" type="submit">Find</button>
@@ -2101,15 +2101,14 @@
 
   el('adCloseBtn').addEventListener('click', () => { el('assetDetailPanel').hidden = true; currentAsset = null; });
   /* ---------------- tag scanner ----------------
-   * The stickers carry a linear barcode with the tag number under it (000009). The phone's
-   * ZXing handles the scan across browsers. Using the native detector first can leave some
-   * browsers stuck with an open camera that never decodes the asset label. Every common 1D
-   * format is accepted because the printer's symbology is not recorded anywhere.
+   * Read the six human-readable digits printed below each sticker's barcode. OCR is warmed
+   * after ICT access is confirmed so model downloads do not add time after Scan is tapped.
    */
   let scanStop = null;
   let scanBusy = false;
   let ocrLoading = null;
   let ocrWorker = null;
+  let ocrWorkerPromise = null;
   let ocrTimer = null;
   let ocrBusy = false;
 
@@ -2131,28 +2130,11 @@
     if (ocrBusy || scanBusy || !video.videoWidth) return;
     ocrBusy = true;
     try {
-      if (!ocrWorker) {
-        await loadOcr();
-        ocrWorker = await window.Tesseract.createWorker('eng', 1, {
-          workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
-          corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0',
-          langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-          logger: (message) => {
-            if (message.status === 'loading tesseract core' || message.status === 'loading language traineddata') {
-              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
-              scanHint(`Loading number reader${percent}…`);
-            } else if (message.status === 'recognizing text') {
-              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
-              scanHint(`Reading printed digits${percent}…`);
-            }
-          }
-        });
-        await ocrWorker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7' });
-      }
-      // The printed number sits below the bars, near the centre of the guide.
+      ocrWorker = ocrWorker || await ensureOcrWorker();
+      // Keep the OCR input small; the digits remain large enough at 1.5x for recognition.
       const crop = document.createElement('canvas');
-      crop.width = Math.round(video.videoWidth * 0.42 * 4);
-      crop.height = Math.round(video.videoHeight * 0.1 * 4);
+      crop.width = Math.round(video.videoWidth * 0.42 * 1.5);
+      crop.height = Math.round(video.videoHeight * 0.1 * 1.5);
       const ctx = crop.getContext('2d', { willReadFrequently: true });
       ctx.filter = 'grayscale(1) contrast(1.7)';
       ctx.drawImage(video, video.videoWidth * 0.38, video.videoHeight * 0.55,
@@ -2167,10 +2149,43 @@
       else scanHint('Digits not clear yet. Move closer and hold the six numbers steady in the guide.');
     } catch (error) {
       if (ocrTimer) { clearInterval(ocrTimer); ocrTimer = null; }
-      scanHint('Number reading could not load. Enter the six-digit tag number below.');
+      scanHint('Number reader failed to load. Enter the six-digit tag number below.');
     } finally {
       ocrBusy = false;
     }
+  }
+
+  function ensureOcrWorker() {
+    if (ocrWorker) return Promise.resolve(ocrWorker);
+    if (!ocrWorkerPromise) {
+      ocrWorkerPromise = (async () => {
+        await loadOcr();
+        const worker = await window.Tesseract.createWorker('eng', 1, {
+          workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
+          corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0',
+          langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+          logger: (message) => {
+            if (el('scanSheet').hidden) return;
+            if (message.status === 'loading tesseract core' || message.status === 'loading language traineddata') {
+              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
+              scanHint(`Loading number reader${percent}…`);
+            } else if (message.status === 'recognizing text') {
+              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
+              scanHint(`Reading printed digits${percent}…`);
+            }
+          }
+        });
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7' });
+        return worker;
+      })().then((worker) => {
+        ocrWorker = worker;
+        return worker;
+      }).catch((error) => {
+        ocrWorkerPromise = null;
+        throw error;
+      });
+    }
+    return ocrWorkerPromise;
   }
 
   function scanHalt() {
@@ -2194,7 +2209,7 @@
     scanHint('Starting number reader… keep the six digits in the guide.');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false
       });
       video.srcObject = stream;
       await video.play();
@@ -2205,7 +2220,7 @@
       } catch (error) { /* Camera zoom is optional; keep scanning at the default lens setting. */ }
       scanStop = () => { stream.getTracks().forEach((track) => track.stop()); video.srcObject = null; };
       scanHint('Reading the printed number… hold the tag steady.');
-      ocrTimer = setInterval(() => scanPrintedNumber(video), 1200);
+      ocrTimer = setInterval(() => scanPrintedNumber(video), 800);
       scanPrintedNumber(video);
     } catch (error) {
       el('scanCam').hidden = true;
@@ -3570,6 +3585,9 @@
       main.appendChild(empty);
       return;
     }
+
+    // Warm OCR while the ICT page is idle so its downloads do not start after Scan is tapped.
+    ensureOcrWorker().catch(() => {});
 
     // A section nobody can use is never rendered, rather than rendered and then failing on
     // click - which is how a permission system teaches people to distrust it.

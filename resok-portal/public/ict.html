@@ -2136,23 +2136,35 @@
         ocrWorker = await window.Tesseract.createWorker('eng', 1, {
           workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
           corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0',
-          langPath: 'https://tessdata.projectnaptha.com/4.0.0'
+          langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+          logger: (message) => {
+            if (message.status === 'loading tesseract core' || message.status === 'loading language traineddata') {
+              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
+              scanHint(`Loading number reader${percent}…`);
+            } else if (message.status === 'recognizing text') {
+              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
+              scanHint(`Reading printed digits${percent}…`);
+            }
+          }
         });
         await ocrWorker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7' });
       }
       // The printed number sits below the bars, near the centre of the guide.
       const crop = document.createElement('canvas');
-      crop.width = Math.round(video.videoWidth * 0.55 * 4);
-      crop.height = Math.round(video.videoHeight * 0.13 * 4);
+      crop.width = Math.round(video.videoWidth * 0.42 * 4);
+      crop.height = Math.round(video.videoHeight * 0.1 * 4);
       const ctx = crop.getContext('2d', { willReadFrequently: true });
       ctx.filter = 'grayscale(1) contrast(1.7)';
-      ctx.drawImage(video, video.videoWidth * 0.3, video.videoHeight * 0.52,
-        video.videoWidth * 0.55, video.videoHeight * 0.13, 0, 0, crop.width, crop.height);
+      ctx.drawImage(video, video.videoWidth * 0.38, video.videoHeight * 0.55,
+        video.videoWidth * 0.42, video.videoHeight * 0.1, 0, 0, crop.width, crop.height);
       const result = await ocrWorker.recognize(crop);
-      const number = (result.data.text || '').split(/\r?\n/)
+      const textLines = (result.data.lines || []).map((line) => line.text || '');
+      textLines.push(...(result.data.text || '').split(/\r?\n/));
+      const number = textLines
         .map((line) => line.replace(/\D/g, ''))
         .find((line) => /^\d{6}$/.test(line));
       if (number) scanFound(number);
+      else scanHint('Digits not clear yet. Move closer and hold the six numbers steady in the guide.');
     } catch (error) {
       if (ocrTimer) { clearInterval(ocrTimer); ocrTimer = null; }
       scanHint('Number reading could not load. Enter the six-digit tag number below.');
@@ -2182,10 +2194,15 @@
     scanHint('Starting number reader… keep the six digits in the guide.');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false
       });
       video.srcObject = stream;
       await video.play();
+      const track = stream.getVideoTracks()[0];
+      try {
+        const zoom = track.getCapabilities && track.getCapabilities().zoom;
+        if (zoom && zoom.max > 1) await track.applyConstraints({ advanced: [{ zoom: Math.min(2, zoom.max) }] });
+      } catch (error) { /* Camera zoom is optional; keep scanning at the default lens setting. */ }
       scanStop = () => { stream.getTracks().forEach((track) => track.stop()); video.srcObject = null; };
       scanHint('Reading the printed number… hold the tag steady.');
       ocrTimer = setInterval(() => scanPrintedNumber(video), 1200);

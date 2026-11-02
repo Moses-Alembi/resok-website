@@ -207,7 +207,7 @@
   .scan-head h2{font-size:17px;margin:0}
   .scan-cam{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:4/3}
   .scan-cam video{width:100%;height:100%;object-fit:cover;display:block}
-  .scan-cam .aim{position:absolute;left:34%;right:15%;top:50%;bottom:34%;border:2px solid rgba(255,255,255,.9);border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
+  .scan-cam .aim{position:absolute;left:10%;right:10%;top:34%;bottom:34%;border:2px solid rgba(255,255,255,.85);border-radius:8px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
   .scan-hint{font-size:12.5px;color:var(--muted);margin:8px 0 12px}
   .scan-manual{display:flex;gap:8px}
   .scan-result{margin-top:14px}
@@ -441,7 +441,7 @@
             <option value="seen">Seen ✓</option>
             <option value="missing">Not seen yet</option>
           </select>
-          <button class="btn btn-secondary" id="assetScanBtn" type="button"><i class="fas fa-hashtag"></i> Scan number</button>
+          <button class="btn btn-secondary" id="assetScanBtn" type="button"><i class="fas fa-barcode"></i> Scan tag</button>
           <button class="btn btn-primary" id="assetNewBtn" type="button"><i class="fas fa-plus"></i> Add asset</button>
         </div>
         <div class="scroll"><div id="assetList"></div></div>
@@ -452,11 +452,11 @@
       <div class="scan-sheet" id="scanSheet" hidden role="dialog" aria-modal="true" aria-labelledby="scanTitle">
         <div class="scan-box">
           <div class="scan-head">
-            <h2 id="scanTitle"><i class="fas fa-hashtag"></i> Read the asset number</h2>
+            <h2 id="scanTitle"><i class="fas fa-barcode"></i> Scan an asset tag</h2>
             <button class="btn btn-ghost" id="scanCloseBtn" type="button" aria-label="Close"><i class="fas fa-xmark"></i></button>
           </div>
           <div class="scan-cam" id="scanCam"><video id="scanVideo" playsinline muted></video><div class="aim"></div></div>
-          <p class="scan-hint" id="scanHint">Center the six printed digits in the guide.</p>
+          <p class="scan-hint" id="scanHint">Point the camera at the barcode on the tag.</p>
           <form class="scan-manual" id="scanManualForm" autocomplete="off">
             <input class="in" id="scanManual" inputmode="numeric" maxlength="40" placeholder="Or type the tag number, e.g. 000009" aria-label="Tag number" />
             <button class="btn btn-primary" type="submit">Find</button>
@@ -1660,7 +1660,7 @@
       fill.style.width = (stocktake.expected ? Math.round(100 * stocktake.seen / stocktake.expected) : 0) + '%';
       meter.appendChild(fill); info.appendChild(meter);
       actions.append(
-        stocktakeButton('fa-hashtag', 'Read number to tick', 'btn-primary', scanOpen),
+        stocktakeButton('fa-barcode', 'Scan to tick', 'btn-primary', scanOpen),
         stocktakeButton('fa-eye-slash', 'Not seen yet', 'btn-secondary', () => { el('assetSeenFilter').value = 'missing'; loadAssets(); })
       );
       if (can('assets.manage')) actions.appendChild(stocktakeButton('fa-flag-checkered', 'Finish', 'btn-secondary', stocktakeFinish));
@@ -2101,95 +2101,31 @@
 
   el('adCloseBtn').addEventListener('click', () => { el('assetDetailPanel').hidden = true; currentAsset = null; });
   /* ---------------- tag scanner ----------------
-   * Read the six human-readable digits printed below each sticker's barcode. OCR is warmed
-   * after ICT access is confirmed so model downloads do not add time after Scan is tapped.
+   * The stickers carry a linear barcode with the tag number under it (000009). The phone's
+   * own BarcodeDetector is used where it exists (Chrome on Android); iPhones have none, so
+   * ZXing is loaded on first use instead. Every common 1D format is accepted because the
+   * printer's symbology is not recorded anywhere, and typing the number always works.
    */
+  const SCAN_FORMATS = ['code_128', 'code_39', 'code_93', 'codabar', 'itf', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'data_matrix'];
   let scanStop = null;
   let scanBusy = false;
-  let ocrLoading = null;
-  let ocrWorker = null;
-  let ocrWorkerPromise = null;
-  let ocrTimer = null;
-  let ocrBusy = false;
+  let zxingLoading = null;
 
-  function loadOcr() {
-    if (window.Tesseract) return Promise.resolve();
-    if (!ocrLoading) {
-      ocrLoading = new Promise((resolve, reject) => {
+  function loadZxing() {
+    if (window.ZXing) return Promise.resolve();
+    if (!zxingLoading) {
+      zxingLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+        s.src = 'js/vendor/zxing-library-0.21.3.js';
         s.onload = resolve;
-        s.onerror = () => { ocrLoading = null; reject(new Error('Text recognition could not load.')); };
+        s.onerror = () => { zxingLoading = null; reject(new Error('Scanner could not load.')); };
         document.head.appendChild(s);
       });
     }
-    return ocrLoading;
-  }
-
-  async function scanPrintedNumber(video) {
-    if (ocrBusy || scanBusy || !video.videoWidth) return;
-    ocrBusy = true;
-    try {
-      ocrWorker = ocrWorker || await ensureOcrWorker();
-      // Keep the OCR input small; the digits remain large enough at 1.5x for recognition.
-      const crop = document.createElement('canvas');
-      crop.width = Math.round(video.videoWidth * 0.42 * 1.5);
-      crop.height = Math.round(video.videoHeight * 0.12 * 1.5);
-      const ctx = crop.getContext('2d', { willReadFrequently: true });
-      ctx.filter = 'grayscale(1) contrast(1.7)';
-      ctx.drawImage(video, video.videoWidth * 0.38, video.videoHeight * 0.5,
-        video.videoWidth * 0.42, video.videoHeight * 0.12, 0, 0, crop.width, crop.height);
-      const result = await ocrWorker.recognize(crop);
-      const textLines = (result.data.lines || []).map((line) => line.text || '');
-      textLines.push(...(result.data.text || '').split(/\r?\n/));
-      const number = textLines
-        .map((line) => line.replace(/\D/g, ''))
-        .find((line) => /^\d{6}$/.test(line));
-      if (number) scanFound(number);
-      else scanHint('Digits not clear yet. Move closer and hold the six numbers steady in the guide.');
-    } catch (error) {
-      if (ocrTimer) { clearInterval(ocrTimer); ocrTimer = null; }
-      scanHint('Number reader failed to load. Enter the six-digit tag number below.');
-    } finally {
-      ocrBusy = false;
-    }
-  }
-
-  function ensureOcrWorker() {
-    if (ocrWorker) return Promise.resolve(ocrWorker);
-    if (!ocrWorkerPromise) {
-      ocrWorkerPromise = (async () => {
-        await loadOcr();
-        const worker = await window.Tesseract.createWorker('eng', 1, {
-          workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
-          corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0',
-          langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-          logger: (message) => {
-            if (el('scanSheet').hidden) return;
-            if (message.status === 'loading tesseract core' || message.status === 'loading language traineddata') {
-              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
-              scanHint(`Loading number reader${percent}…`);
-            } else if (message.status === 'recognizing text') {
-              const percent = Number.isFinite(message.progress) ? ` ${Math.round(message.progress * 100)}%` : '';
-              scanHint(`Reading printed digits${percent}…`);
-            }
-          }
-        });
-        await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7' });
-        return worker;
-      })().then((worker) => {
-        ocrWorker = worker;
-        return worker;
-      }).catch((error) => {
-        ocrWorkerPromise = null;
-        throw error;
-      });
-    }
-    return ocrWorkerPromise;
+    return zxingLoading;
   }
 
   function scanHalt() {
-    if (ocrTimer) { clearInterval(ocrTimer); ocrTimer = null; }
     if (scanStop) { try { scanStop(); } catch (e) { /* already stopped */ } }
     scanStop = null;
   }
@@ -2206,22 +2142,36 @@
       scanHint('This browser cannot use the camera here. Type the tag number below.');
       return;
     }
-    scanHint('Starting number reader… keep the six digits in the guide.');
+    scanHint('Point the camera at the barcode on the tag.');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false
-      });
-      video.srcObject = stream;
-      await video.play();
-      const track = stream.getVideoTracks()[0];
-      try {
-        const zoom = track.getCapabilities && track.getCapabilities().zoom;
-        if (zoom && zoom.max > 1) await track.applyConstraints({ advanced: [{ zoom: Math.min(2, zoom.max) }] });
-      } catch (error) { /* Camera zoom is optional; keep scanning at the default lens setting. */ }
-      scanStop = () => { stream.getTracks().forEach((track) => track.stop()); video.srcObject = null; };
-      scanHint('Reading the printed number… hold the tag steady.');
-      ocrTimer = setInterval(() => scanPrintedNumber(video), 800);
-      scanPrintedNumber(video);
+      if ('BarcodeDetector' in window) {
+        const supported = await window.BarcodeDetector.getSupportedFormats();
+        const formats = SCAN_FORMATS.filter((f) => supported.includes(f));
+        if (formats.length) {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+          video.srcObject = stream;
+          await video.play();
+          const detector = new window.BarcodeDetector({ formats });
+          let alive = true;
+          scanStop = () => { alive = false; stream.getTracks().forEach((t) => t.stop()); video.srcObject = null; };
+          const tick = async () => {
+            if (!alive) return;
+            try {
+              const codes = await detector.detect(video);
+              if (codes.length && codes[0].rawValue) { scanFound(codes[0].rawValue); return; }
+            } catch (e) { /* a frame that failed to decode; try the next */ }
+            setTimeout(tick, 180);
+          };
+          tick();
+          return;
+        }
+      }
+      await loadZxing();
+      const hints = new Map();
+      hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
+      const reader = new window.ZXing.BrowserMultiFormatReader(hints, 200);
+      scanStop = () => reader.reset();
+      reader.decodeFromVideoDevice(null, video, (result) => { if (result) scanFound(result.getText()); });
     } catch (error) {
       el('scanCam').hidden = true;
       scanHint(error && error.name === 'NotAllowedError'
@@ -2232,22 +2182,17 @@
 
   function scanFound(raw) {
     if (scanBusy) return;
-    const tag = String(raw || '').replace(/\s/g, '');
-    if (!/^\d{6}$/.test(tag)) {
-      scanHint('That code is not a six-digit tag. Reading the printed number…');
-      return;
-    }
     scanBusy = true;
     scanHalt();
     el('scanCam').hidden = true;
     if (navigator.vibrate) navigator.vibrate(60);
-    scanLookup(tag);
+    scanLookup(raw);
   }
 
   function scanAgainButton() {
     const b = make('button', 'btn btn-secondary');
     b.type = 'button';
-    b.innerHTML = '<i class="fas fa-hashtag"></i> Scan another number';
+    b.innerHTML = '<i class="fas fa-barcode"></i> Scan another';
     b.addEventListener('click', () => { el('scanResult').replaceChildren(); el('scanManual').value = ''; scanStartCamera(); });
     return b;
   }
@@ -3585,9 +3530,6 @@
       main.appendChild(empty);
       return;
     }
-
-    // Warm OCR while the ICT page is idle so its downloads do not start after Scan is tapped.
-    ensureOcrWorker().catch(() => {});
 
     // A section nobody can use is never rendered, rather than rendered and then failing on
     // click - which is how a permission system teaches people to distrust it.

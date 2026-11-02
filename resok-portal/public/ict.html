@@ -2108,7 +2108,6 @@
    */
   let scanStop = null;
   let scanBusy = false;
-  let zxingLoading = null;
   let ocrLoading = null;
   let ocrWorker = null;
   let ocrTimer = null;
@@ -2141,14 +2140,14 @@
         });
         await ocrWorker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7' });
       }
-      // Read the digits line in the scanner guide, not the barcode bars above it.
+      // The printed number sits below the bars, near the centre of the guide.
       const crop = document.createElement('canvas');
-      crop.width = Math.round(video.videoWidth * 0.8 * 3);
-      crop.height = Math.round(video.videoHeight * 0.1 * 3);
+      crop.width = Math.round(video.videoWidth * 0.55 * 4);
+      crop.height = Math.round(video.videoHeight * 0.13 * 4);
       const ctx = crop.getContext('2d', { willReadFrequently: true });
       ctx.filter = 'grayscale(1) contrast(1.7)';
-      ctx.drawImage(video, video.videoWidth * 0.1, video.videoHeight * 0.59,
-        video.videoWidth * 0.8, video.videoHeight * 0.1, 0, 0, crop.width, crop.height);
+      ctx.drawImage(video, video.videoWidth * 0.3, video.videoHeight * 0.52,
+        video.videoWidth * 0.55, video.videoHeight * 0.13, 0, 0, crop.width, crop.height);
       const result = await ocrWorker.recognize(crop);
       const number = (result.data.text || '').split(/\r?\n/)
         .map((line) => line.replace(/\D/g, ''))
@@ -2160,20 +2159,6 @@
     } finally {
       ocrBusy = false;
     }
-  }
-
-  function loadZxing() {
-    if (window.ZXing) return Promise.resolve();
-    if (!zxingLoading) {
-      zxingLoading = new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'js/vendor/zxing-library-0.21.3.js';
-        s.onload = resolve;
-        s.onerror = () => { zxingLoading = null; reject(new Error('Scanner could not load.')); };
-        document.head.appendChild(s);
-      });
-    }
-    return zxingLoading;
   }
 
   function scanHalt() {
@@ -2194,18 +2179,17 @@
       scanHint('This browser cannot use the camera here. Type the tag number below.');
       return;
     }
-    scanHint('Center the printed six-digit number in the guide.');
+    scanHint('Starting number reader… keep the six digits in the guide.');
     try {
-      await loadZxing();
-      const hints = new Map();
-      hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
-      const reader = new window.ZXing.BrowserMultiFormatReader(hints, 200);
-      const scanTipTimer = setTimeout(() => {
-        scanHint('Reading the printed number… hold the tag steady and keep the digits in the guide.');
-      }, 8000);
-      scanStop = () => { clearTimeout(scanTipTimer); reader.reset(); };
-      reader.decodeFromVideoDevice(null, video, (result) => { if (result) scanFound(result.getText()); });
-      ocrTimer = setInterval(() => scanPrintedNumber(video), 1800);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      scanStop = () => { stream.getTracks().forEach((track) => track.stop()); video.srcObject = null; };
+      scanHint('Reading the printed number… hold the tag steady.');
+      ocrTimer = setInterval(() => scanPrintedNumber(video), 1200);
+      scanPrintedNumber(video);
     } catch (error) {
       el('scanCam').hidden = true;
       scanHint(error && error.name === 'NotAllowedError'

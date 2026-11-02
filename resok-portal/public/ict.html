@@ -2134,11 +2134,11 @@
       // Keep the OCR input small; the digits remain large enough at 1.5x for recognition.
       const crop = document.createElement('canvas');
       crop.width = Math.round(video.videoWidth * 0.42 * 1.5);
-      crop.height = Math.round(video.videoHeight * 0.1 * 1.5);
+      crop.height = Math.round(video.videoHeight * 0.12 * 1.5);
       const ctx = crop.getContext('2d', { willReadFrequently: true });
       ctx.filter = 'grayscale(1) contrast(1.7)';
-      ctx.drawImage(video, video.videoWidth * 0.38, video.videoHeight * 0.55,
-        video.videoWidth * 0.42, video.videoHeight * 0.1, 0, 0, crop.width, crop.height);
+      ctx.drawImage(video, video.videoWidth * 0.38, video.videoHeight * 0.5,
+        video.videoWidth * 0.42, video.videoHeight * 0.12, 0, 0, crop.width, crop.height);
       const result = await ocrWorker.recognize(crop);
       const textLines = (result.data.lines || []).map((line) => line.text || '');
       textLines.push(...(result.data.text || '').split(/\r?\n/));

@@ -373,12 +373,12 @@ function sendVerificationEmail(array $config, string $email, string $token, stri
     return $mailer->send($email, 'Verify your ReSoK membership account', $text, [], $html);
 }
 
-/** Password reset uses the same account-email card as confirmation and account claims. */
+/** Shared by staff, members, learners and administrators; use account-neutral wording. */
 function passwordResetEmailHtml(string $url): string
 {
     return cardEmailHtml(
         'Reset your password',
-        emailSalutation(null, null, null),
+        'Hello,',
         cardEmailParagraph('We received a request to reset the password for your ReSoK portal account. '
             . 'Click the button below to choose a new password.')
         . cardEmailParagraph('This link expires in <strong>1 hour</strong> and can be used only once.', true),
@@ -397,7 +397,7 @@ function passwordResetEmailHtml(string $url): string
 function sendPasswordResetEmail(array $config, string $email, string $url, ?string &$error = null): bool
 {
     $error = null;
-    $text = "We received a request to reset the password for your ReSoK portal account.\n\n"
+    $text = "Hello,\n\nWe received a request to reset the password for your ReSoK portal account.\n\n"
         . "Use this link to choose a new password:\n{$url}\n\n"
         . "The link expires in 1 hour and works once. If you did not ask for this, you can ignore this email: your password has not changed.\n\n"
         . "Respiratory Society of Kenya";
@@ -407,7 +407,7 @@ function sendPasswordResetEmail(array $config, string $email, string $url, ?stri
     $mailer = new SimpleMailer($config);
     $token = (string)($query['token'] ?? '');
     $token !== '' ? $mailer->withRedactedArchiveCopy($token) : $mailer->withoutArchiveCopy();
-    $sent = $mailer->send($email, 'Reset your ReSoK members portal password', $text, [], $html);
+    $sent = $mailer->send($email, 'Reset your ReSoK account password', $text, [], $html);
     if (!$sent) $error = $mailer->lastError ?? 'The mail server did not accept the message.';
     return $sent;
 }

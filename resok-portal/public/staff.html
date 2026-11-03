@@ -7,199 +7,108 @@
   <title>Staff Portal - ReSoK</title>
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <style>
-    :root{
-      --brand:#087539;--brand-ink:#05603a;--brand-soft:#ecfdf3;--accent:#bc0b22;
-      --ink:#16202c;--muted:#667085;--line:#e4e7ec;--bg:#f5f7fa;--card:#fff;
-      --warn:#93370d;--warn-bg:#fff8e6;--bad:#b42318;--bad-bg:#fef3f2;--info:#175cd3;--info-bg:#eff8ff;
-      --radius:12px;--shadow:0 2px 12px rgba(16,24,40,.06)
-    }
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
-    [hidden]{display:none!important}
-    a{color:var(--brand)}
-    button{font:inherit}
-    .skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:100;background:#fff;padding:8px 12px;border-radius:8px}
-
-    /* Top bar */
-    .top{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--line)}
-    .top-inner{height:64px;display:flex;align-items:center;gap:12px;padding:0 16px}
-    .top img{height:36px}
-    .top .title{font-weight:700;color:#344054;font-size:15px}
-    .top .spacer{flex:1}
-    .icon-btn{position:relative;border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#344054}
-    .icon-btn:focus-visible,.btn:focus-visible,.side a:focus-visible{outline:3px solid #a6f4c5;outline-offset:2px}
-    .badge{position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:19px;height:19px;padding:0 5px;display:flex;align-items:center;justify-content:center}
-    .who{font-size:13.5px;color:#344054;font-weight:600;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .menu-btn{display:none}
-
-    /* Layout */
-    .layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 64px)}
-    .side{background:#fff;border-right:1px solid var(--line);padding:14px 10px;position:sticky;top:64px;height:calc(100vh - 64px);overflow:auto}
-    .side .sec{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:14px 10px 6px}
-    .side a{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;color:#344054;text-decoration:none;font-weight:600;font-size:14px}
-    .side a i{width:18px;text-align:center;color:#98a2b3}
-    .side a:hover{background:var(--bg)}
-    .side a.active{background:var(--brand-soft);color:var(--brand-ink)}
-    .side a.active i{color:var(--brand)}
-    .side .locked{display:flex;align-items:center;gap:10px;padding:10px;color:#344054;font-weight:600;font-size:14px;cursor:default}
-    .side .locked i{width:18px;text-align:center;color:#98a2b3}
-    .side .locked.greyed{color:#98a2b3;cursor:not-allowed;user-select:none}
-    .soon{margin-left:auto;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:#eef2f6;color:#667085;border-radius:999px;padding:2px 7px}
-    main{padding:22px 22px 60px;min-width:0;max-width:1100px}
-
-    /* Pieces */
-    h1{font-size:23px}
-    h2{font-size:17px}
-    .lede{color:var(--muted);font-size:14px;margin-top:4px;max-width:75ch}
-    .panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;min-width:0}
-    .stack{display:grid;gap:16px}
-    .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-    .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-    .tile{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;text-decoration:none;color:inherit;display:block}
-    .tile b{display:block;font-size:24px;line-height:1.2}
-    .tile span{font-size:13px;color:var(--muted)}
-    .tile.alert b{color:var(--accent)}
-    .head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid #d0d5dd;background:#fff;color:var(--ink);border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none}
-    .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-    .btn.danger{border-color:#f1b9c1;color:var(--bad)}
-    .btn.sm{padding:5px 10px;font-size:12.5px}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-    label.f{display:block;font-size:13px;font-weight:700;color:#344054;margin:12px 0 5px}
-    input[type=text],input[type=search],input[type=tel],input[type=date],select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px 12px;font:inherit;font-size:14px;background:#fff;color:var(--ink)}
-    textarea{resize:vertical;min-height:90px}
-    .check{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:10px}
-    .note{border-radius:9px;padding:11px 14px;font-size:14px;margin-top:12px}
-    .note.ok{background:var(--brand-soft);color:var(--brand-ink)}.note.bad{background:var(--bad-bg);color:var(--bad)}.note.info{background:var(--info-bg);color:var(--info)}.note.warn{background:var(--warn-bg);color:var(--warn)}
-    .empty{color:var(--muted);font-size:14px;padding:18px;border:1px dashed var(--line);border-radius:10px;text-align:center}
-    .list-row{display:flex;gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;flex-wrap:wrap}
-    .list-row:last-child{border-bottom:0}
-    .list-row .grow{flex:1;min-width:160px}
-    code.tag{font-size:12px;background:var(--bg);padding:2px 7px;border-radius:5px}
-    .hint{color:var(--muted);font-size:12.5px}
-    .pill{display:inline-flex;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
-    .p-ok{background:var(--brand-soft);color:var(--brand-ink)}.p-warn{background:var(--warn-bg);color:var(--warn)}.p-muted{background:#f2f4f7;color:#475467}.p-info{background:var(--info-bg);color:var(--info)}.p-bad{background:var(--bad-bg);color:var(--bad)}
-    .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-    th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-    .ann{border-bottom:1px solid var(--line);padding:14px 0}
-    .ann:last-child{border-bottom:0}
-    .ann h3{font-size:16px;margin-bottom:4px}
-    .ann .body{white-space:pre-wrap;font-size:14.5px;margin-top:8px;color:#344054}
-    .ann.unread h3::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:middle}
-    .people{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-    .person{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;display:flex;gap:12px;min-width:0}
-    .avatar{flex:0 0 44px;height:44px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);font-weight:800;display:flex;align-items:center;justify-content:center}
-    .person .info{min-width:0}
-    .person .info b{display:block;overflow-wrap:anywhere}
-    .person .info div{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-    .dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:14px}
-    .dl dt{color:var(--muted);font-weight:600}
-    .bell-panel{position:absolute;right:16px;top:60px;width:min(380px,calc(100vw - 32px));background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(16,24,40,.16);z-index:50;max-height:70vh;overflow:auto}
-    .bell-panel .bp-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
-    .bell-panel a.n{display:block;padding:11px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:13.5px}
-    .bell-panel a.n.unread{background:#f6fef9;font-weight:600}
-    .bell-panel a.n small{display:block;color:var(--muted);font-weight:400;margin-top:2px}
-
-    .field-open{border:2px solid var(--brand);background:var(--brand-soft)}
-    .rep-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:3px solid var(--brand);padding-bottom:12px;margin-bottom:14px}
-    .rep-head img{height:40px}
-    .rep-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
-    .rep-tiles div{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-    .rep-tiles b{display:block;font-size:20px}
-    .rep-tiles span{font-size:12px;color:var(--muted)}
-    .rep-day{margin-top:14px;font-weight:700;color:var(--brand-ink);border-bottom:1px solid var(--line);padding-bottom:4px}
-    .rep-item{padding:8px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
-    .rep-item .sum{white-space:pre-wrap;color:#344054;margin-top:3px}
-    @media print{
-      body{background:#fff}
-      .top,.side,.bell-panel,#flash,.no-print{display:none!important}
-      .layout{display:block}
-      main{padding:0;max-width:none}
-      .panel{box-shadow:none;padding:0}
-      .rep-item,.rep-tiles,.rep-head{break-inside:avoid}
-      a{color:inherit;text-decoration:none}
-    }
-    @media (max-width:900px){
-      .rep-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .menu-btn{display:inline-flex}
-      .layout{grid-template-columns:1fr}
-      .side{position:fixed;left:0;top:64px;bottom:0;width:260px;height:auto;z-index:45;transform:translateX(-100%);transition:transform .2s;box-shadow:0 10px 30px rgba(16,24,40,.2)}
-      .side.open{transform:none}
-      .who{display:none}
-      main{padding:16px 16px 60px}
-      .grid2{grid-template-columns:1fr}
-    }
-    /* Nothing shows until the server has said who this is: a signed-out visitor goes straight to
-       login instead of seeing an empty portal first. Shown anyway after 8s if anything stalls. */
-    body.booting{visibility:hidden;animation:staff-reveal 0s 8s forwards}
-    @keyframes staff-reveal{to{visibility:visible}}
-  </style>
+  <script>
+    (function () {
+      var theme = 'dark';
+      try { if (localStorage.getItem('resok-admin-theme') === 'light') theme = 'light'; } catch (e) {}
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" />
+  <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff1" />
 </head>
 <body class="booting">
   <a class="skip" href="#main">Skip to content</a>
-  <header class="top"><div class="top-inner">
-    <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
-    <img src="assets/img/logo.png" alt="ReSoK" />
-    <span class="title">Staff Portal</span>
-    <span class="spacer"></span>
-    <span class="who" id="who"></span>
-    <a class="icon-btn" id="adminLink" href="admin-home" title="Admin suite" aria-label="Admin suite" hidden><i class="fas fa-user-shield"></i></a>
-    <button class="icon-btn" id="bellBtn" type="button" aria-label="Notifications" aria-expanded="false"><i class="fas fa-bell"></i><span class="badge" id="bellCount" hidden></span></button>
-    <button class="icon-btn" id="logoutBtn" type="button" aria-label="Sign out" title="Sign out"><i class="fas fa-sign-out-alt"></i></button>
-  </div></header>
+  <header class="admin-topbar">
+    <button class="admin-sidebar-toggle" id="menuBtn" type="button" aria-label="Open staff navigation" aria-controls="side" aria-expanded="false"><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <a href="staff" class="admin-brand">
+      <span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+      <span class="admin-brand-text"><strong>ReSoK</strong><small>Staff workspace</small></span>
+    </a>
+    <div class="admin-crumb"><span>Workspace</span><strong id="staffSectionTitle">Overview</strong></div>
+    <div class="admin-search" id="staffSearchWrap">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <label for="staffSearch" class="skip">Search staff workspace</label>
+      <input id="staffSearch" type="search" placeholder="Find a staff section..." autocomplete="off" aria-controls="staffSearchResults" aria-expanded="false" />
+      <div class="admin-search-results" id="staffSearchResults" hidden></div>
+    </div>
+    <div class="admin-topbar-right">
+      <button class="admin-icon-btn admin-theme-toggle" id="staffThemeToggle" type="button" aria-label="Switch to light mode" title="Switch to light mode"><i class="fas fa-sun" aria-hidden="true"></i><i class="fas fa-moon" aria-hidden="true"></i></button>
+      <button class="admin-icon-btn staff-fullscreen" id="staffFullscreen" type="button" aria-label="Enter fullscreen" title="Fullscreen"><i class="fas fa-expand" aria-hidden="true"></i></button>
+      <a class="admin-icon-btn" id="adminLink" href="admin-home" title="Admin suite" aria-label="Admin suite" hidden><i class="fas fa-user-shield" aria-hidden="true"></i></a>
+      <button class="admin-icon-btn icon-btn" id="bellBtn" type="button" aria-label="Notifications" aria-expanded="false"><i class="fas fa-bell" aria-hidden="true"></i><span class="badge" id="bellCount" hidden></span></button>
+      <div class="admin-user-chip">
+        <div class="admin-user-avatar" id="staffAvatar" aria-hidden="true">RS</div>
+        <div class="admin-user-meta"><strong id="who">Staff account</strong><small id="staffAccessRole">Staff portal</small></div>
+      </div>
+      <button class="admin-logout-btn" id="logoutBtn" type="button" aria-label="Sign out" title="Sign out"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></button>
+    </div>
+  </header>
   <div class="bell-panel" id="bellPanel" hidden>
     <div class="bp-head"><span>Notifications</span><button class="btn sm" id="bellAll" type="button">Mark all read</button></div>
     <div id="bellList"></div>
   </div>
 
-  <div class="layout">
-    <nav class="side" id="side" aria-label="Staff portal">
-      <a href="#home" data-view="home"><i class="fas fa-house"></i> Home</a>
-      <a href="#announcements" data-view="announcements"><i class="fas fa-bullhorn"></i> Announcements</a>
-      <a href="#directory" data-view="directory"><i class="fas fa-address-book"></i> Staff directory</a>
-      <a href="#helpdesk" data-view="helpdesk"><i class="fas fa-headset"></i> ICT helpdesk</a>
-      <a href="#equipment" data-view="equipment"><i class="fas fa-laptop"></i> My equipment</a>
-      <a href="#field" data-view="field" data-needs-row><i class="fas fa-person-walking-luggage"></i> Field work</a>
-      <a href="#field-reports" data-view="field-reports"><i class="fas fa-chart-column"></i> Field reports</a>
-      <a href="#timesheets" data-view="timesheets" data-needs-row><i class="fas fa-business-time"></i> Timesheets</a>
-      <a href="#procurement" data-view="procurement"><i class="fas fa-cart-shopping"></i> Purchase requests</a>
-      <a href="#appraisals" data-view="appraisals"><i class="fas fa-star-half-stroke"></i> Appraisals</a>
-      <a href="#payslips" data-view="payslips" data-needs-row><i class="fas fa-file-invoice-dollar"></i> My payslips</a>
-      <a href="#location" data-view="location"><i class="fas fa-location-dot"></i> Location access</a>
-      <a href="#profile" data-view="profile" data-needs-row><i class="fas fa-id-card"></i> My profile</a>
-      <a href="elections?for=staff"><i class="fas fa-check-to-slot"></i> Welfare elections</a>
+  <div class="admin-body">
+    <div class="admin-sidebar-backdrop" id="staffSidebarBackdrop"></div>
+    <aside class="admin-sidebar side" id="side" aria-label="Staff navigation">
+      <nav class="admin-nav">
+      <div class="admin-nav-section">Workspace</div>
+      <a class="admin-nav-link" href="#home" data-view="home"><i class="fas fa-house"></i> Overview</a>
+      <a class="admin-nav-link" href="#announcements" data-view="announcements"><i class="fas fa-bullhorn"></i> Announcements</a>
+      <a class="admin-nav-link" href="#directory" data-view="directory"><i class="fas fa-address-book"></i> Staff directory</a>
+      <a class="admin-nav-link" href="#helpdesk" data-view="helpdesk"><i class="fas fa-headset"></i> ICT helpdesk</a>
+      <a class="admin-nav-link" href="#equipment" data-view="equipment"><i class="fas fa-laptop"></i> My equipment</a>
+      <div class="sec" data-staff-fullnav>My work</div>
+      <a class="admin-nav-link" href="#field" data-view="field" data-needs-row><i class="fas fa-person-walking-luggage"></i> Field work</a>
+      <a class="admin-nav-link" href="#field-reports" data-view="field-reports"><i class="fas fa-chart-column"></i> Field reports</a>
+      <a class="admin-nav-link" href="#timesheets" data-view="timesheets" data-needs-row><i class="fas fa-business-time"></i> Timesheets</a>
+      <a class="admin-nav-link" href="#procurement" data-view="procurement"><i class="fas fa-cart-shopping"></i> Purchase requests</a>
+      <a class="admin-nav-link" href="#appraisals" data-view="appraisals"><i class="fas fa-star-half-stroke"></i> Appraisals</a>
+      <a class="admin-nav-link" href="#payslips" data-view="payslips" data-needs-row><i class="fas fa-file-invoice-dollar"></i> My payslips</a>
+      <a class="admin-nav-link" href="#location" data-view="location"><i class="fas fa-location-dot"></i> Location access</a>
+      <a class="admin-nav-link" href="#profile" data-view="profile" data-needs-row><i class="fas fa-id-card"></i> My profile</a>
+      <a class="admin-nav-link" href="elections?for=staff"><i class="fas fa-check-to-slot"></i> Welfare elections</a>
+      <a class="admin-nav-link" href="election-live"><i class="fas fa-tower-broadcast"></i> Live election results</a>
+      <div class="sec" data-staff-fullnav>Coming soon</div>
       <span class="locked" title="Coming soon"><i class="fas fa-umbrella-beach"></i> Leave <span class="soon">Soon</span></span>
       <span class="locked" title="Coming soon"><i class="fas fa-folder-open"></i> Documents &amp; policies <span class="soon">Soon</span></span>
       <span class="locked" title="Coming soon"><i class="fas fa-list-check"></i> Tasks &amp; projects <span class="soon">Soon</span></span>
       <span class="locked" title="Coming soon"><i class="fas fa-calendar-days"></i> Calendar <span class="soon">Soon</span></span>
       <div id="manageNav" hidden>
         <div class="sec">Manage</div>
-        <a href="#manage-announcements" data-view="manage-announcements" data-cap="announcements.publish"><i class="fas fa-pen-to-square"></i> Announcements</a>
-        <a href="#people" data-view="people" data-cap="staff.manage"><i class="fas fa-users-gear"></i> Staff records</a>
-        <a href="#payroll" data-view="payroll" data-cap="payroll.manage payroll.approve"><i class="fas fa-money-check-dollar"></i> Payroll</a>
-        <a href="#departments" data-view="departments" data-cap="staff.manage"><i class="fas fa-sitemap"></i> Departments</a>
-        <a href="#permissions" data-view="permissions" data-super><i class="fas fa-user-shield"></i> Permissions</a>
-        <a href="#activity" data-view="activity" data-super><i class="fas fa-clock-rotate-left"></i> Activity log</a>
-        <a href="ict#staff" data-super><i class="fas fa-user-plus"></i> Add staff accounts</a>
+        <a class="admin-nav-link" href="#manage-announcements" data-view="manage-announcements" data-cap="announcements.publish"><i class="fas fa-pen-to-square"></i> Announcements</a>
+        <a class="admin-nav-link" href="#people" data-view="people" data-cap="staff.manage"><i class="fas fa-users-gear"></i> Staff records</a>
+        <a class="admin-nav-link" href="#payroll" data-view="payroll" data-cap="payroll.manage payroll.approve"><i class="fas fa-money-check-dollar"></i> Payroll</a>
+        <a class="admin-nav-link" href="#departments" data-view="departments" data-cap="staff.manage"><i class="fas fa-sitemap"></i> Departments</a>
+        <a class="admin-nav-link" href="#permissions" data-view="permissions" data-super><i class="fas fa-user-shield"></i> Permissions</a>
+        <a class="admin-nav-link" href="#activity" data-view="activity" data-super><i class="fas fa-clock-rotate-left"></i> Activity log</a>
+        <a class="admin-nav-link" href="ict#staff" data-super><i class="fas fa-user-plus"></i> Add staff accounts</a>
       </div>
-    </nav>
+      <div id="staffAdminNav" hidden>
+        <div class="sec">Administration</div>
+        <a class="admin-nav-link" href="admin-home"><i class="fas fa-table-cells-large"></i> Admin dashboard</a>
+        <a class="admin-nav-link" href="election-admin?for=staff"><i class="fas fa-sliders"></i> Manage welfare elections</a>
+        <a class="admin-nav-link" href="ict"><i class="fas fa-server"></i> ICT operations</a>
+      </div>
+      </nav>
+      <div class="staff-sidebar-foot">Respiratory Society of Kenya<br>Staff workspace</div>
+    </aside>
 
-    <main id="main" tabindex="-1">
+    <main class="admin-main staff-main" id="main" tabindex="-1">
+      <div class="staff-pagebar"><div class="path"><i class="fas fa-house" aria-hidden="true"></i><span>Staff portal</span><span aria-hidden="true">/</span><strong id="staffViewLabel">Overview</strong></div><span class="staff-role-pill"><i class="fas fa-id-badge" aria-hidden="true"></i><span id="staffRolePill">Staff workspace</span></span></div>
       <div id="flash"></div>
 
       <!-- Home -->
       <section class="stack" data-panel="home">
-        <div>
-          <h1 id="hello">Welcome</h1>
-          <p class="lede" id="helloSub">Your ReSoK staff portal.</p>
+        <div class="staff-home-head">
+          <div><div class="eyebrow">People &amp; operations</div><h1 id="hello">Welcome</h1><p class="lede" id="helloSub">Your ReSoK staff portal.</p></div>
+          <div class="staff-head-actions"><a class="btn" href="elections?for=staff"><i class="fas fa-check-to-slot" aria-hidden="true"></i> Welfare elections</a><a class="btn primary" id="staffElectionManageLink" href="election-admin?for=staff" hidden><i class="fas fa-sliders" aria-hidden="true"></i> Manage elections</a></div>
         </div>
-        <div class="panel" id="homeLaunch" hidden>
-          <h2><i class="fas fa-check-to-slot"></i> Welfare elections</h2>
-          <p style="margin:8px 0 14px">Nominate colleagues and vote in the staff welfare elections.</p>
+        <div class="panel staff-launch-card" id="homeLaunch" hidden>
+          <div class="staff-launch-icon"><i class="fas fa-check-to-slot" aria-hidden="true"></i></div>
+          <h2>Your welfare election workspace</h2>
+          <p style="margin:8px 0 14px">View candidates, nominate colleagues, cast your vote, and follow live election results.</p>
           <a class="btn primary" href="elections?for=staff">Go to welfare elections</a>
           <p class="hint" style="margin-top:14px">The rest of the staff portal is coming soon.</p>
         </div>
@@ -424,9 +333,11 @@
         <div><h1>Activity log</h1><p class="lede">Permission changes, staff record changes, deactivations and announcements.</p></div>
         <div class="panel"><div class="table-wrap" id="activityList"></div></div>
       </section>
+      <footer class="admin-footer"><div class="staff-footer-brand"><i class="fas fa-people-group" aria-hidden="true"></i> ReSoK Staff Portal</div><span class="staff-footer-meta">&copy; 2026 Respiratory Society of Kenya</span></footer>
     </main>
   </div>
 
+  <script src="js/staff-shell.js?v=20261103-staff1"></script>
   <script src="js/portal-state.js?v=20261103-welfare2"></script>
   <script>
   (() => {
@@ -455,7 +366,11 @@
       if (!views.includes(view) || staffLocked()) view = 'home';
       document.querySelectorAll('[data-panel]').forEach((s) => { s.hidden = s.dataset.panel !== view; });
       document.querySelectorAll('.side a[data-view]').forEach((a) => a.classList.toggle('active', a.dataset.view === view));
-      el('side').classList.remove('open'); el('menuBtn').setAttribute('aria-expanded', 'false');
+      if (window.ResokStaffShell) window.ResokStaffShell.closeMenu();
+      else { el('side').classList.remove('open'); el('menuBtn').setAttribute('aria-expanded', 'false'); }
+      const label = document.querySelector('.side a[data-view="' + view + '"]');
+      const title = label ? label.textContent.trim() : view.replace(/-/g, ' ');
+      el('staffSectionTitle').textContent = title; el('staffViewLabel').textContent = title;
       say('flash', '', '');
       if (loaders[view]) loaders[view]();
       window.scrollTo(0, 0);
@@ -470,9 +385,8 @@
       show(hash || 'home');
     }
     window.addEventListener('hashchange', route);
-    el('menuBtn').addEventListener('click', () => {
-      const open = el('side').classList.toggle('open');
-      el('menuBtn').setAttribute('aria-expanded', String(open));
+    if (!window.ResokStaffShell) el('menuBtn').addEventListener('click', () => {
+      const open = el('side').classList.toggle('open'); el('menuBtn').setAttribute('aria-expanded', String(open));
     });
     el('logoutBtn').addEventListener('click', () => window.ResokPortal.logout());
 
@@ -503,6 +417,8 @@
     function tile(value, label, href, alert) {
       const t = make('a', 'tile' + (alert ? ' alert' : ''));
       t.href = href;
+      const icons = { '#home': 'fa-bell', '#announcements': 'fa-bullhorn', '#equipment': 'fa-laptop', '#directory': 'fa-users', '#timesheet-approvals': 'fa-business-time', '#procurement-queue': 'fa-cart-shopping', '#appraisals': 'fa-star-half-stroke', '#payroll': 'fa-money-check-dollar' };
+      const badge = make('span', 'tile-icon'); badge.setAttribute('aria-hidden', 'true'); badge.appendChild(make('i', 'fas ' + (icons[href] || 'fa-chart-simple'))); t.appendChild(badge);
       t.appendChild(make('b', null, String(value)));
       t.appendChild(make('span', null, label));
       return t;
@@ -551,9 +467,14 @@
       document.body.classList.remove('booting');
       const me = home.me || {};
       const first = (me.name || '').split(' ')[0];
-      el('who').textContent = (me.name || me.email || '') + (home.super && !home.onStaffList ? ' · Super admin' : '');
+      el('who').textContent = me.name || me.email || 'Staff account';
       el('who').title = me.email || '';
       el('adminLink').hidden = !home.super;
+      el('staffAdminNav').hidden = !home.super;
+      el('staffElectionManageLink').hidden = !home.super;
+      const accountRole = home.super ? 'Super administrator' : (home.caps.length ? 'Staff manager' : 'Staff member');
+      el('staffAccessRole').textContent = accountRole; el('staffRolePill').textContent = accountRole;
+      el('staffAvatar').textContent = initials(me.name, me.email);
       if (!quiet) {
         el('hello').textContent = first ? 'Welcome, ' + first : 'Welcome';
         el('helloSub').textContent = [me.jobTitle, me.department].filter(Boolean).join(' · ') || 'Your ReSoK staff portal.';
@@ -611,8 +532,10 @@
     // to staff, take its view out of the lock here and in elections.html's staff menu.
     const staffLocked = () => !!home && !home.super;
     function lockForStaff() {
+      document.body.classList.add('staff-launch-mode');
       document.querySelectorAll('.side a').forEach((a) => {
-        if ((a.getAttribute('href') || '').startsWith('elections')) return;
+        const href = a.getAttribute('href') || '';
+        if (href === '#home' || href.startsWith('elections') || href === 'election-live') return;
         const s = make('span', 'locked'); s.title = 'Coming soon'; s.setAttribute('aria-disabled', 'true');
         s.innerHTML = a.innerHTML; s.appendChild(make('span', 'soon', 'Soon'));
         s.hidden = a.hidden;

@@ -187,6 +187,15 @@ try {
     $old = ['t'=>$memberUser,'a'=>$actor['userId'],'aj'=>$actor['jti'],'exp'=>time()+300];
     $body = b64url(json_encode($old)); $_COOKIE['resok_viewas']=$body.'.'.b64url(hash_hmac('sha256',$body,viewAsKey($config),true));
     check(asRequest($config,$actor,'members/me')['userId']===$memberUser,'already-issued member preview cookies remain compatible');
+    $_COOKIE['resok_viewas'] = previewCookie($config,$actor,$employee);
+    $pdo->prepare("INSERT INTO staff_grants(user_id,capability) VALUES(?,'staff.admin')")->execute([$employee]);
+    $hrPreview = asRequest($config,$actor,'staff/people');
+    check($hrPreview['userId'] === $employee && !$hrPreview['superAdmin'] && $hrPreview['role'] === 'member', 'owner can preview HR management screens without turning HR into a website administrator');
+    check(staffGate($pdo,$hrPreview,$config)['admin'], 'preview resolves the HR target own staff grant');
+    foreach (['admin/whoami','admin/elections','ict/credentials'] as $route) denied(fn()=>asRequest($config,$actor,$route), 'HR preview refuses website administration: ' . $route);
+    denied(fn()=>asRequest($config,$actor,'staff/people/1','POST'), 'HR preview remains read-only');
+    $pdo->prepare('DELETE FROM staff_grants WHERE user_id=?')->execute([$employee]);
+    denied(fn()=>asRequest($config,$actor,'staff/people'), 'HR grant revocation applies during an existing preview');
     echo "\n".$GLOBALS['testPasses']." view-as integration checks passed against a disposable database.\n";
 } finally {
     unset($_COOKIE['resok_viewas']); $GLOBALS['testPdo']=null; $pdo=null; $server->exec('DROP DATABASE '.$database);

@@ -14,10 +14,13 @@ declare(strict_types=1);
  * 1. Who gets in. Active staff (a staff_accounts row with active = 1) and super administrators.
  *    Members, learners and ordinary admins do not, whatever they guess at in a URL.
  *
- * 2. Two grantable permissions, both given only by a super administrator:
+ * 2. Staff permissions are given only by a super administrator:
+ *      staff.admin            Admin / HR within this staff portal; expands to all staff capabilities
  *      staff.manage           staff records, departments, reporting managers, deactivation
  *      announcements.publish  write, publish and archive announcements
- *    Super administrators hold both. Nobody can grant a permission to themselves.
+ *    The capability vocabulary below also covers payroll and procurement. Super
+ *    administrators hold every staff capability. Staff administrators cannot delegate
+ *    permissions, enter website administration, or gain ICT/security administration.
  *
  * 3. The directory shows work details only: name, title, department, manager, work email,
  *    work phone and office. Staff number and start date are HR fields, seen by the person
@@ -38,6 +41,7 @@ declare(strict_types=1);
  */
 
 const STAFF_CAPABILITIES = [
+    'staff.admin'           => 'Admin / HR: all staff portal tools (no website administrator access)',
     'staff.manage'          => 'Manage staff records, departments and reporting managers',
     'announcements.publish' => 'Write and publish staff announcements',
     'payroll.manage'        => 'Run payroll: pay records, monthly runs and payslips (sees everyone\'s pay)',
@@ -157,7 +161,7 @@ function staffAudit(PDO $pdo, ?int $actor, string $action, ?string $type = null,
 }
 
 /** Latest recorded work across the existing audit logs; no credentials or raw change payloads. */
-function staffActivityFeed(PDO $pdo, ?int $actorId = null, int $limit = 200): array
+function staffActivityFeed(PDO $pdo, ?int $actorId = null, int $limit = 200, bool $staffOnly = false): array
 {
     $limit = max(1,min(200,$limit));
     $sources = [
@@ -169,6 +173,7 @@ function staffActivityFeed(PDO $pdo, ?int $actorId = null, int $limit = 200): ar
     $entries = []; $available = [];
     $exists = $pdo->prepare('SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
     foreach ($sources as $source => [$table,$actorColumn,$actionColumn,$summaryColumn]) {
+        if ($staffOnly && $source !== 'staff') continue;
         $exists->execute([$table]);
         if (!$exists->fetchColumn()) continue;
         $available[] = $source;
@@ -190,20 +195,33 @@ function staffActivityFeed(PDO $pdo, ?int $actorId = null, int $limit = 200): ar
 // Who is asking
 // ---------------------------------------------------------------------------------------
 
-/** The capabilities this user holds. Super administrators hold all of them. */
+/** Effective staff capabilities; staff.admin never changes the website role. */
 function staffCaps(PDO $pdo, array $user, array $config): array
 {
     if (isSuperAdmin($user, $config)) return array_keys(STAFF_CAPABILITIES);
-    $stmt = $pdo->prepare('SELECT capability FROM staff_grants WHERE user_id = ?');
+    $stmt = $pdo->prepare('SELECT g.capability FROM staff_grants g JOIN staff_accounts s ON s.user_id=g.user_id AND s.active=1 WHERE g.user_id = ?');
     $stmt->execute([(int)$user['userId']]);
-    return array_values(array_intersect(array_keys(STAFF_CAPABILITIES), $stmt->fetchAll(PDO::FETCH_COLUMN)));
+    $grants = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    if (in_array('staff.admin', $grants, true)) return array_keys(STAFF_CAPABILITIES);
+    return array_values(array_intersect(array_keys(STAFF_CAPABILITIES), $grants));
+}
+
+/** Staff administration never changes the user's website role or super-admin status. */
+function staffIsAdmin(PDO $pdo, array $user, array $config): bool
+{
+    return isSuperAdmin($user, $config) || in_array('staff.admin', staffCaps($pdo, $user, $config), true);
+}
+
+function staffGateAdmin(array $gate): bool
+{
+    return !empty($gate['super']) || in_array('staff.admin', $gate['caps'], true);
 }
 
 /**
  * The gate for every staff route. Returns the caller's staff row (null for a super admin who
  * is not on the staff list) and capabilities; refuses everyone else.
  *
- * @return array{row: ?array, caps: string[], super: bool}
+ * @return array{row: ?array, caps: string[], super: bool, admin: bool}
  */
 function staffGate(PDO $pdo, array $user, array $config): array
 {
@@ -212,7 +230,8 @@ function staffGate(PDO $pdo, array $user, array $config): array
     $row = $stmt->fetch() ?: null;
     $super = isSuperAdmin($user, $config);
     if (!$row && !$super) respond(403, ['error' => 'This area is for ReSoK staff. Your account is not on the staff list.']);
-    return ['row' => $row, 'caps' => staffCaps($pdo, $user, $config), 'super' => $super];
+    $caps = staffCaps($pdo, $user, $config);
+    return ['row' => $row, 'caps' => $caps, 'super' => $super, 'admin' => $super || in_array('staff.admin', $caps, true)];
 }
 
 function staffNeed(array $gate, string $capability): void
@@ -577,7 +596,7 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         respond(200, [
             'me' => $gate['row'] ? staffRecord($pdo, $me) : $outsider,
             'onStaffList' => (bool)$gate['row'],
-            'caps' => $gate['caps'], 'super' => $gate['super'],
+            'caps' => $gate['caps'], 'super' => $gate['super'], 'admin' => $gate['admin'],
             'announcements' => staffAnnouncementFeed($pdo, $me, $myDept, 5),
             'toAcknowledge' => $pending,
             'notifications' => staffNotifications($pdo, $me, 8),
@@ -646,6 +665,8 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         if (!$before) respond(404, ['error' => 'No such member of staff.']);
         if (!empty($m[2])) {
             $active = !empty(input()['active']);
+            $owner = $pdo->prepare('SELECT email,role FROM users WHERE id=?'); $owner->execute([$target]);
+            if (!$gate['super'] && isSuperAdmin($owner->fetch() ?: [],$config)) respond(403,['error'=>'Only a super administrator can change a super administrator active status.']);
             if (!$active && $target === $me) respond(400, ['error' => 'You cannot deactivate your own account.']);
             $pdo->prepare('UPDATE staff_accounts SET active = ?, deactivated_at = ? WHERE user_id = ?')
                 ->execute([$active ? 1 : 0, $active ? null : date('Y-m-d H:i:s'), $target]);
@@ -694,6 +715,7 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         $wanted = array_values(array_unique(array_map('strval', $wanted)));
         $unknown = array_diff($wanted, array_keys(STAFF_CAPABILITIES));
         if ($unknown) respond(400, ['error' => 'Unknown permission: ' . implode(', ', $unknown)]);
+        if (in_array('staff.admin', $wanted, true)) $wanted = array_keys(STAFF_CAPABILITIES);
         $pdo->beginTransaction();
         $pdo->prepare('DELETE FROM staff_grants WHERE user_id = ?')->execute([$target]);
         $add = $pdo->prepare('INSERT INTO staff_grants (user_id, capability, granted_by) VALUES (?, ?, ?)');
@@ -816,18 +838,19 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
 
     // ----- activity log (super administrators) -----
     if ($route === 'staff/audit' && $method === 'GET') {
-        if (!$gate['super']) respond(403, ['error' => 'Only a super administrator can see the staff activity log.']);
+        if (!staffGateAdmin($gate)) respond(403, ['error' => 'Only a staff administrator can see the staff activity log.']);
         $actorId = null; $actor = null;
         if (isset($_GET['actorUserId']) && $_GET['actorUserId'] !== '') {
             $rawActor = $_GET['actorUserId'];
             if (!is_scalar($rawActor) || filter_var($rawActor,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]) === false) respond(400,['error'=>'Choose a valid staff account.']);
             $actorId = (int)$rawActor;
-            $find = $pdo->prepare('SELECT u.id,u.email,s.full_name,s.job_title FROM users u LEFT JOIN staff_accounts s ON s.user_id=u.id WHERE u.id=?');
+            $find = $pdo->prepare('SELECT u.id,u.email,s.full_name,s.job_title FROM users u LEFT JOIN staff_accounts s ON s.user_id=u.id WHERE u.id=?'
+                . ($gate['super'] ? '' : ' AND s.user_id IS NOT NULL'));
             $find->execute([$actorId]); $person = $find->fetch();
             if (!$person) respond(404,['error'=>'That account does not exist.']);
             $actor = ['userId'=>$actorId,'name'=>$person['full_name'] ?: $person['email'],'email'=>$person['email'],'jobTitle'=>$person['job_title']];
         }
-        respond(200,staffActivityFeed($pdo,$actorId) + ['actor'=>$actor]);
+        respond(200,staffActivityFeed($pdo,$actorId,200,!$gate['super']) + ['actor'=>$actor]);
     }
 
     respond(404, ['error' => 'Route not found']);

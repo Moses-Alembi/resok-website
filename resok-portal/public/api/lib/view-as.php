@@ -104,11 +104,12 @@ function viewAsName(array $row): string
     return $name !== '' ? $name : (string)$row['email'];
 }
 
-/** Self-service reads for ordinary staff, and staff-management reads for verified peers. */
-function viewAsStaffReadAllowed(string $route, bool $targetSuperAdmin = false): bool
+/** Reads use the target's staff authority; downstream route gates still check each permission. */
+function viewAsStaffReadAllowed(string $route, bool $targetSuperAdmin = false, bool $targetStaffAdmin = false): bool
 {
     // The real actor is already a verified super admin. A verified peer may have their
     // staff management screens previewed too; this never opens other private modules.
+    if ($targetStaffAdmin && strncmp($route, 'staff/', 6) === 0) return true;
     if ($targetSuperAdmin && ($route === 'admin/whoami' || strncmp($route, 'staff/', 6) === 0)) return true;
     if (in_array($route, ['members/me', 'staff/home', 'staff/profile', 'staff/directory', 'staff/departments', 'staff/notifications', 'staff/leave', 'welfare/me', 'welfare/live'], true)) return true;
     if ($route === 'staff/announcements') return empty($_GET['manage']);
@@ -155,7 +156,7 @@ function viewAsApply(array $config, array $actor): array
         if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {
             $refuse('You are viewing the staff portal as ' . viewAsName($target) . '. This preview is read-only; nothing can be changed or submitted in their name.');
         }
-        if (!viewAsStaffReadAllowed($route, $targetSuperAdmin)) {
+        if (!viewAsStaffReadAllowed($route, $targetSuperAdmin, staffIsAdmin(db($config), ['userId'=>(int)$target['id'],'role'=>$target['role'],'email'=>$target['email']], $config))) {
             $refuse('You are viewing the staff portal as ' . viewAsName($target) . '. Exit "View as" to open this area with your own account.');
         }
     } else {

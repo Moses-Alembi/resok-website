@@ -60,7 +60,7 @@
       <nav class="admin-nav">
       <div class="admin-nav-section">Workspace</div>
       <a class="admin-nav-link" href="#home" data-view="home"><i class="fas fa-house"></i> Overview</a>
-      <a class="admin-nav-link" href="#administration" data-view="administration" data-super hidden><i class="fas fa-sliders"></i> Manage staff portal</a>
+      <a class="admin-nav-link" href="#administration" data-view="administration" data-staff-admin hidden><i class="fas fa-sliders"></i> Manage staff portal</a>
       <a class="admin-nav-link" href="#announcements" data-view="announcements"><i class="fas fa-bullhorn"></i> Announcements</a>
       <a class="admin-nav-link" href="#directory" data-view="directory"><i class="fas fa-address-book"></i> Staff directory</a>
       <a class="admin-nav-link" href="#helpdesk" data-view="helpdesk"><i class="fas fa-headset"></i> ICT helpdesk</a>
@@ -83,17 +83,17 @@
       <span class="locked" title="Coming soon"><i class="fas fa-calendar-days"></i> Calendar <span class="soon">Soon</span></span>
       <div id="manageNav" hidden>
         <div class="sec">Manage</div>
-        <a class="admin-nav-link" href="#leave-manage" data-super><i class="fas fa-umbrella-beach"></i> Leave requests</a>
-        <a class="admin-nav-link" href="#timesheet-approvals" data-super><i class="fas fa-business-time"></i> Timesheet approvals</a>
-        <a class="admin-nav-link" href="#procurement-all" data-super><i class="fas fa-cart-shopping"></i> All purchase requests</a>
-        <a class="admin-nav-link" href="#appraisal-cycles" data-super><i class="fas fa-star-half-stroke"></i> Appraisal cycles</a>
+        <a class="admin-nav-link" href="#leave-manage" data-staff-admin><i class="fas fa-umbrella-beach"></i> Leave requests</a>
+        <a class="admin-nav-link" href="#timesheet-approvals" data-staff-admin><i class="fas fa-business-time"></i> Timesheet approvals</a>
+        <a class="admin-nav-link" href="#procurement-all" data-staff-admin><i class="fas fa-cart-shopping"></i> All purchase requests</a>
+        <a class="admin-nav-link" href="#appraisal-cycles" data-staff-admin><i class="fas fa-star-half-stroke"></i> Appraisal cycles</a>
         <a class="admin-nav-link" href="#manage-announcements" data-view="manage-announcements" data-cap="announcements.publish"><i class="fas fa-pen-to-square"></i> Announcements</a>
         <a class="admin-nav-link" href="#people" data-view="people" data-cap="staff.manage"><i class="fas fa-users-gear"></i> Staff records</a>
         <a class="admin-nav-link" href="#payroll" data-view="payroll" data-cap="payroll.manage payroll.approve"><i class="fas fa-money-check-dollar"></i> Payroll</a>
         <a class="admin-nav-link" href="#departments" data-view="departments" data-cap="staff.manage"><i class="fas fa-sitemap"></i> Departments</a>
         <a class="admin-nav-link" href="#permissions" data-view="permissions" data-super><i class="fas fa-user-shield"></i> Permissions</a>
-        <a class="admin-nav-link" href="#activity" data-view="activity" data-super><i class="fas fa-clock-rotate-left"></i> Activity log</a>
-        <a class="admin-nav-link" href="ict#staff" data-super><i class="fas fa-user-plus"></i> Add staff accounts</a>
+        <a class="admin-nav-link" href="#activity" data-view="activity" data-staff-admin><i class="fas fa-clock-rotate-left"></i> Activity log</a>
+        <a class="admin-nav-link" href="#staff-accounts" data-staff-admin><i class="fas fa-user-plus"></i> Add staff accounts</a>
       </div>
       <div id="staffAdminNav" hidden>
         <div class="sec">Administration</div>
@@ -332,11 +332,11 @@
       <!-- Full administration of the implemented staff modules. -->
       <section class="stack" data-panel="administration" hidden>
         <div class="head"><div><h1>Staff administration</h1><p class="lede">Manage staff records, operations and settings from one place.</p></div><span class="pill p-ok">Full administrator access</span></div>
-        <div class="note ok">Your super administrator account has all staff management permissions automatically. You do not need an HR role or separate staff grants.</div>
+        <div class="note ok">Your administrator access covers all staff and HR workflows. Permissions and website administration remain with the super administrator.</div>
         <div class="staff-admin-grid">
           <a class="staff-admin-card" href="#leave-manage"><span class="staff-admin-icon"><i class="fas fa-umbrella-beach" aria-hidden="true"></i></span><strong>Leave requests</strong><span>Configure leave types, review requests and record decisions.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#people"><span class="staff-admin-icon"><i class="fas fa-users-gear" aria-hidden="true"></i></span><strong>Staff records</strong><span>Edit employee details, reporting lines and active status.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
-          <a class="staff-admin-card" href="ict#staff"><span class="staff-admin-icon"><i class="fas fa-user-plus" aria-hidden="true"></i></span><strong>Staff accounts</strong><span>Create accounts, send invitations and manage account access.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
+          <a class="staff-admin-card" href="#staff-accounts"><span class="staff-admin-icon"><i class="fas fa-user-plus" aria-hidden="true"></i></span><strong>Staff accounts</strong><span>Create accounts, send invitations and manage account access.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#departments"><span class="staff-admin-icon"><i class="fas fa-sitemap" aria-hidden="true"></i></span><strong>Departments</strong><span>Add departments and update their names and status.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#manage-announcements"><span class="staff-admin-icon"><i class="fas fa-bullhorn" aria-hidden="true"></i></span><strong>Announcements</strong><span>Write, publish, update and archive staff notices.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#timesheet-approvals"><span class="staff-admin-icon"><i class="fas fa-business-time" aria-hidden="true"></i></span><strong>Timesheet approvals</strong><span>Review submitted timesheets and reopen approved weeks for correction.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
@@ -347,14 +347,26 @@
           <a class="staff-admin-card" href="#procurement-all"><span class="staff-admin-icon"><i class="fas fa-cart-shopping" aria-hidden="true"></i></span><strong>Purchase requests</strong><span>Review all requests, approvals, quotations and orders.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#procurement-suppliers"><span class="staff-admin-icon"><i class="fas fa-truck-field" aria-hidden="true"></i></span><strong>Suppliers</strong><span>Add suppliers and maintain their contact details and status.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#appraisal-cycles"><span class="staff-admin-icon"><i class="fas fa-star-half-stroke" aria-hidden="true"></i></span><strong>Appraisal cycles</strong><span>Create cycles, manage appraisers and track staff progress.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
-          <a class="staff-admin-card" href="#location"><span class="staff-admin-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></span><strong>Access rules</strong><span>Manage location rules, working hours and access requests.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
-          <a class="staff-admin-card" href="election-admin?for=staff"><span class="staff-admin-icon"><i class="fas fa-check-to-slot" aria-hidden="true"></i></span><strong>Welfare elections</strong><span>Manage positions, candidates, the 34-person voter roll and dates.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
-          <a class="staff-admin-card" href="ict#tickets"><span class="staff-admin-icon"><i class="fas fa-headset" aria-hidden="true"></i></span><strong>ICT helpdesk</strong><span>Manage staff support tickets and their progress.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
-          <a class="staff-admin-card" href="ict#assets"><span class="staff-admin-icon"><i class="fas fa-laptop" aria-hidden="true"></i></span><strong>Equipment</strong><span>Manage equipment records, assignments and returns.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
-          <a class="staff-admin-card" href="#permissions"><span class="staff-admin-icon"><i class="fas fa-user-shield" aria-hidden="true"></i></span><strong>Permissions</strong><span>Review access; super administrators hold every staff capability.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
+          <a class="staff-admin-card" href="#location"><span class="staff-admin-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></span><strong>Location access</strong><span>Review staff requests to work away or outside working hours.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
+          <a class="staff-admin-card" data-super href="election-admin?for=staff"><span class="staff-admin-icon"><i class="fas fa-check-to-slot" aria-hidden="true"></i></span><strong>Welfare elections</strong><span>Manage positions, candidates, the 34-person voter roll and dates.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
+          <a class="staff-admin-card" data-super href="ict#tickets"><span class="staff-admin-icon"><i class="fas fa-headset" aria-hidden="true"></i></span><strong>ICT helpdesk</strong><span>Manage staff support tickets and their progress.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
+          <a class="staff-admin-card" data-super href="ict#assets"><span class="staff-admin-icon"><i class="fas fa-laptop" aria-hidden="true"></i></span><strong>Equipment</strong><span>Manage equipment records, assignments and returns.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
+          <a class="staff-admin-card" data-super href="#permissions"><span class="staff-admin-icon"><i class="fas fa-user-shield" aria-hidden="true"></i></span><strong>Permissions</strong><span>Review access; super administrators hold every staff capability.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#activity"><span class="staff-admin-icon"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i></span><strong>Activity log</strong><span>Review staff record changes, permission changes and other actions.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
         </div>
         <p class="hint">Documents and policies, tasks, and the calendar are planned sections and are not yet built.</p>
+      </section>
+
+      <section class="stack" data-panel="staff-accounts" hidden>
+        <div><h1>Staff accounts</h1><p class="lede">Add employees and manage their invitations to the staff portal.</p></div>
+        <div id="staffAccountsFlash"></div>
+        <form class="panel" id="staffAccountsAdd">
+          <label class="f" for="staffAccountsInput">Names and email addresses</label>
+          <textarea id="staffAccountsInput" rows="4" placeholder="Employee Name &lt;employee@example.org&gt;" required></textarea>
+          <p class="hint">One employee per line. Create accounts, then send invitations below.</p>
+          <button class="btn primary" type="submit">Add staff accounts</button>
+        </form>
+        <div class="panel"><div class="table-wrap" id="staffAccountsList"></div></div>
       </section>
 
       <!-- Permissions -->
@@ -365,7 +377,7 @@
 
       <!-- Activity -->
       <section class="stack" data-panel="activity" hidden>
-        <div><h1>Activity log</h1><p class="lede">Recorded staff, ICT, administration and security actions. Choose a person to review their work.</p></div>
+        <div><h1>Activity log</h1><p class="lede">Review recorded staff actions. Super administrators can also review ICT, website administration and security activity.</p></div>
         <div class="panel">
           <div class="head"><div><label for="activityActor" class="f">Staff account</label><select id="activityActor"><option value="">All accounts</option></select></div><button class="btn sm" id="activityRefresh" type="button">Refresh</button></div>
           <p class="hint" id="activityContext" style="margin-bottom:14px"></p>
@@ -518,13 +530,14 @@
       el('adminLink').hidden = !home.super;
       el('staffAdminNav').hidden = !home.super;
       el('staffElectionManageLink').hidden = !home.super;
-      el('staffManageLink').hidden = !home.super;
-      document.querySelectorAll('.side [data-super]').forEach((link) => { link.hidden = !home.super; });
-      const accountRole = home.super ? 'Super administrator' : (home.caps.length ? 'Staff manager' : 'Staff member');
-      const accountCaption = home.super ? accountRole : (String(me.jobTitle || '').trim() || accountRole);
+      el('staffManageLink').hidden = !home.admin;
+      document.querySelectorAll('[data-super]').forEach((link) => { link.hidden = !home.super; });
+      document.querySelectorAll('[data-staff-admin]').forEach((link) => { link.hidden = !home.admin; });
+      const accountRole = home.super ? 'Super administrator' : (home.admin ? 'Staff administrator / HR' : (home.caps.length ? 'Staff manager' : 'Staff member'));
+      const accountCaption = (home.super || home.admin) ? accountRole : (String(me.jobTitle || '').trim() || accountRole);
       el('staffAccessRole').textContent = accountCaption; el('staffAccessRole').title = accountCaption;
       el('staffAccountJobTitle').textContent = String(me.jobTitle || '').trim();
-      el('staffAccountJobTitle').hidden = home.super !== true || !el('staffAccountJobTitle').textContent;
+      el('staffAccountJobTitle').hidden = (home.super !== true && home.admin !== true) || !el('staffAccountJobTitle').textContent;
       el('staffRolePill').textContent = accountRole;
       el('staffAvatar').textContent = initials(me.name, me.email);
       if (!quiet) {
@@ -534,7 +547,7 @@
       // Manage menu: only what this person may use.
       let anyManage = false;
       document.querySelectorAll('#manageNav a').forEach((a) => {
-        const ok = a.hasAttribute('data-super') ? home.super : (a.dataset.cap || '').split(' ').some(can);
+        const ok = a.hasAttribute('data-super') ? home.super : a.hasAttribute('data-staff-admin') ? home.admin : (a.dataset.cap || '').split(' ').some(can);
         a.hidden = !ok; if (ok) anyManage = true;
       });
       el('manageNav').hidden = !anyManage;
@@ -581,8 +594,9 @@
     // Staff launch: core views plus welfare elections; super administrators retain their tools.
     function canOpenView(view) {
       if (!home) return false;
-      if (home.super !== true) return ['home', 'announcements', 'equipment', 'helpdesk'].includes(view);
-      if (['administration', 'permissions', 'activity'].includes(view)) return home.super === true;
+      if (home.super !== true && home.admin !== true) return ['home', 'announcements', 'equipment', 'helpdesk'].includes(view);
+      if (view === 'permissions') return home.super === true;
+      if (['administration', 'activity', 'staff-accounts'].includes(view)) return home.super === true || home.admin === true;
       const requirements = new Map([
         ['people', ['staff.manage']], ['departments', ['staff.manage']],
         ['manage-announcements', ['announcements.publish']], ['payroll', ['payroll.manage', 'payroll.approve']]
@@ -610,7 +624,7 @@
     }
     function syncStaffLaunchLinks() {
       if (!home) return;
-      document.body.classList.toggle('staff-limited', home.super !== true);
+      document.body.classList.toggle('staff-limited', home.super !== true && home.admin !== true);
       document.querySelectorAll('.side a, .staff-main a, #bellPanel a').forEach((link) => {
         const saved = link.hasAttribute('data-staff-launch-href');
         const href = saved ? link.dataset.staffLaunchHref : link.getAttribute('href');
@@ -903,7 +917,7 @@
         if (previewable) {
           const preview = staffPreviewButton(p, 'View staff portal', 'btn sm'); preview.style.marginLeft = '6px'; c5.appendChild(preview);
         }
-        if (home?.super === true) {
+        if (home?.super === true || home?.admin === true) {
           const activity = make('a', 'btn sm', 'Activity'); activity.href = '#activity-' + p.userId;
           activity.title = 'Recorded activity for ' + (p.name || p.email); activity.style.marginLeft = '6px'; c5.appendChild(activity);
         }
@@ -1091,6 +1105,42 @@
         box.appendChild(t);
       } catch (e) { box.textContent = ''; box.appendChild(empty(e.message)); }
     };
+
+    // ---------- staff account administration ----------
+    async function renderStaffAccounts() {
+      const box = el('staffAccountsList');
+      try {
+        const data = await api('staff/admin'); box.textContent = '';
+        const table = make('table'); const head = make('tr');
+        ['Employee', 'Email', 'Account', ''].forEach(label => head.appendChild(make('th', null, label))); table.appendChild(head);
+        data.staff.forEach(person => {
+          const row = make('tr'); const name = make('td'); const actions = make('td');
+          name.append(make('strong', null, person.name || person.email), make('div', 'hint', person.jobTitle || ''));
+          if (person.state !== 'active') {
+            const invite = make('button', 'btn sm', person.state === 'invited' ? 'Resend invitation' : 'Send invitation'); invite.type = 'button';
+            invite.addEventListener('click', async () => {
+              invite.disabled = true;
+              try { await post('staff/admin/' + person.userId + '/invite'); say('staffAccountsFlash', 'Invitation sent.', 'ok'); await renderStaffAccounts(); }
+              catch (e) { say('staffAccountsFlash', e.message || 'Invitation could not be sent.', 'bad'); }
+              finally { invite.disabled = false; }
+            }); actions.appendChild(invite);
+          }
+          row.append(name, make('td', null, person.email), make('td', null, person.state), actions); table.appendChild(row);
+        }); box.appendChild(table);
+      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'Staff accounts could not load.')); }
+    }
+    loaders['staff-accounts'] = renderStaffAccounts;
+    el('staffAccountsAdd').addEventListener('submit', async event => {
+      event.preventDefault(); const button = event.currentTarget.querySelector('button'); button.disabled = true;
+      try {
+        const result = await post('staff/admin/add', {list: el('staffAccountsInput').value});
+        const invalid = result.invalid || [];
+        say('staffAccountsFlash', (result.added || []).length + ' accounts added. ' + (result.marked || []).length + ' existing accounts added to staff.' + (invalid.length ? ' Check these entries: ' + invalid.join(', ') : ''), invalid.length ? 'warn' : 'ok');
+        if (!invalid.length) el('staffAccountsInput').value = '';
+        await renderStaffAccounts();
+      } catch (e) { say('staffAccountsFlash', e.message || 'Accounts could not be added.', 'bad'); }
+      finally { button.disabled = false; }
+    });
 
     // ---------- activity ----------
     let activityActorId = null, activityPeople = null, activityRequest = 0;

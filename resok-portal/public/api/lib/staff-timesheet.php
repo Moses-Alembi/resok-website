@@ -110,7 +110,7 @@ function timesheetDeciders(PDO $pdo, int $userId): array
     $stmt->execute([$userId]);
     $manager = $stmt->fetchColumn();
     if ($manager) return [(int)$manager];
-    $hr = $pdo->query("SELECT g.user_id FROM staff_grants g JOIN staff_accounts s ON s.user_id = g.user_id AND s.active = 1 WHERE g.capability = 'staff.manage'")->fetchAll(PDO::FETCH_COLUMN);
+    $hr = $pdo->query("SELECT DISTINCT g.user_id FROM staff_grants g JOIN staff_accounts s ON s.user_id = g.user_id AND s.active = 1 WHERE g.capability IN ('staff.manage','staff.admin')")->fetchAll(PDO::FETCH_COLUMN);
     return array_values(array_diff(array_map('intval', $hr), [$userId]));
 }
 
@@ -118,7 +118,7 @@ function timesheetMayDecide(PDO $pdo, array $gate, int $me, int $owner): bool
 {
     if ($owner === $me) return false;
     if (in_array($me, timesheetDeciders($pdo, $owner), true)) return true;
-    return $gate['super'];
+    return staffGateAdmin($gate);
 }
 
 function timesheetShape(PDO $pdo, array $sheet, bool $withLines = true): array

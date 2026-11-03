@@ -367,7 +367,12 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
         staffPortalHandle($pdo, $config, $route, $method, $user);
     }
 
-    requireSuperAdmin($user, $config);
+    requireModule('staffPortalHandle', 'lib/staff-portal.php');
+    if (!staffPortalEnsureTables($pdo)) respond(503, ['error'=>'Staff administration is unavailable.']);
+    $gate = staffGate($pdo, $user, $config);
+    if (!staffGateAdmin($gate)) respond(403, ['error'=>'Only a staff administrator manages staff accounts.']);
+    // Asset-register linking is part of ICT administration, not HR.
+    if (strpos($route, 'staff/admin/holders') === 0) requireSuperAdmin($user, $config);
 
     if ($route === 'staff/admin' && $method === 'GET') {
         respond(200, ['staff' => staffList($pdo)]);
@@ -376,6 +381,7 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
         $text = (string)(input()['list'] ?? '');
         if (trim($text) === '' || mb_strlen($text) > 50000) respond(400, ['error' => 'Paste the list of names and email addresses.']);
         $result = staffAdd($pdo, $text, $userId);
+        staffAudit($pdo,$userId,'staff_accounts_added','staff',null,count($result['added']) . ' new staff accounts');
         logAdminAction($pdo, $userId, 'staff_added', null,
             count($result['added']) . ' new, ' . count($result['marked']) . ' existing accounts marked as staff');
         respond(200, $result + ['staff' => staffList($pdo)]);
@@ -383,6 +389,7 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
     if ($route === 'staff/admin/invite' && $method === 'POST') {
         if (function_exists('set_time_limit')) @set_time_limit(180);
         $result = staffSendBatch($pdo, $config, (int)(input()['limit'] ?? 20));
+        staffAudit($pdo,$userId,'staff_invites_sent','staff',null,count($result['sent']) . ' sent');
         logAdminAction($pdo, $userId, 'staff_invites_sent', null, count($result['sent']) . ' sent, ' . count($result['failed']) . ' failed');
         respond(200, $result + ['staff' => staffList($pdo)]);
     }
@@ -391,14 +398,21 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
         if ($m[2] === 'invite') {
             $error = null;
             $sent = staffSendInvite($pdo, $config, $target, $error);
+            staffAudit($pdo,$userId,$sent ? 'staff_invite_sent' : 'staff_invite_failed','staff',(string)$target,$error);
             logAdminAction($pdo, $userId, $sent ? 'staff_invite_sent' : 'staff_invite_failed', null, 'user #' . $target . ($error ? ': ' . $error : ''));
             if (!$sent) respond(400, ['error' => $error ?? 'Not sent.']);
             respond(200, ['staff' => staffList($pdo)]);
         }
+        $person = $pdo->prepare('SELECT email,role FROM users WHERE id=?');
+        $person->execute([$target]);
+        if (!$gate['super'] && isSuperAdmin($person->fetch() ?: [], $config)) respond(403, ['error'=>'Only a super administrator can remove a super administrator.']);
         // Off the staff list. The account itself stays (it may be a member's too); an
         // unused invite link is cancelled so it cannot be finished later.
         $pdo->prepare('DELETE FROM staff_accounts WHERE user_id = ?')->execute([$target]);
+        $pdo->prepare('DELETE FROM staff_grants WHERE user_id = ?')->execute([$target]);
+        sessionRevokeAll($pdo, $target);
         $pdo->prepare('UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE id = ? AND email_verified = 0')->execute([$target]);
+        staffAudit($pdo,$userId,'staff_account_removed','staff',(string)$target,'Removed from the staff list');
         logAdminAction($pdo, $userId, 'staff_removed', null, 'user #' . $target);
         respond(200, ['staff' => staffList($pdo)]);
     }

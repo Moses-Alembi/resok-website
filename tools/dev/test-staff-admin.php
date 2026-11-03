@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 date_default_timezone_set('Africa/Nairobi');
 $lib = __DIR__ . '/../../resok-portal/public/api/lib/';
-foreach (['migrate', 'crypto', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-procurement', 'staff-payroll', 'staff-appraisal', 'staff-geo', 'staff-leave', 'staff-hr-import'] as $module) require_once $lib . $module . '.php';
+foreach (['migrate', 'ict', 'crypto', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-procurement', 'staff-payroll', 'staff-appraisal', 'staff-geo', 'staff-leave', 'staff-hr-import'] as $module) require_once $lib . $module . '.php';
 
 class StaffAdminResponse extends Exception
 {
@@ -14,9 +14,21 @@ class StaffAdminResponse extends Exception
 }
 function respond(int $status, array $body): void { throw new StaffAdminResponse($status, $body); }
 function input(): array { return $GLOBALS['adminInput'] ?? []; }
-function isSuperAdmin(array $user, array $config): bool
-{
-    return ($user['role'] ?? '') === 'admin' && in_array(strtolower($user['email'] ?? ''), $config['super_admins'] ?? [], true);
+// Exercise the production website-role gates without running its HTTP dispatcher.
+$indexSource = file_get_contents(__DIR__ . '/../../resok-portal/public/api/index.php');
+$gateStart = strpos($indexSource, 'function requireAdmin(');
+$gateEnd = strpos($indexSource, 'function requireFields(', $gateStart);
+if ($gateStart === false || $gateEnd === false) throw new RuntimeException('Website authorization helpers not found');
+eval(substr($indexSource, $gateStart, $gateEnd-$gateStart));
+function auth(array $config): array { return $GLOBALS['adminAccountActor']; }
+function logAdminAction(PDO $pdo, int $actor, string $action, ?int $profile = null, ?string $reason = null): void {
+    $pdo->prepare('INSERT INTO admin_actions(admin_user_id,action,reason,created_at) VALUES(?,?,?,NOW())')->execute([$actor,$action,$reason]);
+}
+function adminAccountCall(PDO $pdo, array $config, array $user, string $route, string $method='GET', array $body=[]): StaffAdminResponse {
+    $GLOBALS['adminAccountActor']=$user; $GLOBALS['adminInput']=$body; $_GET=[];
+    try { staffHandle($pdo,$config,$route,$method); }
+    catch (StaffAdminResponse $response) { return $response; }
+    throw new RuntimeException('No account response');
 }
 function requireModule(string $function, string $path): void
 {
@@ -236,6 +248,50 @@ try {
     for ($i=0;$i<205;$i++) $bulkAudit->execute([$second['userId']]);
     $bounded = adminCall($pdo,$config,$super,'staff/audit','GET',[],['actorUserId'=>$second['userId']])->body;
     adminCheck(count($bounded['entries']) === 200 && $bounded['hasMore'] && $bounded['entries'][0]['at'] === '2099-01-01 00:00:00','activity is ordered by time and reports its latest-200 limit');
+    // Staff Admin / HR has full staff workflows without becoming a website admin.
+    $pdo->exec("INSERT INTO users(email,password_hash,email_verified,role) VALUES('hr@staff-admin.test','unused',1,'member')");
+    $hrId = (int)$pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO staff_accounts(user_id,full_name,job_title) VALUES(?,?,?)')->execute([$hrId,'Synthetic HR','Finance & Admin Manager']);
+    $pdo->prepare("INSERT INTO staff_grants(user_id,capability) VALUES(?,'staff.admin')")->execute([$hrId]);
+    $hr = ['userId'=>$hrId,'email'=>'hr@staff-admin.test','role'=>'member'];
+    $hrGate = staffGate($pdo,$hr,$config);
+    adminCheck($hrGate['admin'] && !$hrGate['super'] && !isSuperAdmin($hr,$config), 'HR authority is scoped to staff and never creates website super-admin access');
+    adminCheck($hrGate['caps'] === array_keys(STAFF_CAPABILITIES), 'the single staff-admin grant expands to every staff capability');
+    $hrHome = adminCall($pdo,$config,$hr,'staff/home')->body;
+    adminCheck($hrHome['admin'] && !$hrHome['super'] && $hrHome['me']['jobTitle'] === 'Finance & Admin Manager', 'HR home identifies the scoped role and saved title');
+    foreach (['staff/people','staff/announcements','staff/timesheets/approvals','staff/timesheets/report','staff/payroll','staff/payroll/records','staff/procurement/suppliers','staff/appraisals/cycles','staff/leave'] as $route) {
+        adminCheck(adminCall($pdo,$config,$hr,$route)->status === 200, 'HR opens ' . $route);
+    }
+    adminCheck(adminCall($pdo,$config,$hr,'staff/departments','POST',['name'=>'HR department'])->status === 200, 'HR manages departments');
+    adminCheck(adminCall($pdo,$config,$hr,'staff/leave/types','POST',['name'=>'HR configured leave'])->status === 200, 'HR configures leave types');
+    adminCheck(adminCall($pdo,$config,$hr,'staff/leave')->body['canManage'], 'HR can review and decide staff leave requests');
+    adminCheck(adminCall($pdo,$config,$hr,'staff/timesheets/codes','POST',['code'=>'HR-ONLY','name'=>'HR project','kind'=>'project'])->status === 200, 'HR maintains staff charge codes');
+    foreach (['GET','POST'] as $method) adminCheck(adminCall($pdo,$config,$hr,$method === 'GET' ? 'staff/permissions' : 'staff/permissions/' . $employee['userId'],$method,['caps'=>['staff.admin']])->status === 403, 'HR cannot delegate permissions: ' . $method);
+    adminCheck(adminCall($pdo,$config,$hr,'staff/people/' . $second['userId'] . '/active','POST',['active'=>false])->status === 403, 'HR cannot deactivate a website super administrator');
+    $hrAudit = adminCall($pdo,$config,$hr,'staff/audit')->body;
+    adminCheck($hrAudit['sources'] === ['staff'] && array_unique(array_column($hrAudit['entries'],'source')) === ['staff'], 'HR audit responses contain only staff activity, never website ICT or security logs');
+    $location = adminCall($pdo,$config,$hr,'staff/location')->body;
+    adminCheck(!$location['isSuper'] && $location['cloudflare'] === null, 'HR does not receive global location security settings or infrastructure diagnostics');
+    adminCheck(adminCall($pdo,$config,$hr,'staff/location/settings','POST',[])->status === 403, 'HR cannot edit global location security rules');
+    try { requireAdmin($hr); adminCheck(false,'HR cannot enter website admin routes'); }
+    catch (StaffAdminResponse $response) { adminCheck($response->status === 403,'the production website admin gate rejects HR'); }
+    try { requireSuperAdmin($hr,$config); adminCheck(false,'HR cannot enter global super-admin routes'); }
+    catch (StaffAdminResponse $response) { adminCheck($response->status === 403,'the production global super-admin gate rejects HR'); }
+    foreach (['credentials.view','assets.manage','tickets.manage','roles.manage'] as $cap) adminCheck(!ictCan($pdo,$hr,$config,$cap),'HR does not inherit ICT capability ' . $cap);
+    adminCheck(adminAccountCall($pdo,$config,$hr,'staff/admin')->status === 200,'HR can list staff account invitations inside the staff portal');
+    $addedAccount = adminAccountCall($pdo,$config,$hr,'staff/admin/add','POST',['list'=>'HR Created Employee <new@staff-admin.test>']);
+    adminCheck($addedAccount->status === 200,'HR can add staff accounts');
+    $newId = (int)$pdo->query("SELECT id FROM users WHERE email='new@staff-admin.test'")->fetchColumn();
+    adminCheck($pdo->query('SELECT role FROM users WHERE id=' . $newId)->fetchColumn() === 'member' && !staffIsAdmin($pdo,['userId'=>$newId,'email'=>'new@staff-admin.test','role'=>'member'],$config),'HR-created accounts receive no administrative privileges');
+    adminCheck(adminAccountCall($pdo,$config,$hr,'staff/admin/' . $second['userId'] . '/remove','POST')->status === 403,'HR cannot remove a website super administrator');
+    adminCheck(adminAccountCall($pdo,$config,$employee,'staff/admin')->status === 403,'ordinary staff cannot read account administration');
+    adminCheck(adminAccountCall($pdo,$config,$hr,'staff/admin/holders')->status === 403,'HR account tools cannot open ICT asset linking');
+    adminCheck(in_array($hrId,timesheetDeciders($pdo,$newId),true),'a staff-admin-only grant receives unassigned HR approval notifications');
+    $pdo->prepare('UPDATE staff_accounts SET active=0 WHERE user_id=?')->execute([$hrId]);
+    adminCheck(!staffIsAdmin($pdo,$hr,$config) && adminCall($pdo,$config,$hr,'staff/home')->status === 403, 'deactivation immediately revokes scoped HR access');
+    $pdo->prepare('UPDATE staff_accounts SET active=1 WHERE user_id=?')->execute([$hrId]);
+    $pdo->prepare('DELETE FROM staff_grants WHERE user_id=?')->execute([$hrId]);
+    adminCheck(!staffGate($pdo,$hr,$config)['admin'], 'removing the staff-admin grant revokes scoped authority immediately');
     echo "\n" . $GLOBALS['adminPasses'] . " staff administration checks passed against a disposable database.\n";
 } finally {
     if ($pdo->inTransaction()) $pdo->rollBack();

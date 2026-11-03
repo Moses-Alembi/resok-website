@@ -263,7 +263,7 @@ function appraisalHandle(PDO $pdo, array $config, string $route, string $method,
                 staffNotify($pdo, (int)$a['appraiser_user_id'], 'appraisal', $title, '#appraisal-' . $id, 'ap:' . $id . ':' . md5($title));
                 return;
             }
-            $hr = $pdo->query("SELECT user_id FROM staff_grants WHERE capability = 'staff.manage'")->fetchAll(PDO::FETCH_COLUMN);
+            $hr = $pdo->query("SELECT DISTINCT g.user_id FROM staff_grants g JOIN staff_accounts s ON s.user_id=g.user_id AND s.active=1 WHERE g.capability IN ('staff.manage','staff.admin')")->fetchAll(PDO::FETCH_COLUMN);
             foreach ($hr as $u) if ((int)$u !== (int)$a['user_id']) staffNotify($pdo, (int)$u, 'appraisal', $title, '#appraisal-' . $id, 'ap:' . $id . ':' . md5($title));
         };
         $toPerson = function (string $title) use ($pdo, $a, $id): void {
@@ -386,7 +386,7 @@ function appraisalHandle(PDO $pdo, array $config, string $route, string $method,
             $pdo->prepare("UPDATE staff_appraisals SET stage = 'completed', staff_agrees = ?, staff_comment = ?, acknowledged_at = NOW() WHERE id = ?")->execute([$agrees ? 1 : 0, $comment, $id]);
             $toAppraiser($a['person'] . ($agrees ? ' acknowledged their appraisal' : ' acknowledged their appraisal and disagrees with it'));
             if (!$agrees) {
-                foreach ($pdo->query("SELECT user_id FROM staff_grants WHERE capability = 'staff.manage'")->fetchAll(PDO::FETCH_COLUMN) as $u) {
+                foreach ($pdo->query("SELECT DISTINCT g.user_id FROM staff_grants g JOIN staff_accounts s ON s.user_id=g.user_id AND s.active=1 WHERE g.capability IN ('staff.manage','staff.admin')")->fetchAll(PDO::FETCH_COLUMN) as $u) {
                     if ((int)$u !== (int)$a['user_id']) staffNotify($pdo, (int)$u, 'appraisal', $a['person'] . ' disagrees with their appraisal (' . $a['cycle_name'] . ')', '#appraisal-' . $id, 'ap-dis:' . $id);
                 }
             }

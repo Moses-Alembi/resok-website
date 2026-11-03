@@ -580,7 +580,7 @@ function payrollHandle(PDO $pdo, array $config, string $route, string $method, a
             respond(200, ['ok' => true]);
         }
         if ($action === 'void' && $method === 'POST') {
-            if (!$gate['super']) respond(403, ['error' => 'Only a super administrator voids an approved run.']);
+            if (!staffGateAdmin($gate)) respond(403, ['error' => 'Only a staff administrator voids an approved run.']);
             if ($run['status'] !== 'approved') respond(400, ['error' => 'Only an approved run is voided; a draft is simply deleted.']);
             $reason = fieldText(input()['reason'] ?? '', 500);
             if ($reason === null) respond(400, ['error' => 'Give the reason for voiding.']);

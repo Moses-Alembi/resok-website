@@ -102,8 +102,8 @@ function staffLeaveChange(PDO $pdo, array $gate, int $actor, int $id, string $ac
     if ($action === 'decline' && $note === null) throw new InvalidArgumentException('Give the employee a reason for declining the request.');
     $pdo->beginTransaction();
     try {
-        $query = $pdo->prepare('SELECT * FROM staff_leave_requests WHERE id=?' . ($gate['super'] ? '' : ' AND user_id=?') . ' FOR UPDATE');
-        $query->execute($gate['super'] ? [$id] : [$id,$actor]); $request = $query->fetch();
+        $query = $pdo->prepare('SELECT * FROM staff_leave_requests WHERE id=?' . (staffGateAdmin($gate) ? '' : ' AND user_id=?') . ' FOR UPDATE');
+        $query->execute(staffGateAdmin($gate) ? [$id] : [$id,$actor]); $request = $query->fetch();
         if (!$request) throw new DomainException('No such leave request.');
         if ($action === 'cancel') {
             if (!in_array($request['status'], ['pending','approved'], true)) throw new InvalidArgumentException('This request is already declined or cancelled.');
@@ -112,7 +112,7 @@ function staffLeaveChange(PDO $pdo, array $gate, int $actor, int $id, string $ac
             $status = 'cancelled';
             $pdo->prepare("UPDATE staff_leave_requests SET status='cancelled',cancelled_by=?,cancelled_at=NOW(),cancellation_note=? WHERE id=?")->execute([$actor,$note,$id]);
         } else {
-            if (!$gate['super']) throw new InvalidArgumentException('Only a super administrator decides leave requests.');
+            if (!staffGateAdmin($gate)) throw new InvalidArgumentException('Only a staff administrator decides leave requests.');
             if ($request['status'] !== 'pending') throw new InvalidArgumentException('This request is no longer waiting for a decision.');
             $status = $action === 'approve' ? 'approved' : 'declined';
             $pdo->prepare('UPDATE staff_leave_requests SET status=?,decided_by=?,decided_at=NOW(),decision_note=? WHERE id=?')->execute([$status,$actor,$note,$id]);
@@ -128,23 +128,23 @@ function staffLeaveHandle(PDO $pdo, array $config, string $route, string $method
     if (!staffLeaveEnsureTables($pdo)) respond(503, ['error' => 'Leave records are unavailable.']);
     $me = (int)$user['userId'];
     if ($route === 'staff/leave' && $method === 'GET') {
-        respond(200, ['mine' => staffLeaveRows($pdo,$me), 'requests' => $gate['super'] ? staffLeaveRows($pdo) : [],
-            'pending' => $gate['super'] ? staffLeaveRows($pdo,null,true) : [],
-            'pendingCount' => $gate['super'] ? (int)$pdo->query("SELECT COUNT(*) FROM staff_leave_requests WHERE status='pending'")->fetchColumn() : 0,
-            'types' => staffLeaveTypes($pdo,$gate['super']), 'canManage' => $gate['super'], 'onStaffList' => (bool)$gate['row'],
+        respond(200, ['mine' => staffLeaveRows($pdo,$me), 'requests' => staffGateAdmin($gate) ? staffLeaveRows($pdo) : [],
+            'pending' => staffGateAdmin($gate) ? staffLeaveRows($pdo,null,true) : [],
+            'pendingCount' => staffGateAdmin($gate) ? (int)$pdo->query("SELECT COUNT(*) FROM staff_leave_requests WHERE status='pending'")->fetchColumn() : 0,
+            'types' => staffLeaveTypes($pdo,staffGateAdmin($gate)), 'canManage' => staffGateAdmin($gate), 'onStaffList' => (bool)$gate['row'],
             'today' => date('Y-m-d')]);
     }
     try {
         if ($route === 'staff/leave' && $method === 'POST') {
             if (!$gate['row']) respond(403, ['error' => 'Only employees request leave. You can manage requests without an employee record.']);
             $id = staffLeaveSubmit($pdo,$me,input());
-            foreach ($pdo->query("SELECT id,email,role FROM users WHERE role='admin'")->fetchAll() as $admin) {
-                if (isSuperAdmin($admin,$config)) staffNotify($pdo,(int)$admin['id'],'leave','A staff leave request is waiting for your decision','#leave-manage','leave-request:' . $id);
+            foreach ($pdo->query("SELECT DISTINCT u.id,u.email,u.role FROM users u LEFT JOIN staff_accounts s ON s.user_id=u.id AND s.active=1 LEFT JOIN staff_grants g ON g.user_id=s.user_id AND g.capability='staff.admin' WHERE u.role='admin' OR g.user_id IS NOT NULL")->fetchAll() as $admin) {
+                if (staffIsAdmin($pdo,['userId'=>(int)$admin['id']]+$admin,$config)) staffNotify($pdo,(int)$admin['id'],'leave','A staff leave request is waiting for your decision','#leave-manage','leave-request:' . $id);
             }
             respond(201, ['id' => $id, 'message' => 'Leave request submitted.']);
         }
         if ($route === 'staff/leave/types' && $method === 'POST') {
-            if (!$gate['super']) respond(403, ['error' => 'Only a super administrator configures leave types.']);
+            if (!staffGateAdmin($gate)) respond(403, ['error' => 'Only a staff administrator configures leave types.']);
             $data = input(); $name = staffLeaveText($data['name'] ?? null);
             if ($name === null || mb_strlen($name) > 120) throw new InvalidArgumentException('Give the leave type a name within 120 characters.');
             $description = staffLeaveText($data['description'] ?? null); $id = (int)($data['id'] ?? 0);
@@ -161,7 +161,7 @@ function staffLeaveHandle(PDO $pdo, array $config, string $route, string $method
             respond(200, ['types' => staffLeaveTypes($pdo,true)]);
         }
         if (preg_match('#^staff/leave/(\d+)/(approve|decline|cancel)$#',$route,$match) && $method === 'POST') {
-            if ($match[2] !== 'cancel' && !$gate['super']) respond(403, ['error' => 'Only a super administrator decides leave requests.']);
+            if ($match[2] !== 'cancel' && !staffGateAdmin($gate)) respond(403, ['error' => 'Only a staff administrator decides leave requests.']);
             $result = staffLeaveChange($pdo,$gate,$me,(int)$match[1],$match[2],input());
             staffNotify($pdo,$result['userId'],'leave','Your leave request was ' . $result['status'],'#leave','leave-decision:' . $match[1] . ':' . $result['status']);
             respond(200, ['status' => $result['status']]);

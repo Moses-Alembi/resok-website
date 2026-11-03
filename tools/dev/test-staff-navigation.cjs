@@ -27,16 +27,22 @@ assert(!allowed(null, 'home')); checks++;
 for (const view of ['home','announcements','helpdesk','equipment']) { assert(allowed({super:false,onStaffList:true,caps:['staff.manage','payroll.manage']},view)); checks++; }
 for (const view of ['people','payroll','leave','appraisals']) { assert(!allowed({super:false,onStaffList:true,caps:['staff.manage','payroll.manage']},view)); checks++; }
 const linkLocation = {href:'https://www.resok.org/resok-portal/public/staff',origin:'https://www.resok.org'};
-function allowedLink(home, href) { return vm.runInNewContext(viewGuard+'\nstaffLinkAvailable(href)',{home,href,location:linkLocation,URL,Map}); }
+function allowedLink(home, href) { return vm.runInNewContext(viewGuard+'\nstaffLinkAvailable(href)',{home,href,location:linkLocation,URL,Map,can:cap=>!!home&&(home.super===true||home.caps.includes(cap))}); }
 for (const href of ['#home','#announcements','#equipment','#helpdesk','#announcement-7','#main','staff#home','staff#announcements','elections?for=staff','elections?for=staff#welfare-2026','elections.html?for=staff','election-live','election-live.html','https://example.org/news']) { assert(allowedLink(employee,href),href); checks++; }
 for (const href of ['#directory','#leave','#appraisals','#timesheets','#procurement','#payslips','#profile','#location','elections','elections?for=members','election-admin?for=staff','admin-home','ict','staff#leave','staff/#leave','staff#administration','#timesheet-approvals']) { assert(!allowedLink(employee,href),href); checks++; }
 for (const href of ['#leave','#appraisals','elections?for=staff','election-live','#administration']) { assert(allowedLink({super:true},href)); checks++; }
 
+const hr = {super:false,admin:true,onStaffList:true,caps:['staff.admin','staff.manage','payroll.manage','announcements.publish']};
+for (const view of ['administration','activity','staff-accounts','people','departments','payroll','leave','appraisals','timesheet-approvals']) { assert(allowed(hr,view),view); checks++; }
+assert(!allowed(hr,'permissions')); checks++;
+for (const href of ['#administration','#staff-accounts','#leave','staff#people','elections?for=staff','election-live']) { assert(allowedLink(hr,href),href); checks++; }
+for (const href of ['#permissions','ict','admin-home','election-admin?for=staff']) { assert(!allowedLink(hr,href),href); checks++; }
 const caption = page.match(/const accountCaption = (.*);/)[1];
 for (const [home, me, accountRole, expected] of [
   [{ super: false }, { jobTitle: 'Finance Officer' }, 'Staff member', 'Finance Officer'],
   [{ super: false }, { jobTitle: null }, 'Staff member', 'Staff member'],
   [{ super: false }, { jobTitle: '   ' }, 'Staff manager', 'Staff manager'],
+  [{ super: false, admin: true }, { jobTitle: 'Finance & Admin Manager' }, 'Staff administrator / HR', 'Staff administrator / HR'],
   [{ super: true }, { jobTitle: 'Communications Officer' }, 'Super administrator', 'Super administrator']
 ]) {
   assert.equal(vm.runInNewContext(caption, { home, me, accountRole, String }), expected); checks++;
@@ -44,7 +50,7 @@ for (const [home, me, accountRole, expected] of [
   const headerTitles = page.slice(page.indexOf("      el('staffAccessRole').textContent ="), page.indexOf("      el('staffRolePill').textContent ="));
   vm.runInNewContext(headerTitles, {home,me,accountCaption:expected,el:id=>headerNodes[id] ||= {},String});
   assert.equal(headerNodes.staffAccessRole.textContent,expected);
-  assert.equal(headerNodes.staffAccountJobTitle.hidden,home.super !== true || !String(me.jobTitle || '').trim()); checks++;
+  assert.equal(headerNodes.staffAccountJobTitle.hidden,(home.super !== true && home.admin !== true) || !String(me.jobTitle || '').trim()); checks++;
 }
 
 class Element {

@@ -565,12 +565,13 @@ function geoDeciders(PDO $pdo, array $config, int $userId): array
         $s->execute($supers);
         foreach ($s->fetchAll(PDO::FETCH_COLUMN) as $id) $ids[] = (int)$id;
     }
+    foreach ($pdo->query("SELECT g.user_id FROM staff_grants g JOIN staff_accounts s ON s.user_id=g.user_id AND s.active=1 WHERE g.capability='staff.admin'")->fetchAll(PDO::FETCH_COLUMN) as $id) $ids[] = (int)$id;
     return array_values(array_unique($ids));
 }
 
 function geoMayDecide(PDO $pdo, array $config, array $gate, int $me, int $requester): bool
 {
-    return (bool)$gate['super'];
+    return staffGateAdmin($gate);
 }
 
 function geoDate(?string $s): ?string
@@ -671,7 +672,7 @@ function geoHandle(PDO $pdo, array $config, string $route, string $method, array
         $subject = geoSubject($pdo, $me, (string)$user['role'], $config);
         $v = geoVisitor($config);
         // Only super admins decide, and they see every request.
-        $broad = (bool)$gate['super'];
+        $broad = staffGateAdmin($gate);
         $queue = $broad ? $list("r.status = 'pending'", []) : [];
         $out = [
             'mine' => $list('r.user_id = ?', [$me]),

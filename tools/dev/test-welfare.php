@@ -44,7 +44,7 @@ function finishWorker(array $w): array {$out=stream_get_contents($w[1][1]);$err=
 $server=connectTest();$db='resok_welfare_test_'.bin2hex(random_bytes(5));$server->exec('CREATE DATABASE '.$db);$p=connectTest($db);
 try {
     $sqlDir=__DIR__.'/../../resok-portal/server/';
-    foreach(['schema.sql','schema-elections.sql','schema-elections-ballot.sql','migration-election-nominations.sql','migration-election-external-nominees.sql','migration-election-staff.sql','migration-2026-11-03-welfare-automation.sql'] as $file){foreach(migrateSplit(file_get_contents($sqlDir.$file)) as $sql)$p->exec($sql);}
+    foreach(['schema.sql','schema-elections.sql','schema-elections-ballot.sql','migration-election-nominations.sql','migration-election-external-nominees.sql','migration-election-staff.sql','migration-2026-11-03-welfare-automation.sql','migration-2026-11-03-welfare-staff-total-34.sql'] as $file){foreach(migrateSplit(file_get_contents($sqlDir.$file)) as $sql)$p->exec($sql);}
     check(staffPortalEnsureTables($p),'staff schema initializes in the isolated database');
     $p->exec("INSERT INTO users(email,password_hash,email_verified,role) VALUES('officer@welfare.test','unused',1,'admin'),('observer@welfare.test','unused',1,'member')");
     $officer=(int)$p->query("SELECT id FROM users WHERE email='officer@welfare.test'")->fetchColumn();
@@ -56,11 +56,14 @@ try {
     check(endpoint($p,'admin/welfare/'.$id.'/configure','POST')->status===403,'ordinary observers cannot configure or create voters');
     $GLOBALS['testUser']=['userId'=>$officer,'role'=>'admin','email'=>'officer@welfare.test'];
     check(endpoint($p,'admin/welfare/'.$id.'/configure','POST')->status===200,'officer configures the automatic election');
-    check(welfareReadiness($p,$id)['targetEmployees']===32,'employee target is exactly 32');
-    $people=[];for($n=1;$n<=32;$n++)$people[]=['name'=>'Synthetic Employee '.$n,'email'=>'employee'.$n.'@welfare.test','staffNumber'=>'TEST-'.$n];
+    check(welfareReadiness($p,$id)['targetEmployees']===34,'employee target is exactly 34');
+    $p->exec("UPDATE welfare_settings SET staff_target=32 WHERE election_id=$id");
+    foreach(migrateSplit(file_get_contents($sqlDir.'migration-2026-11-03-welfare-staff-total-34.sql')) as $sql)$p->exec($sql);
+    check((int)welfareSettings($p,$id)['staff_target']===34,'the update migrates an unopened election from 32 to 34');
+    $people=[];for($n=1;$n<=34;$n++)$people[]=['name'=>'Synthetic Employee '.$n,'email'=>'employee'.$n.'@welfare.test','staffNumber'=>'TEST-'.$n];
     welfareImport($p,$id,$people,'employee',$officer);
-    check((int)$p->query('SELECT COUNT(*) FROM staff_accounts')->fetchColumn()===32,'32 distinct synthetic employees are provisioned');
-    check((int)$p->query("SELECT COUNT(*) FROM users WHERE role='member' AND email LIKE 'employee%'")->fetchColumn()===32,'employee creation does not grant administrative roles');
+    check((int)$p->query('SELECT COUNT(*) FROM staff_accounts')->fetchColumn()===34,'34 distinct synthetic employees are provisioned');
+    check((int)$p->query("SELECT COUNT(*) FROM users WHERE role='member' AND email LIKE 'employee%'")->fetchColumn()===34,'employee creation does not grant administrative roles');
     reject(fn()=>welfareArm($p,$id,true),'unactivated employees cannot be silently omitted to arm the election');
     reject(fn()=>welfareImport($p,$id,[$people[0],$people[0]],'employee',$officer),'duplicate email rows are rejected');
     $bad=[['name'=>'Conflicting Account','email'=>'conflict@welfare.test','staffNumber'=>'TEST-1']];
@@ -71,30 +74,34 @@ try {
     check($p->query("SELECT password_hash FROM users WHERE email='employee1@welfare.test'")->fetchColumn()==='preserved','existing passwords are preserved');
     reject(fn()=>welfareImport($p,$id,[['name'=>'Synthetic Guest','email'=>'guest@welfare.test']],'guest',$officer),'additional voter imports are rejected');
     check((int)$p->query("SELECT COUNT(*) FROM users WHERE email='guest@welfare.test'")->fetchColumn()===0,'a rejected extra voter does not create an account');
-    $p->exec("UPDATE staff_accounts SET active=0 WHERE staff_number='TEST-32'");
-    check(!welfareReadiness($p,$id)['ready'],'31 employees are not a complete electorate');
-    reject(fn()=>welfareArm($p,$id,true),'31 employees cannot arm the schedule');
-    [$unused,$error]=electionDrawRoll($p,$id,2026);check($error!==null,'manual drawing also rejects 31 employees');
-    $p->exec("UPDATE staff_accounts SET active=1 WHERE staff_number='TEST-32'");
-    welfareImport($p,$id,[['name'=>'Synthetic Extra Employee','email'=>'extra@welfare.test','staffNumber'=>'TEST-33']],'employee',$officer);
-    $p->exec("UPDATE users SET email_verified=1 WHERE email='extra@welfare.test'");
-    check(!welfareReadiness($p,$id)['ready'],'33 employees are not a valid electorate');
+    $p->exec("UPDATE staff_accounts SET active=0 WHERE staff_number='TEST-34'");
+    check(!welfareReadiness($p,$id)['ready'],'33 employees are not a complete electorate');
     reject(fn()=>welfareArm($p,$id,true),'33 employees cannot arm the schedule');
     [$unused,$error]=electionDrawRoll($p,$id,2026);check($error!==null,'manual drawing also rejects 33 employees');
+
     $p->exec("UPDATE staff_accounts SET active=0 WHERE staff_number='TEST-33'");
+    reject(fn()=>welfareArm($p,$id,true),'the previous total of 32 is no longer sufficient');
+    $p->exec("UPDATE staff_accounts SET active=1 WHERE staff_number='TEST-33'");
+    $p->exec("UPDATE staff_accounts SET active=1 WHERE staff_number='TEST-34'");
+    welfareImport($p,$id,[['name'=>'Synthetic Extra Employee','email'=>'extra@welfare.test','staffNumber'=>'TEST-35']],'employee',$officer);
+    $p->exec("UPDATE users SET email_verified=1 WHERE email='extra@welfare.test'");
+    check(!welfareReadiness($p,$id)['ready'],'35 employees are not a valid electorate');
+    reject(fn()=>welfareArm($p,$id,true),'35 employees cannot arm the schedule');
+    [$unused,$error]=electionDrawRoll($p,$id,2026);check($error!==null,'manual drawing also rejects 35 employees');
+    $p->exec("UPDATE staff_accounts SET active=0 WHERE staff_number='TEST-35'");
     // Legacy extra-voter rows must never enlarge the current staff-only electorate.
     $p->exec("INSERT INTO users(email,password_hash,email_verified,role) VALUES('guest@welfare.test','unused',1,'member')");$guest=(int)$p->lastInsertId();
     $p->prepare("INSERT INTO welfare_guests(election_id,user_id,name,added_by) VALUES(?,?,'Synthetic Legacy Guest',?)")->execute([$id,$guest,$officer]);
-    $r=welfareReadiness($p,$id);check($r['ready']&&$r['expectedVoters']===32,'legacy guest rows do not change the total of 32');
-    [$roll,$error]=electionDrawRoll($p,$id,2026);check(!$error&&(int)$p->query("SELECT COUNT(*) FROM election_roll WHERE election_id=$id")->fetchColumn()===32,'manual roll includes exactly 32 employees and no legacy guest');
+    $r=welfareReadiness($p,$id);check($r['ready']&&$r['expectedVoters']===34,'legacy guest rows do not change the total of 34');
+    [$roll,$error]=electionDrawRoll($p,$id,2026);check(!$error&&(int)$p->query("SELECT COUNT(*) FROM election_roll WHERE election_id=$id")->fetchColumn()===34,'manual roll includes exactly 34 employees and no legacy guest');
     [$positions,$error]=electionPositionSave($p,$id,['title'=>'Welfare Chair','seats'=>1,'maxChoices'=>1,'allowAbstain'=>false]);
     check(!$error,'contested post is configured');$pos=$positions[0]['id'];
-    $r=welfareArm($p,$id,true);check($r['ready']&&$r['expectedVoters']===32,'exactly 32 employees are ready without additional voters');
-    check((int)$p->query('SELECT COUNT(*) FROM election_roll WHERE election_id='.$id)->fetchColumn()===32,'the frozen roll contains exactly 32 distinct staff accounts');
+    $r=welfareArm($p,$id,true);check($r['ready']&&$r['expectedVoters']===34,'exactly 34 employees are ready without additional voters');
+    check((int)$p->query('SELECT COUNT(*) FROM election_roll WHERE election_id='.$id)->fetchColumn()===34,'the frozen roll contains exactly 34 distinct staff accounts');
     [$unused,$error]=electionDrawRoll($p,$id,2026);check($error!==null,'an armed roster cannot be redrawn');
     reject(fn()=>welfareImport($p,$id,[$people[0]],'employee',$officer),'roster imports are blocked after arming');
     $p->prepare("INSERT INTO election_roll(election_id,user_id,name,standing_at_cutoff) VALUES(?,?,'Synthetic Invalid Voter','welfare_guest')")->execute([$id,$guest]);
-    welfareRunScheduled($p);check(electionFind($p,(string)$id)['status']==='draft'&&str_contains((string)welfareSettings($p,$id)['last_error'],'32'),'an old oversized frozen roll cannot progress automatically');
+    welfareRunScheduled($p);check(electionFind($p,(string)$id)['status']==='draft'&&str_contains((string)welfareSettings($p,$id)['last_error'],'34'),'an old oversized frozen roll cannot progress automatically');
     welfareArm($p,$id,false);welfareArm($p,$id,true);
     welfareRunScheduled($p);$e=electionFind($p,(string)$id);check($e['status']==='nominations','nominations open automatically at the scheduled time');
     $uids=$p->query("SELECT user_id FROM staff_accounts WHERE active=1 ORDER BY user_id")->fetchAll(PDO::FETCH_COLUMN);
@@ -123,15 +130,19 @@ try {
     [$unused,$error]=electionCastVote($p,$e['slug'],$observer,[$pos=>[$cid]],null);check($error!==null,'viewing live totals does not confer a vote');
     $p->exec("UPDATE elections SET nominations_close_at=DATE_SUB(NOW(),INTERVAL 2 MINUTE),opens_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE id=$id");
     welfareRunScheduled($p);check(electionFind($p,(string)$id)['status']==='open','nominations close and voting opens automatically');
+    $p->exec("UPDATE welfare_settings SET staff_target=32 WHERE election_id=$id");
+    foreach(migrateSplit(file_get_contents($sqlDir.'migration-2026-11-03-welfare-staff-total-34.sql')) as $sql)$p->exec($sql);
+    check((int)welfareSettings($p,$id)['staff_target']===32 && (int)$p->query("SELECT COUNT(*) FROM election_roll WHERE election_id=$id")->fetchColumn()===34,'the target migration preserves metadata and frozen rolls once voting has opened');
+    $p->exec("UPDATE welfare_settings SET staff_target=34 WHERE election_id=$id");
     [$unused,$error]=electionCastVote($p,$e['slug'],(int)$uids[0],[$pos=>'abstain'],null);check($error!==null,'explicit abstention obeys the position rule');
     check((int)$p->query('SELECT COUNT(*) FROM election_ballots')->fetchColumn()===0,'invalid ballots write nothing');
     $w1=worker($db,$e['slug'],(int)$uids[0],$pos,$cid);$w2=worker($db,$e['slug'],(int)$uids[0],$pos,$cid);
     $v1=finishWorker($w1);$v2=finishWorker($w2);check(($v1[1]===null)!==($v2[1]===null),'two simultaneous submissions record exactly one ballot');
     foreach(array_slice($uids,1) as $i=>$uid){[$receipt,$error]=electionCastVote($p,$e['slug'],(int)$uid,[$pos=>[$i<23?$cid:$cid2]],null);if($error)throw new RuntimeException($error);}
-    $live=welfareLive($p)['elections'][0];check($live['roll']['voted']===32&&$live['positions'][0]['ballotsCast']===32,'live count reconciles all 32 staff ballots');
-    check(array_sum(array_column($live['positions'][0]['candidates'],'votes'))===32,'candidate totals match recorded ballots');
+    $live=welfareLive($p)['elections'][0];check($live['roll']['voted']===34&&$live['positions'][0]['ballotsCast']===34,'live count reconciles all 34 staff ballots');
+    check(array_sum(array_column($live['positions'][0]['candidates'],'votes'))===34,'candidate totals match recorded ballots');
     $p->exec("UPDATE elections SET closes_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE id=$id");
-    $p->exec("CREATE TRIGGER welfare_test_failure BEFORE INSERT ON election_results FOR EACH ROW BEGIN IF NEW.votes<10 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Synthetic declaration failure'; END IF; END");
+    $p->exec("CREATE TRIGGER welfare_test_failure BEFORE INSERT ON election_results FOR EACH ROW BEGIN IF NEW.votes<20 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Synthetic declaration failure'; END IF; END");
     welfareRunScheduled($p);
     check((int)$p->query("SELECT COUNT(*) FROM election_results WHERE election_id=$id")->fetchColumn()===0,'a declaration failure rolls back every partial result row');
     check(electionFind($p,(string)$id)['status']!=='published','a failed declaration cannot publish a partial result');
@@ -169,7 +180,7 @@ try {
     check(electionFind($p,(string)$tid)['status']==='closed','a tied election remains closed rather than publishing an invented winner');
     check(str_contains((string)welfareSettings($p,$tid)['last_error'],'tied'),'a tie produces an actionable status');
     check(electionResults($p,$tid)['declaration']===0,'a tie does not create a final declaration');
-    check(count(electionNominatableMembers($p,$id))===32,'the employee candidate picker contains exactly the 32 active staff');
+    check(count(electionNominatableMembers($p,$id))===34,'the employee candidate picker contains exactly the 34 active staff');
 
     // Board elections retain their separate nomination and private-count rules.
     [$board,$error]=electionCreate($p,['title'=>'Synthetic Board Regression','eligibilityCutoff'=>date('Y-m-d'),'nominationsOpenAt'=>date('Y-m-d H:i:s',time()-300),'nominationsCloseAt'=>date('Y-m-d H:i:s',time()+600),'opensAt'=>date('Y-m-d H:i:s',time()+1200),'closesAt'=>date('Y-m-d H:i:s',time()+1800)],$officer);

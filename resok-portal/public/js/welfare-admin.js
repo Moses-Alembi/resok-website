@@ -9,7 +9,7 @@
     panel = node('section', null, 'panel'); panel.id = 'welfareAdmin';
     const parent = document.getElementById('viewOne'); parent.insertBefore(panel, parent.children[1] || null);
     panel.append(node('h2', 'Automatic welfare election'));
-    panel.append(node('p', 'Exactly 32 staff voters. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
+    panel.append(node('p', 'Exactly 34 staff voters. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
     const message = node('p'); message.setAttribute('role', 'status');
     async function act(action, body) {
       message.textContent = 'Saving…';

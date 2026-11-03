@@ -57,17 +57,17 @@ function welfareReadiness(PDO $pdo, int $id): array
     $settings = welfareSettings($pdo, $id);
     $employees = $pdo->query("SELECT COUNT(*) AS total, COALESCE(SUM(u.email_verified=1),0) AS ready
         FROM staff_accounts s JOIN users u ON u.id=s.user_id WHERE s.active=1 AND s.staff_number IS NOT NULL AND s.staff_number<>''")->fetch();
-    return ['targetEmployees' => 32, 'employees' => (int)$employees['total'], 'employeesReady' => (int)$employees['ready'],
-        'expectedVoters' => 32,
-        'ready' => (int)$employees['total'] === 32 && (int)$employees['ready'] === 32,
+    return ['targetEmployees' => 34, 'employees' => (int)$employees['total'], 'employeesReady' => (int)$employees['ready'],
+        'expectedVoters' => 34,
+        'ready' => (int)$employees['total'] === 34 && (int)$employees['ready'] === 34,
         'armed' => !empty($settings['armed_at']), 'lastError' => $settings['last_error'] ?? null];
 }
 
 /** Validate the complete import before touching accounts. Existing passwords and roles stay intact. */
 function welfareImport(PDO $pdo, int $id, array $people, string $kind, int $admin): array
 {
-    if ($kind !== 'employee') throw new InvalidArgumentException('Welfare elections are limited to the 32 staff voters.');
-    if (!$people || count($people) > 32) throw new InvalidArgumentException('Supply between 1 and 32 named employees.');
+    if ($kind !== 'employee') throw new InvalidArgumentException('Welfare elections are limited to the 34 staff voters.');
+    if (!$people || count($people) > 34) throw new InvalidArgumentException('Supply between 1 and 34 named employees.');
     $seen = []; $numbers = [];
     foreach ($people as &$p) {
         if (!is_array($p)) throw new InvalidArgumentException('Every row needs a name and email.');
@@ -129,7 +129,7 @@ function welfareArm(PDO $pdo, int $id, bool $arm): array
             if (!welfareSettings($pdo,$id)) throw new RuntimeException('Set up the automatic election first.');
             if ($raw['status']==='cancelled') throw new RuntimeException('A cancelled election cannot be armed.');
             $r=welfareReadiness($pdo,$id);
-            if (!$r['ready']) throw new RuntimeException('Exactly 32 employees with employee numbers and activated accounts are required. Reconcile the staff roster first.');
+            if (!$r['ready']) throw new RuntimeException('Exactly 34 employees with employee numbers and activated accounts are required. Reconcile the staff roster first.');
             if (!electionPositions($pdo,$id)) throw new RuntimeException('Add the contested posts first.');
             if (!$raw['nominations_open_at'] || !$raw['nominations_close_at']) throw new RuntimeException('Set nomination dates and voting dates first.');
             if (new DateTimeImmutable($raw['closes_at']) <= new DateTimeImmutable('now')) throw new RuntimeException('The voting window has already ended.');
@@ -138,11 +138,11 @@ function welfareArm(PDO $pdo, int $id, bool $arm): array
                 SELECT ?,NULL,u.id,COALESCE(NULLIF(s.full_name,''),u.email),s.staff_number,u.email,'staff'
                 FROM staff_accounts s JOIN users u ON u.id=s.user_id WHERE s.active=1 AND u.email_verified=1 AND s.staff_number IS NOT NULL AND s.staff_number<>''")->execute([$id]);
             $count=$pdo->prepare('SELECT COUNT(*) FROM election_roll WHERE election_id=?');$count->execute([$id]);
-            if ((int)$count->fetchColumn() !== $r['expectedVoters']) throw new RuntimeException('The voter roll must contain exactly 32 distinct staff accounts. Check the staff roster.');
+            if ((int)$count->fetchColumn() !== $r['expectedVoters']) throw new RuntimeException('The voter roll must contain exactly 34 distinct staff accounts. Check the staff roster.');
             // Finality is an election rule, not a claim that nominees personally consented.
             $pdo->prepare("UPDATE election_candidates c JOIN election_positions p ON p.id=c.position_id SET c.status='approved' WHERE p.election_id=? AND c.status='nominated'")->execute([$id]);
             $pdo->prepare('UPDATE welfare_settings SET armed_at=NOW(),last_error=NULL WHERE election_id=?')->execute([$id]);
-            welfareEvent($pdo,$id,'Schedule armed. The voter roll is fixed at exactly 32 staff voters.');
+            welfareEvent($pdo,$id,'Schedule armed. The voter roll is fixed at exactly 34 staff voters.');
         }
         $pdo->commit();
     } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
@@ -163,7 +163,7 @@ function welfareRunScheduled(PDO $pdo): void
             if (!$e['openedAt']) {
                 $roll=$pdo->prepare("SELECT COUNT(*) AS total,COUNT(DISTINCT user_id) AS distinctUsers,COALESCE(SUM(standing_at_cutoff='staff'),0) AS employees FROM election_roll WHERE election_id=?");
                 $roll->execute([$id]);$counts=$roll->fetch();
-                if ((int)$counts['total']!==32 || (int)$counts['distinctUsers']!==32 || (int)$counts['employees']!==32) throw new RuntimeException('The frozen roll must contain exactly 32 staff voters. Disarm and arm the schedule again after reconciling the staff roster.');
+                if ((int)$counts['total']!==34 || (int)$counts['distinctUsers']!==34 || (int)$counts['employees']!==34) throw new RuntimeException('The frozen roll must contain exactly 34 staff voters. Disarm and arm the schedule again after reconciling the staff roster.');
             }
             if ($now >= new DateTimeImmutable($raw['closes_at']) && !$e['openedAt']) throw new RuntimeException('The voting window elapsed before voting could open. Review the election; no result was invented.');
             if (in_array($e['status'],['draft','roll_published'],true) && $now >= new DateTimeImmutable($raw['nominations_open_at'])) {
@@ -227,7 +227,7 @@ function welfareHandle(PDO $pdo, array $config, string $route, string $method): 
         if ($action==='arm' || $action==='disarm') $result=['readiness'=>welfareArm($pdo,$id,$action==='arm')];
         elseif ($action==='configure') {
             if ($e['locked']) throw new RuntimeException('Voting has already opened.');
-            $pdo->prepare('INSERT IGNORE INTO welfare_settings (election_id,staff_target,configured_by) VALUES (?,32,?)')->execute([$id,(int)$user['userId']]);
+            $pdo->prepare('INSERT IGNORE INTO welfare_settings (election_id,staff_target,configured_by) VALUES (?,34,?)')->execute([$id,(int)$user['userId']]);
             $result=['readiness'=>welfareReadiness($pdo,$id)];
         } elseif ($action==='import') $result=welfareImport($pdo,$id,is_array($data['people']??null)?$data['people']:[],(string)($data['kind']??''),(int)$user['userId']);
         else respond(404,['error'=>'No such welfare action.']);

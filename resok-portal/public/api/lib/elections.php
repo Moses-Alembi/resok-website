@@ -297,7 +297,7 @@ function electionDrawRoll(PDO $pdo, int $electionId, int $paidYear): array
 
 /**
  * The roll for a staff welfare election: every active member of staff who can sign in,
- * frozen the same way a members' roll is. Exactly 32 employees must have employee numbers
+ * frozen the same way a members' roll is. Exactly 34 employees must have employee numbers
  * and activated accounts before the roll can be drawn.
  *
  * @return array{0:?array,1:?string}
@@ -307,7 +307,7 @@ function electionDrawStaffRoll(PDO $pdo, int $electionId): array
     if (!function_exists('staffPortalEnsureTables') || !staffPortalEnsureTables($pdo)) {
         return [null, 'The staff list is not available on this server.'];
     }
-    if (function_exists('welfareReadiness') && !welfareReadiness($pdo, $electionId)['ready']) return [null, 'Exactly 32 employees with employee numbers and activated accounts are required. Reconcile the staff roster first.'];
+    if (function_exists('welfareReadiness') && !welfareReadiness($pdo, $electionId)['ready']) return [null, 'Exactly 34 employees with employee numbers and activated accounts are required. Reconcile the staff roster first.'];
     $pdo->beginTransaction();
     try {
         $pdo->prepare('DELETE FROM election_roll WHERE election_id = ?')->execute([$electionId]);
@@ -322,7 +322,7 @@ function electionDrawStaffRoll(PDO $pdo, int $electionId): array
             ->execute([$electionId]);
         $rollCount = $pdo->prepare('SELECT COUNT(*) FROM election_roll WHERE election_id=?');
         $rollCount->execute([$electionId]);
-        if ((int)$rollCount->fetchColumn() !== 32) throw new RuntimeException('Exactly 32 activated staff accounts are required before drawing the welfare voter roll.');
+        if ((int)$rollCount->fetchColumn() !== 34) throw new RuntimeException('Exactly 34 activated staff accounts are required before drawing the welfare voter roll.');
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();

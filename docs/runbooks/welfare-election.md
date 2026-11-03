@@ -12,10 +12,14 @@ not a camera/video broadcast.
    runner or phpMyAdmin. Existing migration files were not changed.
    **The current cPanel deploy excludes `resok-portal/server/`: upload this migration
    separately before expecting the migration runner to list it.**
+   Also apply `migration-2026-11-03-welfare-staff-total-34.sql` for the final 34-person target.
+   Existing migrations remain unchanged. Upload this new file separately on cPanel too.
+   An already-armed roll needs to be disarmed and armed again with all 34 staff ready;
+   this update does not rewrite a frozen roll or any election that has opened.
 2. Create/select a staff welfare election in `election-admin`. Set the contested posts,
    seats, maximum choices and all four dates. Times are Africa/Nairobi.
 3. In **Automatic welfare election**, select **Set up automatic election**.
-4. Reconcile the real employee roster. There must be exactly **32 active employees with
+4. Reconcile the real employee roster. There must be exactly **34 active employees with
    distinct employee numbers and activated accounts**. Paste spreadsheet rows as
    `employee number<TAB>full name<TAB>email`. Header rows should be removed.
 5. Account imports do not send mail. Use the existing staff invite action for employees,
@@ -23,7 +27,7 @@ not a camera/video broadcast.
    that mailbox link activates the account. Existing passwords and roles are preserved.
 6. Once every account is ready, choose **Arm automatic schedule**. This snapshots the
    voter roll. Imports/redrawing are refused while armed; disarm before corrections.
-   The total is exactly **32 staff voters**; no additional voter accounts are included.
+   The total is exactly **34 staff voters**; no additional voter accounts are included.
    Nothing can change the electorate after voting has opened.
 7. Add a cPanel cron job every minute:
 

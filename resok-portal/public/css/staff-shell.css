@@ -72,9 +72,7 @@ button{font:inherit}input,select,textarea{accent-color:var(--brand-primary)}
 .staff-main .staff-launch-card{background:linear-gradient(120deg,var(--brand-soft),transparent 75%),var(--surface);border:1px solid var(--line)}
 .staff-launch-card h2{font-size:22px;letter-spacing:-.3px}
 .staff-launch-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:var(--brand-soft);color:var(--brand-ink);font-size:19px;margin-bottom:16px}
-.staff-launch-mode .side .locked.greyed,.staff-launch-mode [data-staff-fullnav]{display:none}
-.staff-launch-mode .side .sec{display:none}
-.staff-launch-mode .side .admin-nav-section:first-child{display:block}
+/* Keep unreleased staff tools visible with their disabled Coming soon labels. */
 .staff-main .welfare-live{background:var(--surface);color:var(--ink);border-color:var(--line);border-left-color:var(--brand-primary);box-shadow:var(--shadow)}
 .staff-main .welfare-live .wl-meta{color:var(--muted)}
 .staff-main .welfare-live .wl-stale{color:var(--warn)}

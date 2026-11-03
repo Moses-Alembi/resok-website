@@ -13,7 +13,9 @@ The Permissions screen shows those accounts with every capability checked and th
 **Full access automatically**, instead of offering ineffective staff-grant changes.
 
 This change does not assign HR roles or change existing staff grants. Ordinary staff retain
-their current launch restrictions. Workflow rules, such as approval stages and locked
+their current launch restrictions. Their full menu remains visible, with unreleased tools
+marked **Coming soon** and disabled; management links remain restricted to authorized users.
+Workflow rules, such as approval stages and locked
 records, still apply. Leave, documents and policies, tasks and projects, and the calendar
 remain planned sections, outside the existing management tools.
 

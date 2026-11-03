@@ -1,17 +1,15 @@
 (function () {
   'use strict';
-  let current;
   const api = (route, body) => window.ResokPortal.api(route, body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) });
   const node = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; };
   async function render(election) {
-    current = election;
     let panel = document.getElementById('welfareAdmin');
     if (panel) panel.remove();
     if (election.electorate !== 'staff') return;
     panel = node('section', null, 'panel'); panel.id = 'welfareAdmin';
     const parent = document.getElementById('viewOne'); parent.insertBefore(panel, parent.children[1] || null);
     panel.append(node('h2', 'Automatic welfare election'));
-    panel.append(node('p', '32 employee accounts plus the named additional voters. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
+    panel.append(node('p', 'Exactly 32 staff voters. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
     const message = node('p'); message.setAttribute('role', 'status');
     async function act(action, body) {
       message.textContent = 'Saving…';
@@ -21,7 +19,7 @@
     try {
       const data = await api('admin/welfare/' + election.id);
       const r = data.readiness;
-      panel.append(node('p', r.employeesReady + '/' + r.targetEmployees + ' employee accounts ready · ' + r.additionalReady + '/' + r.additionalVoters + ' additional accounts ready · ' + r.expectedVoters + ' expected voters', 'lede'));
+      panel.append(node('p', r.employeesReady + '/' + r.targetEmployees + ' staff accounts ready; ' + r.expectedVoters + ' total voters', 'lede'));
       if (r.lastError) panel.append(node('p', r.lastError, 'note warn'));
       if (!data.settings) {
         const configure = node('button', 'Set up automatic election', 'btn btn-primary'); configure.type = 'button'; configure.onclick = () => act('configure'); panel.append(configure, message); return;
@@ -34,34 +32,22 @@
       const live = node('a', 'Open live election screen', 'btn btn-ghost'); live.href = 'election-live'; controls.append(arm, live); panel.append(controls);
       if (!r.armed && !election.locked) {
         const form = node('form');
-        const label = node('label', 'Account list'); label.htmlFor = 'welfareImportKind';
-        const select = node('select'); select.id = 'welfareImportKind'; select.className = 'in';
-        [['employee', 'Employees: employee number, full name, email'], ['guest', 'Additional voters: full name, email']].forEach(([v,t])=>{const o=node('option',t);o.value=v;select.append(o);});
-        const rowsLabel = node('label', 'Paste rows copied from a spreadsheet (tab-separated), or comma-separated rows'); rowsLabel.htmlFor = 'welfareImportRows';
+        const rowsLabel = node('label', 'Staff roster: employee number, full name, email (one employee per row, separated by tabs or commas)'); rowsLabel.htmlFor = 'welfareImportRows';
         const rows = node('textarea'); rows.id='welfareImportRows'; rows.className='in'; rows.rows=6; rows.required=true;
         const save = node('button','Create or reconcile these accounts','btn btn-primary');save.type='submit';
-        form.append(label,select,rowsLabel,rows,node('p','Existing passwords and roles are preserved. New accounts need activation; this action does not send email.'),save);
+        form.append(rowsLabel,rows,node('p','Existing passwords and roles are preserved. New accounts need activation; this action does not send email.'),save);
         form.onsubmit=async(event)=>{
           event.preventDefault();
           try {
             const people=rows.value.split(/\r?\n/).filter(l=>l.trim()).map(line=>{
               const parts=line.split(line.includes('\t')?'\t':',').map(p=>p.trim());
-              if(select.value==='employee'&&parts.length===3)return {staffNumber:parts[0],name:parts[1],email:parts[2]};
-              if(select.value==='guest'&&parts.length===2)return {name:parts[0],email:parts[1]};
-              throw new Error('Each employee row needs 3 columns; an additional-voter row needs 2.');
+              if(parts.length===3)return {staffNumber:parts[0],name:parts[1],email:parts[2]};
+              throw new Error('Each staff row needs 3 columns: employee number, full name, email.');
             });
-            save.disabled=true;await act('import',{kind:select.value,people});
+            save.disabled=true;await act('import',{kind:'employee',people});
           }catch(e){message.textContent=e.message;}finally{save.disabled=false;}
         };
         panel.append(form);
-      }
-      if(data.guests.length){
-        panel.append(node('h3','Additional voters'));
-        data.guests.forEach(g=>{
-          const row=node('p',g.name+' — '+g.email+' — '+(Number(g.ready)?'Ready':'Needs activation'));
-          if(!r.armed&&!election.locked){const remove=node('button','Remove','btn btn-ghost btn-sm');remove.type='button';remove.onclick=()=>act('remove-guest',{userId:g.userId});row.append(' ',remove);}
-          panel.append(row);
-        });
       }
       panel.append(node('p','Voting is recorded against the voter roll. The live feed exposes aggregate totals only. Keep the scheduled cron job running every minute; portal activity also advances due stages.','lede'),message);
     } catch(e) { panel.append(node('p',e.message||'Could not load welfare setup.','note warn')); }

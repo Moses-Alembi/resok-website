@@ -18,17 +18,14 @@ not a camera/video broadcast.
 4. Reconcile the real employee roster. There must be exactly **32 active employees with
    distinct employee numbers and activated accounts**. Paste spreadsheet rows as
    `employee number<TAB>full name<TAB>email`. Header rows should be removed.
-5. Add additional named voters separately, as `full name<TAB>email`. These people receive
-   ordinary portal accounts, never staff/admin permissions. They vote and may nominate
-   employees, but cannot stand as employee candidates. An employee cannot be counted again
-   as an additional voter. The actual total is **32 + the number of additional people**.
-6. Account imports do not send mail. Use the existing staff invite action for employees,
-   or ask each new person to use **Forgot password** with their own address. Completing
+5. Account imports do not send mail. Use the existing staff invite action for employees,
+   or ask each new employee to use **Forgot password** with their own address. Completing
    that mailbox link activates the account. Existing passwords and roles are preserved.
-7. Once every account is ready, choose **Arm automatic schedule**. This snapshots the
+6. Once every account is ready, choose **Arm automatic schedule**. This snapshots the
    voter roll. Imports/redrawing are refused while armed; disarm before corrections.
+   The total is exactly **32 staff voters**; no additional voter accounts are included.
    Nothing can change the electorate after voting has opened.
-8. Add a cPanel cron job every minute:
+7. Add a cPanel cron job every minute:
 
    ```text
    * * * * * php /home/resokorg/public_html/resok-portal/public/api/cron/welfare.php

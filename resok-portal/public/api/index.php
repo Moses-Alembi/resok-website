@@ -412,7 +412,7 @@ function mfaGrantSession(PDO $pdo, array $config, int $userId, array $extra = []
             'id' => (int)$user['id'],
             'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
             'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
-            'isWelfareVoter' => function_exists('welfareGuestMayView') && (welfareGuestMayView($pdo, (int)$user['id']) || welfareDuringWindow($pdo, (int)$user['id'])),
+            'isWelfareVoter' => function_exists('welfareDuringWindow') && welfareDuringWindow($pdo, (int)$user['id']),
             'email' => $user['email'],
             'role' => $user['role'],
             'membershipStatus' => $user['membership_status'],
@@ -497,7 +497,7 @@ function completeLogin(PDO $pdo, array $config, array $user): void
             'isAuthor' => $isAuthor,
             // Staff without a membership go to the staff home page rather than the Academy.
             'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
-            'isWelfareVoter' => function_exists('welfareGuestMayView') && (welfareGuestMayView($pdo, (int)$user['id']) || welfareDuringWindow($pdo, (int)$user['id'])),
+            'isWelfareVoter' => function_exists('welfareDuringWindow') && welfareDuringWindow($pdo, (int)$user['id']),
             'email' => $user['email'],
             'role' => $user['role'],
             'membershipStatus' => $user['membership_status'],

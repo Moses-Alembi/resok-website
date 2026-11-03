@@ -512,7 +512,7 @@ function procurementHandle(PDO $pdo, array $config, string $route, string $metho
             $r = procurementShape($pdo, procurementRow($pdo, (int)$id), false);
             $out[] = [$r['ref'], substr($r['createdAt'], 0, 10), $r['requester'], $r['department'], $r['chargeCode'], $r['title'], $r['total'], $r['statusLabel'], $r['supplier'], $r['lpoNumber'], $r['lpoAmount']];
         }
-        staffAudit($pdo, $me, 'procurement_exported', 'procurement', null, "$from to $to");
+        staffAudit($pdo, staffAuditActor($user), 'procurement_exported', 'procurement', null, "$from to $to");
         timesheetCsv("procurement-$from-to-$to.csv", ['Ref', 'Raised', 'Requested by', 'Department', 'Project', 'Purchase', 'Estimated total', 'Status', 'Supplier', 'LPO', 'LPO amount'], $out);
     }
 

@@ -244,7 +244,7 @@ function appraisalHandle(PDO $pdo, array $config, string $route, string $method,
 
     if (preg_match('#^staff/appraisals/(\d+)$#', $route, $m) && $method === 'GET') {
         [$a, $role] = $load((int)$m[1]);
-        if ($role === 'hr') staffAudit($pdo, $me, 'appraisal_viewed', 'appraisal', (string)$a['id'], $a['person'] . ' ' . $a['cycle_name']);
+        if ($role === 'hr') staffAudit($pdo, staffAuditActor($user), 'appraisal_viewed', 'appraisal', (string)$a['id'], $a['person'] . ' ' . $a['cycle_name']);
         respond(200, ['appraisal' => appraisalShape($pdo, $a, $role), 'competencies' => APPRAISAL_COMPETENCIES, 'ratings' => APPRAISAL_RATINGS]);
     }
 
@@ -474,7 +474,7 @@ function appraisalHandle(PDO $pdo, array $config, string $route, string $method,
         }
         usort($rows, static fn($x, $y) => strnatcasecmp((string)$x['person'], (string)$y['person']));
         if (!empty($_GET['csv'])) {
-            staffAudit($pdo, $me, 'appraisal_cycle_exported', 'appraisal_cycle', $m[1]);
+            staffAudit($pdo, staffAuditActor($user), 'appraisal_cycle_exported', 'appraisal_cycle', $m[1]);
             timesheetCsv('appraisals-' . $m[1] . '.csv', ['Staff', 'Job title', 'Department', 'Appraiser', 'Stage', 'Score', 'Rating', 'Agrees', 'Training needs'],
                 array_map(static fn($r) => [$r['person'], $r['jobTitle'], $r['department'], $r['appraiser'], $r['stageLabel'], $r['score'], $r['rating'],
                     $r['agrees'] === null ? '' : ($r['agrees'] ? 'Yes' : 'No'), $r['trainingNeeds']], $rows));

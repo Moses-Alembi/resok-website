@@ -67,8 +67,9 @@ const tick = () => new Promise(setImmediate);
     ui.setStart(async () => { throw Error('Preview refused'); });
     await buttons[1].events.click(); await tick();
     check(kind + ' reports backend refusal and re-enables the action', () => { assert.equal(buttons[1].disabled, false); assert(ui.notices.some(args => args.includes('Preview refused'))); });
-    const staffAdmin = previewContext(kind, admin, [{ ...employee, role: 'admin' }]);
+    const staffAdmin = previewContext(kind, admin, [{ ...employee, role: 'admin', super: true }]);
     check(kind + ' lets the server decide staff accounts with admin roles', () => assert.equal(previews(staffAdmin.root).length, 2));
+    check(kind + ' links each employee to recorded activity', () => assert(ui.root.all('a').some(link => link.textContent === 'Activity' && link.href === (kind === 'staff' ? '#activity-15' : 'staff#activity-15'))));
     if (kind === 'staff') {
       const self = previewContext(kind, { super: true, me: { userId: 15 } });
       check('Staff records do not offer a redundant self-preview', () => assert.equal(previews(self.root).length, 0));
@@ -84,5 +85,25 @@ const tick = () => new Promise(setImmediate);
       });
     }
   }
-  console.log(checks + ' staff preview entry-point checks passed');
+  const activityNodes = {}, activityCalls = [];
+  const activityEl = id => activityNodes[id] ||= make('div');
+  let activityData = {entries:[],actor:null,hasMore:false};
+  const activityContext = vm.createContext({loaders:{},el:activityEl,make,empty:text=>make('p','empty',text),fmtWhen:String,location:{hash:''},
+    api:async route => { activityCalls.push(route); return route==='staff/people' ? {people:[employee]} : activityData; }});
+  const activitySource = staffPage.slice(staffPage.indexOf('    let activityActorId ='), staffPage.indexOf('    // ---------- field work'));
+  vm.runInContext(activitySource,activityContext); await vm.runInContext('loaders.activity();',activityContext);
+  check('activity view opens all recorded accounts by default',()=>{ assert(activityCalls.includes('staff/audit')); assert(activityNodes.activityList.textContent.includes('Nothing recorded yet.')); });
+  const note='<script>untrusted()</script>';
+  activityData={actor:{userId:15,name:employee.name,jobTitle:employee.jobTitle},entries:[{actorUserId:15,actor:employee.name,source:'admin',action:'profile_updated',summary:note,at:'2026-11-03 17:00:00'}],hasMore:true};
+  await vm.runInContext('activityActorId=15; loaders.activity();',activityContext);
+  check('selected staff activity is requested by stable account ID',()=>{assert(activityCalls.includes('staff/audit&actorUserId=15'));assert.equal(activityNodes.activityActor.value,'15');});
+  check('selected account name and job title identify the history',()=>{assert(activityNodes.activityContext.textContent.includes(employee.name));assert(activityNodes.activityContext.textContent.includes(employee.jobTitle));assert(activityNodes.activityContext.textContent.includes('latest 200'));});
+  check('activity names and summaries render safely as text',()=>{assert(activityNodes.activityList.textContent.includes(note));assert.equal(activityNodes.activityList.all('script').length,0);assert.equal(activityNodes.activityList.all('img').length,0);});
+  check('admin actions are labelled and actor links keep the person filter',()=>{assert(activityNodes.activityList.textContent.includes('Administration'));assert(activityNodes.activityList.all('a').some(link=>link.href==='#activity-15'));});
+  activityData={actor:{userId:15,name:'Selected Account'},entries:[],hasMore:false};
+  await vm.runInContext('loaders.activity();',activityContext);
+  check('an unused account reports no recorded activity clearly',()=>assert(activityNodes.activityList.textContent.includes('No recorded activity for Selected Account yet.')));
+  activityEl('activityActor').value='19'; activityEl('activityActor').events.change();
+  check('changing the activity account updates its shareable portal destination',()=>assert.equal(activityContext.location.hash,'activity-19'));
+  console.log(checks + ' staff preview and activity UI checks passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

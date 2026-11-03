@@ -371,7 +371,7 @@ function timesheetHandle(PDO $pdo, array $config, string $route, string $method,
                        'approved' => array_sum(array_column($codes, 'approved')), 'pending' => array_sum(array_column($codes, 'pending'))];
         }
         if (!empty($_GET['csv'])) {
-            staffAudit($pdo, $me, 'timesheet_report_exported', 'timesheet', null, $month);
+            staffAudit($pdo, staffAuditActor($user), 'timesheet_report_exported', 'timesheet', null, $month);
             $out = [];
             foreach ($rows as $r) foreach ($r['codes'] as $c) $out[] = [$r['name'], $month, $c['code'], $c['name'], round($c['approved'] / 60, 2), round($c['pending'] / 60, 2)];
             timesheetCsv('timesheets-' . $month . '.csv', ['Staff', 'Month', 'Code', 'Project / code', 'Approved hours', 'Not yet approved hours'], $out);

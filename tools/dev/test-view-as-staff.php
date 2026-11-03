@@ -104,7 +104,7 @@ try {
         check(callPreview($pdo,$config,'view-as/start','POST',['scope'=>'staff','userId'=>$employee])->status===403,'an ordinary '.$mail.' cannot start staff previews');
     }
     $GLOBALS['testActor'] = $actor;
-    foreach (['inactive','member','admin','other-super'] as $mail) {
+    foreach (['inactive','member','admin'] as $mail) {
         check(callPreview($pdo,$config,'view-as/start','POST',['scope'=>'staff','userId'=>(int)$ids[$mail.'@view-as.test']])->status===403,'staff preview refuses '.$mail.' target');
     }
     check(callPreview($pdo,$config,'view-as/start','POST',['scope'=>'staff','userId'=>$actor['userId']])->status===400,'staff preview refuses the actor own account');
@@ -137,6 +137,25 @@ try {
     foreach (['view-as/status','view-as/end','auth/logout'] as $route) check(asRequest($config,$actor,$route)['userId']===$actor['userId'],'own control route retains the real actor: '.$route);
     $status = callPreview($pdo,$config,'view-as/status');
     check($status->body['active']&&$status->body['scope']==='staff'&&$status->body['targetUserId']===$employee&&$status->body['returnTo']==='staff#people','status exposes only the validated preview and signed return path');
+    $peerId = (int)$ids['other-super@view-as.test'];
+    $peer = callPreview($pdo,$config,'view-as/start','POST',['scope'=>'staff','userId'=>$peerId]);
+    check($peer->status === 200 && $peer->body['readOnly'] && $peer->body['targetSuperAdmin'],'a super administrator can preview a peer staff workspace read-only');
+    $_COOKIE['resok_viewas'] = previewCookie($config,$actor,$peerId);
+    $peerUser = asRequest($config,$actor,'staff/home');
+    check($peerUser['userId'] === $peerId && $peerUser['role'] === 'admin' && $peerUser['superAdmin'] && $peerUser['viewAs']['actorId'] === $actor['userId'],'peer preview uses that peer verified permissions while preserving the real actor');
+    foreach (['staff/people','staff/permissions','staff/audit','staff/payroll','admin/whoami'] as $route) {
+        check(asRequest($config,$actor,$route)['userId'] === $peerId,'peer preview reads its staff management screen: ' . $route);
+    }
+    foreach ([['staff/people/1','POST'],['staff/permissions/1','POST'],['staff/profile','POST'],['elections/test/vote','POST'],['auth/password','POST']] as [$route,$method]) {
+        denied(fn()=>asRequest($config,$actor,$route,$method),'peer preview still cannot perform actions: ' . $route);
+    }
+    foreach (['auth/mfa/status','ict/credentials','mdt','abstracts/reviews'] as $route) denied(fn()=>asRequest($config,$actor,$route),'peer staff preview does not open unrelated private areas: ' . $route);
+    $removed = $config; $removed['super_admins'] = ['super@view-as.test'];
+    check(!asRequest($removed,$actor,'staff/home')['superAdmin'],'revoking the peer super-admin configuration takes effect during preview');
+    denied(fn()=>asRequest($removed,$actor,'staff/people'),'a peer whose privileges were removed cannot retain staff management reads');
+    $peerStatus = callPreview($pdo,$config,'view-as/status');
+    check($peerStatus->body['targetSuperAdmin'] === true,'preview status exposes the current peer permission level for tab reconciliation');
+    $_COOKIE['resok_viewas'] = previewCookie($config,$actor,$employee);
     foreach ([['a'=>$actor['userId']+999],['aj'=>'different-session'],['exp'=>time()-1],['scope'=>'invalid']] as $override) {
         $_COOKIE['resok_viewas'] = previewCookie($config,$actor,$employee,$override);
         check(asRequest($config,$actor,'staff/home')['userId']===$actor['userId']&&!isset($_COOKIE['resok_viewas']),'invalid or mismatched preview is discarded');

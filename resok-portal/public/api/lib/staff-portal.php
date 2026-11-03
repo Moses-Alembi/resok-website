@@ -140,6 +140,12 @@ function staffPortalEnsureTables(PDO $pdo): bool
     }
 }
 
+/** Read/export audit entries belong to the person actually operating the preview. */
+function staffAuditActor(array $user): int
+{
+    return (int)($user['viewAs']['actorId'] ?? $user['userId']);
+}
+
 function staffAudit(PDO $pdo, ?int $actor, string $action, ?string $type = null, ?string $id = null, ?string $summary = null): void
 {
     try {
@@ -148,6 +154,36 @@ function staffAudit(PDO $pdo, ?int $actor, string $action, ?string $type = null,
     } catch (Throwable $e) {
         error_log('Staff audit write failed: ' . $e->getMessage());
     }
+}
+
+/** Latest recorded work across the existing audit logs; no credentials or raw change payloads. */
+function staffActivityFeed(PDO $pdo, ?int $actorId = null, int $limit = 200): array
+{
+    $limit = max(1,min(200,$limit));
+    $sources = [
+        'staff' => ['staff_audit','actor_user_id','action','summary'],
+        'ict' => ['ict_audit','actor_user_id','action','summary'],
+        'admin' => ['admin_actions','admin_user_id','action','reason'],
+        'security' => ['security_events','user_id','event_type','detail'],
+    ];
+    $entries = []; $available = [];
+    $exists = $pdo->prepare('SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
+    foreach ($sources as $source => [$table,$actorColumn,$actionColumn,$summaryColumn]) {
+        $exists->execute([$table]);
+        if (!$exists->fetchColumn()) continue;
+        $available[] = $source;
+        $stmt = $pdo->prepare("SELECT a.id,a.$actorColumn AS actor_id,a.$actionColumn AS action,a.$summaryColumn AS summary,a.created_at,
+            COALESCE(NULLIF(s.full_name,''),u.email) AS actor,u.email AS actor_email FROM $table a
+            LEFT JOIN users u ON u.id=a.$actorColumn LEFT JOIN staff_accounts s ON s.user_id=a.$actorColumn"
+            . ($actorId === null ? '' : " WHERE a.$actorColumn=?") . ' ORDER BY a.created_at DESC,a.id DESC LIMIT ' . ($limit+1));
+        $stmt->execute($actorId === null ? [] : [$actorId]);
+        foreach ($stmt->fetchAll() as $row) $entries[] = [
+            'id'=>(int)$row['id'],'source'=>$source,'actorUserId'=>$row['actor_id'] === null ? null : (int)$row['actor_id'],
+            'actor'=>$row['actor'],'actorEmail'=>$row['actor_email'],'action'=>$row['action'],'summary'=>$row['summary'],'at'=>$row['created_at'],
+        ];
+    }
+    usort($entries,static fn($a,$b) => strcmp($b['at'],$a['at']) ?: strcmp($a['source'],$b['source']) ?: ($b['id'] <=> $a['id']));
+    return ['entries'=>array_slice($entries,0,$limit),'hasMore'=>count($entries)>$limit,'sources'=>$available];
 }
 
 // ---------------------------------------------------------------------------------------
@@ -781,10 +817,17 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
     // ----- activity log (super administrators) -----
     if ($route === 'staff/audit' && $method === 'GET') {
         if (!$gate['super']) respond(403, ['error' => 'Only a super administrator can see the staff activity log.']);
-        $rows = $pdo->query('SELECT a.*, COALESCE(s.full_name, u.email) AS actor FROM staff_audit a
-                             LEFT JOIN users u ON u.id = a.actor_user_id LEFT JOIN staff_accounts s ON s.user_id = a.actor_user_id
-                             ORDER BY a.id DESC LIMIT 200')->fetchAll();
-        respond(200, ['entries' => array_map(static fn($r) => ['action' => $r['action'], 'summary' => $r['summary'], 'actor' => $r['actor'], 'at' => $r['created_at']], $rows)]);
+        $actorId = null; $actor = null;
+        if (isset($_GET['actorUserId']) && $_GET['actorUserId'] !== '') {
+            $rawActor = $_GET['actorUserId'];
+            if (!is_scalar($rawActor) || filter_var($rawActor,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]) === false) respond(400,['error'=>'Choose a valid staff account.']);
+            $actorId = (int)$rawActor;
+            $find = $pdo->prepare('SELECT u.id,u.email,s.full_name,s.job_title FROM users u LEFT JOIN staff_accounts s ON s.user_id=u.id WHERE u.id=?');
+            $find->execute([$actorId]); $person = $find->fetch();
+            if (!$person) respond(404,['error'=>'That account does not exist.']);
+            $actor = ['userId'=>$actorId,'name'=>$person['full_name'] ?: $person['email'],'email'=>$person['email'],'jobTitle'=>$person['job_title']];
+        }
+        respond(200,staffActivityFeed($pdo,$actorId) + ['actor'=>$actor]);
     }
 
     respond(404, ['error' => 'Route not found']);

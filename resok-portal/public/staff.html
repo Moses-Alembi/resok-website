@@ -365,15 +365,19 @@
 
       <!-- Activity -->
       <section class="stack" data-panel="activity" hidden>
-        <div><h1>Activity log</h1><p class="lede">Permission changes, staff record changes, deactivations and announcements.</p></div>
-        <div class="panel"><div class="table-wrap" id="activityList"></div></div>
+        <div><h1>Activity log</h1><p class="lede">Recorded staff, ICT, administration and security actions. Choose a person to review their work.</p></div>
+        <div class="panel">
+          <div class="head"><div><label for="activityActor" class="f">Staff account</label><select id="activityActor"><option value="">All accounts</option></select></div><button class="btn sm" id="activityRefresh" type="button">Refresh</button></div>
+          <p class="hint" id="activityContext" style="margin-bottom:14px"></p>
+          <div class="table-wrap" id="activityList"></div>
+        </div>
       </section>
       <footer class="admin-footer"><div class="staff-footer-brand"><i class="fas fa-people-group" aria-hidden="true"></i> ReSoK Staff Portal</div><span class="staff-footer-meta">&copy; 2026 Respiratory Society of Kenya</span></footer>
     </main>
   </div>
 
   <script src="js/staff-shell.js?v=20261103-staff1"></script>
-  <script src="js/portal-state.js?v=20261103-viewas-staff1"></script>
+  <script src="js/portal-state.js?v=20261103-viewas-staff2"></script>
   <script>
   (() => {
     /*
@@ -416,6 +420,8 @@
       const hash = location.hash.replace('#', '');
       const ann = hash.match(/^announcement-(\d+)$/);
       if (ann) { show('announcements'); openAnnouncement(+ann[1]); return; }
+      const activity = hash.match(/^activity-([1-9]\d*)$/);
+      if (hash === 'activity' || activity) { activityActorId = activity ? +activity[1] : null; show('activity'); return; }
       // The module scripts claim their own links, e.g. #procurement-12 or #appraisal-4.
       for (const claim of moduleRoutes) if (claim(hash)) return;
       show(hash || 'home');
@@ -897,6 +903,10 @@
         if (previewable) {
           const preview = staffPreviewButton(p, 'View staff portal', 'btn sm'); preview.style.marginLeft = '6px'; c5.appendChild(preview);
         }
+        if (home?.super === true) {
+          const activity = make('a', 'btn sm', 'Activity'); activity.href = '#activity-' + p.userId;
+          activity.title = 'Recorded activity for ' + (p.name || p.email); activity.style.marginLeft = '6px'; c5.appendChild(activity);
+        }
         tr.appendChild(c5);
         t.appendChild(tr);
       });
@@ -1083,23 +1093,46 @@
     };
 
     // ---------- activity ----------
+    let activityActorId = null, activityPeople = null, activityRequest = 0;
     loaders.activity = async () => {
       const box = el('activityList');
+      const request = ++activityRequest;
+      box.textContent = 'Loading activity…';
+      el('activityContext').textContent = '';
       try {
-        const data = await api('staff/audit');
+        const [data, choices] = await Promise.all([
+          api('staff/audit' + (activityActorId ? '&actorUserId=' + activityActorId : '')),
+          activityPeople ? Promise.resolve(activityPeople) : api('staff/people').then((result) => { activityPeople = result.people; return activityPeople; })
+        ]);
+        if (request !== activityRequest) return;
+        const select = el('activityActor'); select.textContent = '';
+        const all = make('option', null, 'All accounts'); all.value = ''; select.appendChild(all);
+        choices.forEach((person) => { const option = make('option', null, person.name || person.email); option.value = String(person.userId); select.appendChild(option); });
+        if (data.actor && !choices.some((person) => person.userId === data.actor.userId)) {
+          const option = make('option', null, data.actor.name); option.value = String(data.actor.userId); select.appendChild(option);
+        }
+        select.value = activityActorId ? String(activityActorId) : '';
+        el('activityContext').textContent = (data.actor ? [data.actor.name,data.actor.jobTitle].filter(Boolean).join(' · ') : 'All accounts')
+          + (data.hasMore ? ' · Showing the latest 200 recorded actions.' : ' · Latest recorded actions.');
         box.textContent = '';
-        if (!data.entries.length) { box.appendChild(empty('Nothing recorded yet.')); return; }
+        if (!data.entries.length) { box.appendChild(empty(data.actor ? 'No recorded activity for ' + data.actor.name + ' yet.' : 'Nothing recorded yet.')); return; }
         const t = make('table'); const hr = make('tr');
-        ['When', 'Who', 'What'].forEach((h) => hr.appendChild(make('th', null, h)));
+        ['When', 'Who', 'Area', 'What'].forEach((h) => hr.appendChild(make('th', null, h)));
         t.appendChild(hr);
         data.entries.forEach((e) => {
           const tr = make('tr');
-          tr.append(make('td', 'hint', fmtWhen(e.at)), make('td', null, e.actor || '—'), make('td', null, e.action.replace(/_/g, ' ') + (e.summary ? ': ' + e.summary : '')));
+          tr.appendChild(make('td', 'hint', fmtWhen(e.at)));
+          const who = make('td');
+          if (e.actorUserId) { const link = make('a', null, e.actor || e.actorEmail || 'Account'); link.href = '#activity-' + e.actorUserId; who.appendChild(link); }
+          else who.textContent = e.actor || 'System';
+          tr.append(who, make('td', 'hint', ({staff:'Staff',ict:'ICT',admin:'Administration',security:'Security'})[e.source] || e.source), make('td', null, e.action.replace(/_/g, ' ') + (e.summary ? ': ' + e.summary : '')));
           t.appendChild(tr);
         });
         box.appendChild(t);
-      } catch (e) { box.textContent = ''; box.appendChild(empty(e.message)); }
+      } catch (e) { if (request === activityRequest) { box.textContent = ''; box.appendChild(empty(e.message)); } }
     };
+    el('activityActor').addEventListener('change', () => { location.hash = el('activityActor').value ? 'activity-' + el('activityActor').value : 'activity'; });
+    el('activityRefresh').addEventListener('click', () => { activityPeople = null; loaders.activity(); });
 
     // ---------- field work (lib/staff-field.php) ----------
     let field = null;

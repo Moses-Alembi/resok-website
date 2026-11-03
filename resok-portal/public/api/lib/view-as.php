@@ -19,7 +19,8 @@
  *     votes, nominations, course attempts, registrations and passwords are refused, so
  *     nothing is ever done in the member's name that they did not do;
  *   - member previews require ordinary members; staff previews require active staff and
- *     never carry the target's administrator role or permit another super administrator.
+ *     retain a verified super administrator's staff-workspace permissions while all
+ *     writes remain blocked. Ordinary staff never inherit the viewing actor's privileges.
  * Starting, ending and every edit go to the admin audit log (admin_actions) and the security
  * log, with the administrator's account.
  */
@@ -92,10 +93,7 @@ function viewAsTarget(PDO $pdo, int $userId, string $scope = 'member', array $co
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     if (!$row) return null;
-    if ($scope === 'staff') {
-        // Preview the staff workspace without inheriting any administrator authority.
-        if (isSuperAdmin(['role' => $row['role'], 'email' => $row['email']], $config)) return null;
-    } elseif ((string)$row['role'] !== 'member') return null;
+    if ($scope !== 'staff' && (string)$row['role'] !== 'member') return null;
     return $row;
 }
 
@@ -106,9 +104,12 @@ function viewAsName(array $row): string
     return $name !== '' ? $name : (string)$row['email'];
 }
 
-/** Staff previews read only the workspace's self-service endpoints, never management data. */
-function viewAsStaffReadAllowed(string $route): bool
+/** Self-service reads for ordinary staff, and staff-management reads for verified peers. */
+function viewAsStaffReadAllowed(string $route, bool $targetSuperAdmin = false): bool
 {
+    // The real actor is already a verified super admin. A verified peer may have their
+    // staff management screens previewed too; this never opens other private modules.
+    if ($targetSuperAdmin && ($route === 'admin/whoami' || strncmp($route, 'staff/', 6) === 0)) return true;
     if (in_array($route, ['members/me', 'staff/home', 'staff/profile', 'staff/directory', 'staff/departments', 'staff/notifications', 'staff/leave', 'welfare/me', 'welfare/live'], true)) return true;
     if ($route === 'staff/announcements') return empty($_GET['manage']);
     if (preg_match('#^staff/announcements/[1-9][0-9]*$#D', $route)) return true;
@@ -146,6 +147,7 @@ function viewAsApply(array $config, array $actor): array
         return $actor;
     }
     $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    $targetSuperAdmin = $scope === 'staff' && isSuperAdmin(['role'=>$target['role'],'email'=>$target['email']], $config);
     $refuse = static function (string $why) use ($target) {
         respond(403, ['error' => $why, 'viewAs' => true, 'viewingName' => viewAsName($target)]);
     };
@@ -153,7 +155,7 @@ function viewAsApply(array $config, array $actor): array
         if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {
             $refuse('You are viewing the staff portal as ' . viewAsName($target) . '. This preview is read-only; nothing can be changed or submitted in their name.');
         }
-        if (!viewAsStaffReadAllowed($route)) {
+        if (!viewAsStaffReadAllowed($route, $targetSuperAdmin)) {
             $refuse('You are viewing the staff portal as ' . viewAsName($target) . '. Exit "View as" to open this area with your own account.');
         }
     } else {
@@ -169,8 +171,8 @@ function viewAsApply(array $config, array $actor): array
     return [
         'userId' => (int)$target['id'],
         'email' => (string)$target['email'],
-        'role' => 'member',
-        'superAdmin' => false,
+        'role' => $targetSuperAdmin ? 'admin' : 'member',
+        'superAdmin' => $targetSuperAdmin,
         'mfaSetupRequired' => false,
         'exp' => (int)$claims['exp'],
         'viewAs' => [
@@ -179,6 +181,7 @@ function viewAsApply(array $config, array $actor): array
             'profileId' => $target['profile_id'] !== null ? (int)$target['profile_id'] : null,
             'scope' => $scope,
             'readOnly' => $scope === 'staff',
+            'targetSuperAdmin' => $targetSuperAdmin,
             'returnTo' => viewAsReturnTo($scope, $claims['returnTo'] ?? null),
         ],
     ];
@@ -222,6 +225,7 @@ function viewAsHandle(PDO $pdo, array $config, string $route, string $method): v
             'readOnly' => $scope === 'staff',
             'jobTitle' => $scope === 'staff' ? ($target['job_title'] ?? null) : null,
             'targetUserId' => (int)$target['id'],
+            'targetSuperAdmin' => $scope === 'staff' && isSuperAdmin(['role'=>$target['role'],'email'=>$target['email']], $config),
             'returnTo' => $returnTo,
         ]);
     }
@@ -243,7 +247,7 @@ function viewAsHandle(PDO $pdo, array $config, string $route, string $method): v
         if ($userId === (int)$actor['userId']) respond(400, ['error' => 'That is your own account.']);
         $target = viewAsTarget($pdo, $userId, $scope, $config);
         if (!$target) respond(403, ['error' => $scope === 'staff'
-            ? 'Choose an active staff account. Another super administrator cannot be viewed as.'
+            ? 'Choose an active staff account.'
             : 'Only ordinary member accounts can be viewed. Administrators cannot be viewed as.']);
 
         $expires = time() + VIEW_AS_MINUTES * 60;
@@ -270,6 +274,7 @@ function viewAsHandle(PDO $pdo, array $config, string $route, string $method): v
             'readOnly' => $scope === 'staff',
             'jobTitle' => $scope === 'staff' ? ($target['job_title'] ?? null) : null,
             'targetUserId' => (int)$target['id'],
+            'targetSuperAdmin' => $scope === 'staff' && isSuperAdmin(['role'=>$target['role'],'email'=>$target['email']], $config),
             'returnTo' => $returnTo,
             // A member goes to their dashboard; an account with no membership is a learner.
             'goTo' => $scope === 'staff' ? 'staff' : ($target['profile_id'] !== null ? 'dashboard' : 'academy'),

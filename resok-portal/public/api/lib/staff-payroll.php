@@ -597,7 +597,7 @@ function payrollHandle(PDO $pdo, array $config, string $route, string $method, a
             $lines->execute([$id]);
             $all = array_map(static fn($l) => payrollLineShape($config, $l, true), $lines->fetchAll());
             $ref = 'Salary ' . date('M Y', strtotime($run['period'] . '-01'));
-            staffAudit($pdo, $me, 'payroll_exported', 'payroll', (string)$id, $run['period'] . ' ' . $type);
+            staffAudit($pdo, staffAuditActor($user), 'payroll_exported', 'payroll', (string)$id, $run['period'] . ' ' . $type);
             if ($type === 'register') {
                 timesheetCsv('payroll-' . $run['period'] . '.csv',
                     ['Name', 'Staff no.', 'KRA PIN', 'Basic', 'Gross', 'NSSF', 'SHIF', 'Housing Levy', 'Taxable pay', 'PAYE', 'Pension', 'Other deductions', 'Net pay', 'Employer NSSF', 'Employer Housing Levy'],

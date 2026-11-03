@@ -111,6 +111,9 @@ const activeStaff = { active: true, scope: 'staff', name: '<img src=x onerror=ba
   const changedTarget = setup({ respond: async () => ({ ...activeStaff, targetUserId: 24 }) }); await changedTarget.client.showViewAsBanner();
   changedTarget.setResponder(async () => ({ ...activeStaff, targetUserId: 25 })); await changedTarget.client.showViewAsBanner();
   check('changing the target in another tab cannot leave the old identity displayed', () => assert.equal(changedTarget.reloads(), 1));
+  const changedPrivilege = setup({ respond: async () => ({ ...activeStaff, targetSuperAdmin:true }) }); await changedPrivilege.client.showViewAsBanner();
+  changedPrivilege.setResponder(async () => ({ ...activeStaff, targetSuperAdmin:false })); await changedPrivilege.client.showViewAsBanner();
+  check('changing a viewed administrator permission level reloads the preview', () => assert.equal(changedPrivilege.reloads(),1));
   check('tab focus and visibility both revalidate server-side preview state', () => { assert.equal(typeof changedTarget.windowEvents.focus, 'function'); assert.equal(typeof changedTarget.documentEvents.visibilitychange, 'function'); });
   console.log(checks + ' preview session and banner checks passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1072,7 +1072,7 @@
     } finally {
       viewAsStatusLoading = false;
     }
-    const snapshot = status?.active === true ? [status.scope || "member", status.targetUserId || status.profileId || status.email, status.endsAt].join(":") : "inactive";
+    const snapshot = status?.active === true ? [status.scope || "member", status.targetUserId || status.profileId || status.email, status.targetSuperAdmin === true, status.endsAt].join(":") : "inactive";
     if (viewAsSnapshot !== null && snapshot !== viewAsSnapshot) { reloadViewAsPage(); return; }
     viewAsSnapshot = snapshot;
     if (!status || !status.active) {

@@ -44,11 +44,21 @@ and fresh status checks when focused, so they do not retain the wrong account di
 
 Staff previews are read-only: they cannot cast votes, nominate, submit requests, change
 passwords or edit profiles. Opening announcements does not mark the employee's notices or
-notifications read. Management endpoints and unrelated private areas remain unavailable;
-the administrator can exit the preview to use their own management tools. Active staff
-accounts with administrator roles are previewed with ordinary staff authority. Other
-super administrators and deactivated staff cannot be previewed. Starts and exits are audited.
+notifications read. Ordinary staff previews use ordinary staff authority. A verified
+super-administrator peer can also be previewed with their actual staff-management
+permissions; all writes remain blocked. Unrelated private modules stay unavailable,
+and deactivated staff cannot be previewed. Starts and exits are audited. Read/export
+audit entries during preview belong to the real operator, not the employee being observed.
 The existing member preview retains its profile-correction behavior.
+
+Each account has an **Activity** link in Staff records and ICT Staff & access, including
+super administrators. It opens `staff#activity-<userId>`. The Activity log also has an
+account selector and Refresh button. Its latest 200 recorded actions combine staff,
+ICT, administration and security logs when those modules have data, with source labels
+and an explicit limit notice when more history exists. This shows existing audit events,
+not every page view. Only verified super administrators may read this history. Actor
+filters do not grant access to ordinary staff, and raw before/after payloads, credentials
+and client fingerprints are excluded from the response.
 
 For a name/designation sheet, open **Staff records → Load HR list** and keep **Update job
 titles only** selected. Paste the serial number, name and title columns, check the matched

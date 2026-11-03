@@ -342,7 +342,7 @@ function fieldHandle(PDO $pdo, array $config, string $route, string $method, arr
                                LEFT JOIN staff_accounts m ON m.user_id = s.manager_user_id WHERE s.user_id = ?');
         $stmt->execute([$who]);
         $p = $stmt->fetch() ?: [];
-        if ($who !== $me) staffAudit($pdo, $me, 'field_report_viewed', 'staff', (string)$who, $period . ' ' . $from);
+        if ($who !== $me) staffAudit($pdo, staffAuditActor($user), 'field_report_viewed', 'staff', (string)$who, $period . ' ' . $from);
         respond(200, [
             'period' => $period, 'from' => $from, 'to' => $to, 'label' => $label,
             'person' => ['userId' => $who, 'name' => $people[$who], 'jobTitle' => $p['job_title'] ?? null, 'department' => $p['department'] ?? null,
@@ -372,7 +372,7 @@ function fieldHandle(PDO $pdo, array $config, string $route, string $method, arr
                        'minutes' => (int)($r['mins'] ?? 0), 'counties' => $r['counties'] ?? '', 'loggedLater' => (int)($r['later'] ?? 0)];
         }
         if (!empty($_GET['csv'])) {
-            staffAudit($pdo, $me, 'field_team_exported', 'field', null, $period . ' ' . $from);
+            staffAudit($pdo, staffAuditActor($user), 'field_team_exported', 'field', null, $period . ' ' . $from);
             header_remove('Content-Type');
             header('Content-Type: text/csv; charset=utf-8');
             header('Content-Disposition: attachment; filename="field-work-' . $period . '-' . $from . '.csv"');

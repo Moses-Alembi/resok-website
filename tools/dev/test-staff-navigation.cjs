@@ -11,10 +11,10 @@ function allowed(home, view) {
   return vm.runInNewContext(viewGuard + '\ncanOpenView(view)', { home, view, can: cap => !!home && (home.super === true || home.caps.includes(cap)), Map });
 }
 const employee = { super: false, onStaffList: true, caps: [] };
-for (const view of ['home', 'announcements', 'directory', 'helpdesk', 'equipment', 'field', 'field-reports', 'timesheets', 'procurement', 'appraisals', 'payslips', 'location', 'profile', 'leave']) {
+for (const view of ['home', 'announcements', 'helpdesk', 'equipment']) {
   assert(allowed(employee, view), view); checks++;
 }
-for (const view of ['administration', 'permissions', 'activity', 'people', 'departments', 'manage-announcements', 'payroll']) {
+for (const view of ['administration', 'permissions', 'activity', 'people', 'departments', 'manage-announcements', 'payroll', 'directory', 'leave', 'field', 'field-reports', 'timesheets', 'procurement', 'appraisals', 'payslips', 'location', 'profile']) {
   assert(!allowed(employee, view), view); checks++;
 }
 for (const view of ['administration', 'permissions', 'activity', 'people', 'departments', 'manage-announcements', 'payroll', 'leave', 'timesheets']) {
@@ -24,6 +24,14 @@ for (const view of ['profile', 'field', 'payslips']) {
   assert(!allowed({ super: true, onStaffList: false, caps: [] }, view), view); checks++;
 }
 assert(!allowed(null, 'home')); checks++;
+for (const view of ['home','announcements','helpdesk','equipment']) { assert(allowed({super:false,onStaffList:true,caps:['staff.manage','payroll.manage']},view)); checks++; }
+for (const view of ['people','payroll','leave','appraisals']) { assert(!allowed({super:false,onStaffList:true,caps:['staff.manage','payroll.manage']},view)); checks++; }
+const linkLocation = {href:'https://www.resok.org/resok-portal/public/staff',origin:'https://www.resok.org'};
+function allowedLink(home, href) { return vm.runInNewContext(viewGuard+'\nstaffLinkAvailable(href)',{home,href,location:linkLocation,URL,Map}); }
+for (const href of ['#home','#announcements','#equipment','#helpdesk','#announcement-7','#main','staff#home','staff#announcements','https://example.org/news']) { assert(allowedLink(employee,href),href); checks++; }
+for (const href of ['#directory','#leave','#appraisals','#timesheets','#procurement','#payslips','#profile','#location','elections?for=staff','election-live','staff#leave','staff/#leave','staff#administration','#timesheet-approvals']) { assert(!allowedLink(employee,href),href); checks++; }
+for (const href of ['#leave','#appraisals','elections?for=staff','election-live','#administration']) { assert(allowedLink({super:true},href)); checks++; }
+
 const caption = page.match(/const accountCaption = (.*);/)[1];
 for (const [home, me, accountRole, expected] of [
   [{ super: false }, { jobTitle: 'Finance Officer' }, 'Staff member', 'Finance Officer'],
@@ -35,13 +43,26 @@ for (const [home, me, accountRole, expected] of [
 }
 
 class Element {
-  constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.ownText = ''; this.value = ''; this.checked = false; }
-  append(...kids) { for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) this.children.push(kid); }
+  constructor(tag) {
+    this.tag = tag; this.children = []; this.events = {}; this.ownText = ''; this.value = ''; this.checked = false;
+    this.dataset = {}; this.attributes = {}; this.parent = null;
+    const classes = new Set();
+    this.classList = { add: (...values) => values.forEach(value => classes.add(value)), remove: (...values) => values.forEach(value => classes.delete(value)), contains: value => classes.has(value), toggle: (value, enabled) => { if (enabled) classes.add(value); else classes.delete(value); } };
+  }
+  append(...kids) { for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) { this.children.push(kid); if (kid instanceof Element) kid.parent = this; } }
   appendChild(kid) { this.append(kid); return kid; }
   replaceChildren(...kids) { this.children = []; this.append(...kids); }
   addEventListener(key, fn) { this.events[key] = fn; }
   scrollIntoView() {}
   focus() {}
+  dataKey(key) { return key.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()); }
+  getAttribute(key) { return key.startsWith('data-') ? this.dataset[this.dataKey(key)] ?? null : key === 'title' ? this.title ?? null : this.attributes[key] ?? null; }
+  setAttribute(key, value) { if (key.startsWith('data-')) this.dataset[this.dataKey(key)] = String(value); else if (key === 'title') this.title = String(value); else this.attributes[key] = String(value); }
+  removeAttribute(key) { if (key.startsWith('data-')) delete this.dataset[this.dataKey(key)]; else if (key === 'title') delete this.title; else delete this.attributes[key]; }
+  hasAttribute(key) { return this.getAttribute(key) !== null; }
+  closest(selector) { if (selector === '.side' && this.classList.contains('side')) return this; if (selector === 'a[data-staff-launch-href]' && this.tag === 'a' && this.hasAttribute('data-staff-launch-href')) return this; return this.parent?.closest(selector) || null; }
+  querySelector(selector) { return selector === '[data-launch-badge]' ? this.all('span').find(node => node.dataset.launchBadge) || null : null; }
+  remove() { if (this.parent) this.parent.children = this.parent.children.filter(node => node !== this); this.parent = null; }
   set textContent(value) { this.ownText = value; this.children = []; }
   get textContent() { return this.ownText + this.children.map(kid => typeof kid === 'string' ? kid : kid.textContent).join(' '); }
   all(tag) { return [this, ...this.children.filter(kid => kid instanceof Element).flatMap(kid => kid.all(tag))].filter(kid => kid.tag === tag); }
@@ -55,6 +76,29 @@ function h(tag, attrs, ...kids) {
   }
   node.append(...kids); return node;
 }
+// Disabled entries remain visible and can be restored when a super-admin session loads.
+const sidebar = new Element('nav'); sidebar.classList.add('side');
+const paused = h('a', { text: 'Leave' }); paused.setAttribute('href', '#leave'); paused.setAttribute('title', 'Original title'); paused.setAttribute('tabindex', '0');
+const active = h('a', { text: 'ICT helpdesk' }); active.setAttribute('href', '#helpdesk');
+const shortcut = h('a', { text: 'Welfare elections' }); shortcut.setAttribute('href', 'elections?for=staff');
+sidebar.append(paused, active);
+const body = new Element('body');
+const launchContext = vm.createContext({ home: employee, location: linkLocation, URL, Map,
+  document: { body, querySelectorAll: () => [paused, active, shortcut] }, make: (tag, cls, text) => h(tag, { class: cls, text }) });
+vm.runInContext(viewGuard + '\nsyncStaffLaunchLinks();', launchContext);
+assert.equal(paused.getAttribute('href'), null); assert.equal(paused.getAttribute('aria-disabled'), 'true'); assert.equal(paused.getAttribute('tabindex'), '-1'); checks++;
+assert(paused.textContent.includes('Leave') && paused.textContent.includes('Soon')); assert(body.classList.contains('staff-limited')); checks++;
+assert.equal(active.getAttribute('href'), '#helpdesk'); assert.equal(shortcut.getAttribute('href'), null); checks++;
+vm.runInContext('syncStaffLaunchLinks();', launchContext); assert.equal(paused.all('span').length, 1); checks++;
+const intercept = page.match(/document.addEventListener\('click', \(event\) => \{([\s\S]*?)\}, true\);/)[1];
+let prevented = false, stopped = false;
+vm.runInNewContext('((event) => {' + intercept + '})(event)', { event: { target: paused, preventDefault() { prevented = true; }, stopImmediatePropagation() { stopped = true; } } });
+assert(prevented && stopped); checks++;
+launchContext.home = { super: true };
+vm.runInContext('syncStaffLaunchLinks();', launchContext);
+assert.equal(paused.getAttribute('href'), '#leave'); assert.equal(shortcut.getAttribute('href'), 'elections?for=staff'); checks++;
+assert.equal(paused.getAttribute('title'), 'Original title'); assert.equal(paused.getAttribute('tabindex'), '0'); assert.equal(paused.getAttribute('aria-disabled'), null); checks++;
+assert(!paused.querySelector('[data-launch-badge]') && !paused.classList.contains('staff-unavailable') && !body.classList.contains('staff-limited')); checks++;
 function leaveContext(manage, pendingCount = 1) {
   const root = new Element('section'), posts = [];
   const pending = manage ? [{ id: 1, userId: 3, person: 'Employee', type: 'Configured leave', startsOn: '2026-11-10', endsOn: '2026-11-12', status: 'pending', reason: 'Employee note' }] : [];
@@ -66,6 +110,27 @@ function leaveContext(manage, pendingCount = 1) {
 }
 const tick = () => new Promise(setImmediate);
 (async () => {
+  const elections = fs.readFileSync(path.join(publicDir, 'elections.html'), 'utf8');
+  const accessFunctions = elections.slice(elections.indexOf('    function applyElectionManagementAccess'), elections.indexOf('    const make =', elections.indexOf('    function applyElectionManagementAccess')));
+  const bootStart = elections.lastIndexOf('    (async () => {');
+  const boot = elections.slice(bootStart, elections.indexOf('    })();', bootStart) + '    })();'.length);
+  for (const kind of ['super', 'staff-admin', 'employee', 'member']) {
+    const nodes = {}; let redirected = '', loaded = false;
+    const el = id => nodes[id] ||= { textContent: '', hidden: true };
+    const context = vm.createContext({ STAFF: kind !== 'member', el, location: { hash: '' },
+      window: { location: { replace: path => { redirected = path; } } },
+      api: async route => {
+        if (route.includes('admin/whoami')) {
+          if (kind === 'employee') throw Object.assign(new Error('Forbidden'), { status: 403 });
+          return { isSuperAdmin: kind === 'super' };
+        }
+        return route.includes('welfare/me') ? { me: { name: 'Staff' } } : { firstName: 'Member' };
+      }, loadList: async () => { loaded = true; }, openElection() {} });
+    vm.runInContext(accessFunctions, context); await vm.runInContext(boot, context);
+    if (kind === 'super' || kind === 'member') { assert(loaded); assert.equal(redirected, ''); }
+    else { assert(!loaded); assert.equal(redirected, 'staff'); }
+    checks++;
+  }
   const ordinary = leaveContext(false); ordinary.S.loaders.leave(); await tick();
   assert(ordinary.root.textContent.includes('Submit leave request')); assert(!ordinary.root.textContent.includes('To approve')); checks++;
   const form = ordinary.root.all('form')[0]; form.all('select')[0].value = '1'; form.all('textarea')[0].value = '<img src=x onerror=bad()>';

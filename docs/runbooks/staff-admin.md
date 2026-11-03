@@ -12,11 +12,14 @@ super-admin email configuration. Individual staff grants cannot reduce that acce
 The Permissions screen shows those accounts with every capability checked and the label
 **Full access automatically**, instead of offering ineffective staff-grant changes.
 
-No HR roles or staff grants are assigned by this release. Active employees can use their
-own leave, appraisals, timesheets, purchase requests, payslips, field work, profile, directory,
-announcements, equipment and support tools. The former election-only launch lock is removed.
-Management links and endpoints remain restricted to the appropriate server permissions;
-opening employee tools does not grant payroll, staff management or approval rights.
+The current employee launch exposes only **Overview, Announcements, My equipment and ICT
+helpdesk**. Other sections stay visible but greyed out, with disabled destinations and
+Coming soon labels. Overview shortcuts and notification links follow the same restriction;
+direct links to paused staff views return to Overview. The staff election page redirects
+ordinary staff back to the portal, and the election feed is hidden on their staff overview.
+Verified super administrators retain all existing management tools and their normal links.
+This is a portal launch setting; modules, server permissions and saved grants are retained.
+No HR roles or staff grants are assigned by this release.
 Leave approval and type settings are restricted to super administrators for now, as requested.
 Workflow rules, such as approval stages and locked records, still apply. Documents and policies,
 tasks and projects, and the calendar remain planned sections.

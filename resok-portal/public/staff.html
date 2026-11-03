@@ -15,9 +15,9 @@
     })();
   </script>
   <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" />
-  <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff4" />
+  <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff5" />
 </head>
-<body class="booting">
+<body class="booting staff-limited">
   <a class="skip" href="#main">Skip to content</a>
   <header class="admin-topbar">
     <button class="admin-sidebar-toggle" id="menuBtn" type="button" aria-label="Open staff navigation" aria-controls="side" aria-expanded="false"><i class="fas fa-bars" aria-hidden="true"></i></button>
@@ -416,6 +416,9 @@
       show(hash || 'home');
     }
     window.addEventListener('hashchange', route);
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('a[data-staff-launch-href]')) { event.preventDefault(); event.stopImmediatePropagation(); }
+    }, true);
     if (!window.ResokStaffShell) el('menuBtn').addEventListener('click', () => {
       const open = el('side').classList.toggle('open'); el('menuBtn').setAttribute('aria-expanded', String(open));
     });
@@ -434,6 +437,7 @@
         a.addEventListener('click', () => { if (!item.read) post('staff/notifications/read', { ids: [item.id] }).then(renderBell).catch(() => {}); el('bellPanel').hidden = true; });
         list.appendChild(a);
       });
+      syncStaffLaunchLinks();
     }
     el('bellBtn').addEventListener('click', async () => {
       const panel = el('bellPanel');
@@ -556,13 +560,15 @@
         r.append(make('code', 'tag', a.assetTag), make('span', 'grow', a.name));
         assets.appendChild(r);
       });
+      syncStaffLaunchLinks();
       loadTickets('homeTickets', true);
     }
     loaders.home = () => { if (home) loadHome(true); };
 
-    // Employee tools are open to active staff; management follows server capabilities.
+    // Staff launch: four active sections; verified super administrators retain their tools.
     function canOpenView(view) {
       if (!home) return false;
+      if (home.super !== true) return ['home', 'announcements', 'equipment', 'helpdesk'].includes(view);
       if (['administration', 'permissions', 'activity'].includes(view)) return home.super === true;
       const requirements = new Map([
         ['people', ['staff.manage']], ['departments', ['staff.manage']],
@@ -571,6 +577,53 @@
       if (requirements.has(view)) return requirements.get(view).some(can);
       if (['profile', 'field', 'payslips'].includes(view)) return home.onStaffList === true;
       return true;
+    }
+
+    // Reversible launch controls: keep paused tools visible without active destinations.
+    function staffLinkAvailable(href) {
+      if (!home) return false;
+      if (home.super === true || href === '#main') return true;
+      let target;
+      try { target = new URL(href, location.href); } catch (error) { return true; }
+      if (target.origin !== location.origin) return true;
+      const page = target.pathname.replace(/\/+$/, '').split('/').pop().replace(/\.html$/, '');
+      if (page === 'staff') {
+        let view;
+        try { view = decodeURIComponent(target.hash.slice(1)) || 'home'; } catch (error) { return false; }
+        return /^announcement-\d+$/.test(view) ? canOpenView('announcements') : canOpenView(view);
+      }
+      return !['elections', 'election-live', 'election-admin', 'admin-home', 'ict'].includes(page);
+    }
+    function syncStaffLaunchLinks() {
+      if (!home) return;
+      document.body.classList.toggle('staff-limited', home.super !== true);
+      document.querySelectorAll('.side a, .staff-main a, #bellPanel a').forEach((link) => {
+        const saved = link.hasAttribute('data-staff-launch-href');
+        const href = saved ? link.dataset.staffLaunchHref : link.getAttribute('href');
+        if (href === null) return;
+        if (!staffLinkAvailable(href)) {
+          if (!saved) {
+            link.dataset.staffLaunchHref = href;
+            link.dataset.staffLaunchTitle = link.getAttribute('title') || '';
+            link.dataset.staffLaunchTabindex = link.getAttribute('tabindex') || '';
+          }
+          link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.setAttribute('tabindex', '-1');
+          link.title = 'Coming soon'; link.classList.add('staff-unavailable');
+          if (link.closest('.side')) {
+            link.classList.add('locked', 'greyed');
+            if (!link.querySelector('[data-launch-badge]')) {
+              const badge = make('span', 'soon', 'Soon'); badge.dataset.launchBadge = '1'; link.appendChild(badge);
+            }
+          }
+        } else if (saved) {
+          link.setAttribute('href', href); link.removeAttribute('aria-disabled');
+          if (link.dataset.staffLaunchTitle) link.title = link.dataset.staffLaunchTitle; else link.removeAttribute('title');
+          if (link.dataset.staffLaunchTabindex) link.setAttribute('tabindex', link.dataset.staffLaunchTabindex); else link.removeAttribute('tabindex');
+          link.classList.remove('staff-unavailable', 'locked', 'greyed');
+          const badge = link.querySelector('[data-launch-badge]'); if (badge) badge.remove();
+          delete link.dataset.staffLaunchHref; delete link.dataset.staffLaunchTitle; delete link.dataset.staffLaunchTabindex;
+        }
+      });
     }
 
     // ---------- announcements ----------

@@ -1,9 +1,10 @@
 # Staff leave
 
-Employees use `staff#leave` to request leave and track its status. Super administrators
+Leave is implemented but currently greyed out for ordinary staff under the four-section
+staff launch. When enabled, employees use `staff#leave` to request leave and track its status. Super administrators
 use `staff#leave-manage` to decide requests, see the register and configure leave types.
-The welfare-election-only menu restriction has been removed; employees can also open
-their appraisals, timesheets, payslips and other existing personal staff tools.
+The current launch keeps Overview, Announcements, My equipment and ICT helpdesk active
+for ordinary staff. Super administrators can continue managing Leave and its settings.
 
 Before the first request, the super administrator adds the organisation's actual leave
 types under **Leave types**. Names and optional guidance are configurable. Nothing seeds

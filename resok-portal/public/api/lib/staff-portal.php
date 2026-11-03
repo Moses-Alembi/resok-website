@@ -32,7 +32,8 @@ declare(strict_types=1);
  * Timesheets, payroll, procurement and appraisals live in lib/staff-timesheet.php,
  * staff-payroll.php, staff-procurement.php and staff-appraisal.php.
  *
- * Leave, documents and policies, tasks and projects, and the calendar are not built: they
+ * Leave requests live in lib/staff-leave.php. Documents and policies, tasks and projects,
+ * and the calendar are not built: they
  * need the Society's HR policy and a decision on Microsoft 365, and show as "coming soon".
  */
 
@@ -504,6 +505,7 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
 
     // Timesheets, payroll, procurement and appraisals, each in its own file behind the same gate.
     foreach ([
+        'staff/leave'      => ['staffLeaveHandle', 'lib/staff-leave.php'],
         'staff/timesheets' => ['timesheetHandle', 'lib/staff-timesheet.php'],
         'staff/payroll'    => ['payrollHandle', 'lib/staff-payroll.php'],
         'staff/procurement'=> ['procurementHandle', 'lib/staff-procurement.php'],

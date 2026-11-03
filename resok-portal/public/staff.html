@@ -61,6 +61,7 @@
       <a class="admin-nav-link" href="#helpdesk" data-view="helpdesk"><i class="fas fa-headset"></i> ICT helpdesk</a>
       <a class="admin-nav-link" href="#equipment" data-view="equipment"><i class="fas fa-laptop"></i> My equipment</a>
       <div class="sec" data-staff-fullnav>My work</div>
+      <a class="admin-nav-link" href="#leave" data-view="leave"><i class="fas fa-umbrella-beach"></i> Leave</a>
       <a class="admin-nav-link" href="#field" data-view="field" data-needs-row><i class="fas fa-person-walking-luggage"></i> Field work</a>
       <a class="admin-nav-link" href="#field-reports" data-view="field-reports"><i class="fas fa-chart-column"></i> Field reports</a>
       <a class="admin-nav-link" href="#timesheets" data-view="timesheets" data-needs-row><i class="fas fa-business-time"></i> Timesheets</a>
@@ -72,12 +73,12 @@
       <a class="admin-nav-link" href="elections?for=staff"><i class="fas fa-check-to-slot"></i> Welfare elections</a>
       <a class="admin-nav-link" href="election-live"><i class="fas fa-tower-broadcast"></i> Live election results</a>
       <div class="sec" data-staff-fullnav>Coming soon</div>
-      <span class="locked" title="Coming soon"><i class="fas fa-umbrella-beach"></i> Leave <span class="soon">Soon</span></span>
       <span class="locked" title="Coming soon"><i class="fas fa-folder-open"></i> Documents &amp; policies <span class="soon">Soon</span></span>
       <span class="locked" title="Coming soon"><i class="fas fa-list-check"></i> Tasks &amp; projects <span class="soon">Soon</span></span>
       <span class="locked" title="Coming soon"><i class="fas fa-calendar-days"></i> Calendar <span class="soon">Soon</span></span>
       <div id="manageNav" hidden>
         <div class="sec">Manage</div>
+        <a class="admin-nav-link" href="#leave-manage" data-super><i class="fas fa-umbrella-beach"></i> Leave requests</a>
         <a class="admin-nav-link" href="#timesheet-approvals" data-super><i class="fas fa-business-time"></i> Timesheet approvals</a>
         <a class="admin-nav-link" href="#procurement-all" data-super><i class="fas fa-cart-shopping"></i> All purchase requests</a>
         <a class="admin-nav-link" href="#appraisal-cycles" data-super><i class="fas fa-star-half-stroke"></i> Appraisal cycles</a>
@@ -107,14 +108,7 @@
       <section class="stack" data-panel="home">
         <div class="staff-home-head">
           <div><div class="eyebrow">People &amp; operations</div><h1 id="hello">Welcome</h1><p class="lede" id="helloSub">Your ReSoK staff portal.</p></div>
-          <div class="staff-head-actions"><a class="btn primary" id="staffManageLink" href="#administration" hidden><i class="fas fa-sliders" aria-hidden="true"></i> Manage staff portal</a><a class="btn" href="elections?for=staff"><i class="fas fa-check-to-slot" aria-hidden="true"></i> Welfare elections</a><a class="btn" id="staffElectionManageLink" href="election-admin?for=staff" hidden><i class="fas fa-sliders" aria-hidden="true"></i> Manage elections</a></div>
-        </div>
-        <div class="panel staff-launch-card" id="homeLaunch" hidden>
-          <div class="staff-launch-icon"><i class="fas fa-check-to-slot" aria-hidden="true"></i></div>
-          <h2>Your welfare election workspace</h2>
-          <p style="margin:8px 0 14px">View candidates, nominate colleagues, cast your vote, and follow live election results.</p>
-          <a class="btn primary" href="elections?for=staff">Go to welfare elections</a>
-          <p class="hint" style="margin-top:14px">The rest of the staff portal is coming soon.</p>
+          <div class="staff-head-actions"><a class="btn primary" href="#leave" data-needs-row><i class="fas fa-umbrella-beach" aria-hidden="true"></i> Request leave</a><a class="btn" href="#appraisals"><i class="fas fa-star-half-stroke" aria-hidden="true"></i> My appraisals</a><a class="btn primary" id="staffManageLink" href="#administration" hidden><i class="fas fa-sliders" aria-hidden="true"></i> Manage staff portal</a><a class="btn" href="elections?for=staff"><i class="fas fa-check-to-slot" aria-hidden="true"></i> Welfare elections</a><a class="btn" id="staffElectionManageLink" href="election-admin?for=staff" hidden><i class="fas fa-sliders" aria-hidden="true"></i> Manage elections</a></div>
         </div>
         <div class="tiles" id="homeTiles"></div>
         <div class="grid2">
@@ -219,6 +213,8 @@
         </div>
         <div class="panel" id="frBox"><div class="empty">Choose a period and a person, then View report.</div></div>
       </section>
+
+      <section class="stack" data-panel="leave" hidden></section>
 
       <!-- Timesheets, procurement, appraisals, payslips and payroll: built by js/staff-*.js -->
       <section class="stack" data-panel="timesheets" hidden></section>
@@ -331,6 +327,7 @@
         <div class="head"><div><h1>Staff administration</h1><p class="lede">Manage staff records, operations and settings from one place.</p></div><span class="pill p-ok">Full administrator access</span></div>
         <div class="note ok">Your super administrator account has all staff management permissions automatically. You do not need an HR role or separate staff grants.</div>
         <div class="staff-admin-grid">
+          <a class="staff-admin-card" href="#leave-manage"><span class="staff-admin-icon"><i class="fas fa-umbrella-beach" aria-hidden="true"></i></span><strong>Leave requests</strong><span>Configure leave types, review requests and record decisions.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#people"><span class="staff-admin-icon"><i class="fas fa-users-gear" aria-hidden="true"></i></span><strong>Staff records</strong><span>Edit employee details, reporting lines and active status.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="ict#staff"><span class="staff-admin-icon"><i class="fas fa-user-plus" aria-hidden="true"></i></span><strong>Staff accounts</strong><span>Create accounts, send invitations and manage account access.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#departments"><span class="staff-admin-icon"><i class="fas fa-sitemap" aria-hidden="true"></i></span><strong>Departments</strong><span>Add departments and update their names and status.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
@@ -350,7 +347,7 @@
           <a class="staff-admin-card" href="#permissions"><span class="staff-admin-icon"><i class="fas fa-user-shield" aria-hidden="true"></i></span><strong>Permissions</strong><span>Review access; super administrators hold every staff capability.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
           <a class="staff-admin-card" href="#activity"><span class="staff-admin-icon"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i></span><strong>Activity log</strong><span>Review staff record changes, permission changes and other actions.</span><span class="staff-admin-open">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></span></a>
         </div>
-        <p class="hint">Leave, documents and policies, tasks, and the calendar are planned sections and are not yet built.</p>
+        <p class="hint">Documents and policies, tasks, and the calendar are planned sections and are not yet built.</p>
       </section>
 
       <!-- Permissions -->
@@ -394,7 +391,8 @@
     const views = Array.from(document.querySelectorAll('[data-panel]')).map((s) => s.dataset.panel);
     const loaders = {};
     function show(view) {
-      if (!views.includes(view) || staffLocked()) view = 'home';
+      if (!home) return;
+      if (!views.includes(view) || !canOpenView(view)) view = 'home';
       document.querySelectorAll('[data-panel]').forEach((s) => { s.hidden = s.dataset.panel !== view; });
       document.querySelectorAll('.side a[data-view]').forEach((a) => a.classList.toggle('active', a.dataset.view === view));
       if (window.ResokStaffShell) window.ResokStaffShell.closeMenu();
@@ -407,7 +405,7 @@
       window.scrollTo(0, 0);
     }
     function route() {
-      if (staffLocked()) { show('home'); return; }
+      if (!home) return;
       const hash = location.hash.replace('#', '');
       const ann = hash.match(/^announcement-(\d+)$/);
       if (ann) { show('announcements'); openAnnouncement(+ann[1]); return; }
@@ -521,7 +519,6 @@
       el('manageNav').hidden = !anyManage;
       document.querySelectorAll('[data-needs-row]').forEach((a) => { a.hidden = !home.onStaffList; });
       renderBell(home.notifications);
-      if (staffLocked()) { lockForStaff(); return; }
 
       const tiles = el('homeTiles'); tiles.textContent = '';
       tiles.append(
@@ -559,26 +556,17 @@
     }
     loaders.home = () => { if (home) loadHome(true); };
 
-    // ---------- launch lock ----------
-    // Staff get welfare elections only for now (Moses, 29 Oct 2026); everything else is greyed
-    // out as coming soon. Super admins keep the whole portal to set it up. To open a section
-    // to staff, take its view out of the lock here and in elections.html's staff menu.
-    const staffLocked = () => !!home && !home.super;
-    function lockForStaff() {
-      document.body.classList.add('staff-launch-mode');
-      document.querySelectorAll('.side a').forEach((a) => {
-        const href = a.getAttribute('href') || '';
-        if (href === '#home' || href.startsWith('elections') || href === 'election-live') return;
-        const s = make('span', 'locked'); s.title = 'Coming soon'; s.setAttribute('aria-disabled', 'true');
-        s.innerHTML = a.innerHTML; s.appendChild(make('span', 'soon', 'Soon'));
-        s.hidden = a.hidden;
-        a.replaceWith(s);
-      });
-      document.querySelectorAll('.side .locked').forEach((s) => s.classList.add('greyed'));
-      el('manageNav').hidden = true;
-      el('bellBtn').hidden = true;
-      document.querySelectorAll('[data-panel="home"] > .tiles, [data-panel="home"] > .grid2').forEach((n) => { n.hidden = true; });
-      el('homeLaunch').hidden = false;
+    // Employee tools are open to active staff; management follows server capabilities.
+    function canOpenView(view) {
+      if (!home) return false;
+      if (['administration', 'permissions', 'activity'].includes(view)) return home.super === true;
+      const requirements = new Map([
+        ['people', ['staff.manage']], ['departments', ['staff.manage']],
+        ['manage-announcements', ['announcements.publish']], ['payroll', ['payroll.manage', 'payroll.approve']]
+      ]);
+      if (requirements.has(view)) return requirements.get(view).some(can);
+      if (['profile', 'field', 'payslips'].includes(view)) return home.onStaffList === true;
+      return true;
     }
 
     // ---------- announcements ----------
@@ -1275,6 +1263,7 @@
     else start();
   })();
   </script>
+  <script src="js/staff-leave.js?v=20261103-leave1"></script>
   <script src="js/staff-timesheets.js?v=20261103-admin2"></script>
   <script src="js/staff-procurement.js?v=20261103-admin2"></script>
   <script src="js/staff-appraisals.js?v=20261103-admin2"></script>

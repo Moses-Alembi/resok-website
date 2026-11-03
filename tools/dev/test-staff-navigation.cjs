@@ -24,6 +24,15 @@ for (const view of ['profile', 'field', 'payslips']) {
   assert(!allowed({ super: true, onStaffList: false, caps: [] }, view), view); checks++;
 }
 assert(!allowed(null, 'home')); checks++;
+const caption = page.match(/const accountCaption = (.*);/)[1];
+for (const [home, me, accountRole, expected] of [
+  [{ super: false }, { jobTitle: 'Finance Officer' }, 'Staff member', 'Finance Officer'],
+  [{ super: false }, { jobTitle: null }, 'Staff member', 'Staff member'],
+  [{ super: false }, { jobTitle: '   ' }, 'Staff manager', 'Staff manager'],
+  [{ super: true }, { jobTitle: 'Communications Officer' }, 'Super administrator', 'Super administrator']
+]) {
+  assert.equal(vm.runInNewContext(caption, { home, me, accountRole, String }), expected); checks++;
+}
 
 class Element {
   constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.ownText = ''; this.value = ''; this.checked = false; }

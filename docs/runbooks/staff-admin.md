@@ -21,6 +21,19 @@ Leave approval and type settings are restricted to super administrators for now,
 Workflow rules, such as approval stages and locked records, still apply. Documents and policies,
 tasks and projects, and the calendar remain planned sections.
 
+Job titles are shown below employee names in the staff header, Staff records and the ICT
+staff-account list. Super administrators keep their administrator caption in the header.
+Titles are profile data, independent of roles and staff permissions.
+
+For a name/designation sheet, open **Staff records → Load HR list** and keep **Update job
+titles only** selected. Paste the serial number, name and title columns, check the matched
+accounts, omit anyone whose record should stay unchanged, then apply. A printed SN is not
+an employee number. This mode changes only `job_title`: it preserves names, employee numbers,
+counties, account activation, roles and election eligibility. Weak matches are left unselected.
+It does not create missing accounts. Turning title-only mode off retains the full HR import
+for sheets that contain actual employee numbers and intentional county updates.
+Keep named roster sheets and comparison exports outside the public source repository.
+
 Module scripts register before initial navigation so links to management tabs also work
 when opened directly or refreshed. Asset versions on the staff page must be bumped when
 changing its scripts or stylesheet because production assets use an immutable cache.

@@ -10,6 +10,8 @@
  * account's employee number, job title and counties of operation. The county is read from the
  * title ("Project Officer - Kilifi"); a title naming none is HQ, Nairobi. Every match and
  * county can be changed in the preview before anything is written.
+ * With titlesOnly, the first column is only a serial number and only job_title is updated;
+ * employee numbers, names, counties, activation and election eligibility stay unchanged.
  *
  * Having an employee number is what puts someone on the welfare election roll
  * (lib/elections.php), so the list decides who votes. Accounts not on it keep their portal
@@ -105,12 +107,14 @@ function hrImportHandle(PDO $pdo, array $config, string $route, string $method, 
 {
     if ($route !== 'staff/people/import' || $method !== 'POST') return;
     staffNeed($gate, 'staff.manage');
-    if (!function_exists('geoEnsureTables') || !geoEnsureTables($pdo)) respond(503, ['error' => 'Counties are not available on this server yet.']);
     $data = input();
+    $titlesOnly = !empty($data['titlesOnly']);
+    if (!$titlesOnly && (!function_exists('geoEnsureTables') || !geoEnsureTables($pdo))) respond(503, ['error' => 'Counties are not available on this server yet.']);
     $rows = hrImportParse((string)($data['text'] ?? ''));
-    if (!$rows) respond(400, ['error' => 'No rows found. Copy the Employee Number, Name and Job Title columns from the spreadsheet and paste them here.']);
+    if (!$rows) respond(400, ['error' => 'No rows found. Paste three columns: serial or employee number, name, and job title.']);
     if (count($rows) > 300) respond(400, ['error' => 'That is more than 300 rows. Paste the employee list only.']);
     $people = hrImportPeople($pdo, $config);
+    if ($titlesOnly) $people = array_values(array_filter($people,static fn($person) => (bool)$person['on_staff']));
     $byId = [];
     foreach ($people as $p) $byId[(int)$p['user_id']] = $p;
 
@@ -120,7 +124,7 @@ function hrImportHandle(PDO $pdo, array $config, string $route, string $method, 
             $scores = [];
             foreach ($people as $p) {
                 // The employee number already on a record is the surest match of all.
-                $s = ($p['staff_number'] !== null && $p['staff_number'] === $r['number']) ? 10.0 : hrImportScore($r['name'], $p);
+                $s = (!$titlesOnly && $p['staff_number'] !== null && $p['staff_number'] === $r['number']) ? 10.0 : hrImportScore($r['name'], $p);
                 if ($s > 0) $scores[(int)$p['user_id']] = $s;
             }
             arsort($scores);
@@ -131,8 +135,8 @@ function hrImportHandle(PDO $pdo, array $config, string $route, string $method, 
             $sure = $best !== null && $top >= 1.6 && $top - $second >= 0.75;
             $out[] = $r + [
                 'row' => $i,
-                'counties' => hrImportCounties($r['title']),
-                'userId' => $best !== null && $top >= 0.75 ? $best : null,
+                'counties' => $titlesOnly ? [] : hrImportCounties($r['title']),
+                'userId' => $best !== null && ($sure || (!$titlesOnly && $top >= 0.75)) ? $best : null,
                 'match' => $sure ? 'sure' : ($best !== null && $top >= 0.75 ? 'check' : 'none'),
             ];
         }
@@ -142,7 +146,8 @@ function hrImportHandle(PDO $pdo, array $config, string $route, string $method, 
             'rows' => $out,
             'people' => array_map(static fn($p) => ['userId' => (int)$p['user_id'], 'name' => $p['name'] ?: null, 'email' => $p['email'], 'onStaff' => (bool)$p['on_staff']], $people),
             'notListed' => array_map(static fn($p) => ['userId' => (int)$p['user_id'], 'name' => $p['name'] ?: null, 'email' => $p['email']], $notListed),
-            'counties' => GEO_KENYA_COUNTIES,
+            'counties' => $titlesOnly ? [] : GEO_KENYA_COUNTIES,
+            'titlesOnly' => $titlesOnly,
         ]);
     }
 
@@ -156,10 +161,11 @@ function hrImportHandle(PDO $pdo, array $config, string $route, string $method, 
         $uid = (int)($c['userId'] ?? 0);
         if ($uid <= 0) continue;
         if (!isset($byId[$uid])) respond(400, ['error' => 'Row ' . ($i + 1) . ' (' . $r['name'] . '): that account is not staff or an administrator.']);
+        if ($titlesOnly && !$byId[$uid]['on_staff']) respond(400, ['error' => 'Row ' . ($i + 1) . ': this account has no staff record. Create or link its staff record first.']);
         if (isset($seenUsers[$uid])) respond(400, ['error' => $r['name'] . ' and ' . $seenUsers[$uid] . ' are matched to the same account. Fix one of them.']);
-        if (isset($seenNumbers[$r['number']])) respond(400, ['error' => 'Employee number ' . $r['number'] . ' appears twice in the list.']);
+        if (!$titlesOnly && isset($seenNumbers[$r['number']])) respond(400, ['error' => 'Employee number ' . $r['number'] . ' appears twice in the list.']);
         $counties = [];
-        foreach ((array)($c['counties'] ?? hrImportCounties($r['title'])) as $name) {
+        foreach ($titlesOnly ? [] : (array)($c['counties'] ?? hrImportCounties($r['title'])) as $name) {
             $n = geoCounty(is_scalar($name) ? (string)$name : '');
             if ($n === null) respond(400, ['error' => 'Row ' . ($i + 1) . ' (' . $r['name'] . '): "' . $name . '" is not a county.']);
             $counties[$n] = true;
@@ -171,6 +177,16 @@ function hrImportHandle(PDO $pdo, array $config, string $route, string $method, 
     if (!$plan) respond(400, ['error' => 'Nobody is matched to an account, so there is nothing to apply.']);
 
     $me = (int)$user['userId'];
+    if ($titlesOnly) {
+        $pdo->beginTransaction();
+        try {
+            $set = $pdo->prepare('UPDATE staff_accounts SET job_title=? WHERE user_id=?');
+            foreach ($plan as [$uid,$row]) $set->execute([mb_substr($row['title'],0,120),$uid]);
+            staffAudit($pdo,$me,'hr_titles_imported','staff',null,count($plan) . ' job titles updated; employee numbers and account access unchanged');
+            $pdo->commit();
+        } catch (Throwable $error) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $error; }
+        respond(200,['applied'=>count($plan),'titlesOnly'=>true,'message'=>count($plan) . ' job titles updated. Employee numbers, counties, account access and election eligibility were not changed.']);
+    }
     $pdo->beginTransaction();
     try {
         // Numbers move with the list: clear any that now belong to someone else first, so the

@@ -15,7 +15,7 @@
     })();
   </script>
   <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" />
-  <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff3" />
+  <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff4" />
 </head>
 <body class="booting">
   <a class="skip" href="#main">Skip to content</a>
@@ -291,7 +291,9 @@
         </div>
         <div class="panel" id="hrImport" hidden>
           <h2>Load the HR employee list</h2>
-          <p class="hint">Copy the Employee Number, Name and Job Title columns from the spreadsheet and paste them here. Each row is matched to an account by name; check the matches before applying. The county comes from the job title, and a title naming none is HQ, Nairobi. Only people on this list can vote or stand in welfare elections.</p>
+          <p class="hint">Paste three tab-separated columns: serial or employee number, name, and job title. Check the account matched to each row before applying. Omit anyone whose record should stay unchanged.</p>
+          <label class="check"><input type="checkbox" id="hrTitlesOnly" checked> Update job titles only; preserve employee numbers, counties and account access</label>
+          <p class="hint">A printed SN is a row number, not an employee number. Only turn off title-only mode when the first column contains real employee numbers and you also intend to update counties.</p>
           <textarea id="hrText" rows="8" aria-label="Employee list pasted from the spreadsheet" style="width:100%;margin-top:8px"></textarea>
           <div class="row" style="margin-top:10px">
             <button class="btn primary" type="button" id="hrPreview">Check the list</button>
@@ -504,7 +506,9 @@
       el('staffManageLink').hidden = !home.super;
       document.querySelectorAll('.side [data-super]').forEach((link) => { link.hidden = !home.super; });
       const accountRole = home.super ? 'Super administrator' : (home.caps.length ? 'Staff manager' : 'Staff member');
-      el('staffAccessRole').textContent = accountRole; el('staffRolePill').textContent = accountRole;
+      const accountCaption = home.super ? accountRole : (String(me.jobTitle || '').trim() || accountRole);
+      el('staffAccessRole').textContent = accountCaption; el('staffAccessRole').title = accountCaption;
+      el('staffRolePill').textContent = accountRole;
       el('staffAvatar').textContent = initials(me.name, me.email);
       if (!quiet) {
         el('hello').textContent = first ? 'Welcome, ' + first : 'Welcome';
@@ -791,12 +795,12 @@
       const box = el('peopleList'); box.textContent = '';
       if (!list.length) { box.appendChild(empty(people.length ? 'Nobody matches.' : 'No staff yet. Add accounts from ICT, Staff & access.')); return; }
       const t = make('table'); const hr = make('tr');
-      ['Name', 'Role', 'Reports to', 'Account', ''].forEach((h) => hr.appendChild(make('th', null, h)));
+      ['Name', 'Department', 'Reports to', 'Account', ''].forEach((h) => hr.appendChild(make('th', null, h)));
       t.appendChild(hr);
       list.forEach((p) => {
         const tr = make('tr');
-        const c1 = make('td'); c1.appendChild(make('b', null, p.name || 'No name given')); c1.appendChild(make('div', 'hint', [p.email, p.staffNumber].filter(Boolean).join(' · '))); tr.appendChild(c1);
-        tr.appendChild(make('td', null, [p.jobTitle, p.department].filter(Boolean).join(' · ') || '—'));
+        const c1 = make('td'); c1.appendChild(make('b', null, p.name || 'No name given')); if (p.jobTitle) c1.appendChild(make('div', 'hint', p.jobTitle)); c1.appendChild(make('div', 'hint', [p.email, p.staffNumber].filter(Boolean).join(' · '))); tr.appendChild(c1);
+        tr.appendChild(make('td', null, p.department || '\u2014'));
         tr.appendChild(make('td', null, p.manager || '—'));
         const c4 = make('td');
         c4.appendChild(make('span', 'pill ' + (!p.active ? 'p-bad' : p.accountReady ? 'p-ok' : 'p-warn'), !p.active ? 'Deactivated' : p.accountReady ? 'Active' : 'Not signed in yet'));
@@ -847,18 +851,25 @@
     loaders.people = loadPeople;
 
     // ---------- HR employee list (lib/staff-hr-import.php) ----------
-    let hrPreview = null;
+    let hrPreview = null, hrPreviewText = '';
+    el('hrText').addEventListener('input', () => { hrPreview = null; el('hrRows').textContent = ''; el('hrMissing').textContent = ''; el('hrApplyRow').hidden = true; });
     el('hrOpen').addEventListener('click', () => { el('hrImport').hidden = false; el('hrText').focus(); });
     el('hrClose').addEventListener('click', () => { el('hrImport').hidden = true; });
+    el('hrTitlesOnly').addEventListener('change', () => { hrPreview = null; el('hrRows').textContent = ''; el('hrMissing').textContent = ''; el('hrApplyRow').hidden = true; say('hrNote', 'Check the list again after changing the import mode.', 'info'); });
     el('hrPreview').addEventListener('click', async () => {
       say('hrNote', '', ''); el('hrRows').textContent = ''; el('hrMissing').textContent = ''; el('hrApplyRow').hidden = true;
-      try { hrPreview = await post('staff/people/import', { text: el('hrText').value }); renderHrPreview(); }
+      try {
+        const text = el('hrText').value, titlesOnly = el('hrTitlesOnly').checked;
+        const result = await post('staff/people/import', { text, titlesOnly });
+        if (text !== el('hrText').value || titlesOnly !== el('hrTitlesOnly').checked) return;
+        hrPreview = result; hrPreviewText = text; renderHrPreview();
+      }
       catch (e) { hrPreview = null; say('hrNote', e.message, 'bad'); }
     });
     function renderHrPreview() {
       const d = hrPreview;
       const t = make('table'); const hr = make('tr');
-      ['No.', 'From the list', 'Account', 'Counties'].forEach((h) => hr.appendChild(make('th', null, h)));
+      (d.titlesOnly ? ['SN', 'From the list', 'Staff account'] : ['Employee no.', 'From the list', 'Account', 'Counties']).forEach((h) => hr.appendChild(make('th', null, h)));
       t.appendChild(hr);
       d.rows.forEach((r) => {
         const tr = make('tr'); tr.dataset.row = r.row;
@@ -871,12 +882,14 @@
         sel.value = r.userId ? String(r.userId) : '';
         c3.appendChild(sel);
         c3.appendChild(make('div', null)).appendChild(make('span', 'pill ' + (r.match === 'sure' ? 'p-ok' : r.match === 'check' ? 'p-warn' : 'p-bad'),
-          r.match === 'sure' ? 'Matched' : r.match === 'check' ? 'Check this match' : 'No account found'));
+          r.match === 'sure' ? 'Matched' : r.match === 'check' ? 'Check this match' : 'No staff account matched'));
         tr.appendChild(c3);
-        const c4 = make('td');
-        const inp = make('input'); inp.type = 'text'; inp.className = 'hr-counties'; inp.value = r.counties.join(', ');
-        inp.setAttribute('list', 'hrCountyList'); inp.setAttribute('aria-label', 'Counties for ' + r.name);
-        c4.appendChild(inp); tr.appendChild(c4);
+        if (!d.titlesOnly) {
+          const c4 = make('td');
+          const inp = make('input'); inp.type = 'text'; inp.className = 'hr-counties'; inp.value = r.counties.join(', ');
+          inp.setAttribute('list', 'hrCountyList'); inp.setAttribute('aria-label', 'Counties for ' + r.name);
+          c4.appendChild(inp); tr.appendChild(c4);
+        }
         t.appendChild(tr);
       });
       const dl = make('datalist'); dl.id = 'hrCountyList';
@@ -885,24 +898,26 @@
       const unsure = d.rows.filter((r) => r.match !== 'sure').length;
       say('hrNote', d.rows.length + ' rows read. ' + (unsure ? unsure + ' need checking (amber or red).' : 'Every row matched an account.'), unsure ? 'warn' : 'ok');
       if (d.notListed.length) {
-        el('hrMissing').appendChild(make('div', 'note warn', 'Active staff not matched to anyone on this list (' + d.notListed.length + '). They keep their portal access but cannot vote or stand in welfare elections: '
-          + d.notListed.map((p) => p.name || p.email).join(', ') + '.'));
+        el('hrMissing').appendChild(make('div', 'note info', 'Staff not matched to a row (' + d.notListed.length + '): ' + d.notListed.map(p => p.name || p.email).join(', ') + '. Review the matches; the preview has not changed any records.'));
       }
+      el('hrApply').textContent = d.titlesOnly ? 'Apply job titles only' : 'Apply staff details';
       el('hrApplyRow').hidden = false;
     }
     el('hrApply').addEventListener('click', async () => {
+      if (!hrPreview) return;
+      const titlesOnly = hrPreview.titlesOnly === true;
       const choices = {};
       el('hrRows').querySelectorAll('tr[data-row]').forEach((tr) => {
         choices[tr.dataset.row] = { userId: +tr.querySelector('.hr-user').value || null,
-          counties: tr.querySelector('.hr-counties').value.split(',').map((s) => s.trim()).filter(Boolean) };
+          ...(titlesOnly ? {} : { counties: tr.querySelector('.hr-counties').value.split(',').map((s) => s.trim()).filter(Boolean) }) };
       });
       const n = Object.values(choices).filter((c) => c.userId).length;
-      if (!confirm('Update ' + n + ' staff records with their employee number, job title and counties from this list?')) return;
+      if (!confirm(titlesOnly ? 'Update only the job titles for ' + n + ' matched staff? Employee numbers, counties, roles and access will stay as they are.' : 'Update ' + n + ' staff records with their employee number, job title and counties from this list?')) return;
       try {
-        const r = await post('staff/people/import', { text: el('hrText').value, choices, apply: true });
+        const r = await post('staff/people/import', { text: hrPreviewText, choices, apply: true, titlesOnly });
         el('hrImport').hidden = true; el('hrRows').textContent = ''; el('hrMissing').textContent = ''; say('hrNote', '', '');
         say('flash', r.message, 'ok');
-        loadPeople();
+        loadPeople(); loadHome(true);
       } catch (e) { say('hrNote', e.message, 'bad'); }
     });
 

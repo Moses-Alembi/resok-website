@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 date_default_timezone_set('Africa/Nairobi');
 $lib = __DIR__ . '/../../resok-portal/public/api/lib/';
-foreach (['migrate', 'crypto', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-procurement', 'staff-payroll', 'staff-appraisal', 'staff-geo', 'staff-leave'] as $module) require_once $lib . $module . '.php';
+foreach (['migrate', 'crypto', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-procurement', 'staff-payroll', 'staff-appraisal', 'staff-geo', 'staff-leave', 'staff-hr-import'] as $module) require_once $lib . $module . '.php';
 
 class StaffAdminResponse extends Exception
 {
@@ -172,6 +172,27 @@ try {
     $queue = adminCall($pdo,$config,$super,'staff/leave')->body;
     adminCheck($queue['pendingCount'] === 1 && count($queue['pending']) === 1 && count($queue['requests']) === 300, 'old pending leave stays in the decision queue when recent history reaches its limit');
     adminCheck((int)$pdo->query("SELECT COUNT(*) FROM staff_notifications WHERE kind='leave'")->fetchColumn() >= 3, 'leave submissions and decisions create portal notifications');
+    // A photographed SN is not an employee number. Title-only updates must preserve access.
+    $source = "1\tSynthetic Employee\tField Officer - Meru\n24\tMissing Colleague\tProject Driver";
+    $pdo->prepare("UPDATE staff_accounts SET full_name='Other Colleague',staff_number='1' WHERE user_id=?")->execute([$other['userId']]);
+    adminCheck(adminCall($pdo,$config,$other,'staff/people/import','POST',['text'=>$source,'titlesOnly'=>true])->status === 403, 'ordinary staff cannot import titles');
+    $pdo->prepare("INSERT INTO staff_accounts(user_id,full_name,staff_number,job_title) VALUES(?,'Moses Alembi','OWNER-1','Original owner title')")->execute([$super['userId']]);
+    $preview = adminCall($pdo,$config,$super,'staff/people/import','POST',['text'=>$source,'titlesOnly'=>true]);
+    adminCheck($preview->status === 200 && $preview->body['titlesOnly'] && $preview->body['rows'][0]['userId'] === (int)$employee['userId'], 'title-only matching uses the name, not a conflicting printed serial number');
+    adminCheck($preview->body['rows'][1]['userId'] === null, 'a weak one-word overlap is not preselected as an account match');
+    $fullPreview = adminCall($pdo,$config,$super,'staff/people/import','POST',['text'=>$source]);
+    adminCheck($fullPreview->body['rows'][0]['userId'] === (int)$other['userId'], 'the existing full HR import still recognises real employee numbers');
+    $pdo->prepare("UPDATE staff_accounts SET work_counties='Nairobi',active=0 WHERE user_id=?")->execute([$employee['userId']]);
+    $before = staffRecord($pdo,(int)$employee['userId']);
+    $countBefore = (int)$pdo->query('SELECT COUNT(*) FROM staff_accounts')->fetchColumn();
+    $applied = adminCall($pdo,$config,$super,'staff/people/import','POST',['text'=>$source,'titlesOnly'=>true,'apply'=>true,'choices'=>[0=>['userId'=>$employee['userId']],1=>['userId'=>null]]]);
+    $after = staffRecord($pdo,(int)$employee['userId']);
+    adminCheck($applied->status === 200 && $applied->body['applied'] === 1 && $after['jobTitle'] === 'Field Officer - Meru', 'a checked title-only import updates the matched job title');
+    foreach (['name','staffNumber','workCounties','active','departmentId','managerUserId','accountReady'] as $field) adminCheck($before[$field] === $after[$field], 'title-only import preserves ' . $field);
+    adminCheck(staffRecord($pdo,(int)$super['userId'])['jobTitle'] === 'Original owner title', 'omitting Moses Alembi leaves his account unchanged');
+    adminCheck((int)$pdo->query('SELECT COUNT(*) FROM staff_accounts')->fetchColumn() === $countBefore, 'title imports do not create staff records or expand the voter population');
+    $accounts = array_column(staffList($pdo),null,'userId');
+    adminCheck($accounts[(int)$employee['userId']]['jobTitle'] === 'Field Officer - Meru', 'the account list API includes job titles for display below names');
     adminCheck((int)$pdo->query('SELECT COUNT(*) FROM staff_audit')->fetchColumn() >= 4, 'management changes remain visible in the activity log');
     echo "\n" . $GLOBALS['adminPasses'] . " staff administration checks passed against a disposable database.\n";
 } finally {

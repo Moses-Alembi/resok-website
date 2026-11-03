@@ -3278,7 +3278,10 @@
     const body = make('tbody');
     list.forEach((s) => {
       const tr = make('tr');
-      tr.appendChild(make('td', s.name ? null : 'muted', s.name || 'No name given'));
+      const staffName = make('td');
+      staffName.appendChild(make('strong', s.name ? null : 'muted', s.name || 'No name given'));
+      if (s.jobTitle) staffName.appendChild(make('div', 'muted', s.jobTitle));
+      tr.appendChild(staffName);
       const em = make('td', null, s.email);
       if (s.member) em.appendChild(make('div', 'muted', 'also a ReSoK member'));
       if (s.role !== 'member') em.appendChild(make('div', 'muted', 'role: ' + s.role));

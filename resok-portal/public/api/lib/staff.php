@@ -153,6 +153,7 @@ function staffList(PDO $pdo): array
         $state = (int)$r['email_verified'] === 1 ? 'active' : ($r['invite_sent_at'] ? 'invited' : 'not_invited');
         return [
             'userId' => (int)$r['user_id'], 'name' => $r['full_name'], 'email' => $r['email'],
+            'jobTitle' => $r['job_title'] ?? null,
             'role' => $r['role'], 'member' => $r['membership_status'] !== null,
             'state' => $state, 'addedAt' => $r['added_at'], 'invitedAt' => $r['invite_sent_at'],
             'inviteCount' => (int)$r['invite_count'], 'inviteError' => $r['invite_error'],

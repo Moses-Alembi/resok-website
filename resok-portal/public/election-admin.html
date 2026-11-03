@@ -404,6 +404,7 @@
       if (message) box.appendChild(make('div', 'note ' + (kind || 'info'), message));
     };
 
+    const STAFF_CONTEXT = new URLSearchParams(location.search).get('for') === 'staff';
     let elections = [];
     let current = null;      // { election, positions, roll }
 
@@ -417,10 +418,10 @@
       const mount = el('listBody');
       try {
         const data = await api('/api/admin/elections');
-        elections = data.elections || [];
+        elections = (data.elections || []).filter((e) => !STAFF_CONTEXT || e.electorate === 'staff');
         mount.textContent = '';
         if (!elections.length) {
-          mount.appendChild(make('div', 'empty', 'No elections yet. Create one to begin.'));
+          mount.appendChild(make('div', 'empty', STAFF_CONTEXT ? 'No welfare elections yet. Create one to begin.' : 'No elections yet. Create one to begin.'));
           return;
         }
         elections.forEach((e) => {
@@ -450,6 +451,11 @@
       el('nCutoffWrap').hidden = staff;
       el('nTitle').placeholder = staff ? 'Staff Welfare Committee Election 2026' : 'ReSoK Board Election 2027';
     });
+    if (STAFF_CONTEXT) {
+      el('nElectorate').value = 'staff';
+      el('nElectorate').dispatchEvent(new Event('change'));
+      el('newBtn').textContent = 'New welfare election';
+    }
     el('nCreate').addEventListener('click', async () => {
       const button = el('nCreate');
       button.disabled = true;

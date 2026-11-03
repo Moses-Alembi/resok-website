@@ -96,7 +96,7 @@
   <nav class="dashboard-nav">
     <div class="dashboard-nav-inner">
       <a href="dashboard" class="dashboard-logo"><img src="assets/img/logo.png" alt="ReSoK" /></a>
-      <div style="font-size:14px;color:var(--muted)" id="whoami">&nbsp;</div>
+      <div style="font-size:14px;color:var(--muted);text-align:right"><div id="whoami">&nbsp;</div><strong id="accountRole" hidden style="display:block;color:var(--brand-primary);font-size:12px">Super administrator</strong></div>
     </div>
   </nav>
 
@@ -104,6 +104,8 @@
     <aside class="dashboard-sidebar">
       <!-- Staff welfare elections (elections?for=staff) use this page with the staff menu. -->
       <ul class="sidebar-nav" id="staffNav" hidden>
+        <li id="electionManagerNav" hidden><a href="election-admin?for=staff"><i class="fas fa-sliders"></i> Manage welfare elections</a></li>
+        <li id="electionAdminNav" hidden><a href="admin-home"><i class="fas fa-user-shield"></i> Admin suite</a></li>
         <li><a href="staff"><i class="fas fa-house"></i> Staff portal</a></li>
         <!-- Staff get welfare elections only for now (Moses, 29 Oct 2026); the rest is coming soon. -->
         <li><span class="staff-locked" aria-disabled="true" title="Coming soon"><i class="fas fa-bullhorn"></i> Announcements <span class="soon">Soon</span></span></li>
@@ -127,6 +129,11 @@
     </aside>
 
     <main class="dashboard-main">
+      <section class="panel" id="electionManagerActions" hidden>
+        <h2>Welfare election management</h2>
+        <p class="lede">Your super administrator account can create elections, configure positions and dates, reconcile voters, and arm the automatic schedule.</p>
+        <a href="election-admin?for=staff" class="btn btn-primary" style="margin-top:16px">Create or manage welfare elections</a>
+      </section>
       <!-- ---------------- List ---------------- -->
       <section class="panel" id="viewList">
         <h1 id="listTitle">Elections</h1>
@@ -286,6 +293,23 @@
       document.getElementById('staffLogout').addEventListener('click', (e) => { e.preventDefault(); window.ResokPortal.logout(); });
     }
     const el = (id) => document.getElementById(id);
+    function applyElectionManagementAccess(info) {
+      // The server checks both the account role and its configured super-admin allowlist.
+      // A staff URL, display name or cached client role never grants management access.
+      const allowed = info?.isSuperAdmin === true;
+      ['electionManagerNav', 'electionAdminNav', 'electionManagerActions', 'accountRole'].forEach((id) => {
+        el(id).hidden = !allowed;
+      });
+      if (allowed && !el('whoami').textContent.trim()) el('whoami').textContent = info.email || '';
+    }
+
+    async function loadElectionManagementAccess() {
+      try {
+        applyElectionManagementAccess(await api('/api/admin/whoami'));
+      } catch {
+        applyElectionManagementAccess(null);
+      }
+    }
     const make = (tag, cls, text) => {
       const node = document.createElement(tag);
       if (cls) node.className = cls;
@@ -862,6 +886,7 @@
       } catch (error) {
         if (error.status === 401) { window.location.href = 'login'; return; }
       }
+      if (STAFF) await loadElectionManagementAccess();
       await loadList();
       // A notification links straight to one election: elections?for=staff#<slug>.
       const slug = decodeURIComponent(location.hash.replace('#', ''));

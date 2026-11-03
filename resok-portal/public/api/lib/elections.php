@@ -208,14 +208,16 @@ function electionPositions(PDO $pdo, int $electionId): array
     if (!$positions) return [];
 
     $ids = array_map(fn($p) => (int)$p['id'], $positions);
-    $stmt = $pdo->prepare('SELECT * FROM election_candidates WHERE position_id IN ('
+    $staff = (electionFind($pdo, (string)$electionId)['electorate'] ?? '') === 'staff';
+    $stmt = $pdo->prepare('SELECT c.*' . ($staff ? ', s.job_title' : '') . ' FROM election_candidates c'
+                          . ($staff ? ' LEFT JOIN staff_accounts s ON s.user_id = c.nominee_user_id' : '') . ' WHERE c.position_id IN ('
                           . implode(',', array_fill(0, count($ids), '?')) . ')
-                           ORDER BY ballot_order, id');
+                           ORDER BY c.ballot_order, c.id');
     $stmt->execute($ids);
 
     $byPosition = [];
     foreach ($stmt->fetchAll() as $c) {
-        $byPosition[(int)$c['position_id']][] = [
+        $candidate = [
             'id'        => (int)$c['id'],
             'name'      => $c['name'],
             'membershipId' => $c['membership_id'],
@@ -225,6 +227,8 @@ function electionPositions(PDO $pdo, int $electionId): array
             'status'    => $c['status'],
             'standing'  => $c['status'] === 'approved',
         ];
+        if ($staff) $candidate['jobTitle'] = $c['job_title'] ?? null;
+        $byPosition[(int)$c['position_id']][] = $candidate;
     }
     return array_map(fn($p) => [
         'id'           => (int)$p['id'],
@@ -1417,17 +1421,18 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
     // The nominee's own user id comes along so the page can tell which nominations belong to
     // whoever is reading. Accepting is the nominee's act alone, and a button offered to
     // somebody who cannot use it is a form that lies.
-    $stmt = $pdo->prepare('SELECT c.*, p.title AS position_title,
+    $stmt = $pdo->prepare('SELECT c.*' . ($staffFinal ? ', s.job_title' : '') . ', p.title AS position_title,
                                   r.name AS nominated_by, COALESCE(c.nominee_user_id, mp.user_id) AS nominee_account
                            FROM election_candidates c
                            JOIN election_positions p ON p.id = c.position_id
                            LEFT JOIN election_roll r ON r.id = c.nominated_by_roll_id
-                           LEFT JOIN member_profiles mp ON mp.id = c.member_profile_id
+                           LEFT JOIN member_profiles mp ON mp.id = c.member_profile_id'
+                           . ($staffFinal ? ' LEFT JOIN staff_accounts s ON s.user_id = c.nominee_user_id' : '') . '
                            WHERE p.election_id = ?
                            ORDER BY p.position, c.nominated_at, c.id');
     $stmt->execute([$electionId]);
 
-    return array_map(fn($c) => [
+    return array_map(fn($c) => array_merge([
         'id'           => (int)$c['id'],
         'positionId'   => (int)$c['position_id'],
         'position'     => $c['position_title'],
@@ -1458,7 +1463,7 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
                 ? 'Contact them to confirm they will stand'
                 : 'Waiting for the nominee to accept')
             : null,
-    ], $stmt->fetchAll());
+    ], $staffFinal ? ['jobTitle' => $c['job_title'] ?? null] : []), $stmt->fetchAll());
 }
 
 /**
@@ -1473,17 +1478,19 @@ function electionNominatableMembers(PDO $pdo, int $electionId): array
 {
     if (!electionsEnsureTables($pdo)) return [];
     $election = electionFind($pdo, (string)$electionId);
-    $staffOnly = ($election['electorate'] ?? '') === 'staff' ? " AND r.standing_at_cutoff = 'staff'" : '';
-    $stmt = $pdo->prepare('SELECT r.member_profile_id, r.user_id, r.name, r.membership_id
-                           FROM election_roll r WHERE r.election_id = ?' . $staffOnly . ' ORDER BY r.name');
+    $staff = ($election['electorate'] ?? '') === 'staff';
+    $staffOnly = $staff ? " AND r.standing_at_cutoff = 'staff'" : '';
+    $stmt = $pdo->prepare('SELECT r.member_profile_id, r.user_id, r.name, r.membership_id' . ($staff ? ', s.job_title' : '') . '
+                           FROM election_roll r' . ($staff ? ' LEFT JOIN staff_accounts s ON s.user_id = r.user_id' : '')
+                           . ' WHERE r.election_id = ?' . $staffOnly . ' ORDER BY r.name');
     $stmt->execute([$electionId]);
     // A staff voter has no member record; the form names them by account instead.
-    return array_map(fn($r) => [
+    return array_map(fn($r) => array_merge([
         'memberProfileId' => $r['member_profile_id'] === null ? null : (int)$r['member_profile_id'],
         'userId'          => (int)$r['user_id'],
         'name'            => $r['name'],
         'membershipId'    => $r['membership_id'],
-    ], $stmt->fetchAll());
+    ], $staff ? ['jobTitle' => $r['job_title'] ?? null] : []), $stmt->fetchAll());
 }
 
 /**

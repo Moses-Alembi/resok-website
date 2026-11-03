@@ -1,0 +1,74 @@
+/* Welfare elections share the staff/ICT shell. Member elections keep their own layout. */
+.staff-elections{--text-dark:var(--ink);--bg-light:var(--bg)}
+.staff-elections .dashboard-container{display:flex;max-width:none;margin:0;padding:64px 0 0;gap:0;align-items:stretch;min-height:100vh}
+.staff-elections .dashboard-sidebar{position:fixed;top:64px;bottom:0;left:0;width:250px;height:auto;padding:0;border-radius:0;box-shadow:none;background:var(--chrome);border-right:1px solid var(--line)}
+.staff-elections #staffNav{padding:18px 12px 10px;list-style:none}
+.staff-elections #staffNav .admin-nav-link{padding:11px 13px;gap:11px;border-left:0;font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.5}
+.staff-elections #staffNav .admin-nav-link i{width:17px;font-size:14px;color:var(--muted);flex:none}
+.staff-elections #staffNav .admin-nav-link:hover{background:var(--hover);color:var(--ink)}
+.staff-elections #staffNav .admin-nav-link.active{background:var(--brand);color:#fff;box-shadow:0 8px 18px rgba(0,147,46,.25)}
+.staff-elections #staffNav .admin-nav-link.active i{color:#fff}
+.staff-elections #staffNav .staff-locked{color:var(--muted);cursor:not-allowed;user-select:none}
+.staff-elections #staffNav .staff-locked:hover{background:transparent;box-shadow:none}
+.staff-elections #staffNav .staff-locked .soon{background:var(--hover);color:var(--muted);border:1px solid var(--line);padding:2px 6px;font-size:9px}
+.staff-elections #staffNav .sidebar-divider{background:var(--line);margin:16px 13px 10px}
+.staff-elections #staffNav .sidebar-logout,.staff-elections #staffNav .sidebar-logout i{color:var(--bad)!important}
+.staff-elections #staffNav .sidebar-logout:hover{background:var(--bad-bg)}
+.staff-elections .staff-sidebar-foot{margin:8px 25px 24px}
+.staff-elections .dashboard-main{gap:22px;min-height:calc(100vh - 64px)}
+.staff-elections .dashboard-main>section{width:100%;max-width:1480px}
+.staff-elections .staff-pagebar a{color:var(--muted)}
+.staff-elections .staff-pagebar a:hover{color:var(--brand-ink)}
+.staff-elections .election-list-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.staff-elections .election-list-heading>div{flex:1;min-width:min(280px,100%)}
+.staff-elections .election-list-heading .eyebrow{color:var(--brand-ink);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.staff-elections h1{font-size:28px;line-height:1.3;letter-spacing:-.5px}
+.staff-elections .lede{font-size:13.5px;line-height:1.8;max-width:75ch;margin:9px 0 0}
+.staff-elections .panel{box-shadow:var(--shadow)}
+.staff-elections .btn-primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.staff-elections .btn-primary:hover{background:#06682f}
+.staff-elections .btn-ghost{background:var(--surface);color:var(--ink);border-color:var(--input-line)}
+.staff-elections .btn-ghost:hover{background:var(--hover);border-color:var(--brand-ink)}
+.staff-elections .card{background:var(--surface);padding:20px;border-radius:11px;gap:16px}
+.staff-elections .card+.card{margin-top:12px}
+.staff-elections .card .when{margin-top:6px;font-size:12.5px;line-height:1.7}
+.staff-elections .card .go{color:var(--brand-ink)}
+.staff-elections .post{background:var(--surface)}
+.staff-elections .post-head{background:var(--hover);border-color:var(--line)}
+.staff-elections .choice:hover{background:var(--hover)}
+.staff-elections .choice input{margin-top:4px}
+.staff-elections .choice .head{display:block;margin-bottom:0}
+.staff-elections .candidate-job-title{color:var(--muted);font-size:12.5px;line-height:1.6;margin-top:3px}
+.staff-elections .manifesto{color:var(--muted)}
+.staff-elections .review{background:var(--brand-soft);border-color:var(--brand)}
+.staff-elections .pill{padding:5px 11px}
+.staff-elections .pill.open{background:var(--brand-soft);color:var(--brand-ink)}
+.staff-elections .pill.closed{background:var(--hover);color:var(--muted)}
+.staff-elections .pill.soon{background:var(--warn-bg);color:var(--warn);margin-left:0;border:0;letter-spacing:normal;text-transform:none;font-size:11.5px}
+.staff-elections .pill.done{background:var(--info-bg);color:var(--info)}
+.staff-elections .note{border:1px solid var(--line);line-height:1.75}
+.staff-elections .result-row.won .who{color:var(--brand-ink)}
+.staff-elections .bar span{background:var(--brand)}
+.staff-elections .empty{background:var(--bg);line-height:1.7}
+.staff-elections .election-empty{padding:48px 22px 44px;margin:8px 0 0}
+.staff-elections .election-empty>i{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 18px;border-radius:14px;background:var(--brand-soft);color:var(--brand-ink);font-size:22px}
+.staff-elections .election-empty h2{color:var(--ink);font-size:16px;font-weight:600;margin:0 0 8px}
+.staff-elections .election-empty p{color:var(--muted);font-size:13px;max-width:54ch;margin:auto}
+.staff-elections #electionManagerActions{background:linear-gradient(115deg,var(--brand-soft),transparent 85%),var(--surface)}
+.staff-elections .admin-footer a{color:var(--ink)}
+@media(max-width:980px){
+  .staff-elections .dashboard-container{display:flex}
+  .staff-elections .dashboard-main{margin-left:0}
+}
+@media(max-width:520px){
+  .staff-elections h1{font-size:24px}
+  .staff-elections .election-list-heading{gap:16px}
+  .staff-elections .election-list-heading>.btn{width:100%;justify-content:center}
+  .staff-elections .card{padding:16px}
+  .staff-elections .card>div{min-width:0!important;width:100%}
+  .staff-elections .election-empty{padding:32px 16px}
+}
+@media print{
+  .staff-elections .dashboard-container{display:block;padding:0;min-height:0}
+  .staff-elections .dashboard-main{margin:0;padding:0;min-height:0}
+}

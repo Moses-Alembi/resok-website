@@ -28,6 +28,10 @@ tasks and projects, and the calendar remain planned sections.
 Job titles are shown below employee names in the staff header, Staff records and the ICT
 staff-account list. Super administrators keep their administrator caption in the header.
 Titles are profile data, independent of roles and staff permissions.
+The staff welfare election page uses the same shell and saved light/dark preference as
+the staff workspace. It shows saved job titles beneath account, candidate and nominee
+names; nomination choices include titles too. Super administrators keep their role caption.
+These displays read existing staff records and do not assign titles or change the voter roll.
 
 For a name/designation sheet, open **Staff records → Load HR list** and keep **Update job
 titles only** selected. Paste the serial number, name and title columns, check the matched

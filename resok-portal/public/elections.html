@@ -92,22 +92,62 @@
 
     @media(max-width:1024px){.dashboard-container{grid-template-columns:1fr}.dashboard-sidebar{position:static}}
   </style>
+  <link id="staffElectionAdminCss" rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" media="not all" />
+  <link id="staffElectionShellCss" rel="stylesheet" href="css/staff-shell.css?v=20261103-staff6" media="not all" />
+  <link id="staffElectionCss" rel="stylesheet" href="css/staff-elections.css?v=20261103-elections1" media="not all" />
+  <script>
+    if (new URLSearchParams(location.search).get('for') === 'staff') {
+      document.documentElement.classList.add('staff-elections');
+      var electionTheme = 'dark';
+      try { if (localStorage.getItem('resok-admin-theme') === 'light') electionTheme = 'light'; } catch (e) {}
+      document.documentElement.setAttribute('data-theme', electionTheme);
+      ['staffElectionAdminCss', 'staffElectionShellCss', 'staffElectionCss'].forEach(function (id) {
+        document.getElementById(id).media = 'all';
+      });
+    }
+  </script>
 </head>
 <body>
-  <nav class="dashboard-nav">
+  <a class="skip" href="#main" data-staff-election hidden>Skip to content</a>
+  <header class="admin-topbar" data-staff-election hidden>
+    <button class="admin-sidebar-toggle" id="menuBtn" type="button" aria-label="Open staff navigation" aria-controls="side" aria-expanded="false"><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <a href="staff" class="admin-brand">
+      <span class="admin-brand-mark"><img src="assets/img/logo.png" alt="ReSoK" /></span>
+      <span class="admin-brand-text"><strong>ReSoK</strong><small>Staff workspace</small></span>
+    </a>
+    <div class="admin-crumb"><span>Workspace</span><strong>Welfare elections</strong></div>
+    <div class="admin-search" id="staffSearchWrap">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <label class="skip" for="staffSearch">Search staff workspace</label>
+      <input id="staffSearch" type="search" placeholder="Find a staff section..." autocomplete="off" aria-controls="staffSearchResults" aria-expanded="false" />
+      <div class="admin-search-results" id="staffSearchResults" hidden></div>
+    </div>
+    <div class="admin-topbar-right">
+      <button class="admin-icon-btn admin-theme-toggle" id="staffThemeToggle" type="button" aria-label="Switch to light mode" title="Switch to light mode"><i class="fas fa-sun" aria-hidden="true"></i><i class="fas fa-moon" aria-hidden="true"></i></button>
+      <button class="admin-icon-btn staff-fullscreen" id="staffFullscreen" type="button" aria-label="Enter fullscreen" title="Fullscreen"><i class="fas fa-expand" aria-hidden="true"></i></button>
+      <div class="admin-user-chip">
+        <div class="admin-user-avatar" id="staffAvatar" aria-hidden="true">RS</div>
+        <div class="admin-user-meta"><strong id="staffElectionName">Staff account</strong><small id="staffElectionCaption">Staff member</small></div>
+      </div>
+      <button class="admin-logout-btn" id="staffElectionLogout" type="button" aria-label="Sign out" title="Sign out"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></button>
+    </div>
+  </header>
+  <nav class="dashboard-nav" id="memberHeader">
     <div class="dashboard-nav-inner">
       <a href="dashboard" class="dashboard-logo"><img src="assets/img/logo.png" alt="ReSoK" /></a>
       <div style="font-size:14px;color:var(--muted);text-align:right"><div id="whoami">&nbsp;</div><strong id="accountRole" hidden style="display:block;color:var(--brand-primary);font-size:12px">Super administrator</strong></div>
     </div>
   </nav>
 
-  <div class="dashboard-container">
-    <aside class="dashboard-sidebar">
+  <div class="dashboard-container" id="electionLayout">
+    <div class="admin-sidebar-backdrop" id="staffSidebarBackdrop" data-staff-election hidden></div>
+    <aside class="dashboard-sidebar" id="side" aria-label="Portal navigation">
       <!-- Staff welfare elections (elections?for=staff) use this page with the staff menu. -->
       <ul class="sidebar-nav" id="staffNav" hidden>
+        <li class="admin-nav-section">Workspace</li>
         <li id="electionManagerNav" hidden><a href="election-admin?for=staff"><i class="fas fa-sliders"></i> Manage welfare elections</a></li>
         <li id="electionAdminNav" hidden><a href="admin-home"><i class="fas fa-user-shield"></i> Admin suite</a></li>
-        <li><a href="staff"><i class="fas fa-house"></i> Staff portal</a></li>
+        <li><a href="staff"><i class="fas fa-house"></i> Overview</a></li>
         <li><a href="staff#announcements"><i class="fas fa-bullhorn"></i> Announcements</a></li>
         <li><a href="staff#directory"><i class="fas fa-address-book"></i> Staff directory</a></li>
         <li><a href="staff#leave"><i class="fas fa-umbrella-beach"></i> Leave</a></li>
@@ -126,6 +166,7 @@
         <li class="sidebar-divider"></li>
         <li><a href="#" class="sidebar-logout" id="staffLogout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
       </ul>
+      <div class="staff-sidebar-foot" data-staff-election hidden>Respiratory Society of Kenya<br>Staff workspace</div>
       <ul class="sidebar-nav" id="memberNav">
         <li><a href="dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
         <li><a href="profile"><i class="fas fa-user"></i> My Profile</a></li>
@@ -140,7 +181,11 @@
       </ul>
     </aside>
 
-    <main class="dashboard-main">
+    <main class="dashboard-main" id="main" tabindex="-1">
+      <div class="staff-pagebar" data-staff-election hidden>
+        <div class="path"><i class="fas fa-house" aria-hidden="true"></i><a href="staff">Staff portal</a><span aria-hidden="true">/</span><strong>Welfare elections</strong></div>
+        <span class="staff-role-pill"><i class="fas fa-check-to-slot" aria-hidden="true"></i> Staff welfare</span>
+      </div>
       <section class="panel" id="electionManagerActions" hidden>
         <h2>Welfare election management</h2>
         <p class="lede">Your super administrator account can create elections, configure positions and dates, reconcile voters, and arm the automatic schedule.</p>
@@ -148,16 +193,23 @@
       </section>
       <!-- ---------------- List ---------------- -->
       <section class="panel" id="viewList">
+        <div class="election-list-heading">
+        <div>
+        <div class="eyebrow" data-staff-election hidden>Staff welfare</div>
         <h1 id="listTitle">Elections</h1>
         <p class="lede" id="staffLede" hidden>
-          Employees and named additional voters may vote if they are on this election's roll.
-          Only eligible employees may stand. Welfare nominations are final and cannot be declined.
+          Nominate colleagues, cast your vote and follow live results.
+          Staff on the election roll may vote, and eligible employees may stand.
+          Welfare nominations are final and cannot be declined.
         </p>
         <p class="lede" id="memberLede">
           ReSoK board elections. You can vote in an election if you were on the electoral roll
           when it was drawn &mdash; that is decided by your membership, not by when you sign in.
         </p>
-        <div id="listBody" style="margin-top:22px"><div class="empty">Loading&hellip;</div></div>
+        </div>
+        <a href="election-live" class="btn btn-ghost" data-staff-election hidden><i class="fas fa-tower-broadcast" aria-hidden="true"></i> Live results</a>
+        </div>
+        <div id="listBody" aria-live="polite" style="margin-top:22px"><div class="empty">Loading&hellip;</div></div>
       </section>
 
       <!-- ---------------- One election ---------------- -->
@@ -270,6 +322,10 @@
           </button>
         </div>
       </section>
+      <footer class="admin-footer" data-staff-election hidden>
+        <a class="staff-footer-brand" href="staff"><i class="fas fa-people-group" aria-hidden="true"></i> ReSoK Staff Portal</a>
+        <span class="staff-footer-meta">Respiratory Society of Kenya</span>
+      </footer>
     </main>
   </div>
 
@@ -290,6 +346,15 @@
     // Staff mode: the same page for staff welfare elections, which members never see.
     const STAFF = new URLSearchParams(location.search).get('for') === 'staff';
     if (STAFF) {
+      document.querySelectorAll('[data-staff-election]').forEach((node) => { node.hidden = false; });
+      document.getElementById('memberHeader').hidden = true;
+      document.getElementById('electionLayout').classList.add('admin-body');
+      document.getElementById('side').classList.add('admin-sidebar', 'side');
+      document.getElementById('side').setAttribute('aria-label', 'Staff navigation');
+      document.getElementById('main').classList.add('admin-main', 'staff-main');
+      document.getElementById('staffNav').classList.add('admin-nav');
+      document.querySelectorAll('#staffNav a').forEach((link) => { link.classList.add('admin-nav-link'); });
+      document.getElementById('staffLogout').classList.add('admin-nav-logout');
       document.getElementById('staffNav').hidden = false;
       document.getElementById('memberNav').hidden = true;
       document.getElementById('listTitle').textContent = 'Welfare elections';
@@ -303,8 +368,17 @@
       document.querySelector('.dashboard-logo').href = 'staff';
       document.title = 'Welfare elections - ReSoK Staff Portal';
       document.getElementById('staffLogout').addEventListener('click', (e) => { e.preventDefault(); window.ResokPortal.logout(); });
+      document.getElementById('staffElectionLogout').addEventListener('click', () => window.ResokPortal.logout());
+      const shell = document.createElement('script');
+      shell.src = 'js/staff-shell.js?v=20261103-staff1'; document.body.appendChild(shell);
     }
     const el = (id) => document.getElementById(id);
+    function setStaffElectionAccount(me, superAdmin) {
+      const name = String(me.name || me.email || 'Staff account');
+      el('staffElectionName').textContent = name;
+      el('staffElectionCaption').textContent = superAdmin ? 'Super administrator' : (String(me.jobTitle || '').trim() || 'Staff member');
+      el('staffAvatar').textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase();
+    }
     function syncElectionStaffLinks(superAdmin) {
       const active = ['staff', 'staff#home', 'staff#announcements', 'staff#equipment', 'staff#helpdesk', 'elections?for=staff', 'election-live'];
       el('staffNav').querySelectorAll('a').forEach((link) => {
@@ -319,7 +393,7 @@
             link.dataset.staffPausedTabindex = link.getAttribute('tabindex') || '';
           }
           link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.setAttribute('tabindex', '-1');
-          link.title = 'Coming soon'; link.classList.add('staff-locked');
+          link.title = 'Coming soon'; link.classList.add('staff-locked', 'staff-unavailable');
           if (!link.querySelector('[data-election-paused-badge]')) {
             const badge = make('span', 'soon', 'Soon'); badge.dataset.electionPausedBadge = '1'; link.appendChild(badge);
           }
@@ -327,7 +401,7 @@
           link.setAttribute('href', href); link.removeAttribute('aria-disabled');
           if (link.dataset.staffPausedTitle) link.title = link.dataset.staffPausedTitle; else link.removeAttribute('title');
           if (link.dataset.staffPausedTabindex) link.setAttribute('tabindex', link.dataset.staffPausedTabindex); else link.removeAttribute('tabindex');
-          link.classList.remove('staff-locked');
+          link.classList.remove('staff-locked', 'staff-unavailable');
           const badge = link.querySelector('[data-election-paused-badge]'); if (badge) badge.remove();
           delete link.dataset.staffPausedHref; delete link.dataset.staffPausedTitle; delete link.dataset.staffPausedTabindex;
         }
@@ -398,12 +472,22 @@
         const data = await api('/api/elections' + (STAFF ? '&electorate=staff' : ''));
         mount.textContent = '';
         if (!(data.elections || []).length) {
-          mount.appendChild(make('div', 'empty', 'No elections are running at the moment.'));
+          const empty = make('div', STAFF ? 'empty election-empty' : 'empty');
+          if (STAFF) {
+            const icon = make('i', 'fas fa-check-to-slot'); icon.setAttribute('aria-hidden', 'true'); empty.appendChild(icon);
+            empty.appendChild(make('h2', null, 'No elections are running at the moment.'));
+            empty.appendChild(make('p', null, 'When nominations or voting open, your welfare elections will appear here.'));
+          } else { empty.textContent = 'No elections are running at the moment.'; }
+          mount.appendChild(empty);
           return;
         }
         data.elections.forEach((election) => {
           const card = make('div', 'card');
+          card.setAttribute('role', 'link'); card.tabIndex = 0;
           card.addEventListener('click', () => openElection(election.slug));
+          card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openElection(election.slug); }
+          });
           const left = make('div');
           left.style.minWidth = '200px';
           left.appendChild(make('h3', null, election.title));
@@ -441,7 +525,7 @@
 
     function renderElection() {
       const e = current.election;
-      document.title = e.title + ' - ReSoK Members’ Portal';
+      document.title = e.title + (STAFF ? ' - ReSoK Staff Portal' : ' - ReSoK Members’ Portal');
       el('eTitle').textContent = e.title;
       el('eDescription').textContent = e.description || '';
       const [cls, label] = statusPill(e);
@@ -514,7 +598,8 @@
       (nominations.members || []).forEach((member) => {
         const option = document.createElement('option');
         option.value = String(STAFF ? member.userId : member.memberProfileId);
-        option.textContent = member.name + (member.membershipId ? ' · ' + member.membershipId : '');
+        option.textContent = member.name + (STAFF && member.jobTitle ? ' · ' + member.jobTitle : '')
+          + (member.membershipId ? ' · ' + member.membershipId : '');
         members.appendChild(option);
       });
       el('eNominateBox').hidden = false;
@@ -547,6 +632,7 @@
           const who = make('div');
           who.style.flex = '1';
           who.appendChild(make('div', 'who', n.name));
+          if (STAFF && n.jobTitle) who.appendChild(make('div', 'candidate-job-title', n.jobTitle));
           const detail = [];
           if (n.nominatedBy) detail.push('Nominated by ' + n.nominatedBy);
           detail.push(current.election.nominationsFinal ? (n.status === 'approved' ? 'On the ballot' : 'Nomination final') : (n.accepted ? 'Accepted' : (n.blocker || n.status)));
@@ -654,6 +740,7 @@
           const who = make('div');
           who.style.flex = '1';
           who.appendChild(make('div', 'who', candidate.name));
+          if (STAFF && candidate.jobTitle) who.appendChild(make('div', 'candidate-job-title', candidate.jobTitle));
           if (candidate.headline) who.appendChild(make('div', 'head', candidate.headline));
           if (candidate.manifesto) who.appendChild(make('div', 'manifesto', candidate.manifesto));
           // A name that stood down stays visible and is marked, so a member does not wonder
@@ -693,6 +780,7 @@
           const who = make('div');
           who.style.flex = '1';
           who.appendChild(make('span', 'who', candidate.name));
+          if (STAFF && candidate.jobTitle) who.appendChild(make('div', 'candidate-job-title', candidate.jobTitle));
           if (candidate.elected) {
             const tag = make('span', 'pill open', 'Elected');
             tag.style.marginLeft = '9px';
@@ -768,6 +856,7 @@
           const who = make('div');
           who.style.flex = '1';
           who.appendChild(make('div', 'who', candidate.name));
+          if (STAFF && candidate.jobTitle) who.appendChild(make('div', 'candidate-job-title', candidate.jobTitle));
           if (candidate.headline) who.appendChild(make('div', 'head', candidate.headline));
           if (candidate.manifesto) who.appendChild(make('div', 'manifesto', candidate.manifesto));
           row.appendChild(who);
@@ -917,9 +1006,12 @@
     });
 
     (async () => {
+      let staffAccount = {};
+      if (STAFF) syncElectionStaffLinks(false);
       try {
         if (STAFF) {
           const home = await api('/api/welfare/me');
+          staffAccount = home.me || {};
           el('whoami').textContent = (home.me && (home.me.name || home.me.email)) || '';
         } else {
           const me = await api('/api/members/me');
@@ -928,7 +1020,7 @@
       } catch (error) {
         if (error.status === 401) { window.location.href = 'login'; return; }
       }
-      if (STAFF) await loadElectionManagementAccess();
+      if (STAFF) setStaffElectionAccount(staffAccount, await loadElectionManagementAccess());
       await loadList();
       // A notification links straight to one election: elections?for=staff#<slug>.
       const slug = decodeURIComponent(location.hash.replace('#', ''));

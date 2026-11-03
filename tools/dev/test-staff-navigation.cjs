@@ -45,7 +45,7 @@ for (const [home, me, accountRole, expected] of [
 class Element {
   constructor(tag) {
     this.tag = tag; this.children = []; this.events = {}; this.ownText = ''; this.value = ''; this.checked = false;
-    this.dataset = {}; this.attributes = {}; this.parent = null;
+    this.dataset = {}; this.attributes = {}; this.parent = null; this.style = {};
     const classes = new Set();
     this.classList = { add: (...values) => values.forEach(value => classes.add(value)), remove: (...values) => values.forEach(value => classes.delete(value)), contains: value => classes.has(value), toggle: (value, enabled) => { if (enabled) classes.add(value); else classes.delete(value); } };
   }
@@ -116,7 +116,49 @@ function leaveContext(manage, pendingCount = 1) {
 const tick = () => new Promise(setImmediate);
 (async () => {
   const elections = fs.readFileSync(path.join(publicDir, 'elections.html'), 'utf8');
-  const accessFunctions = elections.slice(elections.indexOf('    function syncElectionStaffLinks'), elections.indexOf('    const make =', elections.indexOf('    function applyElectionManagementAccess')));
+  const accessFunctions = elections.slice(elections.indexOf('    function setStaffElectionAccount'), elections.indexOf('    const make =', elections.indexOf('    function applyElectionManagementAccess')));
+  const themeInit = [...elections.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
+  for (const [staffMode, saved, expected] of [[true, 'light', 'light'], [true, 'dark', 'dark'], [true, null, 'dark'], [false, 'light', null]]) {
+    const root = new Element('html'), sheets = {};
+    vm.runInNewContext(themeInit, {
+      URLSearchParams, location: { search: staffMode ? '?for=staff' : '' },
+      localStorage: { getItem: () => saved },
+      document: { documentElement: root, getElementById: id => sheets[id] ||= { media: 'not all' } }
+    });
+    assert.equal(root.dataset.theme ?? null, expected); assert.equal(root.classList.contains('staff-elections'), staffMode); checks++;
+    if (staffMode) { assert(Object.values(sheets).every(sheet => sheet.media === 'all')); checks++; }
+    else { assert.equal(Object.keys(sheets).length, 0); checks++; }
+  }
+  for (const id of ['menuBtn','side','staffSidebarBackdrop','staffThemeToggle','staffSearch','staffSearchResults','staffSearchWrap','staffFullscreen']) {
+    assert(elections.includes('id="' + id + '"'), id + ' required by shared staff shell'); checks++;
+  }
+  const captionNodes = {};
+  const captionContext = vm.createContext({ el: id => captionNodes[id] ||= {} });
+  vm.runInContext(accessFunctions, captionContext);
+  for (const [jobTitle, superAdmin, expected] of [['Finance Officer', false, 'Finance Officer'], [null, false, 'Staff member'], ['  ', false, 'Staff member'], ['Communications Officer', true, 'Super administrator']]) {
+    captionContext.me = { name: 'Example Employee', jobTitle }; captionContext.superAdmin = superAdmin;
+    vm.runInContext('setStaffElectionAccount(me, superAdmin);', captionContext);
+    assert.equal(captionNodes.staffElectionCaption.textContent, expected); assert.equal(captionNodes.staffElectionName.textContent, 'Example Employee'); assert.equal(captionNodes.staffAvatar.textContent, 'EE'); checks++;
+  }
+  const candidateRender = elections.slice(elections.indexOf('    function renderCandidates()'), elections.indexOf('    function renderResults('));
+  const nominationRender = elections.slice(elections.indexOf('    function renderNominationList()'), elections.indexOf('    async function respond('));
+  const ballotRender = elections.slice(elections.indexOf('    function renderBallot()'), elections.indexOf('    /** What the voter has marked'));
+  for (const staffMode of [true, false]) {
+    const nodes = {}, title = '<img src=x onerror=bad()>', candidate = { id: 1, name: 'Example Candidate', jobTitle: title, status: 'approved' };
+    const position = { id: 1, title: 'Chairperson', seats: 1, maxChoices: 1, candidates: [candidate] };
+    const renderContext = vm.createContext({ STAFF: staffMode, el: id => nodes[id] ||= new Element('div'),
+      make: (tag, cls, text) => h(tag, { class: cls, text }), document: { createElement: tag => new Element(tag) },
+      current: { positions: [position], election: { nominationsFinal: true } },
+      nominations: { nominations: [{ ...candidate, position: 'Chairperson' }] },
+      ballot: { election: { title: 'Test election' }, voter: { name: 'Test voter' }, positions: [position] }
+    });
+    vm.runInContext(candidateRender + nominationRender + ballotRender + '\nrenderCandidates(); renderNominationList(); renderBallot();', renderContext);
+    for (const id of ['eCandidates', 'eNominations', 'ballotForm']) {
+      assert.equal(nodes[id].textContent.includes(title), staffMode, id + ' job-title visibility');
+      assert.equal(nodes[id].all('img').length, 0, 'job titles render as text'); checks++;
+    }
+    assert.equal(nodes.ballotForm.all('input').length, 1); assert.equal(nodes.eNominations.all('button').length, 0); checks++;
+  }
   // Opening welfare elections must retain the same staff launch controls and super-admin access.
   const electionLinks = ['staff','staff#announcements','staff#helpdesk','staff#equipment','elections?for=staff','election-live','staff#leave','staff#appraisals','staff#directory','election-admin?for=staff','admin-home'].map(href => {
     const link = h('a', { text: href }); link.setAttribute('href', href); return link;

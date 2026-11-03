@@ -280,9 +280,9 @@
     load();
   };
   S.routes.push((hash) => {
-    const m = hash.match(/^procurement-(\d+|queue)$/);
+    const m = hash.match(/^procurement-(\d+|queue|all|suppliers)$/);
     if (!m) return false;
-    pending = m[1] === 'queue' ? { tab: 'queue', openId: null, editing: null } : { openId: +m[1], editing: null };
+    pending = /^\d+$/.test(m[1]) ? { openId: +m[1], editing: null } : { tab: m[1], openId: null, editing: null };
     S.show('procurement');
     return true;
   });

@@ -235,7 +235,8 @@
   let pendingTab = null;
   S.loaders.timesheets = () => { state.tab = pendingTab || 'week'; pendingTab = null; load(); };
   S.routes.push((hash) => {
-    if (hash !== 'timesheet-approvals') return false;
-    pendingTab = 'approve'; S.show('timesheets'); return true;
+    const tab = new Map([['timesheet-approvals', 'approve'], ['timesheet-report', 'report'], ['timesheet-codes', 'codes']]).get(hash);
+    if (!tab) return false;
+    pendingTab = tab; S.show('timesheets'); return true;
   });
 })();

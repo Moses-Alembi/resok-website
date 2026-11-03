@@ -180,6 +180,7 @@ function staffGate(PDO $pdo, array $user, array $config): array
 
 function staffNeed(array $gate, string $capability): void
 {
+    if ($gate['super']) return;
     if (!in_array($capability, $gate['caps'], true)) {
         respond(403, ['error' => 'You do not have permission for this.', 'capability' => $capability]);
     }
@@ -634,18 +635,22 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         if (!$gate['super']) respond(403, ['error' => 'Only a super administrator can see or change staff permissions.']);
         $grants = [];
         foreach ($pdo->query('SELECT user_id, capability FROM staff_grants')->fetchAll() as $g) $grants[(int)$g['user_id']][] = $g['capability'];
-        $people = $pdo->query('SELECT s.user_id, s.full_name, u.email FROM staff_accounts s JOIN users u ON u.id = s.user_id WHERE s.active = 1 ORDER BY COALESCE(s.full_name, u.email)')->fetchAll();
-        respond(200, ['capabilities' => STAFF_CAPABILITIES, 'people' => array_map(static fn($p) => [
-            'userId' => (int)$p['user_id'], 'name' => $p['full_name'], 'email' => $p['email'], 'caps' => $grants[(int)$p['user_id']] ?? [],
-        ], $people)]);
+        $people = $pdo->query('SELECT s.user_id, s.full_name, u.email, u.role FROM staff_accounts s JOIN users u ON u.id = s.user_id WHERE s.active = 1 ORDER BY COALESCE(s.full_name, u.email)')->fetchAll();
+        respond(200, ['capabilities' => STAFF_CAPABILITIES, 'people' => array_map(static function ($p) use ($config, $grants) {
+            $super = isSuperAdmin($p, $config);
+            return ['userId' => (int)$p['user_id'], 'name' => $p['full_name'], 'email' => $p['email'], 'super' => $super,
+                'caps' => $super ? array_keys(STAFF_CAPABILITIES) : ($grants[(int)$p['user_id']] ?? [])];
+        }, $people)]);
     }
     if (preg_match('#^staff/permissions/(\d+)$#', $route, $m) && $method === 'POST') {
         if (!$gate['super']) respond(403, ['error' => 'Only a super administrator can see or change staff permissions.']);
         $target = (int)$m[1];
         if ($target === $me) respond(400, ['error' => 'You cannot change your own permissions.']);
-        $ok = $pdo->prepare('SELECT 1 FROM staff_accounts WHERE user_id = ? AND active = 1');
+        $ok = $pdo->prepare('SELECT u.email, u.role FROM staff_accounts s JOIN users u ON u.id=s.user_id WHERE s.user_id = ? AND s.active = 1');
         $ok->execute([$target]);
-        if (!$ok->fetchColumn()) respond(404, ['error' => 'Permissions can only be given to active staff.']);
+        $person = $ok->fetch();
+        if (!$person) respond(404, ['error' => 'Permissions can only be given to active staff.']);
+        if (isSuperAdmin($person, $config)) respond(400, ['error' => 'Super administrators have full staff access automatically. Staff permissions cannot reduce that access.']);
         $wanted = input()['caps'] ?? null;
         if (!is_array($wanted)) respond(400, ['error' => 'Send the permissions as a list.']);
         $wanted = array_values(array_unique(array_map('strval', $wanted)));

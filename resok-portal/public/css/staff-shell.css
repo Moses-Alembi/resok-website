@@ -56,6 +56,13 @@ button{font:inherit}input,select,textarea{accent-color:var(--brand-primary)}
 .staff-home-head .eyebrow{color:var(--brand-ink);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}
 .staff-home-head h1{font-size:28px;letter-spacing:-.6px;line-height:1.25}
 .staff-head-actions{display:flex;gap:9px;flex-wrap:wrap}
+.staff-admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px}
+.staff-admin-card{display:flex;flex-direction:column;align-items:flex-start;gap:11px;min-width:0;padding:22px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);color:var(--ink);text-decoration:none;transition:border-color .15s,transform .15s}
+.staff-admin-card:hover{border-color:var(--brand-primary);transform:translateY(-2px)}
+.staff-admin-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--brand-soft);color:var(--brand-ink);font-size:16px}
+.staff-admin-card strong{font-size:15px}
+.staff-admin-card>span:not(.staff-admin-icon):not(.staff-admin-open){color:var(--muted);font-size:13px;line-height:1.65}
+.staff-admin-card .staff-admin-open{display:flex;align-items:center;gap:8px;color:var(--brand-ink);font-size:12px;font-weight:700;margin-top:auto;padding-top:7px}
 .staff-main .panel,.staff-main .tile,.staff-main .person{border:1px solid var(--line)}
 .staff-main .panel{padding:23px}
 .staff-main .tile{position:relative;padding:20px;min-height:132px;transition:border-color .15s,transform .15s}

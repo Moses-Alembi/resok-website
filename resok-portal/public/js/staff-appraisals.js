@@ -250,6 +250,7 @@
     load();
   };
   S.routes.push((hash) => {
+    if (hash === 'appraisal-cycles') { pending = { view: 'cycles', id: null, cycleId: null }; S.show('appraisals'); return true; }
     const m = hash.match(/^appraisal-(\d+)$/);
     if (!m) return false;
     pending = { view: 'list', id: +m[1], cycleId: null };

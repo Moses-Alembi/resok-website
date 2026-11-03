@@ -303,7 +303,7 @@ a:hover .more i,.card:hover .more i{transform:translateX(4px)}
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
     }
   </script>
-  <script src="assets/js/blog-posts.js?v=20261103-content1"></script>
+  <script src="assets/js/blog-posts.js"></script>
   <script>
     /**
      * Renders the whole page from RESOK_BLOG_POSTS: a lead story, two secondary cards, and
@@ -315,8 +315,7 @@ a:hover .more i,.card:hover .more i{transform:translateX(4px)}
      * be linked to and the back button behaves.
      */
     (() => {
-      const ALL = (window.RESOK_BLOG_POSTS || []).slice()
-        .sort((a, b) => b.date.localeCompare(a.date));
+      const ALL = (window.RESOK_BLOG_POSTS || []).slice();
       const params = new URLSearchParams(window.location.search);
       let activeCategory = params.get("category") || "All";
       let query = params.get("q") || "";

@@ -189,6 +189,7 @@ function liveCalls(screen) { return screen.calls.filter(route => route === 'welf
   await flush();
   check('staff identity selects staff navigation', () => { assert(!staff.node('liveStaffNav').hidden); assert(staff.node('liveObserverNav').hidden); });
   check('staff account title appears below the name', () => { assert.equal(staff.node('liveAccountName').textContent, 'Example Employee'); assert.equal(staff.node('liveAccountCaption').textContent, 'Programme Officer'); });
+  check('ordinary staff do not get a duplicate title line', () => assert(staff.node('liveAccountJobTitle').hidden));
   check('staff home links point to the staff workspace', () => { for (const id of ['liveBrandHome','liveHomeBreadcrumb','liveFooterHome']) assert.equal(staff.node(id).getAttribute('href'), 'staff'); });
   check('ordinary staff cannot use administrative controls', () => { assert(staff.node('liveManageNav').hidden); assert(staff.node('liveManageAction').hidden); });
   check('ordinary staff paused tools stay visible and disabled', () => {
@@ -206,6 +207,7 @@ function liveCalls(screen) { return screen.calls.filter(route => route === 'welf
   await flush();
   check('verified super admins without staff records retain management', () => { assert(!superAdmin.node('liveStaffNav').hidden); assert(!superAdmin.node('liveManageNav').hidden); assert(!superAdmin.node('liveManageAction').hidden); });
   check('super admin keeps their role caption', () => assert.equal(superAdmin.node('liveAccountCaption').textContent, 'Super administrator'));
+  check('a super admin job title also appears beneath their name', () => { assert(!superAdmin.node('liveAccountJobTitle').hidden); assert.equal(superAdmin.node('liveAccountJobTitle').textContent,'Unchanged job title'); });
   check('super admin can use the existing paused staff tools', () => {
     for (const link of superAdmin.node('liveStaffNav').querySelectorAll('[data-staff-paused-href]')) { assert.equal(link.getAttribute('href'), link.dataset.staffPausedHref); assert.equal(link.getAttribute('aria-disabled'), null); assert.equal(link.getAttribute('tabindex'), null); assert(link.querySelector('.soon').hidden); }
   });

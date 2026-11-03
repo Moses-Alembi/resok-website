@@ -23,6 +23,8 @@
     const account = isStaff ? (home.me || person || {}) : (person || {});
     const name = String(account.name || account.email || 'Portal account');
     byId('liveAccountName').textContent = name;
+    byId('liveAccountJobTitle').textContent = String(account.jobTitle || '').trim();
+    byId('liveAccountJobTitle').hidden = !superAdmin || !byId('liveAccountJobTitle').textContent;
     byId('liveAccountCaption').textContent = superAdmin ? 'Super administrator'
       : (isStaff ? (String(account.jobTitle || '').trim() || 'Staff member') : 'Portal account');
     byId('staffAvatar').textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase();

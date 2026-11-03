@@ -26,7 +26,8 @@ Workflow rules, such as approval stages and locked records, still apply. Documen
 tasks and projects, and the calendar remain planned sections.
 
 Job titles are shown below employee names in the staff header, Staff records and the ICT
-staff-account list. Super administrators keep their administrator caption in the header.
+staff-account list. Super administrators keep their administrator caption in the header,
+with a separate job-title line when their staff record has a title.
 Titles are profile data, independent of roles and staff permissions.
 The staff welfare election page uses the same shell and saved light/dark preference as
 the staff workspace. It shows saved job titles beneath account, candidate and nominee

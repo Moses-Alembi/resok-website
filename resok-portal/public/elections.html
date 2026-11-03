@@ -127,7 +127,7 @@
       <button class="admin-icon-btn staff-fullscreen" id="staffFullscreen" type="button" aria-label="Enter fullscreen" title="Fullscreen"><i class="fas fa-expand" aria-hidden="true"></i></button>
       <div class="admin-user-chip">
         <div class="admin-user-avatar" id="staffAvatar" aria-hidden="true">RS</div>
-        <div class="admin-user-meta"><strong id="staffElectionName">Staff account</strong><small id="staffElectionCaption">Staff member</small></div>
+        <div class="admin-user-meta"><strong id="staffElectionName">Staff account</strong><small id="staffElectionJobTitle" hidden></small><small id="staffElectionCaption">Staff member</small></div>
       </div>
       <button class="admin-logout-btn" id="staffElectionLogout" type="button" aria-label="Sign out" title="Sign out"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></button>
     </div>
@@ -376,6 +376,8 @@
     function setStaffElectionAccount(me, superAdmin) {
       const name = String(me.name || me.email || 'Staff account');
       el('staffElectionName').textContent = name;
+      el('staffElectionJobTitle').textContent = String(me.jobTitle || '').trim();
+      el('staffElectionJobTitle').hidden = superAdmin !== true || !el('staffElectionJobTitle').textContent;
       el('staffElectionCaption').textContent = superAdmin ? 'Super administrator' : (String(me.jobTitle || '').trim() || 'Staff member');
       el('staffAvatar').textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase();
     }

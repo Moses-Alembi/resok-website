@@ -40,6 +40,11 @@ for (const [home, me, accountRole, expected] of [
   [{ super: true }, { jobTitle: 'Communications Officer' }, 'Super administrator', 'Super administrator']
 ]) {
   assert.equal(vm.runInNewContext(caption, { home, me, accountRole, String }), expected); checks++;
+  const headerNodes = {};
+  const headerTitles = page.slice(page.indexOf("      el('staffAccessRole').textContent ="), page.indexOf("      el('staffRolePill').textContent ="));
+  vm.runInNewContext(headerTitles, {home,me,accountCaption:expected,el:id=>headerNodes[id] ||= {},String});
+  assert.equal(headerNodes.staffAccessRole.textContent,expected);
+  assert.equal(headerNodes.staffAccountJobTitle.hidden,home.super !== true || !String(me.jobTitle || '').trim()); checks++;
 }
 
 class Element {
@@ -139,6 +144,8 @@ const tick = () => new Promise(setImmediate);
     captionContext.me = { name: 'Example Employee', jobTitle }; captionContext.superAdmin = superAdmin;
     vm.runInContext('setStaffElectionAccount(me, superAdmin);', captionContext);
     assert.equal(captionNodes.staffElectionCaption.textContent, expected); assert.equal(captionNodes.staffElectionName.textContent, 'Example Employee'); assert.equal(captionNodes.staffAvatar.textContent, 'EE'); checks++;
+    assert.equal(captionNodes.staffElectionJobTitle.hidden,superAdmin !== true || !String(jobTitle || '').trim());
+    if (!captionNodes.staffElectionJobTitle.hidden) assert.equal(captionNodes.staffElectionJobTitle.textContent,jobTitle); checks++;
   }
   const candidateRender = elections.slice(elections.indexOf('    function renderCandidates()'), elections.indexOf('    function renderResults('));
   const nominationRender = elections.slice(elections.indexOf('    function renderNominationList()'), elections.indexOf('    async function respond('));

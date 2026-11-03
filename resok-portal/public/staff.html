@@ -44,7 +44,7 @@
       <button class="admin-icon-btn icon-btn" id="bellBtn" type="button" aria-label="Notifications" aria-expanded="false"><i class="fas fa-bell" aria-hidden="true"></i><span class="badge" id="bellCount" hidden></span></button>
       <div class="admin-user-chip">
         <div class="admin-user-avatar" id="staffAvatar" aria-hidden="true">RS</div>
-        <div class="admin-user-meta"><strong id="who">Staff account</strong><small id="staffAccessRole">Staff portal</small></div>
+        <div class="admin-user-meta"><strong id="who">Staff account</strong><small id="staffAccountJobTitle" hidden></small><small id="staffAccessRole">Staff portal</small></div>
       </div>
       <button class="admin-logout-btn" id="logoutBtn" type="button" aria-label="Sign out" title="Sign out"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></button>
     </div>
@@ -517,6 +517,8 @@
       const accountRole = home.super ? 'Super administrator' : (home.caps.length ? 'Staff manager' : 'Staff member');
       const accountCaption = home.super ? accountRole : (String(me.jobTitle || '').trim() || accountRole);
       el('staffAccessRole').textContent = accountCaption; el('staffAccessRole').title = accountCaption;
+      el('staffAccountJobTitle').textContent = String(me.jobTitle || '').trim();
+      el('staffAccountJobTitle').hidden = home.super !== true || !el('staffAccountJobTitle').textContent;
       el('staffRolePill').textContent = accountRole;
       el('staffAvatar').textContent = initials(me.name, me.email);
       if (!quiet) {

@@ -131,8 +131,8 @@
       <section class="panel" id="viewList">
         <h1 id="listTitle">Elections</h1>
         <p class="lede" id="staffLede" hidden>
-          Staff welfare elections. Only ReSoK staff vote and stand. You can vote if you were on
-          the staff roll when it was drawn; nominations name colleagues from that roll.
+          Employees and named additional voters may vote if they are on this election's roll.
+          Only eligible employees may stand. Welfare nominations are final and cannot be declined.
         </p>
         <p class="lede" id="memberLede">
           ReSoK board elections. You can vote in an election if you were on the electoral roll
@@ -254,7 +254,7 @@
     </main>
   </div>
 
-  <script src="js/portal-state.js?v=20261028-staffsec"></script>
+  <script src="js/portal-state.js?v=20261103-welfare2"></script>
   <script>
   /**
    * The member side of an election: what is running, the ballot paper, and declared results.
@@ -279,7 +279,7 @@
       document.getElementById('nomKindRow').hidden = true;
       document.getElementById('nomMemberLabel').textContent = 'Member of staff';
       document.getElementById('nomIntro').textContent = 'You may nominate one colleague for each post, and you may nominate yourself. '
-        + 'Nominating someone else asks them to accept before their name goes on the ballot.';
+        + 'Welfare nominations are final, are approved automatically for scheduled elections, and cannot be declined.';
       document.getElementById('nomHeadline').placeholder = 'e.g. Accounts, Nairobi office';
       document.querySelector('.dashboard-logo').href = 'staff';
       document.title = 'Welfare elections - ReSoK Staff Portal';
@@ -483,14 +483,14 @@
           who.appendChild(make('div', 'who', n.name));
           const detail = [];
           if (n.nominatedBy) detail.push('Nominated by ' + n.nominatedBy);
-          detail.push(n.accepted ? 'Accepted' : (n.blocker || n.status));
+          detail.push(current.election.nominationsFinal ? (n.status === 'approved' ? 'On the ballot' : 'Nomination final') : (n.accepted ? 'Accepted' : (n.blocker || n.status)));
           who.appendChild(make('div', 'head', detail.join(' · ')));
           if (n.headline) who.appendChild(make('div', 'manifesto', n.headline));
           row.appendChild(who);
 
           // Accept and decline appear only on a nomination the signed-in member has been
           // given and has not yet answered. Everything else is read-only here.
-          if (n.mine && !n.accepted && n.status === 'nominated') {
+          if (!current.election.nominationsFinal && n.mine && !n.accepted && n.status === 'nominated') {
             const actions = make('div');
             actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
             const yes = make('button', 'btn btn-primary', 'Accept');
@@ -853,7 +853,7 @@
     (async () => {
       try {
         if (STAFF) {
-          const home = await api('/api/staff/home');
+          const home = await api('/api/welfare/me');
           el('whoami').textContent = (home.me && (home.me.name || home.me.email)) || '';
         } else {
           const me = await api('/api/members/me');

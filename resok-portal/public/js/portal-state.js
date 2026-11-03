@@ -144,6 +144,12 @@
       failure.payload = data;
       throw failure;
     }
+    if (data === null || typeof data !== "object") {
+      const failure = new Error("The portal server did not return a valid response. Please open the portal and sign in again.");
+      failure.status = response.status;
+      failure.code = "INVALID_API_RESPONSE";
+      throw failure;
+    }
     return data;
   }
 
@@ -1066,6 +1072,7 @@
   }
 
   window.ResokPortal = {
+    isFeatureLocked: (name) => LOCKED_FEATURES.includes(name),
     viewAsStart,
     viewAsEnd,
     api,
@@ -1131,7 +1138,6 @@
   if (LOCKED_FEATURES.includes(pageName()) && !staffElections) {
     window.location.replace("dashboard");
   }
-  window.ResokPortal.isFeatureLocked = (name) => LOCKED_FEATURES.includes(name);
 
   function lockSidebarLinks() {
     LOCKED_FEATURES.forEach((name) => {
@@ -1168,4 +1174,16 @@
   } else {
     autoStartIdleWatch();
   }
+
+  // The same aggregate election feed appears on signed-in portal pages.
+  function loadWelfareFeed() {
+    if (["login", "forgot-password", "index", "two-factor-setup"].includes(pageName())) return;
+    if (document.getElementById("resokWelfareLoader")) return;
+    const script = document.createElement("script");
+    script.id = "resokWelfareLoader";
+    script.src = new URL("welfare-live.js?v=20261103-welfare2", SELF_SRC || location.href).href;
+    document.body.appendChild(script);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", loadWelfareFeed);
+  else loadWelfareFeed();
 })();

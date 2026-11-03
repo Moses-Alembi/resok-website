@@ -192,7 +192,7 @@
         <label><span>Who votes</span>
           <select class="in" id="nElectorate">
             <option value="members">Members: a board election</option>
-            <option value="staff">Staff only: a welfare election</option>
+            <option value="staff">Employees and additional voters: a welfare election</option>
           </select></label>
         <label><span>Title</span><input class="in" id="nTitle" placeholder="ReSoK Board Election 2027" /></label>
         <label><span>Description</span><textarea class="in" id="nDescription" rows="3"></textarea></label>
@@ -255,9 +255,9 @@
       <section class="panel">
         <h2>Electoral roll</h2>
         <p class="lede" id="rollLedeStaff" hidden>
-          A staff welfare election: the roll is every active member of staff who can sign in,
-          drawn once and frozen. Staff who have not yet set their password are left off and
-          counted below &mdash; send them their invite, then draw the roll again.
+          A welfare election uses employees with employee numbers and activated accounts,
+          plus named additional voters. Automatic setup checks for exactly 32 employees
+          and every additional account before freezing the roll.
         </p>
         <p class="lede" id="rollLedeMembers">
           Drawn once and frozen. Only members who paid for the year chosen <em>and</em> can sign
@@ -336,7 +336,7 @@
       <section class="panel" id="countPanel" hidden>
         <h2>The count</h2>
         <p class="lede">
-          Not available until voting has closed, and every reading of it is logged. A tie for
+          Scheduled welfare elections show provisional totals live. Other elections are counted after closing. A tie for
           the last seat stops a declaration rather than being resolved by a sort order.
         </p>
         <div id="countBody" style="margin-top:16px"></div>
@@ -369,7 +369,8 @@
   </div>
 
   <script src="js/admin-shell.js?v=20260924-roles3"></script>
-  <script src="js/portal-state.js?v=20261028-staffsec"></script>
+  <script src="js/portal-state.js?v=20261103-welfare2"></script>
+  <script src="js/welfare-admin.js?v=20261103-welfare1"></script>
   <script>
   /**
    * The returning officer's console.
@@ -481,10 +482,15 @@
       try {
         current = await api('/api/admin/elections/' + id);
         renderElection();
+        const nominationLede = document.querySelector('#nominationsPanel .lede');
+        if (nominationLede) nominationLede.textContent = current.election.nominationsFinal
+          ? 'Welfare nominations are final and cannot be declined. Automatic welfare setup approves eligible nominations without a separate acceptance step.'
+          : 'Nominees accept before the returning officer approves their candidacy.';
         renderRoll();
         renderPositions();
         await renderNominations();
         renderCount();
+        document.dispatchEvent(new CustomEvent('resok:election-admin-open', { detail: current.election }));
       } catch (error) {
         notice('pageNotice', error.message || 'That election could not be opened.', 'bad');
       }
@@ -930,8 +936,8 @@
             approve.type = 'button';
             // Approving somebody who has not agreed would put a name on a ballot without
             // their consent, so the button says why it is not offered yet.
-            approve.disabled = !n.accepted;
-            approve.title = n.accepted ? ''
+            approve.disabled = !current.election.nominationsFinal && !n.accepted;
+            approve.title = (current.election.nominationsFinal || n.accepted) ? ''
               : (n.external ? 'Contact them and record their agreement first'
                             : 'Waiting for the nominee to accept');
             approve.addEventListener('click', () => approveCandidate(n.positionId, n));
@@ -947,7 +953,7 @@
     /* ---------------- the count ---------------- */
     function renderCount() {
       const e = current.election;
-      el('countPanel').hidden = !['closed', 'published'].includes(e.status);
+      el('countPanel').hidden = e.electorate !== 'staff' && !['closed', 'published'].includes(e.status);
       el('countBody').textContent = '';
       el('declareBtn').hidden = true;
       notice('countNotice', '');

@@ -299,7 +299,7 @@
     </section>
   </main>
 
-  <script src="js/portal-state.js?v=20261028-staffsec"></script>
+  <script src="js/portal-state.js?v=20261103-welfare2"></script>
   <script src="js/google-signin.js?v=20261005-phase4"></script>
   <script>
     const form = document.getElementById("loginForm");
@@ -436,7 +436,7 @@
       // also a ReSoK member keeps the member dashboard, which has the ICT report box too.
       const isStaffOnly = data.user?.isStaff === true && !data.user?.membershipStatus;
       const next = safeNextPath();
-      const destination = isAdmin ? "admin-review" : next || (isStaffOnly ? "staff" : (isAuthor ? "abstracts" : (isLearner ? "academy" : "dashboard")));
+      const destination = isAdmin ? "admin-review" : next || (data.user?.isWelfareVoter ? "elections?for=staff" : (isStaffOnly ? "staff" : (isAuthor ? "abstracts" : (isLearner ? "academy" : "dashboard"))));
       showAlert(
         next && !isAdmin
           ? "Login successful. Taking you back..."
@@ -475,7 +475,7 @@
           ? "Signed in with a recovery code. That code is now used up."
           : "Verified. Signing you in...", "success");
         setTimeout(() => {
-          window.location.href = isAdmin ? "admin-review" : (next || (result.user?.isLearner === true ? "academy" : "dashboard"));
+          window.location.href = isAdmin ? "admin-review" : (next || (result.user?.isWelfareVoter ? "elections?for=staff" : (result.user?.isLearner === true ? "academy" : "dashboard")));
         }, result.usedRecoveryCode ? 1600 : 650);
       } catch (error) {
         if (error.payload?.geoBlocked) { showGeoRequest(error.payload); return; }
@@ -496,7 +496,7 @@
       const next = safeNextPath();
       const staffOnly = result.user?.isStaff === true && !result.user?.membershipStatus;
       setTimeout(() => {
-        window.location.href = isAdmin ? "admin-review" : (next || (staffOnly ? "staff" : (result.user?.isLearner === true ? "academy" : "dashboard")));
+        window.location.href = isAdmin ? "admin-review" : (next || (result.user?.isWelfareVoter ? "elections?for=staff" : (staffOnly ? "staff" : (result.user?.isLearner === true ? "academy" : "dashboard"))));
       }, 650);
     }
     document.getElementById("passkeyBtn").addEventListener("click", async () => {

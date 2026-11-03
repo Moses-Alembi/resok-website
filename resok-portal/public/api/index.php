@@ -38,7 +38,7 @@ $config = require $configPath;
 date_default_timezone_set('Africa/Nairobi');
 
 $missingModules = [];
-foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-payroll', 'staff-procurement', 'staff-appraisal', 'staff-geo', 'staff-hr-import', 'passkey', 'migrate', 'view-as'] as $module) {
+foreach (['portal-mail', 'mpesa', 'throttle', 'mfa', 'security-assessment', 'blog', 'social-ingest', 'invites', 'crypto', 'input-guard', 'events', 'attendance', 'ict', 'ict-infrastructure', 'ict-assets', 'ict-credentials', 'ict-licenses', 'ict-tickets', 'academy', 'academy-assessments', 'academy-certificates', 'membership', 'elections', 'welfare', 'abstracts', 'abstracts-review', 'abstracts-decisions', 'abstracts-figures', 'conference', 'conference-api', 'conference-programme', 'conference-sponsors', 'conference-groups', 'conference-survey', 'conference-speakers', 'conference-presentations', 'proof', 'qr', 'google-signin', 'mdt', 'careers', 'directory', 'newsletter', 'staff', 'staff-portal', 'staff-field', 'staff-timesheet', 'staff-payroll', 'staff-procurement', 'staff-appraisal', 'staff-geo', 'staff-hr-import', 'passkey', 'migrate', 'view-as'] as $module) {
     $modulePath = __DIR__ . '/lib/' . $module . '.php';
     if (is_file($modulePath)) {
         require_once $modulePath;
@@ -412,6 +412,7 @@ function mfaGrantSession(PDO $pdo, array $config, int $userId, array $extra = []
             'id' => (int)$user['id'],
             'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
             'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
+            'isWelfareVoter' => function_exists('welfareGuestMayView') && (welfareGuestMayView($pdo, (int)$user['id']) || welfareDuringWindow($pdo, (int)$user['id'])),
             'email' => $user['email'],
             'role' => $user['role'],
             'membershipStatus' => $user['membership_status'],
@@ -496,6 +497,7 @@ function completeLogin(PDO $pdo, array $config, array $user): void
             'isAuthor' => $isAuthor,
             // Staff without a membership go to the staff home page rather than the Academy.
             'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
+            'isWelfareVoter' => function_exists('welfareGuestMayView') && (welfareGuestMayView($pdo, (int)$user['id']) || welfareDuringWindow($pdo, (int)$user['id'])),
             'email' => $user['email'],
             'role' => $user['role'],
             'membershipStatus' => $user['membership_status'],
@@ -1300,6 +1302,15 @@ if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)
 try {
     requireConfig($config);
     $pdo = db($config);
+
+    if (strpos($route, 'welfare/') === 0 || strpos($route, 'admin/welfare/') === 0) {
+        requireModule('welfareHandle', 'lib/welfare.php');
+        welfareHandle($pdo, $config, $route, $method);
+    }
+    if ((strpos($route, 'elections') === 0 || strpos($route, 'admin/elections') === 0) && function_exists('welfareRunScheduled')) {
+        auth($config);
+        welfareRunScheduled($pdo);
+    }
 
     // Proof of work in front of sign-in, sign-up and the public forms (lib/proof.php).
     if ($route === 'proof/challenge' && $method === 'GET') {
@@ -3057,7 +3068,7 @@ Respiratory Society of Kenya");
         requireModule('electionsList', 'lib/elections.php');
         if (($_GET['electorate'] ?? '') === 'staff') {
             if (!electionStaffMayView($pdo, $config, $user)) respond(403, ['error' => 'Welfare elections are for ReSoK staff.']);
-            respond(200, ['elections' => electionsList($pdo, false, 'staff')]);
+            respond(200, ['elections' => array_values(array_filter(electionsList($pdo, false, 'staff'), fn($e) => electionVisibleTo($pdo, $config, $e, $user)))]);
         }
         respond(200, ['elections' => electionsList($pdo, false, 'members')]);
     }
@@ -3342,7 +3353,7 @@ Respiratory Society of Kenya");
         $user = auth($config);
         requireModule('electionTally', 'lib/elections.php');
         requireSuperAdmin($user, $config);
-        [$tally, $error] = electionTally($pdo, (int)$m[1]);
+        [$tally, $error] = electionTally($pdo, (int)$m[1], true);
         if ($error) respond(400, ['error' => $error]);
         securityLog($pdo, $config, 'election_tally_viewed', 'warning', 'election',
                     'Count read for election ' . $m[1], (int)$user['userId']);

@@ -76,6 +76,7 @@ function migrateOrder(): array
         'migration-election-nominations.sql',   // nomination phase; alters elections
         'migration-election-external-nominees.sql', // candidates from outside the membership
         'migration-election-staff.sql',        // staff welfare elections: electorate, staff roll and nominees
+        'migration-2026-11-03-welfare-automation.sql', // welfare schedule, extra voter accounts and live count
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];
 }

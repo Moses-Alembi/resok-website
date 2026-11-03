@@ -303,7 +303,9 @@ function geoCheck(PDO $pdo, array $config, int $userId, string $role): ?array
     $v = geoVisitor($config);
 
     // Working hours first: it needs no location, so it holds even where location cannot be read.
-    if ($settings['hours'] !== 'off' && !$subject['super'] && !geoInHours($settings)) {
+    $electionRoute = (bool)preg_match('#^(auth/|welfare/|elections(?:/|$))#', (string)($GLOBALS['route'] ?? ''));
+    $electionHours = $electionRoute && function_exists('welfareDuringWindow') && welfareDuringWindow($pdo, $userId);
+    if ($settings['hours'] !== 'off' && !$subject['super'] && !$electionHours && !geoInHours($settings)) {
         if (geoExceptionCovers($pdo, $userId, 'hours', $v)) {
             geoEvent($pdo, $userId, 'hours', 'approved', $v);
         } elseif ($settings['hours'] === 'enforce') {

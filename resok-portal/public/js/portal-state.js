@@ -982,22 +982,39 @@
     }, IDLE_TICK_MS);
   }
 
-  // ----- "View as member" (super administrators; api/lib/view-as.php) -------------------
+  // ----- Super-administrator member/staff previews (api/lib/view-as.php) ---------------
   // The server decides who each request acts as, from an httpOnly cookie this page cannot
   // read. This flag only tells pages to ask (view-as/status) and show the banner; it grants
   // nothing. The cached member in resok_portal_state is dropped on the way in and out, so
   // neither person's details are ever shown as the other's.
   const VIEW_AS_FLAG = "resok_viewas";
+  const VIEW_AS_SYNC = "resok_viewas_sync";
+  let viewAsReturnTo = "admin-review";
+  let viewAsMemoryFlag = false;
+  let viewAsSnapshot = null, viewAsStatusLoading = false, viewAsReloading = false;
+
+  function notifyViewAsChanged() {
+    try { localStorage.setItem(VIEW_AS_SYNC, Date.now() + ":" + Math.random().toString(36).slice(2)); } catch { /* Focus checks still work. */ }
+  }
+  function reloadViewAsPage() {
+    if (!viewAsReloading) { viewAsReloading = true; window.location.reload(); }
+  }
+
+  function viewAsReturnPath(value, fallback = "admin-review") {
+    const allowed = ["admin-review", "ict#staff", "staff#people"];
+    return allowed.includes(value) ? value : (allowed.includes(fallback) ? fallback : "admin-review");
+  }
 
   function viewAsFlag(on) {
     try {
-      if (on === undefined) return localStorage.getItem(VIEW_AS_FLAG) === "1";
+      if (on === undefined) return localStorage.getItem(VIEW_AS_FLAG) === "1" || viewAsMemoryFlag;
       if (on) localStorage.setItem(VIEW_AS_FLAG, "1");
       else localStorage.removeItem(VIEW_AS_FLAG);
     } catch {
-      /* private mode - the banner just will not show */
+      /* The server status check still shows the banner when storage is unavailable. */
     }
-    return Boolean(on);
+    if (on !== undefined) viewAsMemoryFlag = Boolean(on);
+    return viewAsMemoryFlag;
   }
 
   function resetCachedMember(email) {
@@ -1005,65 +1022,129 @@
     state.loggedIn = true;
     // The profile page shows the sign-in email from here; the member's, not the admin's.
     if (email) state.member.email = email;
-    saveState(state);
+    try { saveState(state); } catch { /* A blocked cache must not strand a server-side preview. */ }
   }
 
   async function viewAsStart(profileId) {
     const result = await api("/api/view-as/start", { method: "POST", body: JSON.stringify({ profileId }) });
+    viewAsReturnTo = viewAsReturnPath(result.returnTo);
     viewAsFlag(true);
     resetCachedMember(result.email);
-    window.location.href = result.goTo || "dashboard";
+    notifyViewAsChanged();
+    window.location.href = ["dashboard", "academy"].includes(result.goTo) ? result.goTo : "dashboard";
+  }
+
+  async function viewAsStaffStart(userId, returnTo = "ict#staff") {
+    const target = Number(userId);
+    if (!Number.isSafeInteger(target) || target <= 0) throw new Error("Choose a staff account to preview.");
+    const result = await api("/api/view-as/start", {
+      method: "POST", body: JSON.stringify({ userId: target, scope: "staff", returnTo: viewAsReturnPath(returnTo, "ict#staff") })
+    });
+    viewAsReturnTo = viewAsReturnPath(result.returnTo, returnTo);
+    viewAsFlag(true);
+    resetCachedMember(result.email);
+    notifyViewAsChanged();
+    window.location.href = "staff";
   }
 
   async function viewAsEnd() {
-    try {
-      await api("/api/view-as/end", { method: "POST", body: "{}" });
-    } finally {
-      viewAsFlag(false);
-      resetCachedMember();
-      window.location.href = "admin-review";
-    }
+    const result = await api("/api/view-as/end", { method: "POST", body: "{}" });
+    viewAsFlag(false);
+    resetCachedMember();
+    notifyViewAsChanged();
+    window.location.href = result.targetUserId === null
+      ? viewAsReturnPath(viewAsReturnTo)
+      : viewAsReturnPath(result.returnTo, viewAsReturnTo);
   }
 
   async function showViewAsBanner() {
-    if (!viewAsFlag()) return;
+    // The cookie is shared across tabs and can outlive a page's local-storage flag.
+    // Always check protected pages, including when browser storage is unavailable.
+    const wasViewing = viewAsFlag();
+    if (!wasViewing && ["login", "forgot-password", "index", "two-factor-setup"].includes(pageName())) return;
+    if (viewAsStatusLoading) return;
+    viewAsStatusLoading = true;
     let status = null;
     try {
       status = await api("/api/view-as/status");
     } catch {
       return;
+    } finally {
+      viewAsStatusLoading = false;
     }
+    const snapshot = status?.active === true ? [status.scope || "member", status.targetUserId || status.profileId || status.email, status.endsAt].join(":") : "inactive";
+    if (viewAsSnapshot !== null && snapshot !== viewAsSnapshot) { reloadViewAsPage(); return; }
+    viewAsSnapshot = snapshot;
     if (!status || !status.active) {
       // Ended on its own (30 minutes, or the administrator signed out): forget it quietly.
       viewAsFlag(false);
-      resetCachedMember();
+      if (wasViewing) resetCachedMember();
       return;
     }
+    if (document.getElementById("viewAsBanner")) return;
+    viewAsFlag(true);
+    viewAsReturnTo = viewAsReturnPath(status.returnTo);
+    const staffPreview = status.scope === "staff";
+    const style = document.createElement("style");
+    style.textContent =
+      "body.view-as-active{padding-top:var(--resok-view-as-height,64px)}" +
+      "body.view-as-active .admin-topbar,body.view-as-active .topbar{top:var(--resok-view-as-height,64px)}" +
+      "body.view-as-active .admin-body{min-height:calc(100vh - var(--resok-view-as-height,64px))}" +
+      "body.view-as-active .admin-sidebar{top:calc(64px + var(--resok-view-as-height,64px))}" +
+      "body.view-as-active .admin-sidebar-backdrop{inset:calc(64px + var(--resok-view-as-height,64px)) 0 0}" +
+      "body.view-as-active .bell-panel{top:calc(72px + var(--resok-view-as-height,64px))}" +
+      "body.view-as-active .dashboard-nav{top:var(--resok-view-as-height,64px)}" +
+      "body.view-as-active .dashboard-sidebar:not(.admin-sidebar){top:calc(94px + var(--resok-view-as-height,64px))}";
+    document.head.appendChild(style);
     const bar = document.createElement("div");
     bar.id = "viewAsBanner";
     bar.setAttribute("role", "status");
     bar.style.cssText =
-      "position:sticky;top:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:12px;flex-wrap:wrap;" +
+      "position:fixed;top:0;left:0;right:0;z-index:10000;display:flex;align-items:center;gap:12px;flex-wrap:wrap;" +
       "padding:10px 16px;background:#bc0b22;color:#fff;font-family:'Segoe UI',Tahoma,sans-serif;font-size:14px;line-height:1.4;" +
       "box-shadow:0 2px 10px rgba(0,0,0,.2)";
     const text = document.createElement("span");
-    text.style.cssText = "flex:1;min-width:220px";
+    text.style.cssText = "flex:1;min-width:220px;overflow-wrap:anywhere";
     const ends = new Date(status.endsAt * 1000).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
     const who = document.createElement("strong");
     who.textContent = status.name;
-    text.append("Viewing the portal as ", who, ` (${status.email}). This is exactly what they see. Only their profile can be changed; every change is logged. Ends at ${ends}.`);
+    text.append(staffPreview ? "Viewing staff portal as " : "Viewing the portal as ", who,
+      staffPreview
+        ? ` (${status.email}). Read-only preview using their permissions. No actions are submitted as them. Ends at ${ends}.`
+        : ` (${status.email}). This is exactly what they see. Only their profile can be changed; every change is logged. Ends at ${ends}.`);
     const exit = document.createElement("button");
     exit.type = "button";
-    exit.textContent = "Exit view as";
+    exit.textContent = staffPreview ? "Return to my admin view" : "Exit view as";
     exit.style.cssText =
       "flex-shrink:0;border:0;border-radius:6px;padding:8px 14px;background:#fff;color:#bc0b22;font-weight:800;font-size:13px;cursor:pointer";
-    exit.addEventListener("click", () => {
+    exit.addEventListener("click", async () => {
       exit.disabled = true;
-      viewAsEnd();
+      try { await viewAsEnd(); }
+      catch (error) {
+        exit.disabled = false;
+        let failure = document.getElementById("viewAsExitError");
+        if (!failure) {
+          failure = document.createElement("span"); failure.id = "viewAsExitError"; failure.setAttribute("role", "alert"); bar.appendChild(failure);
+        }
+        failure.textContent = error.message || "Could not exit the preview. Please try again.";
+      }
     });
     bar.append(text, exit);
     document.body.prepend(bar);
+    document.body.classList.add("view-as-active");
+    const sizeBanner = () => document.documentElement.style.setProperty("--resok-view-as-height", Math.ceil(bar.getBoundingClientRect().height) + "px");
+    sizeBanner();
+    window.addEventListener("resize", sizeBanner);
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(sizeBanner).observe(bar);
+    const expiresIn = Number(status.endsAt) * 1000 - Date.now();
+    if (staffPreview && Number.isFinite(expiresIn)) window.setTimeout(() => exit.click(), Math.max(0, expiresIn));
   }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === VIEW_AS_FLAG || event.key === VIEW_AS_SYNC) reloadViewAsPage();
+  });
+  window.addEventListener("focus", () => { if (document.readyState !== "loading") showViewAsBanner(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && document.readyState !== "loading") showViewAsBanner(); });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", showViewAsBanner);
@@ -1074,6 +1155,7 @@
   window.ResokPortal = {
     isFeatureLocked: (name) => LOCKED_FEATURES.includes(name),
     viewAsStart,
+    viewAsStaffStart,
     viewAsEnd,
     api,
     proofFetch,

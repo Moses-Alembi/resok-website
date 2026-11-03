@@ -240,6 +240,9 @@
   @media print{body *{visibility:hidden}#stocktakeReport,#stocktakeReport *{visibility:visible}#stocktakeReport{position:absolute;left:0;top:0;width:100%}#stocktakeReport .st-actions{display:none}}
   .scan-ok{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;background:var(--ok-bg);color:var(--ok)}
   .scan-err{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:600;background:var(--crit-bg);color:var(--crit)}
+  .staff-preview-name{border:0;background:none;padding:0;color:var(--ok);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+  .staff-preview-name:hover{text-decoration:underline}
+  .staff-preview-name:disabled{opacity:.6;cursor:wait}
 </style>
 </head>
 <body>
@@ -963,7 +966,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="js/portal-state.js?v=20261103-welfare2"></script>
+<script src="js/portal-state.js?v=20261103-viewas-staff1"></script>
 <script>
 /**
  * ICT Operations.
@@ -3259,6 +3262,21 @@
     box.className = 'notice' + (message ? ' show ' + (kind || 'success') : '');
   }
   const STAFF_STATE = { active: ['Active', 's-ok'], invited: ['Invited', 's-warning'], not_invited: ['Not invited yet', 's-unknown'] };
+  let staffPreviewStarting = false;
+  function staffPreviewButton(person, label, className) {
+    const button = make('button', className, label);
+    button.type = 'button';
+    button.title = 'See the staff portal as ' + (person.name || person.email);
+    button.dataset.staffPreview = String(person.userId);
+    button.addEventListener('click', async () => {
+      if (me.isSuperAdmin !== true || staffPreviewStarting) return;
+      staffPreviewStarting = true; button.disabled = true;
+      try { await window.ResokPortal.viewAsStaffStart(person.userId, 'ict#staff'); }
+      catch (error) { staffAcctNotice(error.message || 'Could not open this staff portal.', 'error'); }
+      finally { staffPreviewStarting = false; button.disabled = false; }
+    });
+    return button;
+  }
 
   function renderStaffAccounts(list) {
     const counts = { active: 0, invited: 0, not_invited: 0 };
@@ -3279,7 +3297,8 @@
     list.forEach((s) => {
       const tr = make('tr');
       const staffName = make('td');
-      staffName.appendChild(make('strong', s.name ? null : 'muted', s.name || 'No name given'));
+      const previewable = me.isSuperAdmin === true;
+      staffName.appendChild(previewable ? staffPreviewButton(s, s.name || s.email || 'No name given', 'staff-preview-name') : make('strong', s.name ? null : 'muted', s.name || 'No name given'));
       if (s.jobTitle) staffName.appendChild(make('div', 'muted', s.jobTitle));
       tr.appendChild(staffName);
       const em = make('td', null, s.email);
@@ -3294,6 +3313,9 @@
       tr.appendChild(st);
       const act = make('td');
       act.style.whiteSpace = 'nowrap';
+      if (previewable) {
+        const preview = staffPreviewButton(s, 'View staff portal', 'btn btn-secondary'); preview.style.cssText = 'font-size:12px;margin-right:6px'; act.appendChild(preview);
+      }
       if (s.state !== 'active') {
         const b = make('button', 'btn btn-secondary', s.state === 'invited' ? 'Resend' : 'Invite');
         b.type = 'button'; b.style.fontSize = '12px';

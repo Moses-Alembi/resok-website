@@ -1,7 +1,7 @@
 <?php
 /**
- * "View as member": a super administrator sees the member portal exactly as one member sees
- * it, without that member's password, and can correct their profile for them.
+ * "View as": a super administrator sees a member or staff portal without their password.
+ * Member previews allow existing profile corrections. Staff previews are read-only.
  *
  * How it works. Starting it sets a second cookie, resok_viewas, beside the administrator's own
  * session. On every request auth() reads it and, if it is genuine, answers as the member
@@ -18,7 +18,8 @@
  *   - the only writes are the member's own profile and photo (VIEW_AS_WRITES). Payments,
  *     votes, nominations, course attempts, registrations and passwords are refused, so
  *     nothing is ever done in the member's name that they did not do;
- *   - only ordinary member accounts can be viewed, never another administrator.
+ *   - member previews require ordinary members; staff previews require active staff and
+ *     never carry the target's administrator role or permit another super administrator.
  * Starting, ending and every edit go to the admin audit log (admin_actions) and the security
  * log, with the administrator's account.
  */
@@ -36,6 +37,13 @@ const VIEW_AS_PRIVATE_PREFIXES = ['auth/mfa', 'auth/passkey', 'staff/', 'ict/', 
 
 /** Routes that always act as the administrator, never as the member being viewed. */
 const VIEW_AS_OWN_ROUTES = ['view-as/start', 'view-as/end', 'view-as/status', 'auth/logout'];
+
+/** A return destination is part of the signed preview, never an arbitrary redirect URL. */
+function viewAsReturnTo(string $scope, $requested = null): string
+{
+    $allowed = $scope === 'staff' ? ['ict#staff', 'staff#people'] : ['admin-review'];
+    return is_string($requested) && in_array($requested, $allowed, true) ? $requested : $allowed[0];
+}
 
 function viewAsKey(array $config): string
 {
@@ -68,25 +76,46 @@ function viewAsClaims(array $config): ?array
     [$body, $sig] = array_pad(explode('.', $raw, 2), 2, '');
     if ($body === '' || $sig === '' || !hash_equals(b64url(hash_hmac('sha256', $body, viewAsKey($config), true)), $sig)) return null;
     $claims = json_decode(base64_decode(strtr($body, '-_', '+/')), true);
-    if (!is_array($claims) || (int)($claims['exp'] ?? 0) < time() || (int)($claims['t'] ?? 0) <= 0 || (int)($claims['a'] ?? 0) <= 0) return null;
+    if (!is_array($claims) || (int)($claims['exp'] ?? 0) < time() || (int)($claims['t'] ?? 0) <= 0 || (int)($claims['a'] ?? 0) <= 0
+        || !in_array($claims['scope'] ?? 'member', ['member', 'staff'], true)) return null;
     return $claims;
 }
 
 /** The member account behind a profile or user id, or null when it cannot be viewed. */
-function viewAsTarget(PDO $pdo, int $userId): ?array
+function viewAsTarget(PDO $pdo, int $userId, string $scope = 'member', array $config = []): ?array
 {
-    $stmt = $pdo->prepare('SELECT u.id, u.email, u.role, mp.id AS profile_id, mp.title, mp.first_name, mp.surname
-                             FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id WHERE u.id = ? LIMIT 1');
+    if ($scope === 'staff' && (!function_exists('staffPortalEnsureTables') || !staffPortalEnsureTables($pdo))) return null;
+    $stmt = $pdo->prepare('SELECT u.id, u.email, u.role, mp.id AS profile_id, mp.title, mp.first_name, mp.surname'
+        . ($scope === 'staff' ? ', s.full_name AS staff_name, s.job_title' : '') . '
+                             FROM users u LEFT JOIN member_profiles mp ON mp.user_id = u.id'
+        . ($scope === 'staff' ? ' JOIN staff_accounts s ON s.user_id = u.id AND s.active = 1' : '') . ' WHERE u.id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
-    if (!$row || (string)$row['role'] !== 'member') return null;
+    if (!$row) return null;
+    if ($scope === 'staff') {
+        // Preview the staff workspace without inheriting any administrator authority.
+        if (isSuperAdmin(['role' => $row['role'], 'email' => $row['email']], $config)) return null;
+    } elseif ((string)$row['role'] !== 'member') return null;
     return $row;
 }
 
 function viewAsName(array $row): string
 {
+    if (trim((string)($row['staff_name'] ?? '')) !== '') return trim((string)$row['staff_name']);
     $name = trim(implode(' ', array_filter([$row['title'] ?? '', $row['first_name'] ?? '', $row['surname'] ?? ''])));
     return $name !== '' ? $name : (string)$row['email'];
+}
+
+/** Staff previews read only the workspace's self-service endpoints, never management data. */
+function viewAsStaffReadAllowed(string $route): bool
+{
+    if (in_array($route, ['members/me', 'staff/home', 'staff/profile', 'staff/directory', 'staff/departments', 'staff/notifications', 'staff/leave', 'welfare/me', 'welfare/live'], true)) return true;
+    if ($route === 'staff/announcements') return empty($_GET['manage']);
+    if (preg_match('#^staff/announcements/[1-9][0-9]*$#D', $route)) return true;
+    // The report filter is mandatory even when the target independently holds ICT grants.
+    if ($route === 'ict/tickets') return (string)($_GET['reported'] ?? '') === '1';
+    if ($route === 'elections') return (string)($_GET['electorate'] ?? '') === 'staff';
+    return (bool)preg_match('#^elections/[A-Za-z0-9-]+(?:/(?:ballot|nominations))?$#D', $route);
 }
 
 /**
@@ -109,22 +138,33 @@ function viewAsApply(array $config, array $actor): array
     $route = (string)($GLOBALS['route'] ?? '');
     if (in_array($route, VIEW_AS_OWN_ROUTES, true)) return $actor;
 
-    $target = viewAsTarget(db($config), (int)$claims['t']);
+    $scope = (string)($claims['scope'] ?? 'member');
+    $target = viewAsTarget(db($config), (int)$claims['t'], $scope, $config);
     if ($target === null) {
         viewAsClearCookie();
+        if ($scope === 'staff') respond(403, ['error' => 'This staff preview has ended because the account is no longer available. Exit "View as" to return to your own account.', 'viewAs' => true]);
         return $actor;
     }
     $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $refuse = static function (string $why) use ($target) {
         respond(403, ['error' => $why, 'viewAs' => true, 'viewingName' => viewAsName($target)]);
     };
-    foreach (VIEW_AS_PRIVATE_PREFIXES as $prefix) {
-        if (strncmp($route, $prefix, strlen($prefix)) === 0) {
-            $refuse('You are viewing the portal as ' . viewAsName($target) . '. This area stays private to them. Exit "View as" to return to your own account.');
+    if ($scope === 'staff') {
+        if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {
+            $refuse('You are viewing the staff portal as ' . viewAsName($target) . '. This preview is read-only; nothing can be changed or submitted in their name.');
         }
-    }
-    if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true) && (VIEW_AS_WRITES[$route] ?? null) !== $method) {
-        $refuse('You are viewing the portal as ' . viewAsName($target) . '. Only their profile can be changed from here; nothing else is done in their name.');
+        if (!viewAsStaffReadAllowed($route)) {
+            $refuse('You are viewing the staff portal as ' . viewAsName($target) . '. Exit "View as" to open this area with your own account.');
+        }
+    } else {
+        foreach (VIEW_AS_PRIVATE_PREFIXES as $prefix) {
+            if (strncmp($route, $prefix, strlen($prefix)) === 0) {
+                $refuse('You are viewing the portal as ' . viewAsName($target) . '. This area stays private to them. Exit "View as" to return to your own account.');
+            }
+        }
+        if (!in_array($method, ['GET', 'HEAD', 'OPTIONS'], true) && (VIEW_AS_WRITES[$route] ?? null) !== $method) {
+            $refuse('You are viewing the portal as ' . viewAsName($target) . '. Only their profile can be changed from here; nothing else is done in their name.');
+        }
     }
     return [
         'userId' => (int)$target['id'],
@@ -137,6 +177,9 @@ function viewAsApply(array $config, array $actor): array
             'actorId' => (int)$actor['userId'],
             'actorEmail' => (string)($actor['email'] ?? ''),
             'profileId' => $target['profile_id'] !== null ? (int)$target['profile_id'] : null,
+            'scope' => $scope,
+            'readOnly' => $scope === 'staff',
+            'returnTo' => viewAsReturnTo($scope, $claims['returnTo'] ?? null),
         ],
     ];
 }
@@ -160,16 +203,26 @@ function viewAsHandle(PDO $pdo, array $config, string $route, string $method): v
         $actor = $claims ? authOptional($config) : null;
         if (!$claims || !$actor || empty($actor['superAdmin']) || (int)$claims['a'] !== (int)$actor['userId']
             || !hash_equals((string)($claims['aj'] ?? ''), (string)($actor['jti'] ?? ''))) {
-            respond(200, ['active' => false]);
+            respond(200, ['active' => false, 'returnTo' => viewAsReturnTo((string)($claims['scope'] ?? 'member'), $claims['returnTo'] ?? null)]);
         }
-        $target = viewAsTarget($pdo, (int)$claims['t']);
-        if (!$target) respond(200, ['active' => false]);
+        $scope = (string)($claims['scope'] ?? 'member');
+        $returnTo = viewAsReturnTo($scope, $claims['returnTo'] ?? null);
+        $target = viewAsTarget($pdo, (int)$claims['t'], $scope, $config);
+        if (!$target) {
+            viewAsClearCookie();
+            respond(200, ['active' => false, 'returnTo' => $returnTo]);
+        }
         respond(200, [
             'active' => true,
             'name' => viewAsName($target),
             'email' => (string)$target['email'],
             'profileId' => $target['profile_id'] !== null ? (int)$target['profile_id'] : null,
             'endsAt' => (int)$claims['exp'],
+            'scope' => $scope,
+            'readOnly' => $scope === 'staff',
+            'jobTitle' => $scope === 'staff' ? ($target['job_title'] ?? null) : null,
+            'targetUserId' => (int)$target['id'],
+            'returnTo' => $returnTo,
         ]);
     }
 
@@ -177,16 +230,21 @@ function viewAsHandle(PDO $pdo, array $config, string $route, string $method): v
         $actor = auth($config);
         requireSuperAdmin($actor, $config);
         $data = input();
+        $scope = $data['scope'] ?? 'member';
+        if (!in_array($scope, ['member', 'staff'], true)) respond(400, ['error' => 'Choose a member or staff preview.']);
+        $returnTo = viewAsReturnTo($scope, $data['returnTo'] ?? null);
         $userId = (int)($data['userId'] ?? 0);
-        if ($userId <= 0 && (int)($data['profileId'] ?? 0) > 0) {
+        if ($scope === 'member' && $userId <= 0 && (int)($data['profileId'] ?? 0) > 0) {
             $q = $pdo->prepare('SELECT user_id FROM member_profiles WHERE id = ? LIMIT 1');
             $q->execute([(int)$data['profileId']]);
             $userId = (int)$q->fetchColumn();
         }
-        if ($userId <= 0) respond(404, ['error' => 'No such member.']);
+        if ($userId <= 0) respond(404, ['error' => $scope === 'staff' ? 'No such staff account.' : 'No such member.']);
         if ($userId === (int)$actor['userId']) respond(400, ['error' => 'That is your own account.']);
-        $target = viewAsTarget($pdo, $userId);
-        if (!$target) respond(403, ['error' => 'Only ordinary member accounts can be viewed. Administrators cannot be viewed as.']);
+        $target = viewAsTarget($pdo, $userId, $scope, $config);
+        if (!$target) respond(403, ['error' => $scope === 'staff'
+            ? 'Choose an active staff account. Another super administrator cannot be viewed as.'
+            : 'Only ordinary member accounts can be viewed. Administrators cannot be viewed as.']);
 
         $expires = time() + VIEW_AS_MINUTES * 60;
         if (!empty($actor['exp'])) $expires = min($expires, (int)$actor['exp']);
@@ -195,33 +253,43 @@ function viewAsHandle(PDO $pdo, array $config, string $route, string $method): v
             'a' => (int)$actor['userId'],
             'aj' => (string)($actor['jti'] ?? ''),
             'exp' => $expires,
+            'scope' => $scope,
+            'returnTo' => $returnTo,
         ]));
         viewAsSetCookie($body . '.' . b64url(hash_hmac('sha256', $body, viewAsKey($config), true)), $expires);
 
         $name = viewAsName($target);
-        logAdminAction($pdo, (int)$actor['userId'], 'view_as_started', $target['profile_id'] !== null ? (int)$target['profile_id'] : null, $name . ' <' . $target['email'] . '>');
-        securityLog($pdo, $config, 'view_as_started', 'warning', 'view-as', 'Super admin viewing the portal as ' . $target['email'], (int)$actor['userId']);
+        logAdminAction($pdo, (int)$actor['userId'], 'view_as_started', $target['profile_id'] !== null ? (int)$target['profile_id'] : null, ($scope === 'staff' ? 'Staff user ' . $userId . ': ' : '') . $name . ' <' . $target['email'] . '>');
+        securityLog($pdo, $config, 'view_as_started', 'warning', 'view-as', 'Super admin viewing the ' . $scope . ' portal as ' . $target['email'], (int)$actor['userId']);
         respond(200, [
             'active' => true,
             'name' => $name,
             'email' => (string)$target['email'],
             'endsAt' => $expires,
+            'scope' => $scope,
+            'readOnly' => $scope === 'staff',
+            'jobTitle' => $scope === 'staff' ? ($target['job_title'] ?? null) : null,
+            'targetUserId' => (int)$target['id'],
+            'returnTo' => $returnTo,
             // A member goes to their dashboard; an account with no membership is a learner.
-            'goTo' => $target['profile_id'] !== null ? 'dashboard' : 'academy',
+            'goTo' => $scope === 'staff' ? 'staff' : ($target['profile_id'] !== null ? 'dashboard' : 'academy'),
         ]);
     }
 
     if ($route === 'view-as/end' && $method === 'POST') {
         $claims = viewAsClaims($config);
+        $scope = (string)($claims['scope'] ?? 'member');
+        $returnTo = viewAsReturnTo($scope, $claims['returnTo'] ?? null);
         viewAsClearCookie();
         if ($claims) {
             $actor = authOptional($config);
-            if ($actor && (int)$actor['userId'] === (int)$claims['a']) {
-                $target = viewAsTarget($pdo, (int)$claims['t']);
+            if ($actor && !empty($actor['superAdmin']) && (int)$actor['userId'] === (int)$claims['a']
+                && hash_equals((string)($claims['aj'] ?? ''), (string)($actor['jti'] ?? ''))) {
+                $target = viewAsTarget($pdo, (int)$claims['t'], $scope, $config);
                 logAdminAction($pdo, (int)$actor['userId'], 'view_as_ended', $target && $target['profile_id'] !== null ? (int)$target['profile_id'] : null,
                     $target ? viewAsName($target) : null);
             }
         }
-        respond(200, ['active' => false]);
+        respond(200, ['active' => false, 'returnTo' => $returnTo, 'targetUserId' => $claims ? (int)$claims['t'] : null]);
     }
 }

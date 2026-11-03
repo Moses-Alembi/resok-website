@@ -33,6 +33,22 @@ the staff workspace. It shows saved job titles beneath account, candidate and no
 names; nomination choices include titles too. Super administrators keep their role caption.
 These displays read existing staff records and do not assign titles or change the voter roll.
 
+Verified super administrators can click an employee's name or **View staff portal** in
+**Staff records** or **ICT → Staff & access** to preview that employee's workspace. The
+preview opens in the same tab with their name, saved title, navigation and own data.
+The banner's **Return to my admin view** button returns to the originating staff list.
+The preview expires within 30 minutes and remains tied to the administrator's live session.
+Other open portal tabs reconcile preview changes through shared-browser notifications
+and fresh status checks when focused, so they do not retain the wrong account display.
+
+Staff previews are read-only: they cannot cast votes, nominate, submit requests, change
+passwords or edit profiles. Opening announcements does not mark the employee's notices or
+notifications read. Management endpoints and unrelated private areas remain unavailable;
+the administrator can exit the preview to use their own management tools. Active staff
+accounts with administrator roles are previewed with ordinary staff authority. Other
+super administrators and deactivated staff cannot be previewed. Starts and exits are audited.
+The existing member preview retains its profile-correction behavior.
+
 For a name/designation sheet, open **Staff records → Load HR list** and keep **Update job
 titles only** selected. Paste the serial number, name and title columns, check the matched
 accounts, omit anyone whose record should stay unchanged, then apply. A printed SN is not
@@ -53,3 +69,7 @@ test credentials as `test-welfare.php`. It creates and drops its own randomly na
 It checks automatic super-admin access, management without an employee record, effective
 permission display, employee access to their own tools, management restrictions, leave
 privacy and concurrent submissions, editing records and settings, and auditing.
+`php tools/dev/test-view-as-staff.php` uses the same disposable instance for staff-preview
+authorization, session binding, read restrictions, denied writes and member-preview regression.
+The Node checks `test-staff-view-as-ui.cjs` and `test-view-as-client.cjs` in `tools/dev/`
+cover entry points, cache transitions, the preview banner, expiry and safe return navigation.

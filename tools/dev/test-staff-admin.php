@@ -172,6 +172,20 @@ try {
     $queue = adminCall($pdo,$config,$super,'staff/leave')->body;
     adminCheck($queue['pendingCount'] === 1 && count($queue['pending']) === 1 && count($queue['requests']) === 300, 'old pending leave stays in the decision queue when recent history reaches its limit');
     adminCheck((int)$pdo->query("SELECT COUNT(*) FROM staff_notifications WHERE kind='leave'")->fetchColumn() >= 3, 'leave submissions and decisions create portal notifications');
+    $previewNotice = adminCall($pdo,$config,$super,'staff/announcements','POST',['title'=>'Synthetic preview notice','body'=>'An announcement visible to staff.','requiresAck'=>true]);
+    $previewNoticeId = (int)$previewNotice->body['id'];
+    adminCheck(adminCall($pdo,$config,$super,'staff/announcements/' . $previewNoticeId . '/publish','POST')->status === 200, 'a published notice is available for the staff-preview regression');
+    $previewEmployee = array_merge($employee,['viewAs'=>['actorId'=>$super['userId'],'scope'=>'staff']]);
+    $previewRead = adminCall($pdo,$config,$previewEmployee,'staff/announcements/' . $previewNoticeId);
+    adminCheck($previewRead->status === 200 && $previewRead->body['announcement']['readAt'] === null, 'viewing a notice as staff preserves its unread state');
+    adminCheck((int)$pdo->query('SELECT COUNT(*) FROM staff_announcement_reads WHERE announcement_id=' . $previewNoticeId)->fetchColumn() === 0, 'staff preview does not insert an employee announcement-read record');
+    $previewNotification = $pdo->prepare('SELECT read_at FROM staff_notifications WHERE user_id=? AND dedupe_key=?');
+    $previewNotification->execute([$employee['userId'],'announcement:' . $previewNoticeId]);
+    adminCheck($previewNotification->fetchColumn() === null, 'staff preview leaves the matching notification unread');
+    $realRead = adminCall($pdo,$config,$employee,'staff/announcements/' . $previewNoticeId);
+    adminCheck($realRead->status === 200 && $realRead->body['announcement']['readAt'] !== null, 'the employee opening their own notice still records the read');
+    $previewNotification->execute([$employee['userId'],'announcement:' . $previewNoticeId]);
+    adminCheck($previewNotification->fetchColumn() !== null, 'the employee opening their own notice still marks their notification read');
     // A photographed SN is not an employee number. Title-only updates must preserve access.
     $source = "1\tSynthetic Employee\tField Officer - Meru\n24\tMissing Colleague\tProject Driver";
     $pdo->prepare("UPDATE staff_accounts SET full_name='Other Colleague',staff_number='1' WHERE user_id=?")->execute([$other['userId']]);

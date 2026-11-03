@@ -717,7 +717,8 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         if (!$visible) respond(404, ['error' => 'No such announcement.']);
 
         if ($action === '' && $method === 'GET') {
-            if ($a['status'] === 'published' && $gate['row']) {
+            // Previewing as an employee must not mark their notices or notifications read.
+            if ($a['status'] === 'published' && $gate['row'] && empty($user['viewAs'])) {
                 $pdo->prepare('INSERT IGNORE INTO staff_announcement_reads (announcement_id, user_id) VALUES (?, ?)')->execute([(int)$a['id'], $me]);
                 $pdo->prepare("UPDATE staff_notifications SET read_at = NOW() WHERE user_id = ? AND dedupe_key = ? AND read_at IS NULL")
                     ->execute([$me, 'announcement:' . (int)$a['id']]);

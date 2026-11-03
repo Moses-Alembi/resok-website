@@ -16,6 +16,11 @@
   </script>
   <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" />
   <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff6" />
+  <style>
+    .staff-preview-name{border:0;background:none;padding:0;color:var(--brand-ink);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+    .staff-preview-name:hover{text-decoration:underline}
+    .staff-preview-name:disabled{opacity:.6;cursor:wait}
+  </style>
 </head>
 <body class="booting staff-limited">
   <a class="skip" href="#main">Skip to content</a>
@@ -368,7 +373,7 @@
   </div>
 
   <script src="js/staff-shell.js?v=20261103-staff1"></script>
-  <script src="js/portal-state.js?v=20261103-welfare2"></script>
+  <script src="js/portal-state.js?v=20261103-viewas-staff1"></script>
   <script>
   (() => {
     /*
@@ -836,6 +841,21 @@
 
     // ---------- staff records ----------
     let people = [], depts = [], counties = [];
+    let staffPreviewStarting = false;
+    function staffPreviewButton(person, label, className) {
+      const button = make('button', className, label);
+      button.type = 'button';
+      button.title = 'See the staff portal as ' + (person.name || person.email);
+      button.dataset.staffPreview = String(person.userId);
+      button.addEventListener('click', async () => {
+        if (home?.super !== true || staffPreviewStarting) return;
+        staffPreviewStarting = true; button.disabled = true;
+        try { await window.ResokPortal.viewAsStaffStart(person.userId, 'staff#people'); }
+        catch (error) { say('flash', error.message || 'Could not open this staff portal.', 'bad'); }
+        finally { staffPreviewStarting = false; button.disabled = false; }
+      });
+      return button;
+    }
     async function loadPeople() {
       try {
         const data = await api('staff/people');
@@ -853,7 +873,11 @@
       t.appendChild(hr);
       list.forEach((p) => {
         const tr = make('tr');
-        const c1 = make('td'); c1.appendChild(make('b', null, p.name || 'No name given')); if (p.jobTitle) c1.appendChild(make('div', 'hint', p.jobTitle)); c1.appendChild(make('div', 'hint', [p.email, p.staffNumber].filter(Boolean).join(' · '))); tr.appendChild(c1);
+        const previewable = home?.super === true && p.active === true && Number(p.userId) !== Number(home.me?.userId);
+        const c1 = make('td');
+        c1.appendChild(previewable ? staffPreviewButton(p, p.name || p.email || 'No name given', 'staff-preview-name') : make('b', null, p.name || 'No name given'));
+        if (p.jobTitle) c1.appendChild(make('div', 'hint', p.jobTitle));
+        c1.appendChild(make('div', 'hint', [p.email, p.staffNumber].filter(Boolean).join(' · '))); tr.appendChild(c1);
         tr.appendChild(make('td', null, p.department || '\u2014'));
         tr.appendChild(make('td', null, p.manager || '—'));
         const c4 = make('td');
@@ -867,7 +891,11 @@
           try { await post('staff/people/' + p.userId + '/active', { active: !p.active }); loadPeople(); }
           catch (e) { say('flash', e.message, 'bad'); }
         });
-        c5.append(edit, tog); tr.appendChild(c5);
+        c5.append(edit, tog);
+        if (previewable) {
+          const preview = staffPreviewButton(p, 'View staff portal', 'btn sm'); preview.style.marginLeft = '6px'; c5.appendChild(preview);
+        }
+        tr.appendChild(c5);
         t.appendChild(tr);
       });
       box.appendChild(t);

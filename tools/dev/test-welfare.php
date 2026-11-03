@@ -159,6 +159,8 @@ try {
     foreach(array_slice($uids,1) as $i=>$uid){[$receipt,$error]=electionCastVote($p,$e['slug'],(int)$uid,[$pos=>[$i<23?$cid:$cid2]],null);if($error)throw new RuntimeException($error);}
     $live=welfareLive($p)['elections'][0];check($live['roll']['voted']===34&&$live['positions'][0]['ballotsCast']===34,'live count reconciles all 34 staff ballots');
     check(array_sum(array_column($live['positions'][0]['candidates'],'votes'))===34,'candidate totals match recorded ballots');
+    $liveCandidates=array_column($live['positions'][0]['candidates'],null,'candidateId');
+    check($liveCandidates[$cid]['jobTitle']==='Programme Coordinator','provisional live totals identify staff candidates by job title');
     $p->exec("UPDATE elections SET closes_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE id=$id");
     $p->exec("CREATE TRIGGER welfare_test_failure BEFORE INSERT ON election_results FOR EACH ROW BEGIN IF NEW.votes<20 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Synthetic declaration failure'; END IF; END");
     welfareRunScheduled($p);
@@ -166,6 +168,9 @@ try {
     check(electionFind($p,(string)$id)['status']!=='published','a failed declaration cannot publish a partial result');
     $p->exec('DROP TRIGGER welfare_test_failure');welfareRunScheduled($p);
     check(electionFind($p,(string)$id)['status']==='published','voting closes, counts and publishes automatically');
+    $finalLive=welfareLive($p)['elections'][0];
+    check($finalLive['final']&&!array_key_exists('jobTitle',$finalLive['positions'][0]['candidates'][0]),'published live totals do not attach current job titles to the historical count');
+    check(!array_key_exists('jobTitle',$finalLive['results']['positions'][0]['candidates'][0]),'historical declarations keep their original candidate fields');
     check(welfareSettings($p,$id)['last_error']===null,'a successful retry clears the old scheduler error');
     check(electionResults($p,$id)['declaration']===1,'a single final declaration is stored');welfareRunScheduled($p);check(electionResults($p,$id)['declaration']===1,'scheduler retries do not duplicate declarations');
     [$unused,$error]=electionCastVote($p,$e['slug'],(int)$uids[0],[$pos=>[$cid]],null);check($error!==null,'closed elections reject further votes');
@@ -213,5 +218,8 @@ try {
     $bc=(int)$p->query("SELECT id FROM election_candidates WHERE position_id=$bpos")->fetchColumn();
     [$answer,$error]=electionRespondToNomination($p,$bc,(int)$uids[1],false);check(!$error&&!$answer['accepted'],'board nominees can still decline');
     [$unused,$error]=electionTally($p,$bid,true);check($error!==null,'the live-count option does not expose an ongoing board election');
+    $p->exec("UPDATE elections SET status='closed' WHERE id=$bid");
+    [$boardCount,$error]=electionTally($p,$bid);
+    check(!$error&&!array_key_exists('jobTitle',$boardCount['positions'][0]['candidates'][0]),'a closed member-election count does not disclose staff job titles');
     echo "\n$passes integration checks passed against a disposable database.\n";
 } finally { if($p->inTransaction())$p->rollBack();$p=null;$server->exec('DROP DATABASE '.$db); }

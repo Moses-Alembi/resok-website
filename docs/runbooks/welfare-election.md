@@ -5,6 +5,18 @@ shows aggregate candidate totals and turnout, never individual choices, staff nu
 addresses or nominators. The feed refreshes every five seconds; it is a results feed,
 not a camera/video broadcast.
 
+`election-live` uses the shared ICT/staff layout, saved light/dark theme and mobile
+navigation. Active staff get their staff links and saved job title; verified super
+administrators keep their role caption and management tools. Other authenticated accounts
+can view totals using portal navigation. Identity lookup failures do not block the feed.
+Paused staff tools remain greyed out for ordinary staff, including on this page.
+
+The full screen refreshes every five seconds, with manual Refresh, last-checked time and
+reconnection notices. Unchanged results preserve the displayed cards; changed counts
+preserve keyboard focus and expanded election updates. Current candidate job titles appear
+on provisional staff counts; published results retain their historical fields.
+The page supplies its own full renderer and suppresses the compact widget on this page only.
+
 ## Prepare and deploy
 
 1. Deploy the PHP and portal changes. Apply the new
@@ -68,3 +80,6 @@ randomly named `resok_welfare_test_*` database.
 The tests cover roster readiness, authorization, automatic nominations and stages,
 concurrent duplicate submissions, a ballot waiting during closure, multi-seat counting,
 privacy of the live response, automatic publication, ties, and board-election regression.
+`node tools/dev/test-election-live.cjs` checks the full-screen renderer and navigation using
+an in-memory DOM, including polling, stale results, recovery, safe text rendering and focus.
+These are functional checks, not visual browser verification.

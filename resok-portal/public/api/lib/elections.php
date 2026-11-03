@@ -610,12 +610,17 @@ function electionTally(PDO $pdo, int $electionId, bool $live = false): array
     foreach (electionPositions($pdo, $electionId) as $position) {
         $rows = [];
         foreach ($position['candidates'] as $candidate) {
-            $rows[] = [
+            $row = [
                 'candidateId' => $candidate['id'],
                 'name'        => $candidate['name'],
                 'status'      => $candidate['status'],
                 'votes'       => $counts[$position['id']][$candidate['id']] ?? 0,
             ];
+            // Current job titles identify staff during the live count, not historical declarations.
+            if ($election['electorate'] === 'staff' && $election['status'] !== 'published') {
+                $row['jobTitle'] = $candidate['jobTitle'] ?? null;
+            }
+            $rows[] = $row;
         }
         // Sorted by votes, but who is elected is not decided here - a tie has to be seen by
         // a person, and silently electing whichever row sorted first would hide it.

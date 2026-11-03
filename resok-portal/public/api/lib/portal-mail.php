@@ -246,7 +246,7 @@ function brandedEmailHtml(string $title, string $bodyHtml, ?string $ctaText = nu
 }
 
 /**
- * The centred card layout used for account emails (confirm your email, claim your account):
+ * The centred card layout used for account emails (confirm, claim, and password reset):
  * logo, envelope, big centred heading, one button, set on a pale green page.
  *
  * Images are loaded from the live site whatever portal_base_url says. A mail client fetches
@@ -373,6 +373,21 @@ function sendVerificationEmail(array $config, string $email, string $token, stri
     return $mailer->send($email, 'Verify your ReSoK membership account', $text, [], $html);
 }
 
+/** Password reset uses the same account-email card as confirmation and account claims. */
+function passwordResetEmailHtml(string $url): string
+{
+    return cardEmailHtml(
+        'Reset your password',
+        emailSalutation(null, null, null),
+        cardEmailParagraph('We received a request to reset the password for your ReSoK portal account. '
+            . 'Click the button below to choose a new password.')
+        . cardEmailParagraph('This link expires in <strong>1 hour</strong> and can be used only once.', true),
+        'Choose a new password',
+        $url,
+        'If you did not request a password reset, you can safely ignore this email. Your password has not changed.'
+    );
+}
+
 /**
  * The password reset link. Sent through SimpleMailer like every other portal email - it used
  * to be the one message that went through bare mail(), skipping the SMTP login the others
@@ -382,17 +397,11 @@ function sendVerificationEmail(array $config, string $email, string $token, stri
 function sendPasswordResetEmail(array $config, string $email, string $url, ?string &$error = null): bool
 {
     $error = null;
-    $text = "We received a request to reset the password for your ReSoK Members' Portal account.\n\n"
+    $text = "We received a request to reset the password for your ReSoK portal account.\n\n"
         . "Use this link to choose a new password:\n{$url}\n\n"
         . "The link expires in 1 hour and works once. If you did not ask for this, you can ignore this email: your password has not changed.\n\n"
         . "Respiratory Society of Kenya";
-    $html = brandedEmailHtml(
-        'Reset your password',
-        '<p style="margin:0 0 14px;font-size:15px;line-height:1.65;">We received a request to reset the password for your ReSoK Members&#39; Portal account. Use the button below to choose a new one.</p>'
-        . '<p style="margin:0;font-size:13px;line-height:1.6;color:#667085;">The link expires in 1 hour and works once. If you did not ask for this, you can safely ignore this email: your password has not changed.</p>',
-        'Choose a New Password',
-        $url
-    );
+    $html = passwordResetEmailHtml($url);
     // The archive gets a copy with the token blanked out: the link sets the password.
     parse_str((string)parse_url($url, PHP_URL_QUERY), $query);
     $mailer = new SimpleMailer($config);

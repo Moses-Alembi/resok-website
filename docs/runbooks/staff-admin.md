@@ -12,11 +12,12 @@ super-admin email configuration. Individual staff grants cannot reduce that acce
 The Permissions screen shows those accounts with every capability checked and the label
 **Full access automatically**, instead of offering ineffective staff-grant changes.
 
-The current employee launch exposes only **Overview, Announcements, My equipment and ICT
-helpdesk**. Other sections stay visible but greyed out, with disabled destinations and
-Coming soon labels. Overview shortcuts and notification links follow the same restriction;
-direct links to paused staff views return to Overview. The staff election page redirects
-ordinary staff back to the portal, and the election feed is hidden on their staff overview.
+The current employee launch exposes **Overview, Announcements, My equipment, ICT helpdesk,
+Welfare elections and Live election results**. Other sections stay visible but greyed out,
+with disabled destinations and Coming soon labels. Overview shortcuts and notification links follow the same restriction;
+direct links to paused staff views return to Overview. Staff can open welfare elections,
+nominate, vote and follow the live feed, subject to each election's eligibility and schedule.
+The staff election sidebar follows the same launch restrictions.
 Verified super administrators retain all existing management tools and their normal links.
 This is a portal launch setting; modules, server permissions and saved grants are retained.
 No HR roles or staff grants are assigned by this release.

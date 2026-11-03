@@ -1,10 +1,11 @@
 # Staff leave
 
-Leave is implemented but currently greyed out for ordinary staff under the four-section
+Leave is implemented but currently greyed out for ordinary staff under the current
 staff launch. When enabled, employees use `staff#leave` to request leave and track its status. Super administrators
 use `staff#leave-manage` to decide requests, see the register and configure leave types.
-The current launch keeps Overview, Announcements, My equipment and ICT helpdesk active
-for ordinary staff. Super administrators can continue managing Leave and its settings.
+The current launch keeps Overview, Announcements, My equipment, ICT helpdesk,
+Welfare elections and Live election results active for ordinary staff.
+Super administrators can continue managing Leave and its settings.
 
 Before the first request, the super administrator adds the organisation's actual leave
 types under **Leave types**. Names and optional guidance are configurable. Nothing seeds

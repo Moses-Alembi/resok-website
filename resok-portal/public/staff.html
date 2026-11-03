@@ -15,7 +15,7 @@
     })();
   </script>
   <link rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" />
-  <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff5" />
+  <link rel="stylesheet" href="css/staff-shell.css?v=20261103-staff6" />
 </head>
 <body class="booting staff-limited">
   <a class="skip" href="#main">Skip to content</a>
@@ -565,7 +565,7 @@
     }
     loaders.home = () => { if (home) loadHome(true); };
 
-    // Staff launch: four active sections; verified super administrators retain their tools.
+    // Staff launch: core views plus welfare elections; super administrators retain their tools.
     function canOpenView(view) {
       if (!home) return false;
       if (home.super !== true) return ['home', 'announcements', 'equipment', 'helpdesk'].includes(view);
@@ -592,7 +592,8 @@
         try { view = decodeURIComponent(target.hash.slice(1)) || 'home'; } catch (error) { return false; }
         return /^announcement-\d+$/.test(view) ? canOpenView('announcements') : canOpenView(view);
       }
-      return !['elections', 'election-live', 'election-admin', 'admin-home', 'ict'].includes(page);
+      if (page === 'elections') return target.searchParams.get('for') === 'staff';
+      return !['election-admin', 'admin-home', 'ict'].includes(page);
     }
     function syncStaffLaunchLinks() {
       if (!home) return;

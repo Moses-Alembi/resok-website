@@ -25,6 +25,7 @@
     .sidebar-nav li a i{width:20px;text-align:center}
     .sidebar-nav .staff-locked{display:flex;align-items:center;gap:12px;padding:14px 24px;color:#98a2b3;font-weight:500;font-size:14px;border-left:3px solid transparent;cursor:not-allowed;user-select:none}
     .sidebar-nav .staff-locked i{width:20px;text-align:center}
+    .sidebar-nav a.staff-locked:hover{background:transparent;color:#98a2b3;border-left-color:transparent}
     .sidebar-nav .staff-locked .soon{margin-left:auto;padding:2px 7px;border-radius:999px;background:#eef2f7;color:#667085;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
     .sidebar-divider{height:1px;background:#eee;margin:12px 24px}
     .sidebar-logout{color:var(--brand-secondary)!important}
@@ -121,6 +122,7 @@
         <li><a href="staff#location"><i class="fas fa-location-dot"></i> Location access</a></li>
         <li><a href="staff#profile"><i class="fas fa-id-card"></i> My profile</a></li>
         <li><a href="elections?for=staff" class="active"><i class="fas fa-check-to-slot"></i> Welfare elections</a></li>
+        <li><a href="election-live"><i class="fas fa-tower-broadcast"></i> Live election results</a></li>
         <li class="sidebar-divider"></li>
         <li><a href="#" class="sidebar-logout" id="staffLogout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
       </ul>
@@ -303,6 +305,34 @@
       document.getElementById('staffLogout').addEventListener('click', (e) => { e.preventDefault(); window.ResokPortal.logout(); });
     }
     const el = (id) => document.getElementById(id);
+    function syncElectionStaffLinks(superAdmin) {
+      const active = ['staff', 'staff#home', 'staff#announcements', 'staff#equipment', 'staff#helpdesk', 'elections?for=staff', 'election-live'];
+      el('staffNav').querySelectorAll('a').forEach((link) => {
+        if (link.id === 'staffLogout') return;
+        const saved = link.hasAttribute('data-staff-paused-href');
+        const href = saved ? link.dataset.staffPausedHref : link.getAttribute('href');
+        if (href === null) return;
+        if (!superAdmin && !active.includes(href)) {
+          if (!saved) {
+            link.dataset.staffPausedHref = href;
+            link.dataset.staffPausedTitle = link.getAttribute('title') || '';
+            link.dataset.staffPausedTabindex = link.getAttribute('tabindex') || '';
+          }
+          link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.setAttribute('tabindex', '-1');
+          link.title = 'Coming soon'; link.classList.add('staff-locked');
+          if (!link.querySelector('[data-election-paused-badge]')) {
+            const badge = make('span', 'soon', 'Soon'); badge.dataset.electionPausedBadge = '1'; link.appendChild(badge);
+          }
+        } else if (saved) {
+          link.setAttribute('href', href); link.removeAttribute('aria-disabled');
+          if (link.dataset.staffPausedTitle) link.title = link.dataset.staffPausedTitle; else link.removeAttribute('title');
+          if (link.dataset.staffPausedTabindex) link.setAttribute('tabindex', link.dataset.staffPausedTabindex); else link.removeAttribute('tabindex');
+          link.classList.remove('staff-locked');
+          const badge = link.querySelector('[data-election-paused-badge]'); if (badge) badge.remove();
+          delete link.dataset.staffPausedHref; delete link.dataset.staffPausedTitle; delete link.dataset.staffPausedTabindex;
+        }
+      });
+    }
     function applyElectionManagementAccess(info) {
       // The server checks both the account role and its configured super-admin allowlist.
       // A staff URL, display name or cached client role never grants management access.
@@ -310,6 +340,7 @@
       ['electionManagerNav', 'electionAdminNav', 'electionManagerActions', 'accountRole'].forEach((id) => {
         el(id).hidden = !allowed;
       });
+      syncElectionStaffLinks(allowed);
       if (allowed && !el('whoami').textContent.trim()) el('whoami').textContent = info.email || '';
       return allowed;
     }
@@ -897,7 +928,7 @@
       } catch (error) {
         if (error.status === 401) { window.location.href = 'login'; return; }
       }
-      if (STAFF && !(await loadElectionManagementAccess())) { window.location.replace('staff'); return; }
+      if (STAFF) await loadElectionManagementAccess();
       await loadList();
       // A notification links straight to one election: elections?for=staff#<slug>.
       const slug = decodeURIComponent(location.hash.replace('#', ''));

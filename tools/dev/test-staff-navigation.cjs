@@ -28,8 +28,8 @@ for (const view of ['home','announcements','helpdesk','equipment']) { assert(all
 for (const view of ['people','payroll','leave','appraisals']) { assert(!allowed({super:false,onStaffList:true,caps:['staff.manage','payroll.manage']},view)); checks++; }
 const linkLocation = {href:'https://www.resok.org/resok-portal/public/staff',origin:'https://www.resok.org'};
 function allowedLink(home, href) { return vm.runInNewContext(viewGuard+'\nstaffLinkAvailable(href)',{home,href,location:linkLocation,URL,Map}); }
-for (const href of ['#home','#announcements','#equipment','#helpdesk','#announcement-7','#main','staff#home','staff#announcements','https://example.org/news']) { assert(allowedLink(employee,href),href); checks++; }
-for (const href of ['#directory','#leave','#appraisals','#timesheets','#procurement','#payslips','#profile','#location','elections?for=staff','election-live','staff#leave','staff/#leave','staff#administration','#timesheet-approvals']) { assert(!allowedLink(employee,href),href); checks++; }
+for (const href of ['#home','#announcements','#equipment','#helpdesk','#announcement-7','#main','staff#home','staff#announcements','elections?for=staff','elections?for=staff#welfare-2026','elections.html?for=staff','election-live','election-live.html','https://example.org/news']) { assert(allowedLink(employee,href),href); checks++; }
+for (const href of ['#directory','#leave','#appraisals','#timesheets','#procurement','#payslips','#profile','#location','elections','elections?for=members','election-admin?for=staff','admin-home','ict','staff#leave','staff/#leave','staff#administration','#timesheet-approvals']) { assert(!allowedLink(employee,href),href); checks++; }
 for (const href of ['#leave','#appraisals','elections?for=staff','election-live','#administration']) { assert(allowedLink({super:true},href)); checks++; }
 
 const caption = page.match(/const accountCaption = (.*);/)[1];
@@ -61,7 +61,11 @@ class Element {
   removeAttribute(key) { if (key.startsWith('data-')) delete this.dataset[this.dataKey(key)]; else if (key === 'title') delete this.title; else delete this.attributes[key]; }
   hasAttribute(key) { return this.getAttribute(key) !== null; }
   closest(selector) { if (selector === '.side' && this.classList.contains('side')) return this; if (selector === 'a[data-staff-launch-href]' && this.tag === 'a' && this.hasAttribute('data-staff-launch-href')) return this; return this.parent?.closest(selector) || null; }
-  querySelector(selector) { return selector === '[data-launch-badge]' ? this.all('span').find(node => node.dataset.launchBadge) || null : null; }
+  querySelector(selector) {
+    if (selector === '[data-launch-badge]') return this.all('span').find(node => node.dataset.launchBadge) || null;
+    if (selector === '[data-election-paused-badge]') return this.all('span').find(node => node.dataset.electionPausedBadge) || null;
+    return null;
+  }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter(node => node !== this); this.parent = null; }
   set textContent(value) { this.ownText = value; this.children = []; }
   get textContent() { return this.ownText + this.children.map(kid => typeof kid === 'string' ? kid : kid.textContent).join(' '); }
@@ -81,14 +85,15 @@ const sidebar = new Element('nav'); sidebar.classList.add('side');
 const paused = h('a', { text: 'Leave' }); paused.setAttribute('href', '#leave'); paused.setAttribute('title', 'Original title'); paused.setAttribute('tabindex', '0');
 const active = h('a', { text: 'ICT helpdesk' }); active.setAttribute('href', '#helpdesk');
 const shortcut = h('a', { text: 'Welfare elections' }); shortcut.setAttribute('href', 'elections?for=staff');
+const liveShortcut = h('a', { text: 'Live election results' }); liveShortcut.setAttribute('href', 'election-live');
 sidebar.append(paused, active);
 const body = new Element('body');
 const launchContext = vm.createContext({ home: employee, location: linkLocation, URL, Map,
-  document: { body, querySelectorAll: () => [paused, active, shortcut] }, make: (tag, cls, text) => h(tag, { class: cls, text }) });
+  document: { body, querySelectorAll: () => [paused, active, shortcut, liveShortcut] }, make: (tag, cls, text) => h(tag, { class: cls, text }) });
 vm.runInContext(viewGuard + '\nsyncStaffLaunchLinks();', launchContext);
 assert.equal(paused.getAttribute('href'), null); assert.equal(paused.getAttribute('aria-disabled'), 'true'); assert.equal(paused.getAttribute('tabindex'), '-1'); checks++;
 assert(paused.textContent.includes('Leave') && paused.textContent.includes('Soon')); assert(body.classList.contains('staff-limited')); checks++;
-assert.equal(active.getAttribute('href'), '#helpdesk'); assert.equal(shortcut.getAttribute('href'), null); checks++;
+assert.equal(active.getAttribute('href'), '#helpdesk'); assert.equal(shortcut.getAttribute('href'), 'elections?for=staff'); assert.equal(liveShortcut.getAttribute('href'), 'election-live'); checks++;
 vm.runInContext('syncStaffLaunchLinks();', launchContext); assert.equal(paused.all('span').length, 1); checks++;
 const intercept = page.match(/document.addEventListener\('click', \(event\) => \{([\s\S]*?)\}, true\);/)[1];
 let prevented = false, stopped = false;
@@ -111,12 +116,30 @@ function leaveContext(manage, pendingCount = 1) {
 const tick = () => new Promise(setImmediate);
 (async () => {
   const elections = fs.readFileSync(path.join(publicDir, 'elections.html'), 'utf8');
-  const accessFunctions = elections.slice(elections.indexOf('    function applyElectionManagementAccess'), elections.indexOf('    const make =', elections.indexOf('    function applyElectionManagementAccess')));
+  const accessFunctions = elections.slice(elections.indexOf('    function syncElectionStaffLinks'), elections.indexOf('    const make =', elections.indexOf('    function applyElectionManagementAccess')));
+  // Opening welfare elections must retain the same staff launch controls and super-admin access.
+  const electionLinks = ['staff','staff#announcements','staff#helpdesk','staff#equipment','elections?for=staff','election-live','staff#leave','staff#appraisals','staff#directory','election-admin?for=staff','admin-home'].map(href => {
+    const link = h('a', { text: href }); link.setAttribute('href', href); return link;
+  });
+  const logout = h('a', { id: 'staffLogout', text: 'Logout' }); logout.setAttribute('href', '#'); electionLinks.push(logout);
+  electionLinks[6].setAttribute('title', 'Request leave'); electionLinks[6].setAttribute('tabindex', '0');
+  const navNodes = { staffNav: { querySelectorAll: () => electionLinks }, whoami: { textContent: 'Staff' } };
+  const navContext = vm.createContext({ el: id => navNodes[id] ||= { hidden: true }, make: (tag, cls, text) => h(tag, { class: cls, text }) });
+  vm.runInContext(accessFunctions + '\napplyElectionManagementAccess(null);', navContext);
+  for (const link of electionLinks.slice(0, 6).concat(logout)) { assert(link.getAttribute('href')); assert.equal(link.getAttribute('aria-disabled'), null); checks++; }
+  for (const link of electionLinks.slice(6, -1)) { assert.equal(link.getAttribute('href'), null); assert.equal(link.getAttribute('aria-disabled'), 'true'); checks++; }
+  assert(navNodes.electionManagerNav.hidden && navNodes.electionAdminNav.hidden && navNodes.electionManagerActions.hidden); checks++;
+  vm.runInContext('applyElectionManagementAccess({isSuperAdmin:false});', navContext);
+  assert.equal(electionLinks[6].all('span').length, 1); checks++;
+  vm.runInContext('applyElectionManagementAccess({isSuperAdmin:true});', navContext);
+  assert.equal(electionLinks[6].getAttribute('href'), 'staff#leave'); assert.equal(electionLinks[6].getAttribute('title'), 'Request leave'); assert.equal(electionLinks[6].getAttribute('tabindex'), '0'); checks++;
+  assert.equal(electionLinks[6].getAttribute('aria-disabled'), null); assert(!electionLinks[6].querySelector('[data-election-paused-badge]')); checks++;
+  assert(!navNodes.electionManagerNav.hidden && !navNodes.electionAdminNav.hidden && !navNodes.electionManagerActions.hidden); checks++;
   const bootStart = elections.lastIndexOf('    (async () => {');
   const boot = elections.slice(bootStart, elections.indexOf('    })();', bootStart) + '    })();'.length);
   for (const kind of ['super', 'staff-admin', 'employee', 'member']) {
     const nodes = {}; let redirected = '', loaded = false;
-    const el = id => nodes[id] ||= { textContent: '', hidden: true };
+    const el = id => nodes[id] ||= { textContent: '', hidden: true, querySelectorAll: () => [] };
     const context = vm.createContext({ STAFF: kind !== 'member', el, location: { hash: '' },
       window: { location: { replace: path => { redirected = path; } } },
       api: async route => {
@@ -127,8 +150,8 @@ const tick = () => new Promise(setImmediate);
         return route.includes('welfare/me') ? { me: { name: 'Staff' } } : { firstName: 'Member' };
       }, loadList: async () => { loaded = true; }, openElection() {} });
     vm.runInContext(accessFunctions, context); await vm.runInContext(boot, context);
-    if (kind === 'super' || kind === 'member') { assert(loaded); assert.equal(redirected, ''); }
-    else { assert(!loaded); assert.equal(redirected, 'staff'); }
+    assert(loaded); assert.equal(redirected, '');
+    if (kind !== 'member') assert.equal(nodes.electionManagerActions.hidden, kind !== 'super');
     checks++;
   }
   const ordinary = leaveContext(false); ordinary.S.loaders.leave(); await tick();

@@ -47,7 +47,6 @@ button{font:inherit}input,select,textarea{accent-color:var(--brand-primary)}
 .side a.staff-unavailable:hover{background:transparent;box-shadow:none;color:var(--muted)}
 .staff-main .tile.staff-unavailable:hover{transform:none;border-color:var(--line)}
 .staff-main .btn.staff-unavailable{background:var(--hover);border-color:var(--line);color:var(--muted)}
-body.staff-limited .staff-main>.welfare-live{display:none!important}
 .side .admin-nav-link.active{background:var(--brand)}
 .soon{margin-left:auto;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;background:var(--hover);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 6px}
 .staff-sidebar-foot{margin:8px 24px 24px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);line-height:1.7}

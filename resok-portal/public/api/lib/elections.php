@@ -148,7 +148,7 @@ function electionVisibleTo(PDO $pdo, array $config, array $election, array $user
 /**
  * What staff see of a welfare election: only what they need to vote and nominate.
  *
- * A staff roll and staff candidates carry staff numbers in membership_id; those are HR
+ * A staff roll and staff candidates may carry staff numbers in membership_id; those are HR
  * details and never leave Staff records, so they are blanked here. And who nominated whom
  * is shown only to the person nominated - colleagues have no need of it, and in a small
  * workplace it is the kind of detail that causes friction. The returning officer still sees
@@ -301,8 +301,8 @@ function electionDrawRoll(PDO $pdo, int $electionId, int $paidYear): array
 
 /**
  * The roll for a staff welfare election: every active member of staff who can sign in,
- * frozen the same way a members' roll is. Exactly 34 employees must have employee numbers
- * and activated accounts before the roll can be drawn.
+ * frozen the same way a members' roll is. Every active staff account must have a verified
+ * email before the roll can be drawn; employee numbers are optional.
  *
  * @return array{0:?array,1:?string}
  */
@@ -311,7 +311,8 @@ function electionDrawStaffRoll(PDO $pdo, int $electionId): array
     if (!function_exists('staffPortalEnsureTables') || !staffPortalEnsureTables($pdo)) {
         return [null, 'The staff list is not available on this server.'];
     }
-    if (function_exists('welfareReadiness') && !welfareReadiness($pdo, $electionId)['ready']) return [null, 'Exactly 34 employees with employee numbers and activated accounts are required. Reconcile the staff roster first.'];
+    $readiness = function_exists('welfareReadiness') ? welfareReadiness($pdo, $electionId) : null;
+    if ($readiness !== null && !$readiness['ready']) return [null, 'Every active staff account must have a verified email before the voter roll can be frozen. Reconcile the staff roster first.'];
     $pdo->beginTransaction();
     try {
         $pdo->prepare('DELETE FROM election_roll WHERE election_id = ?')->execute([$electionId]);
@@ -319,14 +320,12 @@ function electionDrawStaffRoll(PDO $pdo, int $electionId): array
                          (election_id, member_profile_id, user_id, name, membership_id, email, standing_at_cutoff)
                        SELECT ?, NULL, u.id, COALESCE(NULLIF(s.full_name, ''), u.email), s.staff_number, u.email, 'staff'
                        FROM staff_accounts s JOIN users u ON u.id = s.user_id
-                       WHERE s.active = 1 AND u.email_verified = 1
-                         -- Employees on the HR list only (Moses, 28 Oct 2026): an employee
-                         -- number is what the HR import sets (lib/staff-hr-import.php).
-                         AND s.staff_number IS NOT NULL AND s.staff_number <> ''")
+                       WHERE s.active = 1 AND u.email_verified = 1")
             ->execute([$electionId]);
         $rollCount = $pdo->prepare('SELECT COUNT(*) FROM election_roll WHERE election_id=?');
         $rollCount->execute([$electionId]);
-        if ((int)$rollCount->fetchColumn() !== 34) throw new RuntimeException('Exactly 34 activated staff accounts are required before drawing the welfare voter roll.');
+        $expected = (int)($readiness['expectedVoters'] ?? 0);
+        if ($expected < 1 || (int)$rollCount->fetchColumn() !== $expected) throw new RuntimeException('The voter roll changed while it was being frozen. Reconcile the active staff accounts and try again.');
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
@@ -363,7 +362,7 @@ function electionRollSummary(PDO $pdo, int $electionId, ?int $paidYear = null): 
     if ($election && $election['electorate'] === 'staff') {
         try {
             $out['eligibleButCannotSignIn'] = (int)$pdo->query("SELECT COUNT(*) FROM staff_accounts s JOIN users u ON u.id = s.user_id
-                                                                 WHERE s.active = 1 AND u.email_verified = 0 AND s.staff_number IS NOT NULL AND s.staff_number <> ''")->fetchColumn();
+                                                                 WHERE s.active = 1 AND u.email_verified = 0")->fetchColumn();
         } catch (Throwable $e) { /* staff tables not deployed */ }
         return $out;
     }
@@ -868,7 +867,6 @@ function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $can
         $stmt->execute([(int)($data['userId'] ?? $existingUserId ?? 0)]);
         $staff = $stmt->fetch();
         if (!$staff) return [null, 'Choose an active member of staff as the candidate.'];
-        if (trim((string)$staff['staff_number']) === '') return [null, 'Only employees on the HR list (with an employee number) can stand in a welfare election.'];
         $nomineeUserId = (int)$staff['user_id'];
         if ($name === '') $name = (string)($staff['full_name'] ?: $staff['email']);
         if (empty($data['membershipId'])) $data['membershipId'] = $staff['staff_number'];

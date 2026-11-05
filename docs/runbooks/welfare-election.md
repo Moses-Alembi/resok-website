@@ -24,22 +24,24 @@ The page supplies its own full renderer and suppresses the compact widget on thi
    runner or phpMyAdmin. Existing migration files were not changed.
    **The current cPanel deploy excludes `resok-portal/server/`: upload this migration
    separately before expecting the migration runner to list it.**
-   Also apply `migration-2026-11-03-welfare-staff-total-34.sql` for the final 34-person target.
-   Existing migrations remain unchanged. Upload this new file separately on cPanel too.
-   An already-armed roll needs to be disarmed and armed again with all 34 staff ready;
-   this update does not rewrite a frozen roll or any election that has opened.
+   The voter target now records the active staff count when the schedule is armed; this
+   change needs no new schema migration. Existing migrations remain unchanged.
+   To update an already-armed roll before voting opens, disarm and arm again with every
+   active staff account ready. This update does not rewrite an existing frozen roll.
 2. Create/select a staff welfare election in `election-admin`. Set the contested posts,
    seats, maximum choices and all four dates. Times are Africa/Nairobi.
 3. In **Automatic welfare election**, select **Set up automatic election**.
-4. Reconcile the real employee roster. There must be exactly **34 active employees with
-   distinct employee numbers and activated accounts**. Paste spreadsheet rows as
-   `employee number<TAB>full name<TAB>email`. Header rows should be removed.
+4. Reconcile the real employee roster. **Every active staff account is eligible**, and
+   each must have a verified email before the roll can be frozen. There is no fixed
+   voter count. Paste spreadsheet rows as `full name<TAB>email`, or optionally
+   `employee number<TAB>full name<TAB>email`. Employee numbers must be distinct when
+   supplied. Header rows should be removed.
 5. Account imports do not send mail. Use the existing staff invite action for employees,
    or ask each new employee to use **Forgot password** with their own address. Completing
    that mailbox link activates the account. Existing passwords and roles are preserved.
 6. Once every account is ready, choose **Arm automatic schedule**. This snapshots the
    voter roll. Imports/redrawing are refused while armed; disarm before corrections.
-   The total is exactly **34 staff voters**; no additional voter accounts are included.
+   The total follows the verified active staff list; no additional voter accounts are included.
    Nothing can change the electorate after voting has opened.
 7. Add a cPanel cron job every minute:
 
@@ -77,7 +79,8 @@ MariaDB instance on 127.0.0.1:33317**, using synthetic people only. It never loa
 with the test password specified in that script. Each run creates and drops its own
 randomly named `resok_welfare_test_*` database.
 
-The tests cover roster readiness, authorization, automatic nominations and stages,
+The tests cover empty and unverified rosters, varying active staff counts, optional employee
+numbers, frozen-roll validation, authorization, automatic nominations and stages,
 concurrent duplicate submissions, a ballot waiting during closure, multi-seat counting,
 privacy of the live response, automatic publication, ties, and board-election regression.
 `node tools/dev/test-election-live.cjs` checks the full-screen renderer and navigation using

@@ -192,7 +192,7 @@
         <label><span>Who votes</span>
           <select class="in" id="nElectorate">
             <option value="members">Members: a board election</option>
-            <option value="staff">34 staff voters: a welfare election</option>
+            <option value="staff">Active staff voters: a welfare election</option>
           </select></label>
         <label><span>Title</span><input class="in" id="nTitle" placeholder="ReSoK Board Election 2027" /></label>
         <label><span>Description</span><textarea class="in" id="nDescription" rows="3"></textarea></label>
@@ -255,8 +255,8 @@
       <section class="panel">
         <h2>Electoral roll</h2>
         <p class="lede" id="rollLedeStaff" hidden>
-          A welfare election has exactly 34 staff voters. Each employee needs a distinct
-          employee number and an activated account before the voter roll can be frozen.
+          Every active staff account with a verified email is eligible for a welfare election.
+          Employee numbers are optional. The voter roll freezes when the schedule is armed.
         </p>
         <p class="lede" id="rollLedeMembers">
           Drawn once and frozen. Only members who paid for the year chosen <em>and</em> can sign
@@ -369,7 +369,7 @@
 
   <script src="js/admin-shell.js?v=20260924-roles3"></script>
   <script src="js/portal-state.js?v=20261103-viewas-staff2"></script>
-  <script src="js/welfare-admin.js?v=20261103-staff34"></script>
+  <script src="js/welfare-admin.js?v=20261105-active-staff"></script>
   <script>
   /**
    * The returning officer's console.

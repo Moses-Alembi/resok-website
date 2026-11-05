@@ -9,7 +9,7 @@
     panel = node('section', null, 'panel'); panel.id = 'welfareAdmin';
     const parent = document.getElementById('viewOne'); parent.insertBefore(panel, parent.children[1] || null);
     panel.append(node('h2', 'Automatic welfare election'));
-    panel.append(node('p', 'Exactly 34 staff voters. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
+    panel.append(node('p', 'Every active staff account with a verified email is eligible. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
     const message = node('p'); message.setAttribute('role', 'status');
     async function act(action, body) {
       message.textContent = 'Saving…';
@@ -32,7 +32,7 @@
       const live = node('a', 'Open live election screen', 'btn btn-ghost'); live.href = 'election-live'; controls.append(arm, live); panel.append(controls);
       if (!r.armed && !election.locked) {
         const form = node('form');
-        const rowsLabel = node('label', 'Staff roster: employee number, full name, email (one employee per row, separated by tabs or commas)'); rowsLabel.htmlFor = 'welfareImportRows';
+        const rowsLabel = node('label', 'Staff roster: full name and email, or employee number, full name and email (one employee per row, separated by tabs or commas)'); rowsLabel.htmlFor = 'welfareImportRows';
         const rows = node('textarea'); rows.id='welfareImportRows'; rows.className='in'; rows.rows=6; rows.required=true;
         const save = node('button','Create or reconcile these accounts','btn btn-primary');save.type='submit';
         form.append(rowsLabel,rows,node('p','Existing passwords and roles are preserved. New accounts need activation; this action does not send email.'),save);
@@ -42,7 +42,8 @@
             const people=rows.value.split(/\r?\n/).filter(l=>l.trim()).map(line=>{
               const parts=line.split(line.includes('\t')?'\t':',').map(p=>p.trim());
               if(parts.length===3)return {staffNumber:parts[0],name:parts[1],email:parts[2]};
-              throw new Error('Each staff row needs 3 columns: employee number, full name, email.');
+              if(parts.length===2)return {staffNumber:'',name:parts[0],email:parts[1]};
+              throw new Error('Each staff row needs full name and email, with an optional employee number.');
             });
             save.disabled=true;await act('import',{kind:'employee',people});
           }catch(e){message.textContent=e.message;}finally{save.disabled=false;}

@@ -132,7 +132,7 @@
       heading.append(node('h2', entry.election.title), node('p', entry.upcoming
         ? 'The dry run is scheduled. Review the posts and timeline; nominations and voting will unlock at their scheduled times.'
         : (entry.final ? 'Final results have been declared.' : 'Provisional candidate totals. Results can change until the count is declared.')));
-      const phaseClass = entry.upcoming ? 'p-warn' : (entry.final ? 'p-info' : (['open', 'nominations'].includes(entry.election.status) ? 'p-ok' : 'p-muted'));
+      const phaseClass = entry.upcoming ? (entry.armed ? 'p-election-green' : 'p-election-red') : (entry.final ? 'p-info' : (['open', 'nominations'].includes(entry.election.status) ? 'p-ok' : 'p-muted'));
       header.append(heading, node('span', entry.upcoming ? (entry.armed ? 'Upcoming' : 'Setup preview') : (entry.final ? 'Results declared' : String(entry.election.status).replace(/_/g, ' ')), 'pill ' + phaseClass));
       panel.appendChild(header);
       const stats = node('div', null, 'live-stats');
@@ -145,7 +145,7 @@
       panel.appendChild(stats);
       if (entry.upcoming) {
         panel.appendChild(countdown(entry.election));
-        if (!entry.armed) panel.appendChild(node('p', 'Preview only: the returning officer still needs to arm the automatic schedule. Nominations and voting remain closed until setup is complete and the scheduled times arrive.', 'note warn'));
+        if (!entry.armed) panel.appendChild(node('p', 'Preview only: the returning officer still needs to arm the automatic schedule. Nominations and voting remain closed until setup is complete and the scheduled times arrive.', 'note upcoming-setup-note'));
       }
       if (entry.attention) panel.appendChild(node('p', entry.attention, 'note warn'));
       const positions = node('div', null, 'live-positions');

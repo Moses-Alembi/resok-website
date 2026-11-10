@@ -3084,7 +3084,13 @@ Respiratory Society of Kenya");
         $user = auth($config);
         requireModule('electionFind', 'lib/elections.php');
         $election = electionFind($pdo, $m[1]);
-        if (!$election || $election['status'] === 'draft' || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
+        $upcoming = $election && $election['status'] === 'draft'
+            && $election['electorate'] === 'staff'
+            && function_exists('welfareReady') && welfareReady($pdo)
+            && !empty(welfareSettings($pdo, (int)$election['id'])['armed_at']);
+        if (!$election || ($election['status'] === 'draft' && !$upcoming)
+            || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
+        if ($upcoming) $election['upcoming'] = true;
         respond(200, electionForVoters($election, [
             'election'  => $election,
             'positions' => electionPositions($pdo, (int)$election['id']),

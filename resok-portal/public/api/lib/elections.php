@@ -114,18 +114,29 @@ function electionsList(PDO $pdo, bool $includeDrafts = false, ?string $electorat
     } elseif ($electorate === 'staff') {
         return [];
     }
-    // Everything except a draft, because a draft is the only state members are not meant to
-    // see. The nomination statuses were missing from this list when the phase was added,
-    // which hid the election from exactly the people it was asking to nominate - the one
-    // audience it existed for.
+    // Members never see drafts. Staff can preview only an armed welfare draft, so a
+    // returning officer's unfinished setup is never exposed in the staff portal.
     if (!$includeDrafts) {
-        $where[] = "status IN ('nominations','nominations_closed','roll_published',
-                               'open','closed','published')";
+        $visibleStatuses = "status IN ('nominations','nominations_closed','roll_published',
+                                       'open','closed','published')";
+        if ($electorate === 'staff' && function_exists('welfareReady') && welfareReady($pdo)) {
+            $where[] = "($visibleStatuses OR (status = 'draft' AND EXISTS (
+                           SELECT 1 FROM welfare_settings ws
+                           WHERE ws.election_id = elections.id AND ws.armed_at IS NOT NULL
+                       )))";
+        } else {
+            $where[] = $visibleStatuses;
+        }
     }
     if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
     $sql .= ' ORDER BY opens_at DESC';
     $stmt = $pdo->query($sql);
-    return $stmt ? array_map('electionShape', $stmt->fetchAll()) : [];
+    if (!$stmt) return [];
+    return array_map(static function (array $row): array {
+        $election = electionShape($row);
+        $election['upcoming'] = $election['status'] === 'draft';
+        return $election;
+    }, $stmt->fetchAll());
 }
 
 /** Whether this user may see staff welfare elections: active staff and super admins. */

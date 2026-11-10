@@ -436,10 +436,12 @@
     };
     const fmt = (value) => {
       if (!value) return '';
-      const d = new Date(String(value).replace(' ', 'T'));
+      const raw = String(value);
+      const d = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(raw) ? raw : raw.replace(' ', 'T') + '+03:00');
       return isNaN(d) ? String(value)
         : d.toLocaleString('en-KE', { day: 'numeric', month: 'long', year: 'numeric',
-                                      hour: '2-digit', minute: '2-digit' });
+                                      hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Nairobi',
+                                      timeZoneName: 'short' });
     };
 
     let current = null;      // the election being looked at
@@ -458,6 +460,7 @@
 
     /** The single word that describes where an election has got to. */
     function statusPill(election) {
+      if (election.upcoming) return ['soon', 'Upcoming'];
       if (election.status === 'published') return ['done', 'Result declared'];
       if (election.status === 'closed') return ['closed', 'Voting closed'];
       if (election.votingOpen) return ['open', 'Voting open'];
@@ -478,7 +481,7 @@
           if (STAFF) {
             const icon = make('i', 'fas fa-check-to-slot'); icon.setAttribute('aria-hidden', 'true'); empty.appendChild(icon);
             empty.appendChild(make('h2', null, 'No elections are running at the moment.'));
-            empty.appendChild(make('p', null, 'When nominations or voting open, your welfare elections will appear here.'));
+            empty.appendChild(make('p', null, 'Scheduled welfare elections will appear here so you can review the timetable before nominations open.'));
           } else { empty.textContent = 'No elections are running at the moment.'; }
           mount.appendChild(empty);
           return;
@@ -493,8 +496,10 @@
           const left = make('div');
           left.style.minWidth = '200px';
           left.appendChild(make('h3', null, election.title));
-          left.appendChild(make('div', 'when',
-            'Voting ' + fmt(election.opensAt) + ' — ' + fmt(election.closesAt)));
+          left.appendChild(make('div', 'when', election.upcoming
+            ? 'Nominations ' + fmt(election.nominationsOpenAt) + ' - ' + fmt(election.nominationsCloseAt)
+              + ' | Voting ' + fmt(election.opensAt) + ' - ' + fmt(election.closesAt)
+            : 'Voting ' + fmt(election.opensAt) + ' - ' + fmt(election.closesAt)));
           card.appendChild(left);
           const [cls, label] = statusPill(election);
           card.appendChild(make('span', 'pill ' + cls, label));
@@ -533,14 +538,19 @@
       const [cls, label] = statusPill(e);
       el('eStatus').className = 'pill ' + cls;
       el('eStatus').textContent = label;
-      el('eWhen').textContent = 'Voting opens ' + fmt(e.opensAt) + ' and closes ' + fmt(e.closesAt) + '.';
+      el('eWhen').textContent = e.upcoming
+        ? 'Nominations: ' + fmt(e.nominationsOpenAt) + ' - ' + fmt(e.nominationsCloseAt)
+          + '. Voting: ' + fmt(e.opensAt) + ' - ' + fmt(e.closesAt) + '.'
+        : 'Voting opens ' + fmt(e.opensAt) + ' and closes ' + fmt(e.closesAt) + '.';
 
       // What this member can do, which depends on the roll rather than on the status alone.
       const actions = el('eActions');
       actions.textContent = '';
       const voter = current.voter;
 
-      if (!voter) {
+      if (e.upcoming) {
+        notice('eNotice', 'This election is scheduled. Review the positions and timetable now. Nominations and voting will become available only during their scheduled windows.', 'info');
+      } else if (!voter) {
         notice('eNotice',
           'You are not on the electoral roll for this election. If you believe that is wrong, '
           + 'contact the ReSoK office before voting closes.', 'warn');

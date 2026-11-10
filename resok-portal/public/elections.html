@@ -94,7 +94,7 @@
   </style>
   <link id="staffElectionAdminCss" rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" media="not all" />
   <link id="staffElectionShellCss" rel="stylesheet" href="css/staff-shell.css?v=20261103-staff6" media="not all" />
-  <link id="staffElectionCss" rel="stylesheet" href="css/staff-elections.css?v=20261110-brand4" media="not all" />
+  <link id="staffElectionCss" rel="stylesheet" href="css/staff-elections.css?v=20261110-brand5" media="not all" />
   <script>
     if (new URLSearchParams(location.search).get('for') === 'staff') {
       document.documentElement.classList.add('staff-elections');
@@ -491,23 +491,6 @@
         : now < votingStart ? { title: 'Voting begins in', at: votingStart }
           : now < votingEnd ? { title: 'Voting closes in', at: votingEnd }
             : { title: 'Election window', at: 0 };
-      const countdown = make('div', 'upcoming-countdown');
-      const countdownCopy = make('div', 'upcoming-countdown-copy');
-      countdownCopy.append(make('span', 'upcoming-countdown-kicker', 'NEXT MILESTONE'),
-        make('strong', 'upcoming-countdown-label', milestone.title));
-      const clock = make('div', 'upcoming-countdown-clock');
-      clock.dataset.countdownTarget = String(milestone.at);
-      clock.dataset.nominationsStart = String(nominationsStart);
-      clock.dataset.votingStart = String(votingStart);
-      clock.dataset.votingEnd = String(votingEnd);
-      [['days', 'DAYS'], ['hours', 'HRS'], ['minutes', 'MIN'], ['seconds', 'SEC']].forEach(([unit, label]) => {
-        const part = make('div', 'countdown-part');
-        part.append(make('strong', null, '00'), make('span', null, label));
-        part.dataset.unit = unit;
-        clock.appendChild(part);
-      });
-      countdown.append(countdownCopy, clock);
-      stages.appendChild(countdown);
       [
         { title: 'Nominations', icon: 'fa-user-plus', start: election.nominationsOpenAt, end: election.nominationsCloseAt, tone: 'green' },
         { title: 'Voting', icon: 'fa-check-to-slot', start: election.opensAt, end: election.closesAt, tone: 'red' },
@@ -525,6 +508,23 @@
         item.appendChild(make('span', 'upcoming-stage-end', 'Until ' + fmt(stage.end)));
         stages.appendChild(item);
       });
+      const countdown = make('div', 'upcoming-countdown');
+      const countdownCopy = make('div', 'upcoming-countdown-copy');
+      countdownCopy.append(make('span', 'upcoming-countdown-kicker', 'NEXT MILESTONE'),
+        make('strong', 'upcoming-countdown-label', milestone.title));
+      const clock = make('div', 'upcoming-countdown-clock');
+      clock.dataset.countdownTarget = String(milestone.at);
+      clock.dataset.nominationsStart = String(nominationsStart);
+      clock.dataset.votingStart = String(votingStart);
+      clock.dataset.votingEnd = String(votingEnd);
+      [['days', 'DAYS'], ['hours', 'HRS'], ['minutes', 'MIN'], ['seconds', 'SEC']].forEach(([unit, label]) => {
+        const part = make('div', 'countdown-part');
+        part.append(make('strong', null, '00'), make('span', null, label));
+        part.dataset.unit = unit;
+        clock.appendChild(part);
+      });
+      countdown.append(countdownCopy, clock);
+      stages.appendChild(countdown);
       return stages;
     }
 
@@ -829,17 +829,49 @@
       mount.textContent = '';
       const positions = current.positions || [];
       if (!positions.length) return;
-      mount.appendChild(make('h2', null, 'Posts and candidates'));
+      const upcoming = !!current.election.upcoming;
+      if (upcoming) {
+        const heading = make('div', 'position-board-heading');
+        const copy = make('div');
+        copy.append(make('span', 'upcoming-countdown-kicker', 'KEY POSITIONS'),
+          make('h2', null, 'Posts on the ballot'),
+          make('p', null, 'Review each position before nominations open. Every post has its own place on the ballot.'));
+        heading.append(copy, make('span', 'position-board-count', String(positions.length).padStart(2, '0') + ' POSTS'));
+        mount.appendChild(heading);
+        mount.classList.add('election-position-grid-wrap');
+      } else {
+        mount.classList.remove('election-position-grid-wrap');
+        mount.appendChild(make('h2', null, 'Posts and candidates'));
+      }
 
-      positions.forEach((position) => {
-        const box = make('div', 'post');
-        box.style.marginTop = '16px';
-        const head = make('div', 'post-head');
-        head.appendChild(make('h3', null, position.title));
-        head.appendChild(make('div', 'rule',
-          position.seats + (position.seats === 1 ? ' seat' : ' seats')
-          + (position.description ? ' · ' + position.description : '')));
-        box.appendChild(head);
+      const grid = upcoming ? make('div', 'election-position-grid') : null;
+      positions.forEach((position, index) => {
+        const box = make('div', upcoming ? 'election-position-card' : 'post');
+        if (!upcoming) box.style.marginTop = '16px';
+        const head = make('div', upcoming ? 'election-position-card-head' : 'post-head');
+        if (upcoming) {
+          const icon = make('span', 'election-position-icon');
+          icon.appendChild(make('i', 'fas fa-landmark'));
+          icon.firstChild.setAttribute('aria-hidden', 'true');
+          head.append(icon,
+            make('span', 'election-position-meta', String(index + 1).padStart(2, '0') + ' / ' + String(positions.length).padStart(2, '0')),
+            make('span', 'election-position-seats', position.seats + (position.seats === 1 ? ' seat' : ' seats')));
+          box.appendChild(head);
+          box.appendChild(make('h3', 'election-position-title', position.title));
+          if (position.description) box.appendChild(make('p', 'election-position-description', position.description));
+          const opening = make('div', 'election-position-opening');
+          opening.appendChild(make('i', 'fas fa-clock'));
+          opening.firstChild.setAttribute('aria-hidden', 'true');
+          opening.appendChild(make('span', null, 'Nominations open ' + stageDate(current.election.nominationsOpenAt)
+            + ' · ' + stageClock(current.election.nominationsOpenAt) + ' EAT'));
+          box.appendChild(opening);
+        } else {
+          head.appendChild(make('h3', null, position.title));
+          head.appendChild(make('div', 'rule',
+            position.seats + (position.seats === 1 ? ' seat' : ' seats')
+            + (position.description ? ' · ' + position.description : '')));
+          box.appendChild(head);
+        }
 
         position.candidates.forEach((candidate) => {
           const row = make('div', 'choice');
@@ -858,8 +890,10 @@
           row.appendChild(who);
           box.appendChild(row);
         });
-        mount.appendChild(box);
+        if (grid) grid.appendChild(box);
+        else mount.appendChild(box);
       });
+      if (grid) mount.appendChild(grid);
     }
 
     function renderResults(results) {

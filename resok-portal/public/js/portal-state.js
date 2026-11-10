@@ -1263,7 +1263,7 @@
     if (document.getElementById("resokWelfareLoader")) return;
     const script = document.createElement("script");
     script.id = "resokWelfareLoader";
-    script.src = new URL("welfare-live.js?v=20261103-welfare2", SELF_SRC || location.href).href;
+    script.src = new URL("welfare-live.js?v=20261110-welfare3", SELF_SRC || location.href).href;
     document.body.appendChild(script);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", loadWelfareFeed);

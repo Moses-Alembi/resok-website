@@ -37,6 +37,14 @@
 .staff-elections .card .when{margin-top:6px;font-size:12.5px;line-height:1.7}
 .staff-elections .card .go{color:var(--brand-ink)}
 .staff-elections .upcoming-stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px;width:100%}
+.staff-elections .upcoming-countdown{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:22px;min-width:0;padding:20px 22px;border:1px solid rgba(0,147,46,.3);border-radius:13px;background:radial-gradient(ellipse at 95% 0,rgba(188,11,34,.15),transparent 38%),linear-gradient(110deg,rgba(0,147,46,.16),rgba(0,147,46,.035) 63%),var(--surface);box-shadow:inset 4px 0 0 var(--brand-primary)}
+.staff-elections .upcoming-countdown-copy{min-width:150px}
+.staff-elections .upcoming-countdown-kicker{display:block;color:var(--brand-ink);font-size:9px;font-weight:900;letter-spacing:.16em}
+.staff-elections .upcoming-countdown-label{display:block;margin-top:5px;color:var(--ink);font-size:15px;line-height:1.35}
+.staff-elections .upcoming-countdown-clock{display:grid;grid-template-columns:repeat(4,minmax(52px,1fr));gap:8px;min-width:min(390px,60%)}
+.staff-elections .countdown-part{text-align:center;padding:6px 5px;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+.staff-elections .countdown-part strong{display:block;color:var(--brand-ink);font-size:clamp(23px,3.2vw,37px);font-weight:850;line-height:1.05;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.staff-elections .countdown-part span{display:block;margin-top:5px;color:var(--muted);font-size:8px;font-weight:850;letter-spacing:.12em}
 .staff-elections .upcoming-stage{min-width:0;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .staff-elections .upcoming-stage.green{border-left:3px solid var(--brand-primary)}
 .staff-elections .upcoming-stage.red{border-left:3px solid var(--brand-secondary)}
@@ -46,6 +54,7 @@
 .staff-elections .upcoming-stage-top small{margin-left:auto;color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .staff-elections .upcoming-stage-date,.staff-elections .upcoming-stage-end{display:block;overflow-wrap:anywhere}
 .staff-elections .upcoming-stage-date{margin-top:9px;color:var(--ink);font-size:12px;line-height:1.5}
+.staff-elections .upcoming-stage-clock{display:block;margin-top:6px;color:var(--ink);font-size:clamp(24px,3.4vw,36px);font-weight:850;line-height:1.1;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
 .staff-elections .upcoming-stage-end{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.5}
 .staff-elections .upcoming-note{border-color:rgba(0,147,46,.35);background:linear-gradient(110deg,rgba(0,147,46,.1),rgba(188,11,34,.055)),var(--surface);color:var(--ink)}
 .staff-elections .card.upcoming-election>.pill.soon,.staff-elections #eStatus.pill.soon{background:linear-gradient(110deg,rgba(0,147,46,.15),rgba(188,11,34,.1));color:var(--brand-ink);border:1px solid rgba(0,147,46,.28)}
@@ -82,6 +91,9 @@
   .staff-elections .election-list-heading>.btn{width:100%;justify-content:center}
   .staff-elections .card{padding:16px}
   .staff-elections .upcoming-stages{grid-template-columns:1fr}
+  .staff-elections .upcoming-countdown{align-items:flex-start;flex-direction:column;gap:15px;padding:17px}
+  .staff-elections .upcoming-countdown-clock{width:100%;min-width:0}
+  .staff-elections .countdown-part strong{font-size:27px}
   .staff-elections .card>div{min-width:0!important;width:100%}
   .staff-elections .election-empty{padding:32px 16px}
 }

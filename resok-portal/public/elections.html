@@ -435,15 +435,23 @@
       if (text !== undefined && text !== null) node.textContent = text;
       return node;
     };
-    const fmt = (value) => {
+    const electionDate = (value) => {
       if (!value) return '';
       const raw = String(value);
-      const d = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(raw) ? raw : raw.replace(' ', 'T') + '+03:00');
-      return isNaN(d) ? String(value)
-        : d.toLocaleString('en-KE', { day: 'numeric', month: 'long', year: 'numeric',
-                                      hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Nairobi',
-                                      timeZoneName: 'short' });
+      const d = electionDateValue(raw);
+      return isNaN(d) ? String(value) : d.toLocaleString('en-KE', {
+        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        timeZone: 'Africa/Nairobi', timeZoneName: 'short'
+      });
     };
+    const electionDateValue = (value) => new Date(/[zZ]|[+-]\d\d:\d\d$/.test(value) ? value : value.replace(' ', 'T') + '+03:00');
+    const stageDate = (value) => electionDateValue(String(value || '')).toLocaleDateString('en-KE', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Nairobi'
+    });
+    const stageClock = (value) => electionDateValue(String(value || '')).toLocaleTimeString('en-KE', {
+      hour: 'numeric', minute: '2-digit', timeZone: 'Africa/Nairobi'
+    });
+    const fmt = electionDate;
 
     let current = null;      // the election being looked at
     let ballot = null;       // the ballot paper being filled in
@@ -474,6 +482,32 @@
     function scheduleStages(election) {
       const stages = make('div', 'upcoming-stages');
       stages.setAttribute('aria-label', 'Election schedule');
+      const now = Date.now();
+      const nominationsStart = electionDateValue(String(election.nominationsOpenAt || '')).getTime();
+      const votingStart = electionDateValue(String(election.opensAt || '')).getTime();
+      const votingEnd = electionDateValue(String(election.closesAt || '')).getTime();
+      const milestone = now < nominationsStart
+        ? { title: 'Nominations begin in', at: nominationsStart }
+        : now < votingStart ? { title: 'Voting begins in', at: votingStart }
+          : now < votingEnd ? { title: 'Voting closes in', at: votingEnd }
+            : { title: 'Election window', at: 0 };
+      const countdown = make('div', 'upcoming-countdown');
+      const countdownCopy = make('div', 'upcoming-countdown-copy');
+      countdownCopy.append(make('span', 'upcoming-countdown-kicker', 'NEXT MILESTONE'),
+        make('strong', 'upcoming-countdown-label', milestone.title));
+      const clock = make('div', 'upcoming-countdown-clock');
+      clock.dataset.countdownTarget = String(milestone.at);
+      clock.dataset.nominationsStart = String(nominationsStart);
+      clock.dataset.votingStart = String(votingStart);
+      clock.dataset.votingEnd = String(votingEnd);
+      [['days', 'DAYS'], ['hours', 'HRS'], ['minutes', 'MIN'], ['seconds', 'SEC']].forEach(([unit, label]) => {
+        const part = make('div', 'countdown-part');
+        part.append(make('strong', null, '00'), make('span', null, label));
+        part.dataset.unit = unit;
+        clock.appendChild(part);
+      });
+      countdown.append(countdownCopy, clock);
+      stages.appendChild(countdown);
       [
         { title: 'Nominations', icon: 'fa-user-plus', start: election.nominationsOpenAt, end: election.nominationsCloseAt, tone: 'green' },
         { title: 'Voting', icon: 'fa-check-to-slot', start: election.opensAt, end: election.closesAt, tone: 'red' },
@@ -486,12 +520,41 @@
         top.appendChild(make('span', null, stage.title));
         top.appendChild(make('small', null, index === 0 ? 'First' : 'Next'));
         item.appendChild(top);
-        item.appendChild(make('strong', 'upcoming-stage-date', fmt(stage.start)));
+        item.appendChild(make('strong', 'upcoming-stage-date', stageDate(stage.start)));
+        item.appendChild(make('strong', 'upcoming-stage-clock', stageClock(stage.start) + ' EAT'));
         item.appendChild(make('span', 'upcoming-stage-end', 'Until ' + fmt(stage.end)));
         stages.appendChild(item);
       });
       return stages;
     }
+
+    function updateElectionCountdowns() {
+      document.querySelectorAll('.upcoming-countdown-clock').forEach((clock) => {
+        const now = Date.now();
+        const nominationsStart = Number(clock.dataset.nominationsStart || 0);
+        const votingStart = Number(clock.dataset.votingStart || 0);
+        const votingEnd = Number(clock.dataset.votingEnd || 0);
+        let target = 0;
+        let label = 'Election window has ended';
+        if (now < nominationsStart) { target = nominationsStart; label = 'Nominations begin in'; }
+        else if (now < votingStart) { target = votingStart; label = 'Voting begins in'; }
+        else if (now < votingEnd) { target = votingEnd; label = 'Voting closes in'; }
+        clock.dataset.countdownTarget = String(target);
+        const labelNode = clock.parentElement.querySelector('.upcoming-countdown-label');
+        if (labelNode) labelNode.textContent = label;
+        const remaining = target ? Math.max(0, Math.floor((target - now) / 1000)) : 0;
+        const days = Math.floor(remaining / 86400);
+        const hours = Math.floor((remaining % 86400) / 3600);
+        const minutes = Math.floor((remaining % 3600) / 60);
+        const seconds = remaining % 60;
+        const values = { days: String(days).padStart(2, '0'), hours: String(hours).padStart(2, '0'),
+          minutes: String(minutes).padStart(2, '0'), seconds: String(seconds).padStart(2, '0') };
+        clock.querySelectorAll('[data-unit]').forEach((part) => {
+          part.querySelector('strong').textContent = values[part.dataset.unit];
+        });
+      });
+    }
+    window.setInterval(updateElectionCountdowns, 1000);
 
     /* ---------------- list ---------------- */
     async function loadList() {

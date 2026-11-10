@@ -64,7 +64,7 @@ try {
     check((int)welfareSettings($p,$id)['staff_target']===34,'the historical migration updates its unopened-election metadata');
     $people=[];for($n=1;$n<=34;$n++)$people[]=['name'=>'Synthetic Employee '.$n,'email'=>'employee'.$n.'@welfare.test','staffNumber'=>'TEST-'.$n];
     welfareImport($p,$id,$people,'employee',$officer);
-    $r=welfareReadiness($p,$id);check(!$r['ready']&&$r['targetEmployees']===34&&$r['employeesReady']===0,'the target follows the active staff list while activation remains required');
+    $r=welfareReadiness($p,$id);check($r['ready']&&$r['targetEmployees']===34&&$r['employeesReady']===0&&$r['expectedVoters']===34,'pending email verification does not block the active staff electorate');
     check((int)$p->query('SELECT COUNT(*) FROM staff_accounts')->fetchColumn()===34,'34 distinct synthetic employees are provisioned');
     check((int)$p->query("SELECT COUNT(*) FROM users WHERE role='member' AND email LIKE 'employee%'")->fetchColumn()===34,'employee creation does not grant administrative roles');
     $p->exec("UPDATE staff_accounts SET job_title='Programme Officer' WHERE staff_number='TEST-1'");
@@ -77,7 +77,6 @@ try {
     $self=endpoint($p,'welfare/me','GET')->body['me'];
     check($self['jobTitle']===null&&$self['name']==='observer@welfare.test','an account without a staff record keeps its email fallback and no job title');
     $GLOBALS['testUser']=['userId'=>$officer,'role'=>'admin','email'=>'officer@welfare.test'];
-    reject(fn()=>welfareArm($p,$id,true),'unactivated employees cannot be silently omitted to arm the election');
     reject(fn()=>welfareImport($p,$id,[$people[0],$people[0]],'employee',$officer),'duplicate email rows are rejected');
     $bad=[['name'=>'Conflicting Account','email'=>'conflict@welfare.test','staffNumber'=>'TEST-1']];
     reject(fn()=>welfareImport($p,$id,$bad,'employee',$officer),'duplicate employee numbers are rejected');
@@ -103,9 +102,11 @@ try {
     welfareImport($p,$id,[['name'=>'Synthetic Extra Employee','email'=>'extra@welfare.test']],'employee',$officer);
     $extra=(int)$p->query("SELECT id FROM users WHERE email='extra@welfare.test'")->fetchColumn();
     check($p->query('SELECT staff_number FROM staff_accounts WHERE user_id='.$extra)->fetchColumn()===null,'a staff account can be imported without an employee number');
-    check(!welfareReadiness($p,$id)['ready'],'an unverified active employee without a number still blocks readiness');
-    check(electionRollSummary($p,$id)['eligibleButCannotSignIn']===1,'pending activation totals include staff without employee numbers');
-    reject(fn()=>welfareArm($p,$id,true),'an unverified employee without a number cannot be silently omitted');
+    $r=welfareReadiness($p,$id);check($r['ready']&&$r['expectedVoters']===35&&$r['unverifiedEmployees']===1,'an unverified active account remains eligible on the roster');
+    check(electionRollSummary($p,$id)['eligibleButCannotSignIn']===1,'the roll summary counts active staff still awaiting email verification');
+    [$roll,$error]=electionDrawRoll($p,$id,2026);check(!$error&&$roll['onRoll']===35&&electionRollEntry($p,$id,$extra)!==null,'manual staff roll includes unverified employees without employee numbers');
+    welfareArm($p,$id,true);check((int)welfareSettings($p,$id)['staff_target']===35&&electionRollEntry($p,$id,$extra)!==null,'automatic schedule keeps unverified active staff on the roll');
+    welfareArm($p,$id,false);
     $p->exec("UPDATE users SET email_verified=1 WHERE email='extra@welfare.test'");
     $r=welfareReadiness($p,$id);check($r['ready']&&$r['targetEmployees']===35&&$r['expectedVoters']===35,'35 verified active employees form a valid electorate');
     [$roll,$error]=electionDrawRoll($p,$id,2026);check(!$error&&$roll['onRoll']===35&&electionRollEntry($p,$id,$extra)!==null,'manual drawing includes verified employees without numbers');

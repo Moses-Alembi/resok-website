@@ -60,8 +60,8 @@ function welfareReadiness(PDO $pdo, int $id): array
     $total = (int)$employees['total'];
     $verified = (int)$employees['ready'];
     return ['targetEmployees' => $total, 'employees' => $total, 'employeesReady' => $verified,
-        'expectedVoters' => $verified,
-        'ready' => $total > 0 && $verified === $total,
+        'expectedVoters' => $total, 'unverifiedEmployees' => max(0, $total - $verified),
+        'ready' => $total > 0,
         'armed' => !empty($settings['armed_at']), 'lastError' => $settings['last_error'] ?? null];
 }
 
@@ -134,21 +134,22 @@ function welfareArm(PDO $pdo, int $id, bool $arm): array
             if (!welfareSettings($pdo,$id)) throw new RuntimeException('Set up the automatic election first.');
             if ($raw['status']==='cancelled') throw new RuntimeException('A cancelled election cannot be armed.');
             $r=welfareReadiness($pdo,$id);
-            if (!$r['ready']) throw new RuntimeException('Every active staff account must have a verified email before the roll can be frozen. Reconcile the staff roster first.');
+            if (!$r['ready']) throw new RuntimeException('Add at least one active staff account to the roster before creating the voter roll.');
             if (!electionPositions($pdo,$id)) throw new RuntimeException('Add the contested posts first.');
             if (!$raw['nominations_open_at'] || !$raw['nominations_close_at']) throw new RuntimeException('Set nomination dates and voting dates first.');
             if (new DateTimeImmutable($raw['closes_at']) <= new DateTimeImmutable('now')) throw new RuntimeException('The voting window has already ended.');
             $pdo->prepare('DELETE FROM election_roll WHERE election_id=?')->execute([$id]);
             $pdo->prepare("INSERT INTO election_roll (election_id,member_profile_id,user_id,name,membership_id,email,standing_at_cutoff)
                 SELECT ?,NULL,u.id,COALESCE(NULLIF(s.full_name,''),u.email),s.staff_number,u.email,'staff'
-                FROM staff_accounts s JOIN users u ON u.id=s.user_id WHERE s.active=1 AND u.email_verified=1")->execute([$id]);
+                FROM staff_accounts s JOIN users u ON u.id=s.user_id WHERE s.active=1")->execute([$id]);
             $count=$pdo->prepare('SELECT COUNT(*) FROM election_roll WHERE election_id=?');$count->execute([$id]);
             if ((int)$count->fetchColumn() !== $r['expectedVoters']) throw new RuntimeException('The voter roll changed while it was being frozen. Reconcile the active staff accounts and try again.');
             $pdo->prepare('UPDATE welfare_settings SET staff_target=? WHERE election_id=?')->execute([$r['expectedVoters'],$id]);
             // Finality is an election rule, not a claim that nominees personally consented.
             $pdo->prepare("UPDATE election_candidates c JOIN election_positions p ON p.id=c.position_id SET c.status='approved' WHERE p.election_id=? AND c.status='nominated'")->execute([$id]);
             $pdo->prepare('UPDATE welfare_settings SET armed_at=NOW(),last_error=NULL WHERE election_id=?')->execute([$id]);
-            welfareEvent($pdo,$id,'Schedule armed. The voter roll is fixed to the verified active staff accounts.');
+            $awaitingVerification = (int)($r['unverifiedEmployees'] ?? 0);
+            welfareEvent($pdo,$id,'Schedule armed with '.$r['expectedVoters'].' active staff voters; '.$awaitingVerification.' accounts still need email verification.');
         }
         $pdo->commit();
     } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }

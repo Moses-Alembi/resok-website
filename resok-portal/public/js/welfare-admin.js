@@ -9,7 +9,7 @@
     panel = node('section', null, 'panel'); panel.id = 'welfareAdmin';
     const parent = document.getElementById('viewOne'); parent.insertBefore(panel, parent.children[1] || null);
     panel.append(node('h2', 'Automatic welfare election'));
-    panel.append(node('p', 'Every active staff account with a verified email is eligible. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
+    panel.append(node('p', 'Every active staff account is eligible and stays on the voter roll, including accounts awaiting email verification. Once verified, staff can sign in and vote. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
     const message = node('p'); message.setAttribute('role', 'status');
     async function act(action, body) {
       message.textContent = 'Saving…';
@@ -19,7 +19,9 @@
     try {
       const data = await api('admin/welfare/' + election.id);
       const r = data.readiness;
-      panel.append(node('p', r.employeesReady + '/' + r.targetEmployees + ' staff accounts ready; ' + r.expectedVoters + ' total voters', 'lede'));
+      const awaitingVerification = Number(r.unverifiedEmployees || 0);
+      panel.append(node('p', r.employeesReady + '/' + r.targetEmployees + ' staff accounts verified; ' + r.expectedVoters + ' voters on the roll', 'lede'));
+      if (awaitingVerification) panel.append(node('p', awaitingVerification + ' active staff account(s) are awaiting email verification. They stay on the roll and can vote after activation.', 'note warn'));
       if (r.lastError) panel.append(node('p', r.lastError, 'note warn'));
       if (!data.settings) {
         const configure = node('button', 'Set up automatic election', 'btn btn-primary'); configure.type = 'button'; configure.onclick = () => act('configure'); panel.append(configure, message); return;
@@ -28,7 +30,10 @@
       const controls = node('div'); controls.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;margin:14px 0';
       const arm = node('button', r.armed ? 'Disarm schedule' : 'Arm automatic schedule', 'btn btn-primary'); arm.type = 'button';
       arm.disabled = election.locked || (!r.armed && !r.ready);
-      arm.onclick = () => { if (confirm(r.armed ? 'Disarm the schedule before voting opens?' : 'Freeze the listed voter roll and arm the schedule? Nominations, voting, counting and publication will progress automatically.')) act(r.armed ? 'disarm' : 'arm'); };
+      arm.onclick = () => {
+        const warning = awaitingVerification ? ' ' + awaitingVerification + ' account(s) still need email verification; they will stay on the roll and can vote after activation.' : ' All active staff accounts are verified.';
+        if (confirm(r.armed ? 'Disarm the schedule before voting opens?' : 'Freeze the voter roll and arm the schedule?' + warning + ' Nominations, voting, counting and publication will progress automatically.')) act(r.armed ? 'disarm' : 'arm');
+      };
       const live = node('a', 'Open live election screen', 'btn btn-ghost'); live.href = 'election-live'; controls.append(arm, live); panel.append(controls);
       if (!r.armed && !election.locked) {
         const form = node('form');

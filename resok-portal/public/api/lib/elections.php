@@ -300,9 +300,9 @@ function electionDrawRoll(PDO $pdo, int $electionId, int $paidYear): array
 }
 
 /**
- * The roll for a staff welfare election: every active member of staff who can sign in,
- * frozen the same way a members' roll is. Every active staff account must have a verified
- * email before the roll can be drawn; employee numbers are optional.
+ * The roll for a staff welfare election: all active staff accounts, frozen the same way
+ * a members' roll is. Email verification is needed to sign in, but does not determine
+ * electorate eligibility; employee numbers are optional.
  *
  * @return array{0:?array,1:?string}
  */
@@ -312,7 +312,7 @@ function electionDrawStaffRoll(PDO $pdo, int $electionId): array
         return [null, 'The staff list is not available on this server.'];
     }
     $readiness = function_exists('welfareReadiness') ? welfareReadiness($pdo, $electionId) : null;
-    if ($readiness !== null && !$readiness['ready']) return [null, 'Every active staff account must have a verified email before the voter roll can be frozen. Reconcile the staff roster first.'];
+    if ($readiness !== null && !$readiness['ready']) return [null, 'Add at least one active staff account to the roster before drawing the voter roll.'];
     $pdo->beginTransaction();
     try {
         $pdo->prepare('DELETE FROM election_roll WHERE election_id = ?')->execute([$electionId]);
@@ -320,7 +320,7 @@ function electionDrawStaffRoll(PDO $pdo, int $electionId): array
                          (election_id, member_profile_id, user_id, name, membership_id, email, standing_at_cutoff)
                        SELECT ?, NULL, u.id, COALESCE(NULLIF(s.full_name, ''), u.email), s.staff_number, u.email, 'staff'
                        FROM staff_accounts s JOIN users u ON u.id = s.user_id
-                       WHERE s.active = 1 AND u.email_verified = 1")
+                       WHERE s.active = 1")
             ->execute([$electionId]);
         $rollCount = $pdo->prepare('SELECT COUNT(*) FROM election_roll WHERE election_id=?');
         $rollCount->execute([$electionId]);

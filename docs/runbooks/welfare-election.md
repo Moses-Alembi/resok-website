@@ -31,18 +31,20 @@ The page supplies its own full renderer and suppresses the compact widget on thi
 2. Create/select a staff welfare election in `election-admin`. Set the contested posts,
    seats, maximum choices and all four dates. Times are Africa/Nairobi.
 3. In **Automatic welfare election**, select **Set up automatic election**.
-4. Reconcile the real employee roster. **Every active staff account is eligible**, and
-   each must have a verified email before the roll can be frozen. There is no fixed
-   voter count. Paste spreadsheet rows as `full name<TAB>email`, or optionally
+4. Reconcile the real employee roster. **Every active staff account is eligible and stays
+   on the frozen voter roll**, even if its email is not verified when the schedule is armed.
+   Those staff must activate their accounts before they can sign in to nominate or vote.
+   There is no fixed voter count. Paste spreadsheet rows as `full name<TAB>email`, or optionally
    `employee number<TAB>full name<TAB>email`. Employee numbers must be distinct when
    supplied. Header rows should be removed.
 5. Account imports do not send mail. Use the existing staff invite action for employees,
    or ask each new employee to use **Forgot password** with their own address. Completing
    that mailbox link activates the account. Existing passwords and roles are preserved.
-6. Once every account is ready, choose **Arm automatic schedule**. This snapshots the
-   voter roll. Imports/redrawing are refused while armed; disarm before corrections.
-   The total follows the verified active staff list; no additional voter accounts are included.
-   Nothing can change the electorate after voting has opened.
+6. Review the voter count and the number of active accounts still awaiting email
+   verification. Choose **Arm automatic schedule** to snapshot all active staff accounts.
+   Staff can activate later and vote once they can sign in. Imports/redrawing are refused
+   while armed; disarm before voting opens to correct the roster. Nothing can change the
+   electorate after voting has opened.
 7. Add a cPanel cron job every minute:
 
    ```text

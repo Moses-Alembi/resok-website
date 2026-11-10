@@ -255,7 +255,7 @@
       <section class="panel">
         <h2>Electoral roll</h2>
         <p class="lede" id="rollLedeStaff" hidden>
-          Every active staff account with a verified email is eligible for a welfare election.
+          Every active staff account is eligible. Staff awaiting email verification stay on the roll and can vote after activating their accounts.
           Employee numbers are optional. The voter roll freezes when the schedule is armed.
         </p>
         <p class="lede" id="rollLedeMembers">
@@ -595,7 +595,7 @@
       tile(roll.voted || 0, 'have voted');
       tile((roll.turnout || 0) + '%', 'turnout');
       const staff = current.election.electorate === 'staff';
-      if (staff) tile(roll.eligibleButCannotSignIn || 0, 'staff not signed in yet', (roll.eligibleButCannotSignIn || 0) > 0 ? 'warn' : 'ok');
+      if (staff) tile(roll.eligibleButCannotSignIn || 0, 'awaiting email verification', (roll.eligibleButCannotSignIn || 0) > 0 ? 'warn' : 'ok');
       el('rollLedeStaff').hidden = !staff;
       el('rollLedeMembers').hidden = staff;
       el('rollYearWrap').hidden = staff;
@@ -607,8 +607,11 @@
     el('drawRoll').addEventListener('click', async () => {
       const year = Number(el('rollYear').value);
       const staff = current.election.electorate === 'staff';
-      if (!window.confirm((staff ? 'Draw the roll from the active staff list?' : 'Draw the roll for members who paid for ' + year + '?')
-          + ' This replaces any roll already drawn.')) return;
+      const awaitingVerification = staff ? Number(current.roll && current.roll.eligibleButCannotSignIn || 0) : 0;
+      const drawPrompt = staff
+        ? 'Draw the roll from all active staff?' + (awaitingVerification ? ' ' + awaitingVerification + ' account(s) still need email verification; they will stay on the roll and can vote after activation.' : '')
+        : 'Draw the roll for members who paid for ' + year + '?';
+      if (!window.confirm(drawPrompt + ' This replaces any roll already drawn.')) return;
       try {
         const data = await api('/api/admin/elections/' + current.election.id + '/roll', {
           method: 'POST', body: JSON.stringify({ paidYear: year })
@@ -619,7 +622,7 @@
         // is a warning, and the reason is what somebody can act on before voting opens.
         if (r.eligibleButCannotSignIn) {
           message += staff
-            ? ' ' + r.eligibleButCannotSignIn + ' member(s) of staff are left off because they have not set their password yet.'
+            ? ' ' + r.eligibleButCannotSignIn + ' active staff account(s) still need email verification; they remain on the roll and can vote after activation.'
             : ' ' + r.eligibleButCannotSignIn + ' paid member(s) are left off because '
               + 'they have never claimed their portal account.';
         }

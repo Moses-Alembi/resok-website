@@ -94,7 +94,7 @@
   </style>
   <link id="staffElectionAdminCss" rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" media="not all" />
   <link id="staffElectionShellCss" rel="stylesheet" href="css/staff-shell.css?v=20261103-staff6" media="not all" />
-  <link id="staffElectionCss" rel="stylesheet" href="css/staff-elections.css?v=20261103-elections1" media="not all" />
+  <link id="staffElectionCss" rel="stylesheet" href="css/staff-elections.css?v=20261110-elections2" media="not all" />
   <script>
     if (new URLSearchParams(location.search).get('for') === 'staff') {
       document.documentElement.classList.add('staff-elections');
@@ -225,6 +225,7 @@
           <span class="pill" id="eStatus"></span>
         </div>
         <div id="eWhen" style="color:var(--muted);font-size:13.5px;margin-top:12px"></div>
+        <div id="eSchedule" class="upcoming-stages" aria-label="Election schedule" hidden></div>
         <div id="eNotice"></div>
 
         <div id="eActions" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap"></div>
@@ -470,6 +471,28 @@
       return ['closed', election.status];
     }
 
+    function scheduleStages(election) {
+      const stages = make('div', 'upcoming-stages');
+      stages.setAttribute('aria-label', 'Election schedule');
+      [
+        { title: 'Nominations', icon: 'fa-user-plus', start: election.nominationsOpenAt, end: election.nominationsCloseAt, tone: 'green' },
+        { title: 'Voting', icon: 'fa-check-to-slot', start: election.opensAt, end: election.closesAt, tone: 'red' },
+      ].forEach((stage, index) => {
+        const item = make('div', 'upcoming-stage ' + stage.tone);
+        const top = make('div', 'upcoming-stage-top');
+        const icon = make('i', 'fas ' + stage.icon);
+        icon.setAttribute('aria-hidden', 'true');
+        top.appendChild(icon);
+        top.appendChild(make('span', null, stage.title));
+        top.appendChild(make('small', null, index === 0 ? 'First' : 'Next'));
+        item.appendChild(top);
+        item.appendChild(make('strong', 'upcoming-stage-date', fmt(stage.start)));
+        item.appendChild(make('span', 'upcoming-stage-end', 'Until ' + fmt(stage.end)));
+        stages.appendChild(item);
+      });
+      return stages;
+    }
+
     /* ---------------- list ---------------- */
     async function loadList() {
       const mount = el('listBody');
@@ -487,7 +510,7 @@
           return;
         }
         data.elections.forEach((election) => {
-          const card = make('div', 'card');
+          const card = make('div', 'card' + (election.upcoming ? ' upcoming-election' : ''));
           card.setAttribute('role', 'link'); card.tabIndex = 0;
           card.addEventListener('click', () => openElection(election.slug));
           card.addEventListener('keydown', (event) => {
@@ -500,6 +523,7 @@
             ? 'Nominations ' + fmt(election.nominationsOpenAt) + ' - ' + fmt(election.nominationsCloseAt)
               + ' | Voting ' + fmt(election.opensAt) + ' - ' + fmt(election.closesAt)
             : 'Voting ' + fmt(election.opensAt) + ' - ' + fmt(election.closesAt)));
+          if (election.upcoming) left.appendChild(scheduleStages(election));
           card.appendChild(left);
           const [cls, label] = statusPill(election);
           card.appendChild(make('span', 'pill ' + cls, label));
@@ -520,6 +544,8 @@
       el('eActions').textContent = '';
       el('eResults').textContent = '';
       el('eCandidates').textContent = '';
+      el('eSchedule').textContent = '';
+      el('eSchedule').hidden = true;
       notice('eNotice', '');
       try {
         current = await api('/api/elections/' + encodeURIComponent(slug));
@@ -542,6 +568,8 @@
         ? 'Nominations: ' + fmt(e.nominationsOpenAt) + ' - ' + fmt(e.nominationsCloseAt)
           + '. Voting: ' + fmt(e.opensAt) + ' - ' + fmt(e.closesAt) + '.'
         : 'Voting opens ' + fmt(e.opensAt) + ' and closes ' + fmt(e.closesAt) + '.';
+      el('eSchedule').hidden = !e.upcoming;
+      if (e.upcoming) el('eSchedule').appendChild(scheduleStages(e));
 
       // What this member can do, which depends on the roll rather than on the status alone.
       const actions = el('eActions');
@@ -550,6 +578,8 @@
 
       if (e.upcoming) {
         notice('eNotice', 'This election is scheduled. Review the positions and timetable now. Nominations and voting will become available only during their scheduled windows.', 'info');
+        const upcomingNote = el('eNotice').querySelector('.note');
+        if (upcomingNote) upcomingNote.classList.add('upcoming-note');
       } else if (!voter) {
         notice('eNotice',
           'You are not on the electoral roll for this election. If you believe that is wrong, '

@@ -13,7 +13,7 @@
     .welfare-live:before{content:'';position:absolute;z-index:-1;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--wl-green) 0 58%,var(--wl-red) 58%)}
     .welfare-live article{min-width:0}.welfare-live h2{font-size:clamp(21px,2.2vw,28px);letter-spacing:-.035em;line-height:1.2;margin:5px 0 7px;color:var(--ink,#172b3a)}
     .welfare-live .wl-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:22px}.welfare-live .wl-eyebrow{display:flex;align-items:center;gap:8px;color:var(--brand-ink,#05603a);font-size:10px;font-weight:850;letter-spacing:.14em;text-transform:uppercase}.welfare-live .wl-caption{margin:0;color:var(--muted,#667085);font-size:13px;line-height:1.7}
-    .welfare-live .wl-state{display:inline-flex;align-items:center;gap:8px;flex:none;padding:7px 11px;border:1px solid rgba(0,147,46,.25);border-radius:999px;background:rgba(0,147,46,.09);color:var(--brand-ink,#05603a);font-size:10px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}.welfare-live .wl-state:before{content:'';width:7px;height:7px;border-radius:50%;background:var(--wl-green);box-shadow:0 0 0 4px rgba(0,147,46,.12)}.welfare-live .wl-state.final{border-color:rgba(188,11,34,.25);background:rgba(188,11,34,.08);color:var(--wl-red)}.welfare-live .wl-state.final:before{background:var(--wl-red);box-shadow:0 0 0 4px rgba(188,11,34,.1)}
+    .welfare-live .wl-state{display:inline-flex;align-items:center;gap:8px;flex:none;padding:7px 11px;border:1px solid rgba(0,147,46,.25);border-radius:999px;background:rgba(0,147,46,.09);color:var(--brand-ink,#05603a);font-size:10px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}.welfare-live .wl-state:before{content:'';width:7px;height:7px;border-radius:50%;background:var(--wl-green);box-shadow:0 0 0 4px rgba(0,147,46,.12)}.welfare-live .wl-state.final{border-color:rgba(188,11,34,.25);background:rgba(188,11,34,.08);color:var(--wl-red)}.welfare-live .wl-state.upcoming{border-color:rgba(188,11,34,.22);background:linear-gradient(100deg,rgba(0,147,46,.1),rgba(188,11,34,.08));color:var(--brand-ink,#05603a)}.welfare-live .wl-stat-red strong{color:var(--wl-red)!important}.welfare-live .wl-state.final:before{background:var(--wl-red);box-shadow:0 0 0 4px rgba(188,11,34,.1)}
     .welfare-live .wl-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 20px}.welfare-live .wl-stat{min-width:0;padding:17px 18px;border:1px solid var(--line,#d8dee7);border-radius:12px;background:var(--bg,rgba(255,255,255,.7))}.welfare-live .wl-stat strong{display:block;overflow-wrap:anywhere;color:var(--ink,#172b3a);font-size:clamp(25px,3vw,36px);font-weight:800;letter-spacing:-.045em;line-height:1.12;font-variant-numeric:tabular-nums}.welfare-live .wl-stat:first-child strong{color:var(--brand-primary,var(--wl-green))}.welfare-live .wl-stat span{display:block;margin-top:6px;color:var(--muted,#667085);font-size:10px;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
     .welfare-live .wl-details{margin-top:8px;border:1px solid var(--line,#d8dee7);border-radius:12px;background:var(--surface,#fff);overflow:hidden}.welfare-live .wl-details summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 17px;cursor:pointer;list-style:none;color:var(--ink,#172b3a);font-size:12.5px;font-weight:750}.welfare-live .wl-details summary::-webkit-details-marker{display:none}.welfare-live .wl-details summary:after{content:'+';display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:var(--brand-soft,rgba(0,147,46,.1));color:var(--brand-ink,#05603a);font-size:18px;line-height:1}.welfare-live .wl-details[open] summary:after{content:'?'}.welfare-live .wl-detail-body{padding:0 17px 17px;border-top:1px solid var(--line,#d8dee7)}
     .welfare-live h3{font-size:13px;margin:18px 0 8px;color:var(--ink,#172b3a)}.welfare-live a{color:var(--brand-ink,#05603a);font-weight:750;text-decoration:none}.welfare-live a:hover{text-decoration:underline}.welfare-live .wl-stale{color:var(--bad,#a3390b)}
@@ -23,6 +23,7 @@
   `;
   document.head.appendChild(style);host.prepend(box);
   const node = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; };
+  const scheduleStamp = (value) => { const raw=String(value||''); const d=new Date(/[zZ]|[+-]\d\d:\d\d$/.test(raw)?raw:raw.replace(' ','T')+'+03:00'); return isNaN(d)?raw:d.toLocaleString('en-KE',{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit',timeZone:'Africa/Nairobi'})+' EAT'; };
   let timer, running = false, previous = '', lastSuccess = 0;
   const stale = node('p', '', 'wl-stale'); stale.setAttribute('role', 'status');
   const content = node('div'); box.append(content, stale);
@@ -52,44 +53,47 @@
           const heading = node('div');
           heading.append(node('div', 'STAFF WELFARE ELECTION', 'wl-eyebrow'));
           heading.append(node('h2', entry.election.title));
-          heading.append(node('p', entry.final ? 'The returning officer has published the final result.' : 'Provisional totals refresh automatically while the election is in progress.', 'wl-caption'));
-          header.append(heading, node('span', entry.final ? 'Final result' : 'Live updates', 'wl-state' + (entry.final ? ' final' : '')));
+          heading.append(node('p', entry.upcoming ? 'Scheduled dry run. Review the posts and timeline before nominations open.' : (entry.final ? 'The returning officer has published the final result.' : 'Provisional totals refresh automatically while the election is in progress.'), 'wl-caption'));
+          header.append(heading, node('span', entry.upcoming ? (entry.armed ? 'Upcoming' : 'Setup preview') : (entry.final ? 'Final result' : 'Live updates'), 'wl-state' + (entry.final ? ' final' : (entry.upcoming ? ' upcoming' : ''))));
           article.append(header);
           const facts = node('div', null, 'wl-facts');
-          const participation = node('div', null, 'wl-stat');
-          participation.append(node('strong', String(entry.roll.voted).padStart(2, '0') + ' / ' + entry.roll.onRoll), node('span', 'Staff ballots cast'));
-          const turnout = node('div', null, 'wl-stat');
-          turnout.append(node('strong', entry.roll.turnout + '%'), node('span', 'Voter turnout'));
-          const phase = node('div', null, 'wl-stat');
-          phase.append(node('strong', entry.election.status.replace(/_/g, ' ')), node('span', 'Election phase'));
-          facts.append(participation, turnout, phase);
+          const factData = entry.upcoming
+            ? [[scheduleStamp(entry.election.nominationsOpenAt), 'Nominations open'], [scheduleStamp(entry.election.opensAt), 'Voting opens'], [scheduleStamp(entry.election.closesAt), 'Voting closes']]
+            : [[String(entry.roll.voted).padStart(2, '0') + ' / ' + entry.roll.onRoll, 'Staff ballots cast'], [entry.roll.turnout + '%', 'Voter turnout'], [entry.election.status.replace(/_/g, ' '), 'Election phase']];
+          factData.forEach(([value,label],index) => { const stat=node('div',null,'wl-stat'); stat.append(node('strong',value),node('span',label)); if(entry.upcoming&&index===2)stat.classList.add('wl-stat-red'); facts.append(stat); });
           article.append(facts);
+          if (entry.upcoming && !entry.armed) article.append(node('p', 'Preview only: the returning officer still needs to arm the automatic schedule.', 'wl-stale'));
           if (entry.attention) article.append(node('p', entry.attention, 'wl-stale'));
           const details = node('details', null, 'wl-details'); details.dataset.election = String(entry.election.id); details.open = full || expanded.has(String(entry.election.id));
           const summary = node('summary');
-          summary.append(node('span', 'Candidate standings and election updates'), node('span', (entry.positions || []).length + ' positions', 'wl-meta'));
+          summary.append(node('span', entry.upcoming ? 'Contested posts and schedule' : 'Candidate standings and election updates'), node('span', (entry.positions || []).length + ' positions', 'wl-meta'));
           details.append(summary);
           const detailBody = node('div', null, 'wl-detail-body');
           (entry.positions || []).forEach((p) => {
             detailBody.append(node('h3', p.title));
-            (p.candidates || []).filter(c => c.status === 'approved').forEach((c) => {
-              const row = node('div', null, 'wl-row');
-              const bar = node('progress'); bar.max = Math.max(1, p.ballotsCast); bar.value = c.votes;
-              bar.setAttribute('aria-label', c.name + ': ' + c.votes + ' votes');
-              row.append(node('span', c.name), bar, node('strong', String(c.votes)));
-              detailBody.append(row);
-            });
-            detailBody.append(node('p', p.ballotsCast + ' ballots ? ' + p.abstentions + ' abstentions', 'wl-meta'));
+            if (entry.upcoming) {
+              detailBody.append(node('p', (p.seats || 1) + ((p.seats || 1) === 1 ? ' seat' : ' seats') + ' - nominations open ' + scheduleStamp(entry.election.nominationsOpenAt), 'wl-meta'));
+            } else {
+              (p.candidates || []).filter(c => c.status === 'approved').forEach((c) => {
+                const row = node('div', null, 'wl-row');
+                const bar = node('progress'); bar.max = Math.max(1, p.ballotsCast); bar.value = c.votes;
+                bar.setAttribute('aria-label', c.name + ': ' + c.votes + ' votes');
+                row.append(node('span', c.name), bar, node('strong', String(c.votes)));
+                detailBody.append(row);
+              });
+              detailBody.append(node('p', p.ballotsCast + ' ballots | ' + p.abstentions + ' abstentions', 'wl-meta'));
+            }
           });
-          const feed = node('ul');
-          (entry.events || []).forEach(e => feed.append(node('li', e.message)));
-          if (entry.events && entry.events.length) detailBody.append(node('h3', 'Election updates'), feed);
+          if (!entry.upcoming && entry.events && entry.events.length) {
+            detailBody.append(node('h3', 'Election updates'));
+            const feed = node('ul'); entry.events.forEach(e => feed.append(node('li', e.message))); detailBody.append(feed);
+          }
           details.append(detailBody); article.append(details);
-          const vote = node('a', 'Open welfare elections'); vote.className = 'wl-open'; vote.href = 'elections?for=staff#' + encodeURIComponent(entry.election.slug);
+          const vote = node('a', entry.upcoming ? 'Review election schedule' : 'Open welfare elections'); vote.className = 'wl-open'; vote.href = 'elections?for=staff#' + encodeURIComponent(entry.election.slug);
           // Observers see totals; eligibility is always decided by the server.
           const info = node('div', null, 'wl-actions');
-          if (entry.canParticipate) info.append(vote);
-          info.append(node('p', entry.canParticipate ? 'Your access to voting is checked securely by the portal.' : 'Live totals are visible here. Ballots are available only to eligible staff.'));
+          if (entry.upcoming || entry.canParticipate) info.append(vote);
+          info.append(node('p', entry.upcoming ? 'Nominations and voting remain closed until their scheduled times.' : (entry.canParticipate ? 'Your access to voting is checked securely by the portal.' : 'Live totals are visible here. Ballots are available only to eligible staff.')));
           article.append(info);
           content.append(article);
         });

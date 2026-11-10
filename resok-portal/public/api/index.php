@@ -3084,16 +3084,24 @@ Respiratory Society of Kenya");
         $user = auth($config);
         requireModule('electionFind', 'lib/elections.php');
         $election = electionFind($pdo, $m[1]);
+        $settings = $election && function_exists('welfareSettings')
+            ? welfareSettings($pdo, (int)$election['id']) : null;
         $upcoming = $election && $election['status'] === 'draft'
-            && $election['electorate'] === 'staff'
-            && function_exists('welfareReady') && welfareReady($pdo)
-            && !empty(welfareSettings($pdo, (int)$election['id'])['armed_at']);
+            && $election['electorate'] === 'staff' && is_array($settings)
+            && !empty($election['opensAt']) && strtotime((string)$election['closesAt']) > time();
         if (!$election || ($election['status'] === 'draft' && !$upcoming)
             || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
-        if ($upcoming) $election['upcoming'] = true;
+        if ($upcoming) { $election['upcoming'] = true; $election['armed'] = !empty($settings['armed_at']); }
+        $positions = electionPositions($pdo, (int)$election['id']);
+        if ($upcoming) {
+            $positions = array_map(static function (array $position): array {
+                unset($position['candidates']);
+                return $position;
+            }, $positions);
+        }
         respond(200, electionForVoters($election, [
             'election'  => $election,
-            'positions' => electionPositions($pdo, (int)$election['id']),
+            'positions' => $positions,
             'voter'     => electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']),
             'results'   => $election['status'] === 'published'
                 ? electionResults($pdo, (int)$election['id']) : null,

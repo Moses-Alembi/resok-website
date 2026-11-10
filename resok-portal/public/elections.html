@@ -469,7 +469,7 @@
 
     /** The single word that describes where an election has got to. */
     function statusPill(election) {
-      if (election.upcoming) return ['soon', 'Upcoming'];
+      if (election.upcoming) return ['soon', election.armed === false ? 'Setup preview' : 'Upcoming'];
       if (election.status === 'published') return ['done', 'Result declared'];
       if (election.status === 'closed') return ['closed', 'Voting closed'];
       if (election.votingOpen) return ['open', 'Voting open'];
@@ -640,7 +640,9 @@
       const voter = current.voter;
 
       if (e.upcoming) {
-        notice('eNotice', 'This election is scheduled. Review the positions and timetable now. Nominations and voting will become available only during their scheduled windows.', 'info');
+        notice('eNotice', e.armed === false
+          ? 'Preview only: the returning officer still needs to arm the automatic schedule. Nominations and voting remain closed until setup is complete and their scheduled times arrive.'
+          : 'This election is scheduled. Review the positions and timetable now. Nominations and voting will become available only during their scheduled windows.', e.armed === false ? 'warn' : 'info');
         const upcomingNote = el('eNotice').querySelector('.note');
         if (upcomingNote) upcomingNote.classList.add('upcoming-note');
       } else if (!voter) {

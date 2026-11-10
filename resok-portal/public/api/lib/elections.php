@@ -122,7 +122,8 @@ function electionsList(PDO $pdo, bool $includeDrafts = false, ?string $electorat
         if ($electorate === 'staff' && function_exists('welfareReady') && welfareReady($pdo)) {
             $where[] = "($visibleStatuses OR (status = 'draft' AND EXISTS (
                            SELECT 1 FROM welfare_settings ws
-                           WHERE ws.election_id = elections.id AND ws.armed_at IS NOT NULL
+                           WHERE ws.election_id = elections.id AND elections.opens_at IS NOT NULL
+                             AND elections.closes_at > NOW()
                        )))";
         } else {
             $where[] = $visibleStatuses;
@@ -132,9 +133,13 @@ function electionsList(PDO $pdo, bool $includeDrafts = false, ?string $electorat
     $sql .= ' ORDER BY opens_at DESC';
     $stmt = $pdo->query($sql);
     if (!$stmt) return [];
-    return array_map(static function (array $row): array {
+    return array_map(static function (array $row) use ($pdo): array {
         $election = electionShape($row);
         $election['upcoming'] = $election['status'] === 'draft';
+        if ($election['upcoming'] && function_exists('welfareSettings')) {
+            $settings = welfareSettings($pdo, (int)$election['id']);
+            $election['armed'] = is_array($settings) && !empty($settings['armed_at']);
+        }
         return $election;
     }, $stmt->fetchAll());
 }

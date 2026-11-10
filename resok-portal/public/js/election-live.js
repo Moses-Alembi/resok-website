@@ -15,6 +15,17 @@
     return result;
   };
   const amount = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+  const localElectionDate = (value) => new Date(/[zZ]|[+-]\d\d:\d\d$/.test(String(value || ''))
+    ? String(value) : String(value || '').replace(' ', 'T') + '+03:00');
+  const scheduleDate = (value) => localElectionDate(value).toLocaleDateString('en-KE', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Nairobi'
+  });
+  const scheduleTime = (value) => localElectionDate(value).toLocaleTimeString('en-KE', {
+    hour: 'numeric', minute: '2-digit', timeZone: 'Africa/Nairobi'
+  });
+  const scheduleStamp = (value) => localElectionDate(value).toLocaleDateString('en-KE', {
+    weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Africa/Nairobi'
+  }) + ' - ' + scheduleTime(value) + ' EAT';
 
   function updateVoteLink() { byId('welfareVoteNav').hidden = !isStaff && !canParticipate; }
   function applyAccount(home, person) {
@@ -75,35 +86,79 @@
     panel.append(mark, node('h2', title), node('p', message));
     return panel;
   }
+  function countdown(election) {
+    const wrap = node('section', null, 'live-countdown');
+    const copy = node('div', null, 'live-countdown-copy');
+    copy.append(node('span', 'NEXT ELECTION MILESTONE', 'live-countdown-kicker'), node('strong', '', 'live-countdown-label'));
+    const clock = node('div', null, 'live-countdown-clock');
+    clock.dataset.nominationOpen = String(localElectionDate(election.nominationsOpenAt).getTime());
+    clock.dataset.nominationClose = String(localElectionDate(election.nominationsCloseAt).getTime());
+    clock.dataset.votingOpen = String(localElectionDate(election.opensAt).getTime());
+    clock.dataset.votingClose = String(localElectionDate(election.closesAt).getTime());
+    [['days', 'DAYS'], ['hours', 'HRS'], ['minutes', 'MIN'], ['seconds', 'SEC']].forEach(([unit, label]) => {
+      const part = node('div', null, 'live-countdown-part'); part.dataset.unit = unit;
+      part.append(node('strong', '00'), node('span', label)); clock.appendChild(part);
+    });
+    wrap.append(copy, clock); return wrap;
+  }
+  function updateCountdowns() {
+    document.querySelectorAll('.live-countdown-clock').forEach((clock) => {
+      const now = Date.now();
+      const stages = [['nominationOpen', 'Nominations open in'], ['nominationClose', 'Nominations close in'],
+        ['votingOpen', 'Voting opens in'], ['votingClose', 'Voting closes in']];
+      const next = stages.find(([key]) => now < Number(clock.dataset[key] || 0));
+      const target = next ? Number(clock.dataset[next[0]]) : 0;
+      const label = clock.parentElement.querySelector('.live-countdown-label');
+      if (label) label.textContent = next ? next[1] : 'Election schedule complete';
+      const left = target ? Math.max(0, Math.floor((target - now) / 1000)) : 0;
+      const values = { days: String(Math.floor(left / 86400)).padStart(2, '0'),
+        hours: String(Math.floor((left % 86400) / 3600)).padStart(2, '0'),
+        minutes: String(Math.floor((left % 3600) / 60)).padStart(2, '0'), seconds: String(left % 60).padStart(2, '0') };
+      clock.querySelectorAll('[data-unit]').forEach((part) => { part.querySelector('strong').textContent = values[part.dataset.unit]; });
+    });
+  }
+  window.setInterval(updateCountdowns, 1000);
+
   function render(elections) {
     const expanded = new Map(Array.from(feed.querySelectorAll('details[data-live-election]')).map((details) => [details.dataset.liveElection, details.open]));
     const focusKey = feed.contains(document.activeElement) ? document.activeElement?.dataset.liveFocusKey : null;
     const panels = [];
-    if (!elections.length) panels.push(emptyPanel('No welfare election has been scheduled yet.', 'Scheduled welfare elections and live candidate totals will appear here.', 'fa-check-to-slot'));
+    if (!elections.length) panels.push(emptyPanel('No welfare election schedule is ready to preview.', 'A returning officer must create the election and configure its automatic schedule before staff can preview the dates.', 'fa-check-to-slot'));
     elections.forEach((entry) => {
       const electionKey = String(entry.election.id);
-      const panel = node('article', null, 'panel live-election');
+      const panel = node('article', null, 'panel live-election' + (entry.upcoming ? ' is-upcoming' : ''));
       const header = node('div', null, 'live-election-header');
       const heading = node('div');
-      heading.append(node('h2', entry.election.title), node('p', entry.final ? 'Final results have been declared.' : 'Provisional candidate totals. Results can change until the count is declared.'));
-      const phaseClass = entry.final ? 'p-info' : (['open', 'nominations'].includes(entry.election.status) ? 'p-ok' : 'p-muted');
-      header.append(heading, node('span', entry.final ? 'Results declared' : String(entry.election.status).replace(/_/g, ' '), 'pill ' + phaseClass));
+      heading.append(node('h2', entry.election.title), node('p', entry.upcoming
+        ? 'The dry run is scheduled. Review the posts and timeline; nominations and voting will unlock at their scheduled times.'
+        : (entry.final ? 'Final results have been declared.' : 'Provisional candidate totals. Results can change until the count is declared.')));
+      const phaseClass = entry.upcoming ? 'p-warn' : (entry.final ? 'p-info' : (['open', 'nominations'].includes(entry.election.status) ? 'p-ok' : 'p-muted'));
+      header.append(heading, node('span', entry.upcoming ? (entry.armed ? 'Upcoming' : 'Setup preview') : (entry.final ? 'Results declared' : String(entry.election.status).replace(/_/g, ' ')), 'pill ' + phaseClass));
       panel.appendChild(header);
       const stats = node('div', null, 'live-stats');
-      [[amount(entry.roll.voted) + ' / ' + amount(entry.roll.onRoll), 'Ballots recorded'], [amount(entry.roll.turnout) + '%', 'Voter turnout'], [amount(entry.roll.onRoll), 'Registered voters']].forEach(([value, label]) => {
+      const statData = entry.upcoming
+        ? [[scheduleStamp(entry.election.nominationsOpenAt), 'Nominations open'], [scheduleStamp(entry.election.opensAt), 'Voting opens'], [scheduleStamp(entry.election.closesAt), 'Voting closes']]
+        : [[amount(entry.roll.voted) + ' / ' + amount(entry.roll.onRoll), 'Ballots recorded'], [amount(entry.roll.turnout) + '%', 'Voter turnout'], [amount(entry.roll.onRoll), 'Registered voters']];
+      statData.forEach(([value, label]) => {
         const stat = node('div', null, 'live-stat'); stat.append(node('strong', value), node('span', label)); stats.appendChild(stat);
       });
       panel.appendChild(stats);
+      if (entry.upcoming) {
+        panel.appendChild(countdown(entry.election));
+        if (!entry.armed) panel.appendChild(node('p', 'Preview only: the returning officer still needs to arm the automatic schedule. Nominations and voting remain closed until setup is complete and the scheduled times arrive.', 'note warn'));
+      }
       if (entry.attention) panel.appendChild(node('p', entry.attention, 'note warn'));
       const positions = node('div', null, 'live-positions');
       (entry.positions || []).forEach((position) => {
         const box = node('section', null, 'live-position');
         const head = node('div', null, 'live-position-head');
-        head.append(node('h3', position.title), node('small', amount(position.ballotsCast) + ' ballots · ' + amount(position.abstentions) + ' abstentions'));
+        head.append(node('h3', position.title), node('small', entry.upcoming
+          ? (amount(position.seats) || 1) + ((amount(position.seats) || 1) === 1 ? ' seat' : ' seats')
+          : amount(position.ballotsCast) + ' ballots | ' + amount(position.abstentions) + ' abstentions'));
         box.appendChild(head);
         const candidates = node('div', null, 'live-candidates');
         const approved = (position.candidates || []).filter((candidate) => candidate.status === 'approved');
-        approved.forEach((candidate) => {
+        if (!entry.upcoming) approved.forEach((candidate) => {
           const row = node('div', null, 'live-candidate');
           const name = node('div', null, 'live-candidate-name'); name.appendChild(node('strong', candidate.name));
           if (!entry.final && candidate.jobTitle) name.appendChild(node('small', candidate.jobTitle));
@@ -112,7 +167,8 @@
           const total = node('div', null, 'live-vote-count'); total.append(node('strong', amount(candidate.votes)), node('small', amount(candidate.votes) === 1 ? 'vote' : 'votes'));
           row.append(name, bar, total); candidates.appendChild(row);
         });
-        if (!approved.length) candidates.appendChild(node('p', 'No confirmed candidates for this position yet.', 'live-no-candidates'));
+        if (entry.upcoming) candidates.appendChild(node('p', entry.armed ? 'Nominations have not opened. Candidate information will appear here after the nomination stage.' : 'Nominations are closed in this preview. The schedule must be armed before the dry run can begin.', 'live-no-candidates'));
+        else if (!approved.length) candidates.appendChild(node('p', 'No confirmed candidates for this position yet.', 'live-no-candidates'));
         box.appendChild(candidates); positions.appendChild(box);
       });
       if (!(entry.positions || []).length) positions.appendChild(node('p', 'Candidate totals will appear once the election positions are ready.', 'live-no-candidates'));
@@ -125,13 +181,14 @@
         details.append(summary, events); panel.appendChild(details);
       }
       const actions = node('div', null, 'live-election-actions');
-      if (entry.canParticipate === true) {
-        const vote = node('a', 'Open welfare elections', 'btn primary');
+      if (entry.upcoming || entry.canParticipate === true) {
+        const vote = node('a', entry.upcoming ? 'Review election schedule' : 'Open welfare elections', 'btn primary');
         vote.setAttribute('href', 'elections?for=staff#' + encodeURIComponent(entry.election.slug)); vote.dataset.liveFocusKey = electionKey + '-vote'; actions.appendChild(vote);
       } else { actions.appendChild(node('p', 'Viewing live totals. Voting is available to people on this election’s roll.')); }
       panel.appendChild(actions); panels.push(panel);
     });
     feed.replaceChildren(...panels);
+    updateCountdowns();
     if (focusKey) {
       const replacement = Array.from(feed.querySelectorAll('[data-live-focus-key]')).find((element) => element.dataset.liveFocusKey === focusKey);
       if (replacement) replacement.focus({ preventScroll: true });

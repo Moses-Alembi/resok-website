@@ -33,16 +33,27 @@ function welfareLive(PDO $pdo, ?int $viewerId = null): array
     if ($own) $pdo->beginTransaction();
     try {
     $ids = $pdo->query("SELECT e.id FROM elections e JOIN welfare_settings w ON w.election_id=e.id
-                        WHERE w.armed_at IS NOT NULL AND e.status NOT IN ('draft','cancelled') ORDER BY e.opens_at DESC LIMIT 4")->fetchAll(PDO::FETCH_COLUMN);
+                        WHERE e.electorate='staff' AND e.status <> 'cancelled'
+                          AND (e.status <> 'draft' OR (e.opens_at IS NOT NULL AND e.closes_at > NOW()))
+                        ORDER BY e.opens_at DESC LIMIT 4")->fetchAll(PDO::FETCH_COLUMN);
     $out = [];
     foreach ($ids as $id) {
         $e = electionFind($pdo, (string)$id);
-        [$count, $error] = electionTally($pdo, (int)$id, true);
-        if ($error) continue;
         $s = welfareSettings($pdo, (int)$id);
+        if ($e['status'] === 'draft') {
+            // A configured future election is a timetable preview only. Return post labels,
+            // never candidates or individual roll details, and expose no ballot totals.
+            $positions = array_map(static fn($p) => array_intersect_key($p, array_flip(['positionId','title','description','seats'])),
+                                   electionPositions($pdo, (int)$id));
+            $count = ['positions' => $positions, 'roll' => electionRollSummary($pdo, (int)$id)];
+            $error = null;
+        } else {
+            [$count, $error] = electionTally($pdo, (int)$id, true);
+        }
+        if ($error) continue;
         $events = $pdo->prepare('SELECT message, created_at AS createdAt FROM welfare_events WHERE election_id=? ORDER BY id DESC LIMIT 8');
         $events->execute([$id]);
-        $out[] = ['election' => $e, 'canParticipate' => $viewerId !== null && electionRollEntry($pdo,(int)$id,$viewerId) !== null, 'roll' => $count['roll'], 'positions' => $count['positions'],
+        $out[] = ['election' => $e, 'upcoming' => $e['status'] === 'draft', 'armed' => !empty($s['armed_at']), 'canParticipate' => $viewerId !== null && electionRollEntry($pdo,(int)$id,$viewerId) !== null, 'roll' => $count['roll'], 'positions' => $count['positions'],
                   'final' => $e['status'] === 'published', 'results' => $e['status'] === 'published' ? electionResults($pdo, (int)$id) : null,
                   'attention' => $s['last_error'], 'events' => $events->fetchAll()];
     }
@@ -219,7 +230,12 @@ function welfareHandle(PDO $pdo, array $config, string $route, string $method): 
     if ($route==='welfare/live' && $method==='GET') {
         if (!headers_sent()) header('Cache-Control: no-store');
         welfareRunScheduled($pdo);
-        respond(200,welfareLive($pdo,(int)$user['userId']));
+        $feed=welfareLive($pdo,(int)$user['userId']);
+        // Only active staff and super administrators can see a welfare election before it opens.
+        if (!function_exists('electionStaffMayView') || !electionStaffMayView($pdo,$config,$user)) {
+            $feed['elections']=array_values(array_filter($feed['elections'],static fn($entry)=>empty($entry['upcoming'])));
+        }
+        respond(200,$feed);
     }
     requireSuperAdmin($user,$config);
     if (!welfareReady($pdo)) respond(503,['error'=>'Apply migration-2026-11-03-welfare-automation.sql first.']);

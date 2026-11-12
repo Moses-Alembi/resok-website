@@ -36,6 +36,13 @@ function welfareLive(PDO $pdo, ?int $viewerId = null): array
                         WHERE e.electorate='staff' AND e.status <> 'cancelled'
                           AND (e.status <> 'draft' OR (e.opens_at IS NOT NULL AND e.closes_at > NOW()))
                         ORDER BY e.opens_at DESC LIMIT 4")->fetchAll(PDO::FETCH_COLUMN);
+    $activeStaffCount = null;
+    try {
+        $activeStaffCount = (int)$pdo->query('SELECT COUNT(*) FROM staff_accounts WHERE active=1')->fetchColumn();
+    } catch (Throwable $e) {
+        try { $activeStaffCount = (int)$pdo->query('SELECT COUNT(*) FROM staff_accounts')->fetchColumn(); }
+        catch (Throwable $ignored) { /* staff portal roster is not installed */ }
+    }
     $out = [];
     foreach ($ids as $id) {
         $e = electionFind($pdo, (string)$id);
@@ -53,7 +60,7 @@ function welfareLive(PDO $pdo, ?int $viewerId = null): array
         if ($error) continue;
         $events = $pdo->prepare('SELECT message, created_at AS createdAt FROM welfare_events WHERE election_id=? ORDER BY id DESC LIMIT 8');
         $events->execute([$id]);
-        $out[] = ['election' => $e, 'upcoming' => $e['status'] === 'draft', 'armed' => !empty($s['armed_at']), 'canParticipate' => $viewerId !== null && electionRollEntry($pdo,(int)$id,$viewerId) !== null, 'roll' => $count['roll'], 'positions' => $count['positions'],
+        $out[] = ['election' => $e, 'upcoming' => $e['status'] === 'draft', 'armed' => !empty($s['armed_at']), 'canParticipate' => $viewerId !== null && electionRollEntry($pdo,(int)$id,$viewerId) !== null, 'activeStaffCount' => $activeStaffCount, 'roll' => $count['roll'], 'positions' => $count['positions'],
                   'final' => $e['status'] === 'published', 'results' => $e['status'] === 'published' ? electionResults($pdo, (int)$id) : null,
                   'attention' => $s['last_error'], 'events' => $events->fetchAll()];
     }

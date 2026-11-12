@@ -138,6 +138,41 @@ function staffAdd(PDO $pdo, string $text, int $adminId): array
     return $result;
 }
 
+/** Current active staff headcount; unlike an election roll, this changes with staff access. */
+function staffActiveCount(PDO $pdo): int
+{
+    if (!staffEnsureTables($pdo)) return 0;
+    try {
+        return (int)$pdo->query('SELECT COUNT(*) FROM staff_accounts WHERE active = 1')->fetchColumn();
+    } catch (Throwable $e) {
+        // Older installations have not added the active flag yet; those rows are active.
+        return (int)$pdo->query('SELECT COUNT(*) FROM staff_accounts')->fetchColumn();
+    }
+}
+
+/** An armed welfare election fixes the electorate; never let staff changes silently skew it. */
+function staffWelfareRosterLock(PDO $pdo): ?array
+{
+    try {
+        $row = $pdo->query("SELECT e.title,e.status FROM elections e
+            JOIN welfare_settings w ON w.election_id=e.id
+            WHERE w.armed_at IS NOT NULL AND e.status NOT IN ('cancelled','published')
+            ORDER BY e.id DESC LIMIT 1")->fetch();
+        return $row ?: null;
+    } catch (PDOException $e) {
+        if (in_array((string)$e->getCode(), ['42S02', '42S22'], true)) return null;
+        throw $e;
+    }
+}
+
+function staffWelfareRosterLockMessage(array $election): string
+{
+    if (in_array(($election['status'] ?? ''), ['draft', 'roll_published'], true)) {
+        return 'The staff roster is frozen for "' . $election['title'] . '". Disarm its schedule before changing staff access, then arm it again to rebuild the voter roll.';
+    }
+    return 'The staff roster is frozen for the active election "' . $election['title'] . '". Wait until it is declared or cancelled before changing staff access.';
+}
+
 /** Everyone on the staff list, with where their invite and account have got to. */
 function staffList(PDO $pdo): array
 {
@@ -155,6 +190,8 @@ function staffList(PDO $pdo): array
             'userId' => (int)$r['user_id'], 'name' => $r['full_name'], 'email' => $r['email'],
             'jobTitle' => $r['job_title'] ?? null,
             'role' => $r['role'], 'member' => $r['membership_status'] !== null,
+            'active' => !isset($r['active']) || (int)$r['active'] === 1,
+            'electionOnly' => !empty($r['election_only']),
             'state' => $state, 'addedAt' => $r['added_at'], 'invitedAt' => $r['invite_sent_at'],
             'inviteCount' => (int)$r['invite_count'], 'inviteError' => $r['invite_error'],
         ];
@@ -375,9 +412,10 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
     if (strpos($route, 'staff/admin/holders') === 0) requireSuperAdmin($user, $config);
 
     if ($route === 'staff/admin' && $method === 'GET') {
-        respond(200, ['staff' => staffList($pdo)]);
+        respond(200, ['staff' => staffList($pdo), 'activeStaffCount' => staffActiveCount($pdo)]);
     }
     if ($route === 'staff/admin/add' && $method === 'POST') {
+        if ($locked = staffWelfareRosterLock($pdo)) respond(409, ['error' => staffWelfareRosterLockMessage($locked)]);
         $text = (string)(input()['list'] ?? '');
         if (trim($text) === '' || mb_strlen($text) > 50000) respond(400, ['error' => 'Paste the list of names and email addresses.']);
         $result = staffAdd($pdo, $text, $userId);
@@ -403,9 +441,17 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
             if (!$sent) respond(400, ['error' => $error ?? 'Not sent.']);
             respond(200, ['staff' => staffList($pdo)]);
         }
+        requireSuperAdmin($user, $config);
+        if ($target === $userId) respond(400, ['error' => 'You cannot remove your own staff access from this screen.']);
         $person = $pdo->prepare('SELECT email,role FROM users WHERE id=?');
         $person->execute([$target]);
-        if (!$gate['super'] && isSuperAdmin($person->fetch() ?: [], $config)) respond(403, ['error'=>'Only a super administrator can remove a super administrator.']);
+        $targetAccount = $person->fetch() ?: [];
+        if (!$targetAccount) respond(404, ['error' => 'That portal account no longer exists.']);
+        if (!$gate['super'] && isSuperAdmin($targetAccount, $config)) respond(403, ['error'=>'Only a super administrator can remove a super administrator.']);
+        $staffEntry = $pdo->prepare('SELECT 1 FROM staff_accounts WHERE user_id=? AND active=1');
+        $staffEntry->execute([$target]);
+        if (!$staffEntry->fetchColumn()) respond(404, ['error' => 'That person is no longer on the active staff roster.']);
+        if ($locked = staffWelfareRosterLock($pdo)) respond(409, ['error' => staffWelfareRosterLockMessage($locked)]);
         // Off the staff list. The account itself stays (it may be a member's too); an
         // unused invite link is cancelled so it cannot be finished later.
         $pdo->prepare('DELETE FROM staff_accounts WHERE user_id = ?')->execute([$target]);

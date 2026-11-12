@@ -358,8 +358,9 @@
       </section>
 
       <section class="stack" data-panel="staff-accounts" hidden>
-        <div><h1>Staff accounts</h1><p class="lede">Add employees and manage their invitations to the staff portal.</p></div>
+        <div><h1>Staff accounts</h1><p class="lede">Add employees, manage their invitations and remove staff access when someone leaves.</p></div>
         <div id="staffAccountsFlash"></div>
+        <div class="panel" id="staffAccountsSummary" role="status"></div>
         <form class="panel" id="staffAccountsAdd">
           <label class="f" for="staffAccountsInput">Names and email addresses</label>
           <textarea id="staffAccountsInput" rows="4" placeholder="Employee Name &lt;employee@example.org&gt;" required></textarea>
@@ -389,7 +390,7 @@
   </div>
 
   <script src="js/staff-shell.js?v=20261103-staff1"></script>
-  <script src="js/portal-state.js?v=20261110-welfare5"></script>
+  <script src="js/portal-state.js?v=20261112-roster1"></script>
   <script>
   (() => {
     /*
@@ -1111,12 +1112,14 @@
       const box = el('staffAccountsList');
       try {
         const data = await api('staff/admin'); box.textContent = '';
+        el('staffAccountsSummary').textContent = (data.activeStaffCount || 0) + ' active staff accounts are on the current roster. '
+          + data.staff.length + ' staff records total. The election voter total is a separate frozen snapshot once a schedule is armed.';
         const table = make('table'); const head = make('tr');
         ['Employee', 'Email', 'Account', ''].forEach(label => head.appendChild(make('th', null, label))); table.appendChild(head);
         data.staff.forEach(person => {
           const row = make('tr'); const name = make('td'); const actions = make('td');
           name.append(make('strong', null, person.name || person.email), make('div', 'hint', person.jobTitle || ''));
-          if (person.state !== 'active') {
+          if (person.active && person.state !== 'active') {
             const invite = make('button', 'btn sm', person.state === 'invited' ? 'Resend invitation' : 'Send invitation'); invite.type = 'button';
             invite.addEventListener('click', async () => {
               invite.disabled = true;
@@ -1125,7 +1128,25 @@
               finally { invite.disabled = false; }
             }); actions.appendChild(invite);
           }
-          row.append(name, make('td', null, person.email), make('td', null, person.state), actions); table.appendChild(row);
+          const access = make('td', null, !person.active ? 'Staff access off' : person.state);
+          const isSelf = String(home.me?.email || '').toLowerCase() === String(person.email || '').toLowerCase();
+          if (isSelf) access.textContent += ' · You';
+          if (home.super === true && person.active && !isSelf) {
+            const remove = make('button', 'btn sm danger', 'Remove staff access'); remove.type = 'button';
+            remove.addEventListener('click', async () => {
+              const identity = person.name || person.email;
+              if (!window.confirm('Permanently remove ' + identity + ' from staff access? This revokes staff portal access. Their ReSoK login, membership and election audit history are retained.')) return;
+              remove.disabled = true;
+              try {
+                await post('staff/admin/' + person.userId + '/remove');
+                say('staffAccountsFlash', 'Staff access removed for ' + identity + '. Other ReSoK records were retained.', 'ok');
+                await renderStaffAccounts();
+              } catch (e) { say('staffAccountsFlash', e.message || 'Staff access could not be removed.', 'bad'); }
+              finally { remove.disabled = false; }
+            });
+            actions.appendChild(remove);
+          }
+          row.append(name, make('td', null, person.email), access, actions); table.appendChild(row);
         }); box.appendChild(table);
       } catch (e) { box.textContent = ''; box.appendChild(empty(e.message || 'Staff accounts could not load.')); }
     }

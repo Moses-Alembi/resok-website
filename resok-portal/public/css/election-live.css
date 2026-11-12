@@ -14,6 +14,7 @@
 #liveCheckedAt{font-size:11.5px;color:var(--muted);margin:5px 0 0}
 .live-toolbar .btn{flex:none}
 .election-live-page #liveFeedNotice{margin:0;line-height:1.75}
+.note.live-roster-note{border-color:var(--line);border-left:3px solid var(--brand-primary);background:var(--surface);color:var(--muted);font-size:11.5px;line-height:1.65}
 .live-feed{display:grid;gap:20px}
 .live-empty{text-align:center;padding:46px 24px!important}
 .live-empty-icon{display:grid;place-items:center;width:54px;height:54px;margin:0 auto 19px;border-radius:14px;color:var(--brand-ink);background:var(--brand-soft);font-size:22px}

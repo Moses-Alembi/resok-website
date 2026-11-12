@@ -665,6 +665,10 @@ function staffPortalHandle(PDO $pdo, array $config, string $route, string $metho
         if (!$before) respond(404, ['error' => 'No such member of staff.']);
         if (!empty($m[2])) {
             $active = !empty(input()['active']);
+            if ($active !== !empty($before['active']) && function_exists('staffWelfareRosterLock')
+                && ($locked = staffWelfareRosterLock($pdo))) {
+                respond(409, ['error' => staffWelfareRosterLockMessage($locked)]);
+            }
             $owner = $pdo->prepare('SELECT email,role FROM users WHERE id=?'); $owner->execute([$target]);
             if (!$gate['super'] && isSuperAdmin($owner->fetch() ?: [],$config)) respond(403,['error'=>'Only a super administrator can change a super administrator active status.']);
             if (!$active && $target === $me) respond(400, ['error' => 'You cannot deactivate your own account.']);

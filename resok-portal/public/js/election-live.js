@@ -138,11 +138,15 @@
       const stats = node('div', null, 'live-stats');
       const statData = entry.upcoming
         ? [[scheduleStamp(entry.election.nominationsOpenAt), 'Nominations open'], [scheduleStamp(entry.election.opensAt), 'Voting opens'], [scheduleStamp(entry.election.closesAt), 'Voting closes']]
-        : [[amount(entry.roll.voted) + ' / ' + amount(entry.roll.onRoll), 'Ballots recorded'], [amount(entry.roll.turnout) + '%', 'Voter turnout'], [amount(entry.roll.onRoll), 'Registered voters']];
+        : [[amount(entry.roll.voted) + ' / ' + amount(entry.roll.onRoll), 'Ballots / frozen roll'], [amount(entry.roll.turnout) + '%', 'Voter turnout'], [entry.activeStaffCount == null ? '—' : amount(entry.activeStaffCount), 'Active staff now']];
       statData.forEach(([value, label]) => {
         const stat = node('div', null, 'live-stat'); stat.append(node('strong', value), node('span', label)); stats.appendChild(stat);
       });
       panel.appendChild(stats);
+      if (!entry.upcoming && entry.activeStaffCount != null && Number(entry.activeStaffCount) !== Number(entry.roll.onRoll)) {
+        panel.appendChild(node('p', 'The voter roll was frozen at ' + amount(entry.roll.onRoll) + ' staff. The current active staff roster has '
+          + amount(entry.activeStaffCount) + '. The frozen total remains the turnout denominator for this election.', 'note live-roster-note'));
+      }
       if (entry.upcoming) {
         panel.appendChild(countdown(entry.election));
         if (!entry.armed) panel.appendChild(node('p', 'Preview only: the returning officer still needs to arm the automatic schedule. Nominations and voting remain closed until setup is complete and the scheduled times arrive.', 'note upcoming-setup-note'));

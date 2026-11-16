@@ -718,13 +718,12 @@
     function renderNominationList() {
       const mount = el('eNominations');
       mount.textContent = '';
+      if (STAFF) return;
       const list = nominations.nominations || [];
       if (!list.length) {
-        mount.appendChild(make('h2', null, 'Nominations received'));
-        mount.appendChild(make('div', 'empty', 'No nominations yet.'));
         return;
       }
-      mount.appendChild(make('h2', null, 'Nominations received'));
+      mount.appendChild(make('h2', null, 'Your nomination'));
 
       const byPosition = {};
       list.forEach((n) => { (byPosition[n.position] = byPosition[n.position] || []).push(n); });

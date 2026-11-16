@@ -3248,12 +3248,24 @@ Respiratory Society of Kenya");
         if (!$election || $election['status'] === 'draft' || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
 
         $entry = electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']);
+        // Voters must not see the developing nominations slate. In member elections, return
+        // only the signed-in nominee's own nomination so they can accept or decline it. Staff
+        // welfare nominations are final and need no member-facing nomination list.
+        $privateNominations = electionNominations($pdo, (int)$election['id'], (int)$user['userId']);
+        if (($election['electorate'] ?? 'members') === 'staff') {
+            $privateNominations = [];
+        } else {
+            $privateNominations = array_values(array_filter(
+                $privateNominations,
+                static fn(array $nomination): bool => !empty($nomination['mine'])
+            ));
+        }
         respond(200, electionForVoters($election, [
             'election'    => $election,
             'positions'   => electionPositions($pdo, (int)$election['id']),
             'canNominate' => $entry !== null && $election['nominationsOpen'],
             'members'     => $entry ? electionNominatableMembers($pdo, (int)$election['id']) : [],
-            'nominations' => electionNominations($pdo, (int)$election['id'], (int)$user['userId']),
+            'nominations' => $privateNominations,
         ]));
     }
 

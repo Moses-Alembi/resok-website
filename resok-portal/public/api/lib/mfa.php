@@ -211,3 +211,28 @@ function mfaRequiredForRole(string $role): bool
 {
     return in_array($role, ['admin', 'content_manager', 'analytics_manager', 'ict'], true);
 }
+
+/** Apply MFA enrollment to effective staff and clinical privileges, not just website roles. */
+function mfaRequiredForUser(PDO $pdo, int $userId, string $role): bool
+{
+    if (mfaRequiredForRole($role)) return true;
+    if ($userId <= 0) return false;
+    try {
+        if (function_exists('staffPortalEnsureTables') && !staffPortalEnsureTables($pdo)) {
+            throw new RuntimeException('Staff privilege tables are unavailable.');
+        }
+        $staff = $pdo->prepare("SELECT 1 FROM staff_accounts s JOIN staff_grants g ON g.user_id = s.user_id
+                                WHERE s.user_id = ? AND s.active = 1 LIMIT 1");
+        $staff->execute([$userId]);
+        if ($staff->fetchColumn()) return true;
+        if (function_exists('mdtEnsureTables') && !mdtEnsureTables($pdo)) {
+            throw new RuntimeException('Clinical privilege tables are unavailable.');
+        }
+        $clinical = $pdo->prepare('SELECT 1 FROM mdt_roles WHERE user_id = ? LIMIT 1');
+        $clinical->execute([$userId]);
+        return (bool)$clinical->fetchColumn();
+    } catch (Throwable $e) {
+        error_log('Could not determine effective privileges for MFA: ' . $e->getMessage());
+        throw new RuntimeException('Could not verify account privileges for MFA.', 0, $e);
+    }
+}

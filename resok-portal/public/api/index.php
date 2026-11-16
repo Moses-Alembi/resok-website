@@ -12,6 +12,7 @@ if (!file_exists($configPath)) {
 }
 
 $config = require $configPath;
+$GLOBALS['config'] = $config;
 
 /**
  * Modules are loaded defensively because this site is deployed by uploading files, and a
@@ -79,7 +80,10 @@ if (!function_exists('botScreen')) {
 }
 
 if (!function_exists('cryptoEncrypt')) {
-    function cryptoEncrypt(array $config, ?string $plain): ?string { return $plain; }
+    function cryptoEncrypt(array $config, ?string $plain): ?string {
+        if ($plain !== null && $plain !== '') throw new RuntimeException('Sensitive data cannot be saved because encryption is unavailable.');
+        return $plain;
+    }
     function cryptoDecrypt(array $config, ?string $stored): ?string { return $stored; }
     function cryptoAvailable(array $config): bool { return false; }
     // cryptoConfig is shimmed too. mapMember() calls it with no guard of its own, so
@@ -359,7 +363,17 @@ function token(array $payload, string $secret, ?int $expiresAt = null): string {
 function requestIsSecure(): bool
 {
     if (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') return true;
-    if (strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') return true;
+    if (strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'
+        && function_exists('ipInRange')) {
+        $remote = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+        $trusted = array_merge(
+            defined('CLOUDFLARE_RANGES') ? CLOUDFLARE_RANGES : [],
+            (array)(($GLOBALS['config'] ?? [])['trusted_proxy_ranges'] ?? [])
+        );
+        foreach ($trusted as $range) {
+            if (ipInRange($remote, (string)$range)) return true;
+        }
+    }
     if ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443) return true;
     return false;
 }
@@ -404,6 +418,10 @@ function mfaGrantSession(PDO $pdo, array $config, int $userId, array $extra = []
     $user = $stmt->fetch();
     if (!$user) respond(401, ['error' => 'That sign-in attempt is no longer valid.']);
     if (function_exists('geoGuardSignIn')) geoGuardSignIn($pdo, $config, (int)$user['id'], (string)$user['role']);
+    if (!function_exists('staffElectionOnly') && function_exists('staffIs') && staffIs($pdo, (int)$user['id'])) {
+        respond(503, ['error' => 'Staff account access settings are unavailable.']);
+    }
+    $electionOnly = function_exists('staffElectionOnly') && staffElectionOnly($pdo, (int)$user['id']);
     $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
     issueAuthCookie($loginToken);
     respond(200, $extra + [
@@ -413,6 +431,7 @@ function mfaGrantSession(PDO $pdo, array $config, int $userId, array $extra = []
             'isLearner' => $user['role'] === 'member' && $user['membership_status'] === null,
             'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
             'isWelfareVoter' => function_exists('welfareDuringWindow') && welfareDuringWindow($pdo, (int)$user['id']),
+            'electionOnly' => $electionOnly,
             'email' => $user['email'],
             'role' => $user['role'],
             'membershipStatus' => $user['membership_status'],
@@ -431,14 +450,23 @@ function completeLogin(PDO $pdo, array $config, array $user): void
     // database where the mfa_ columns were never added - if it names a column that does
     // not exist, the SELECT fails and nobody can log in at all, which is how this broke.
     $mfaEnabled = false;
-    if (mfaEnsureColumns($pdo)) {
-        try {
-            $mfaStmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
-            $mfaStmt->execute([(int)$user['id']]);
-            $mfaEnabled = (bool)(int)($mfaStmt->fetch()['mfa_enabled'] ?? 0);
-        } catch (Throwable $e) {
-            error_log('Could not read two-factor state: ' . $e->getMessage());
-        }
+    $mfaRequired = false;
+    if (!function_exists('mfaRequiredForUser') || !function_exists('mfaEnsureColumns')
+        || !function_exists('mfaIssueChallenge')) {
+        respond(503, ['error' => 'Two-factor security is unavailable. Sign-in is temporarily unavailable.']);
+    }
+    try {
+        $mfaRequired = !empty($config['require_staff_mfa'])
+            && mfaRequiredForUser($pdo, (int)$user['id'], (string)$user['role']);
+        if (!mfaEnsureColumns($pdo)) throw new RuntimeException('MFA columns are unavailable.');
+        $mfaStmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
+        $mfaStmt->execute([(int)$user['id']]);
+        $state = $mfaStmt->fetch();
+        if (!is_array($state)) throw new RuntimeException('MFA state is unavailable.');
+        $mfaEnabled = (bool)(int)$state['mfa_enabled'];
+    } catch (Throwable $e) {
+        error_log('Could not verify two-factor state: ' . $e->getMessage());
+        respond(503, ['error' => 'Two-factor status could not be verified. Sign-in is temporarily unavailable.']);
     }
     if ($mfaEnabled) {
         // Refuse rather than wave them through: this member enrolled precisely so that
@@ -456,6 +484,13 @@ function completeLogin(PDO $pdo, array $config, array $user): void
                                      : 'Enter the 6-digit code from your authenticator app.',
         ]);
     }
+    if ($mfaRequired && !$mfaEnabled) {
+        $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
+        issueAuthCookie($loginToken);
+        respond(200, ['token' => $loginToken, 'mfaSetupRequired' => true, 'user' => [
+            'id' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role'], 'isStaff' => true,
+        ]]);
+    }
     // A staff account that has not enrolled gets a session, but one that reaches only the
     // enrolment routes until two-factor is on (enforced in auth()). That keeps them able to
     // fix it themselves, without the password alone opening any member data.
@@ -471,6 +506,10 @@ function completeLogin(PDO $pdo, array $config, array $user): void
     }
     // Staff sign in from Kenya (and their counties) only, unless an exception is approved.
     if (function_exists('geoGuardSignIn')) geoGuardSignIn($pdo, $config, (int)$user['id'], (string)$user['role']);
+    if (!function_exists('staffElectionOnly') && function_exists('staffIs') && staffIs($pdo, (int)$user['id'])) {
+        respond(503, ['error' => 'Staff account access settings are unavailable.']);
+    }
+    $electionOnly = function_exists('staffElectionOnly') && staffElectionOnly($pdo, (int)$user['id']);
     $loginToken = token(['userId' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role']], $config['jwt_secret']);
     issueAuthCookie($loginToken);
     // A non-member who signed up to submit an abstract, and never joined the Academy,
@@ -498,6 +537,7 @@ function completeLogin(PDO $pdo, array $config, array $user): void
             // Staff without a membership go to the staff home page rather than the Academy.
             'isStaff' => function_exists('staffIs') && staffIs($pdo, (int)$user['id']),
             'isWelfareVoter' => function_exists('welfareDuringWindow') && welfareDuringWindow($pdo, (int)$user['id']),
+            'electionOnly' => $electionOnly,
             'email' => $user['email'],
             'role' => $user['role'],
             'membershipStatus' => $user['membership_status'],
@@ -601,15 +641,18 @@ function sessionRevokeToken(PDO $pdo, string $jti, int $expiresAt): bool
  */
 function sessionNeedsMfaSetup(PDO $pdo, array $config, int $userId, string $role): bool
 {
-    if (empty($config['require_staff_mfa']) || !mfaRequiredForRole($role)) return false;
-    if (!mfaEnsureColumns($pdo)) return false;
+    if (empty($config['require_staff_mfa'])) return false;
     try {
+        if (!mfaRequiredForUser($pdo, $userId, $role)) return false;
+        if (!mfaEnsureColumns($pdo)) throw new RuntimeException('MFA columns are unavailable.');
         $stmt = $pdo->prepare('SELECT mfa_enabled FROM users WHERE id = ? LIMIT 1');
         $stmt->execute([$userId]);
-        return (int)($stmt->fetch()['mfa_enabled'] ?? 0) !== 1;
+        $state = $stmt->fetch();
+        if (!is_array($state)) throw new RuntimeException('MFA state is unavailable.');
+        return (int)$state['mfa_enabled'] !== 1;
     } catch (Throwable $e) {
         error_log('Could not read two-factor state for the session check: ' . $e->getMessage());
-        return false;
+        throw new RuntimeException('Could not verify two-factor state.', 0, $e);
     }
 }
 
@@ -706,6 +749,30 @@ function localDevPayload(array $config): ?array {
     return $payload;
 }
 
+/** Only these authenticated API calls are available to a welfare-election-only account. */
+function electionOnlyRouteAllowed(PDO $pdo, string $route, string $method): bool
+{
+    if ($route === 'auth/access' && $method === 'GET') return true;
+    if (in_array($route, RESOK_MFA_SETUP_ROUTES, true)) {
+        return ($route === 'auth/logout' && $method === 'POST')
+            || ($route === 'auth/mfa/status' && $method === 'GET')
+            || (in_array($route, ['auth/mfa/setup', 'auth/mfa/enable'], true) && $method === 'POST');
+    }
+    if ($route === 'welfare/me' && $method === 'GET') return true;
+    if ($route === 'welfare/live' && $method === 'GET') return true;
+    if ($route === 'elections' && $method === 'GET') return (string)($_GET['electorate'] ?? '') === 'staff';
+
+    if (!preg_match('#^elections/([A-Za-z0-9-]+)(?:/(ballot|vote|nominations|nominate))?$#', $route, $m)) return false;
+    $allowedMethod = match ($m[2] ?? '') {
+        '', 'ballot', 'nominations' => 'GET',
+        'vote', 'nominate' => 'POST',
+        default => '',
+    };
+    if ($method !== $allowedMethod || !function_exists('electionFind')) return false;
+    $election = electionFind($pdo, $m[1]);
+    return $election !== null && ($election['electorate'] ?? 'members') === 'staff';
+}
+
 function auth(array $config): array {
     // Localhost: a real login still wins; otherwise act as the local admin instead of a 401.
     $localDev = localDevPayload($config);
@@ -766,6 +833,20 @@ function auth(array $config): array {
             'error' => 'Your account can reach member data, so two-factor authentication has to be set up before you continue.',
             'mfaSetupRequired' => true,
         ]);
+    }
+    try {
+        if (!function_exists('staffElectionOnly') && function_exists('staffIs') && staffIs(db($config), (int)$live['userId'])) {
+            throw new RuntimeException('Staff access scope helper is unavailable.');
+        }
+        $live['electionOnly'] = function_exists('staffElectionOnly')
+            ? staffElectionOnly(db($config), (int)$live['userId'])
+            : false;
+    } catch (Throwable $e) {
+        error_log('Could not verify staff election-only scope: ' . $e->getMessage());
+        respond(503, ['error' => 'Your account access scope could not be verified. Please try again.']);
+    }
+    if ($live['electionOnly'] && !electionOnlyRouteAllowed(db($config), (string)($GLOBALS['route'] ?? ''), $method)) {
+        respond(403, ['error' => 'This account is limited to staff welfare elections.']);
     }
     // Staff location rules on every request, so a session taken abroad stops working too.
     if (function_exists('geoGuardSession')) geoGuardSession(db($config), $config, $live);
@@ -2241,6 +2322,11 @@ Respiratory Society of Kenya");
     // secret, it is printed into Google's button on every page that shows it.
     if ($route === 'auth/providers' && $method === 'GET') {
         respond(200, ['google' => function_exists('googleSignInEnabled') && googleSignInEnabled($config) ? googleClientId($config) : null]);
+    }
+
+    if ($route === 'auth/access' && $method === 'GET') {
+        $user = auth($config);
+        respond(200, ['electionOnly' => !empty($user['electionOnly'])]);
     }
 
     // "Continue with Google" (lib/google-signin.php). An existing account is signed in -
@@ -4472,12 +4558,10 @@ Respiratory Society of Kenya");
         $pdo->beginTransaction();
         $pdo->prepare('INSERT INTO event_registrations (member_profile_id, event_id, event_title, cpd_points) VALUES (?, ?, ?, ?)')
             ->execute([(int)$member['id'], $event['id'], $event['title'], $event['cpdPoints']]);
-        $pdo->prepare('INSERT INTO cpd_activities (member_profile_id, description, points, occurred_on, added_by) VALUES (?, ?, ?, ?, NULL)')
-            ->execute([(int)$member['id'], 'Registered: ' . $event['title'], $event['cpdPoints'], $event['date']]);
-        $pdo->prepare('UPDATE member_profiles SET cpd_points = cpd_points + ? WHERE id = ?')->execute([$event['cpdPoints'], (int)$member['id']]);
         $pdo->commit();
 
-        respond(201, ['message' => 'Registered for ' . $event['title'], 'event' => array_merge($event, ['registered' => true])]);
+        respond(201, ['message' => 'Registration received. CPD credit is added after attendance is verified.',
+            'event' => array_merge($event, ['registered' => true])]);
     }
 
     if ($route === 'cpd/me' && $method === 'GET') {
@@ -4828,37 +4912,56 @@ Respiratory Society of Kenya");
     if (preg_match('#^payments/(\d+)/confirm$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
         requireAdmin($user);
-        $stmt = $pdo->prepare('SELECT * FROM payments WHERE id = ? LIMIT 1');
-        $stmt->execute([(int)$m[1]]);
-        $payment = $stmt->fetch();
-        if (!$payment) respond(404, ['error' => 'Payment not found']);
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('SELECT * FROM payments WHERE id = ? LIMIT 1 FOR UPDATE');
+            $stmt->execute([(int)$m[1]]);
+            $payment = $stmt->fetch();
+            if (!$payment) {
+                $pdo->rollBack();
+                respond(404, ['error' => 'Payment not found']);
+            }
+            // Confirmation is a one-time transition. Replays return the existing result and
+            // never grant another membership term.
+            if ($payment['status'] === 'paid') {
+                $pdo->commit();
+                respond(200, ['ok' => true, 'alreadyConfirmed' => true]);
+            }
+            if ($payment['status'] !== 'pending') {
+                $pdo->rollBack();
+                respond(409, ['error' => 'Only a pending payment can be confirmed.']);
+            }
+            $update = $pdo->prepare('UPDATE payments SET status = "paid" WHERE id = ? AND status = "pending"');
+            $update->execute([(int)$m[1]]);
+            if ($update->rowCount() !== 1) {
+                $pdo->rollBack();
+                respond(409, ['error' => 'This payment was already handled. Refresh the payment list.']);
+            }
+            if (!empty($payment['member_profile_id'])) {
+                $profileId = (int)$payment['member_profile_id'];
+                if (function_exists('membershipRecordPortalYears')) membershipRecordPortalYears($pdo, $profileId);
+                $stmt = $pdo->prepare('SELECT membership_status FROM member_profiles WHERE id = ? LIMIT 1');
+                $stmt->execute([$profileId]);
+                $before = (string)($stmt->fetch()['membership_status'] ?? '');
 
-        $pdo->prepare('UPDATE payments SET status = "paid" WHERE id = ?')->execute([(int)$m[1]]);
-        if (!empty($payment['member_profile_id'])) {
-            $profileId = (int)$payment['member_profile_id'];
-            if (function_exists('membershipRecordPortalYears')) membershipRecordPortalYears($pdo, $profileId);
-            $stmt = $pdo->prepare('SELECT membership_status FROM member_profiles WHERE id = ? LIMIT 1');
-            $stmt->execute([$profileId]);
-            $before = (string)($stmt->fetch()['membership_status'] ?? '');
-
-            if (in_array($before, ['payment_required', 'rejected'], true)) {
-                // A first subscription still goes to a human. The renewal date is set when
-                // they are approved, because that is when the membership actually begins.
-                $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review",
-                               review_reason = NULL, reviewed_at = NOW() WHERE id = ?')
-                    ->execute([$profileId]);
-            } else {
-                // A renewal. This used to leave the record untouched, so a member paid and
-                // nothing moved - not the status, and not the date they were paying to
-                // extend. Renewals do not need re-approving: the membership was approved
-                // once, and paying is what continues it.
-                requireModule('membershipExtend', 'lib/membership.php');
-                $newDue = membershipExtend($pdo, $profileId);
-                if ($newDue !== null) {
-                    logAdminAction($pdo, (int)$user['userId'], 'membership_renewed', $profileId,
-                                   'Renewed to ' . $newDue);
+                if (in_array($before, ['payment_required', 'rejected'], true)) {
+                    $pdo->prepare('UPDATE member_profiles SET membership_status = "under_review",
+                                   review_reason = NULL, reviewed_at = NOW() WHERE id = ?')
+                        ->execute([$profileId]);
+                } else {
+                    requireModule('membershipExtend', 'lib/membership.php');
+                    $newDue = membershipExtend($pdo, $profileId);
+                    if ($newDue !== null) {
+                        logAdminAction($pdo, (int)$user['userId'], 'membership_renewed', $profileId,
+                                       'Renewed to ' . $newDue);
+                    }
                 }
             }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('Payment confirmation failed: ' . $e->getMessage());
+            respond(500, ['error' => 'Payment confirmation could not be completed. Please retry.']);
         }
 
         $stmt = $pdo->prepare('SELECT * FROM payments WHERE id = ? LIMIT 1');

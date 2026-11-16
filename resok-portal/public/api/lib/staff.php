@@ -209,7 +209,7 @@ function staffSalutation(?string $name): string
 function staffSendInvite(PDO $pdo, array $config, int $userId, ?string &$error = null): bool
 {
     $error = null;
-    $stmt = $pdo->prepare('SELECT s.full_name, u.email, u.email_verified FROM staff_accounts s JOIN users u ON u.id = s.user_id WHERE s.user_id = ?');
+    $stmt = $pdo->prepare('SELECT s.full_name, s.election_only, u.email, u.email_verified FROM staff_accounts s JOIN users u ON u.id = s.user_id WHERE s.user_id = ?');
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     if (!$row) { $error = 'Not on the staff list.'; return false; }
@@ -223,8 +223,10 @@ function staffSendInvite(PDO $pdo, array $config, int $userId, ?string &$error =
     $email = (string)$row['email'];
     $salutation = staffSalutation($row['full_name']);
 
-    $intro = 'A ReSoK staff account has been set up for you on the Society portal. Use it to report ICT problems '
-        . 'and follow them up, and to see the equipment assigned to you.';
+    $intro = !empty($row['election_only'])
+        ? 'A ReSoK account has been set up for you to access staff welfare elections on the Society portal.'
+        : 'A ReSoK staff account has been set up for you on the Society portal. Use it to report ICT problems '
+            . 'and follow them up, and to see the equipment assigned to you.';
     $text = "{$salutation}\n\n{$intro}\n\nChoose your password here:\n{$link}\n\n"
         . 'Sign in with this email address (' . $email . '). The link is unique to you and expires in '
         . STAFF_INVITE_TTL_DAYS . " days. If it expires, use \"Forgot password\" on the login page.\n\n"
@@ -232,7 +234,7 @@ function staffSendInvite(PDO $pdo, array $config, int $userId, ?string &$error =
     $sent = false;
     try {
         $html = cardEmailHtml(
-            'Your staff account is ready',
+            !empty($row['election_only']) ? 'Your election account is ready' : 'Your staff account is ready',
             $salutation,
             cardEmailParagraph(htmlspecialchars($intro, ENT_QUOTES))
             . cardEmailParagraph('Choose your password to start. You will sign in with this email address.', true),
@@ -243,7 +245,8 @@ function staffSendInvite(PDO $pdo, array $config, int $userId, ?string &$error =
             . 'If you were not expecting this email, you can ignore it.'
         );
         // The archive gets a copy with the token blanked out: the link sets the password.
-        $sent = (new SimpleMailer($config))->withRedactedArchiveCopy($token)->send($email, 'Your ReSoK staff account is ready', $text, [], $html);
+        $subject = !empty($row['election_only']) ? 'Your ReSoK election account is ready' : 'Your ReSoK staff account is ready';
+        $sent = (new SimpleMailer($config))->withRedactedArchiveCopy($token)->send($email, $subject, $text, [], $html);
         if (!$sent) $error = 'The mail server did not accept the message.';
     } catch (Throwable $e) {
         $error = mb_substr($e->getMessage(), 0, 255);
@@ -252,6 +255,48 @@ function staffSendInvite(PDO $pdo, array $config, int $userId, ?string &$error =
     $pdo->prepare('UPDATE staff_accounts SET invite_sent_at = IF(?, NOW(), invite_sent_at), invite_count = invite_count + IF(?, 1, 0), invite_error = ? WHERE user_id = ?')
         ->execute([$sent ? 1 : 0, $sent ? 1 : 0, $sent ? null : $error, $userId]);
     return $sent;
+}
+
+/** Create or restrict an active staff login to welfare elections. */
+function staffElectionOnlyAdd(PDO $pdo, string $name, string $email, int $adminId): array
+{
+    if (!staffPortalEnsureTables($pdo)) throw new RuntimeException('Staff tables are unavailable.');
+    $name = trim((string)preg_replace('/\s+/u', ' ', $name));
+    $email = strtolower(trim($email));
+    if ($name === '' || mb_strlen($name) > 160) throw new InvalidArgumentException('Enter the full staff name.');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) throw new InvalidArgumentException('Enter a valid email address.');
+
+    $pdo->beginTransaction();
+    try {
+        $find = $pdo->prepare('SELECT id, email, role, email_verified FROM users WHERE LOWER(email) = ? LIMIT 1 FOR UPDATE');
+        $find->execute([$email]);
+        $existing = $find->fetch();
+        if ($existing && ($existing['role'] === 'admin' || isSuperAdmin($existing, $GLOBALS['config'] ?? []))) {
+            throw new InvalidArgumentException('A privileged administrator account cannot be changed to election-only.');
+        }
+        $userId = (int)($existing['id'] ?? 0);
+
+        if (!$userId) {
+            $pdo->prepare("INSERT INTO users (email, password_hash, email_verified, role) VALUES (?, ?, 0, 'member')")
+                ->execute([$email, password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT)]);
+            $userId = (int)$pdo->lastInsertId();
+        }
+        $pdo->prepare('INSERT INTO staff_accounts (user_id, full_name, added_by, active, election_only)
+                       VALUES (?, ?, ?, 1, 1)
+                       ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), active = 1,
+                                               deactivated_at = NULL, election_only = 1')
+            ->execute([$userId, $name, $adminId]);
+        // The request is specifically to limit this account. Remove any prior staff grants
+        // and invalidate existing sessions so stale privileges cannot survive the change.
+        $pdo->prepare('DELETE FROM staff_grants WHERE user_id = ?')->execute([$userId]);
+        if ($existing) sessionRevokeAll($pdo, $userId);
+        $pdo->commit();
+        return ['userId' => $userId, 'email' => $email, 'name' => $name,
+                'verified' => !empty($existing['email_verified']), 'inviteRequired' => empty($existing['email_verified'])];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
 }
 
 /**
@@ -423,6 +468,23 @@ function staffHandle(PDO $pdo, array $config, string $route, string $method): vo
         logAdminAction($pdo, $userId, 'staff_added', null,
             count($result['added']) . ' new, ' . count($result['marked']) . ' existing accounts marked as staff');
         respond(200, $result + ['staff' => staffList($pdo)]);
+    }
+    if ($route === 'staff/admin/election-only' && $method === 'POST') {
+        requireSuperAdmin($user, $config);
+        if ($locked = staffWelfareRosterLock($pdo)) respond(409, ['error' => staffWelfareRosterLockMessage($locked)]);
+        $data = input();
+        try {
+            $result = staffElectionOnlyAdd($pdo, (string)($data['name'] ?? ''), (string)($data['email'] ?? ''),
+                $userId);
+        } catch (InvalidArgumentException $e) {
+            respond(400, ['error' => $e->getMessage()]);
+        } catch (Throwable $e) {
+            error_log('Election-only staff account setup failed: ' . $e->getMessage());
+            respond(500, ['error' => 'The election account could not be prepared.']);
+        }
+        staffAudit($pdo, $userId, 'election_only_account_prepared', 'staff', (string)$result['userId'], $result['email']);
+        logAdminAction($pdo, $userId, 'election_only_account_prepared', null, $result['email']);
+        respond(201, $result + ['staff' => staffList($pdo)]);
     }
     if ($route === 'staff/admin/invite' && $method === 'POST') {
         if (function_exists('set_time_limit')) @set_time_limit(180);

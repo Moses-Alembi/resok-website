@@ -113,6 +113,18 @@ function payrollEnsureTables(PDO $pdo): bool
             PRIMARY KEY (id),
             KEY staff_payroll_runs_period (period)
         )" . $tail);
+        $pdo->exec("CREATE TABLE IF NOT EXISTS staff_payroll_run_contributors (
+            run_id INT UNSIGNED NOT NULL,
+            user_id INT UNSIGNED NOT NULL,
+            contributed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (run_id, user_id),
+            KEY staff_payroll_contributor_user (user_id)
+        )" . $tail);
+        // Recover contributors we can identify for runs that existed before this table.
+        $pdo->exec('INSERT IGNORE INTO staff_payroll_run_contributors (run_id, user_id)
+                    SELECT id, prepared_by FROM staff_payroll_runs');
+        $pdo->exec('INSERT IGNORE INTO staff_payroll_run_contributors (run_id, user_id)
+                    SELECT run_id, created_by FROM staff_pay_items WHERE run_id IS NOT NULL AND created_by IS NOT NULL');
         $pdo->exec("CREATE TABLE IF NOT EXISTS staff_payroll_lines (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
             run_id INT UNSIGNED NOT NULL,
@@ -254,6 +266,13 @@ function payrollRun(PDO $pdo, int $id): array
     return $run;
 }
 
+/** Permanently exclude anyone who has edited this run from approving it. */
+function payrollRecordContributor(PDO $pdo, int $runId, int $userId): void
+{
+    $pdo->prepare('INSERT IGNORE INTO staff_payroll_run_contributors (run_id, user_id) VALUES (?, ?)')
+        ->execute([$runId, $userId]);
+}
+
 function payrollRunShape(PDO $pdo, array $run): array
 {
     $t = $pdo->prepare('SELECT COUNT(*) AS people, COALESCE(SUM(gross),0) AS gross, COALESCE(SUM(net),0) AS net, COALESCE(SUM(paye),0) AS paye,
@@ -298,7 +317,8 @@ function payrollBuild(PDO $pdo, array $config, int $runId, array $rates): void
                            JOIN users u ON u.id = p.user_id LEFT JOIN staff_departments d ON d.id = s.department_id
                            WHERE p.on_payroll = 1")->fetchAll();
     $items = $pdo->prepare('SELECT kind, label, amount FROM staff_pay_items WHERE user_id = ? AND (run_id IS NULL OR run_id = ?) ORDER BY run_id IS NOT NULL, id');
-    $pdo->beginTransaction();
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) $pdo->beginTransaction();
     $pdo->prepare('DELETE FROM staff_payroll_lines WHERE run_id = ?')->execute([$runId]);
     $add = $pdo->prepare('INSERT INTO staff_payroll_lines (run_id, user_id, name, staff_number, job_title, department, basic, items, gross, taxable_pay,
                             nssf, shif, housing_levy, paye, pension, other_deductions, net, employer_nssf, employer_housing_levy,
@@ -314,7 +334,7 @@ function payrollBuild(PDO $pdo, array $config, int $runId, array $rates): void
             $c['pension'], $c['otherDeductions'], $c['net'], $c['employerNssf'], $c['employerHousingLevy'],
             $p['payment_method'], $p['bank_name'], $p['bank_branch'], $account, $p['kra_pin']]);
     }
-    $pdo->commit();
+    if ($ownsTransaction) $pdo->commit();
 }
 
 function payrollTodo(PDO $pdo, array $gate, int $me): int
@@ -479,6 +499,7 @@ function payrollHandle(PDO $pdo, array $config, string $route, string $method, a
         $settings = payrollSettings($pdo, $period . '-01');
         $pdo->prepare('INSERT INTO staff_payroll_runs (period, settings, prepared_by) VALUES (?, ?, ?)')->execute([$period, json_encode($settings['rates']), $me]);
         $id = (int)$pdo->lastInsertId();
+        payrollRecordContributor($pdo, $id, $me);
         payrollBuild($pdo, $config, $id, $settings['rates']);
         staffAudit($pdo, $me, 'payroll_run_created', 'payroll', (string)$id, $period);
         respond(201, ['run' => payrollRunShape($pdo, payrollRun($pdo, $id))]);
@@ -509,8 +530,18 @@ function payrollHandle(PDO $pdo, array $config, string $route, string $method, a
         if ($action === 'recalculate' && $method === 'POST') {
             $draftOnly();
             $settings = payrollSettings($pdo, $run['period'] . '-01');
+            $pdo->beginTransaction();
+            $lockedRun = $pdo->prepare("SELECT status FROM staff_payroll_runs WHERE id = ? FOR UPDATE");
+            $lockedRun->execute([$id]);
+            if ($lockedRun->fetchColumn() !== 'draft') {
+                $pdo->rollBack();
+                respond(400, ['error' => 'Only a draft run can be changed.']);
+            }
             $pdo->prepare('UPDATE staff_payroll_runs SET settings = ? WHERE id = ?')->execute([json_encode($settings['rates']), $id]);
+            payrollRecordContributor($pdo, $id, $me);
             payrollBuild($pdo, $config, $id, $settings['rates']);
+            staffAudit($pdo, $me, 'payroll_run_recalculated', 'payroll', (string)$id, $run['period']);
+            $pdo->commit();
             respond(200, ['run' => payrollRunShape($pdo, payrollRun($pdo, $id))]);
         }
         if ($action === 'items' && empty($m[3]) && $method === 'POST') {
@@ -525,16 +556,59 @@ function payrollHandle(PDO $pdo, array $config, string $route, string $method, a
             if (!isset(PAYROLL_ITEM_KINDS[$d['kind'] ?? '']) || $label === null || !is_numeric($d['amount'] ?? null) || (float)$d['amount'] <= 0 || (float)$d['amount'] > 10000000) {
                 respond(400, ['error' => 'Give a type, a name and an amount above zero.']);
             }
-            $pdo->prepare('INSERT INTO staff_pay_items (user_id, run_id, kind, label, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)')
-                ->execute([$uid, $id, $d['kind'], $label, round((float)$d['amount'], 2), $me]);
-            payrollBuild($pdo, $config, $id, json_decode($run['settings'], true));
-            staffAudit($pdo, $me, 'payroll_item_added', 'payroll', (string)$id, $run['period'] . ': ' . $label . ' for user ' . $uid);
+            try {
+                $pdo->beginTransaction();
+                $lockedRun = $pdo->prepare("SELECT status FROM staff_payroll_runs WHERE id = ? FOR UPDATE");
+                $lockedRun->execute([$id]);
+                if ($lockedRun->fetchColumn() !== 'draft') {
+                    $pdo->rollBack();
+                    respond(400, ['error' => 'Only a draft run can be changed.']);
+                }
+                $pdo->prepare('INSERT INTO staff_pay_items (user_id, run_id, kind, label, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)')
+                    ->execute([$uid, $id, $d['kind'], $label, round((float)$d['amount'], 2), $me]);
+                payrollRecordContributor($pdo, $id, $me);
+                payrollBuild($pdo, $config, $id, json_decode($run['settings'], true));
+                staffAudit($pdo, $me, 'payroll_item_added', 'payroll', (string)$id, $run['period'] . ': ' . $label . ' for user ' . $uid);
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log('Payroll pay-item add failed: ' . $e->getMessage());
+                respond(500, ['error' => 'The pay item could not be added. Please retry.']);
+            }
             respond(200, ['ok' => true]);
         }
         if ($action === 'items' && !empty($m[3]) && !empty($m[4]) && $method === 'POST') {
             $draftOnly();
-            $pdo->prepare('DELETE FROM staff_pay_items WHERE id = ? AND run_id = ?')->execute([(int)$m[3], $id]);
-            payrollBuild($pdo, $config, $id, json_decode($run['settings'], true));
+            try {
+                $pdo->beginTransaction();
+                $lockedRun = $pdo->prepare("SELECT status FROM staff_payroll_runs WHERE id = ? FOR UPDATE");
+                $lockedRun->execute([$id]);
+                if ($lockedRun->fetchColumn() !== 'draft') {
+                    $pdo->rollBack();
+                    respond(400, ['error' => 'Only a draft run can be changed.']);
+                }
+                $item = $pdo->prepare('SELECT user_id, kind FROM staff_pay_items WHERE id = ? AND run_id = ? FOR UPDATE');
+                $item->execute([(int)$m[3], $id]);
+                $before = $item->fetch();
+                if (!$before) {
+                    $pdo->rollBack();
+                    respond(404, ['error' => 'No such pay item on this run.']);
+                }
+                if ((int)$before['user_id'] === $me) {
+                    $pdo->rollBack();
+                    respond(403, ['error' => 'You cannot remove a pay item from your own pay.']);
+                }
+                $pdo->prepare('DELETE FROM staff_pay_items WHERE id = ? AND run_id = ?')->execute([(int)$m[3], $id]);
+                payrollRecordContributor($pdo, $id, $me);
+                payrollBuild($pdo, $config, $id, json_decode($run['settings'], true));
+                staffAudit($pdo, $me, 'payroll_item_removed', 'payroll', (string)$id,
+                    $run['period'] . ': removed ' . $before['kind'] . ' for user ' . (int)$before['user_id']);
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log('Payroll pay-item deletion failed: ' . $e->getMessage());
+                respond(500, ['error' => 'The pay item could not be removed. Please retry.']);
+            }
             respond(200, ['ok' => true]);
         }
         if ($action === 'submit' && $method === 'POST') {
@@ -553,7 +627,11 @@ function payrollHandle(PDO $pdo, array $config, string $route, string $method, a
         }
         if (($action === 'approve' || $action === 'return') && $method === 'POST') {
             if (!$approve) respond(403, ['error' => 'Only a payroll approver decides a run.']);
-            if ((int)$run['prepared_by'] === $me) respond(403, ['error' => 'You prepared this run, so someone else must approve it.']);
+            // Include the original preparer for runs created before contributor tracking.
+            $contributor = $pdo->prepare('SELECT 1 FROM staff_payroll_run_contributors WHERE run_id = ? AND user_id = ?
+                                          UNION ALL SELECT 1 FROM staff_payroll_runs WHERE id = ? AND prepared_by = ? LIMIT 1');
+            $contributor->execute([$id, $me, $id, $me]);
+            if ($contributor->fetchColumn()) respond(403, ['error' => 'You contributed to this payroll run, so someone else must approve it.']);
             if ($run['status'] !== 'submitted') respond(400, ['error' => 'This run is not waiting for approval.']);
             if ($action === 'return') {
                 $reason = fieldText(input()['reason'] ?? '', 500);

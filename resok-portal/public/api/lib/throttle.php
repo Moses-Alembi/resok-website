@@ -178,9 +178,9 @@ function clientIp(): string
 
 function throttleClientFingerprint(): string
 {
-    $ip = clientIp();
-    $agent = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 120);
-    return $ip . '|' . $agent;
+    // Rate limits must survive arbitrary User-Agent rotation. Keep the network identity
+    // stable; User-Agent may still be recorded separately as a signal, never as a key.
+    return clientIp();
 }
 
 function throttleClientHash(array $config): string

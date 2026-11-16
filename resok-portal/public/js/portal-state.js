@@ -179,7 +179,12 @@
 
   function mergeMemberFromApi(member) {
     if (!member) return getState();
-    const state = getState();
+    let state = getState();
+    // Never carry a previous account's cached profile or payment history into a new login.
+    if (state.member?.id && member.id && String(state.member.id) !== String(member.id)) {
+      localStorage.removeItem(STORAGE_KEY);
+      state = defaultState();
+    }
     state.member = Object.assign({}, state.member, {
       id: member.id || state.member.id,
       userId: member.userId || state.member.userId,
@@ -262,10 +267,7 @@
     } catch {
       /* private mode - nothing to clear */
     }
-    const state = getState();
-    state.loggedIn = false;
-    state.token = "";
-    saveState(state);
+    localStorage.removeItem(STORAGE_KEY);
     window.location.href = timedOut ? "login?timeout=1" : "login";
   }
 
@@ -948,10 +950,7 @@
     stopIdleWatch();
     hideIdleWarning();
     localStorage.removeItem(TOKEN_KEY);
-    const state = getState();
-    state.loggedIn = false;
-    state.token = "";
-    saveState(state);
+    localStorage.removeItem(STORAGE_KEY);
     if (pageName() !== "login") window.location.href = "login";
   }
 
@@ -1220,6 +1219,24 @@
   if (LOCKED_FEATURES.includes(pageName()) && !staffElections) {
     window.location.replace("dashboard");
   }
+
+  // Election-only staff accounts are constrained again in the API. This redirect keeps
+  // direct page visits from landing on a blocked page and never grants access by itself.
+  async function enforceElectionOnlyPage() {
+    if (isLocalPreview() || ["login", "forgot-password", "two-factor-setup"].includes(pageName())) return;
+    const allowed = (pageName() === "elections" && new URLSearchParams(location.search).get("for") === "staff")
+      || pageName() === "election-live";
+    try {
+      const access = await api("/api/auth/access");
+      if (access.electionOnly) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(TOKEN_KEY);
+        if (!allowed) window.location.replace("elections?for=staff");
+      }
+    } catch { /* Anonymous pages and temporary network failures keep their normal handling. */ }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", enforceElectionOnlyPage);
+  else enforceElectionOnlyPage();
 
   function lockSidebarLinks() {
     LOCKED_FEATURES.forEach((name) => {

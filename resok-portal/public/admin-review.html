@@ -746,7 +746,13 @@
     function exportCsv() {
       const columns = ["id", "membershipId", "membershipStatus", "category", "county", "division", "mobile", "email", "paidTotal", "renewalDue"];
       const header = ["ID", "Membership ID", "Status", "Category", "County", "Division", "Mobile", "Email", "Paid Total", "Renewal Due"];
-      const escCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+      const escCsv = (value) => {
+        let text = String(value ?? "");
+        // CSV quoting does not stop spreadsheet formula evaluation. Prefix dangerous
+        // cells with an apostrophe after any leading whitespace/control characters.
+        if (/^[\s\u0000-\u001f\u007f]*[=+@-]/.test(text)) text = "'" + text;
+        return `"${text.replace(/"/g, '""')}"`;
+      };
       const lines = [header.join(",")].concat(
         members.map((member) => columns.map((col) => escCsv(col === "membershipId" ? (member[col] || "Pending") : member[col])).join(","))
       );

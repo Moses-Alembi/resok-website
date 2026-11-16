@@ -20,6 +20,34 @@ DirectoryIndex index.html
 # rules cascade into subdirectories). Do not re-add without first confirming
 # the exact handler name this host's control panel documents for "run .html as
 # PHP" (e.g. AddHandler application/x-httpd-php82 .html, version-specific).
+# Trust forwarded HTTPS only when the TCP peer is inside Cloudflare's published ranges.
+# Keep this list aligned with CLOUDFLARE_RANGES in resok-portal/public/api/lib/throttle.php.
+<IfModule mod_setenvif.c>
+  SetEnvIfExpr "-R '173.245.48.0/20' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '103.21.244.0/22' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '103.22.200.0/22' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '103.31.4.0/22' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '141.101.64.0/18' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '108.162.192.0/18' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '190.93.240.0/20' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '188.114.96.0/20' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '197.234.240.0/22' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '198.41.128.0/17' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '162.158.0.0/15' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '104.16.0.0/13' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '104.24.0.0/14' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '172.64.0.0/13' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '131.0.72.0/22' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '2400:cb00::/32' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '2606:4700::/32' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '2803:f800::/32' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '2405:b500::/32' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '2405:8100::/32' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '2a06:98c0::/29' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIfExpr "-R '2c0f:f248::/32' && req('X-Forwarded-Proto') == 'https'" RESOK_TRUSTED_HTTPS=1 RESOK_SECURE=1
+  SetEnvIf HTTPS "^on$" RESOK_SECURE=1
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
@@ -31,14 +59,14 @@ DirectoryIndex index.html
   # Force HTTPS. http://www.resok.org was serving the whole site in plaintext: the session
   # cookie is Secure so it is never sent, which alone makes the portal look broken, and the
   # login form would post credentials unencrypted. Both conditions are required - a host
-  # that terminates TLS at a proxy leaves %{HTTPS} off and signals the real scheme in
-  # X-Forwarded-Proto, and testing only the first would put such a host in a redirect loop.
+  # that terminates TLS at Cloudflare leaves %{HTTPS} off; the forwarded scheme is trusted
+  # only when the connection came from a published Cloudflare address range above.
   # Local development is exempt. RESOK_LOCAL is set by the developer machine's
   # Apache vhost and can only come from a server config - never from a request -
   # so on the live server this condition is never true.
   RewriteCond %{ENV:RESOK_LOCAL} !=1
   RewriteCond %{HTTPS} !=on
-  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteCond %{ENV:RESOK_TRUSTED_HTTPS} !=1
   RewriteRule ^(.*)$ https://www.resok.org/$1 [R=301,L]
 
   # Canonical host - must stay first, before anything that gates on a session. The portal's
@@ -173,9 +201,8 @@ Options -Indexes
   # frame. X-Frame-Options for older browsers, frame-ancestors for current ones.
   # HSTS.
   #
-  # This was gated on env=HTTPS alone, and TLS is terminated at the host's proxy - so Apache
-  # often never sees HTTPS=on and the header was not sent at all on the bare domain. The
-  # force-HTTPS rule above already checks X-Forwarded-Proto for exactly the same reason.
+  # TLS may be terminated by Cloudflare before Apache sees HTTPS=on. RESOK_SECURE above is
+  # set for direct TLS or a forwarded HTTPS request from a trusted Cloudflare range.
   #
   # The effect was visible on a phone: someone typing resok.org had no HSTS record for that
   # host, so the browser made one request in the clear before the redirect, and showed a
@@ -185,7 +212,6 @@ Options -Indexes
   # A year rather than six months, and includeSubDomains: webmail and cpanel already force
   # HTTPS themselves, and nothing else under the domain is served over plain HTTP - checked
   # before adding it, because this would break any subdomain that still needed it.
-  SetEnvIf X-Forwarded-Proto "^https$" RESOK_SECURE=1
   SetEnvIf HTTPS "^on$" RESOK_SECURE=1
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=RESOK_SECURE
   Header set X-Frame-Options "SAMEORIGIN"

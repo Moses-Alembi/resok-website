@@ -74,6 +74,9 @@ function staffPortalEnsureTables(PDO $pdo): bool
                 ADD KEY staff_accounts_department (department_id),
                 ADD KEY staff_accounts_manager (manager_user_id)');
         }
+        if (!in_array('election_only', $have, true)) {
+            $pdo->exec('ALTER TABLE staff_accounts ADD COLUMN election_only TINYINT(1) NOT NULL DEFAULT 0 AFTER active');
+        }
         $pdo->exec("CREATE TABLE IF NOT EXISTS staff_departments (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,
             name VARCHAR(120) NOT NULL,
@@ -230,8 +233,18 @@ function staffGate(PDO $pdo, array $user, array $config): array
     $row = $stmt->fetch() ?: null;
     $super = isSuperAdmin($user, $config);
     if (!$row && !$super) respond(403, ['error' => 'This area is for ReSoK staff. Your account is not on the staff list.']);
+    if ($row && !empty($row['election_only'])) respond(403, ['error' => 'This account is limited to staff welfare elections.']);
     $caps = staffCaps($pdo, $user, $config);
     return ['row' => $row, 'caps' => $caps, 'super' => $super, 'admin' => $super || in_array('staff.admin', $caps, true)];
+}
+
+/** Whether a staff account is explicitly limited to welfare election access. */
+function staffElectionOnly(PDO $pdo, int $userId): bool
+{
+    if (!staffPortalEnsureTables($pdo)) throw new RuntimeException('Staff access settings are unavailable.');
+    $stmt = $pdo->prepare('SELECT election_only FROM staff_accounts WHERE user_id = ? AND active = 1 LIMIT 1');
+    $stmt->execute([$userId]);
+    return (bool)$stmt->fetchColumn();
 }
 
 function staffNeed(array $gate, string $capability): void

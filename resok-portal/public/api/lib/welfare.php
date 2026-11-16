@@ -232,7 +232,7 @@ function welfareHandle(PDO $pdo, array $config, string $route, string $method): 
     $user=auth($config);
     if ($route==='welfare/me' && $method==='GET') {
         $s=$pdo->prepare('SELECT s.full_name, s.job_title FROM staff_accounts s WHERE user_id=?');$s->execute([(int)$user['userId']]);$person=$s->fetch();
-        respond(200,['me'=>['name'=>($person['full_name']??'')?:$user['email'],'email'=>$user['email'],'jobTitle'=>$person['job_title']??null]]);
+        respond(200,['me'=>['name'=>($person['full_name']??'')?:$user['email'],'email'=>$user['email'],'jobTitle'=>$person['job_title']??null,'electionOnly'=>!empty($user['electionOnly'])]]);
     }
     if ($route==='welfare/live' && $method==='GET') {
         if (!headers_sent()) header('Cache-Control: no-store');

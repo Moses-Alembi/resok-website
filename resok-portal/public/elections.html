@@ -346,6 +346,7 @@
     const api = (path, options) => window.ResokPortal.api(path, options);
     // Staff mode: the same page for staff welfare elections, which members never see.
     const STAFF = new URLSearchParams(location.search).get('for') === 'staff';
+    let staffElectionOnlyAccount = false;
     if (STAFF) {
       document.querySelectorAll('[data-staff-election]').forEach((node) => { node.hidden = false; });
       document.getElementById('memberHeader').hidden = true;
@@ -383,7 +384,9 @@
       el('staffAvatar').textContent = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase();
     }
     function syncElectionStaffLinks(superAdmin) {
-      const active = ['staff', 'staff#home', 'staff#announcements', 'staff#equipment', 'staff#helpdesk', 'elections?for=staff', 'election-live'];
+      const active = staffElectionOnlyAccount
+        ? ['elections?for=staff', 'election-live']
+        : ['staff', 'staff#home', 'staff#announcements', 'staff#equipment', 'staff#helpdesk', 'elections?for=staff', 'election-live'];
       el('staffNav').querySelectorAll('a').forEach((link) => {
         if (link.id === 'staffLogout') return;
         const saved = link.hasAttribute('data-staff-paused-href');
@@ -469,7 +472,7 @@
 
     /** The single word that describes where an election has got to. */
     function statusPill(election) {
-      if (election.upcoming) return ['soon', election.armed === false ? 'Setup preview' : 'Upcoming'];
+      if (election.upcoming) return election.armed === false ? ['setup-preview', 'Setup preview'] : ['soon', 'Upcoming'];
       if (election.status === 'published') return ['done', 'Result declared'];
       if (election.status === 'closed') return ['closed', 'Voting closed'];
       if (election.votingOpen) return ['open', 'Voting open'];
@@ -1153,6 +1156,7 @@
         if (STAFF) {
           const home = await api('/api/welfare/me');
           staffAccount = home.me || {};
+          staffElectionOnlyAccount = staffAccount.electionOnly === true;
           el('whoami').textContent = (home.me && (home.me.name || home.me.email)) || '';
         } else {
           const me = await api('/api/members/me');

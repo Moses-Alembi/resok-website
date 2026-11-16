@@ -58,20 +58,22 @@ function cryptoAvailable(array $config): bool
     return cryptoKey($config) !== null && function_exists('openssl_encrypt');
 }
 
-/** Returns the value unchanged when no key is configured, so callers need no branching. */
+/** Refuses sensitive writes when authenticated encryption is unavailable. */
 function cryptoEncrypt(array $config, ?string $plain): ?string
 {
     if ($plain === null || $plain === '') return $plain;
     $key = cryptoKey($config);
-    if ($key === null || !function_exists('openssl_encrypt')) return $plain;
+    if ($key === null || !function_exists('openssl_encrypt')) {
+        throw new RuntimeException('Sensitive data cannot be saved because encryption is unavailable.');
+    }
     if (cryptoIsEncrypted($plain)) return $plain;   // never double-encrypt
 
     $iv = random_bytes(12);
     $tag = '';
     $cipher = openssl_encrypt($plain, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
     if ($cipher === false) {
-        error_log('cryptoEncrypt failed; storing the value unencrypted rather than losing it.');
-        return $plain;
+        error_log('cryptoEncrypt failed; sensitive write refused.');
+        throw new RuntimeException('Sensitive data could not be encrypted and was not saved.');
     }
     return CRYPTO_MARKER . base64_encode($iv . $tag . $cipher);
 }

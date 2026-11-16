@@ -150,11 +150,18 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" integrity="sha384-nFoSjZIoH3CCp8W639jJyQkuPHinJ2NHe7on1xvlUA7SuGfJAfvMldrsoAVm6ECz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/portal-state.js?v=20261103-viewas-staff2"></script>
   <script>
+  // PDF.js 6 is an ES module; pin library and worker to the same patched release.
+  let pdfjsLib = null;
+  const pdfjsReady = import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.4.299/pdf.min.mjs').then((lib) => {
+    pdfjsLib = lib;
+    window.pdfjsLib = lib;
+    lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.4.299/pdf.worker.min.mjs';
+    return lib;
+  });
   /**
    * A PDF toolkit that runs entirely in the browser.
    *
@@ -526,10 +533,9 @@
       },
 
       async pdfToImages() {
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        await pdfjsReady;
         const data = await files[0].arrayBuffer();
-        const doc = await pdfjsLib.getDocument({ data }).promise;
+        const doc = await pdfjsLib.getDocument({ data, isEvalSupported: false }).promise;
         const scale = Number(el('opt-scale').value);
         const base = files[0].name.replace(/\.pdf$/i, '');
         for (let n = 1; n <= doc.numPages; n++) {
@@ -577,9 +583,8 @@
       },
 
       async pdfToWord() {
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const doc = await pdfjsLib.getDocument({ data: await files[0].arrayBuffer() }).promise;
+        await pdfjsReady;
+        const doc = await pdfjsLib.getDocument({ data: await files[0].arrayBuffer(), isEvalSupported: false }).promise;
 
         const paras = [];
         for (let n = 1; n <= doc.numPages; n++) {

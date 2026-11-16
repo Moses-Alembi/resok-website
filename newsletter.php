@@ -60,13 +60,9 @@ function db(array $config): PDO {
     return $pdo;
 }
 
-/** This script's own address, so the links work at the site root and under /resok-new/. */
-function selfUrl(): string {
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
-    $host = preg_replace('/[^A-Za-z0-9.:\-]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'www.resok.org'));
-    $path = (string)($_SERVER['SCRIPT_NAME'] ?? '/newsletter.php');
-    return ($https ? 'https' : 'http') . '://' . $host . $path;
+/** Use the configured public origin; request Host headers must not change emailed links. */
+function selfUrl(array $config): string {
+    return rtrim(newsletterSiteUrl($config), '/') . '/newsletter.php';
 }
 
 $configPath = __DIR__ . '/resok-portal/public/api/config.php';
@@ -214,8 +210,8 @@ if ($existing) {
 }
 
 require_once __DIR__ . '/resok-portal/public/api/lib/portal-mail.php';
-$confirmUrl = selfUrl() . '?confirm=' . $token;
-$leaveUrl = selfUrl() . '?unsubscribe=' . $token;
+$confirmUrl = selfUrl($config) . '?confirm=' . $token;
+$leaveUrl = selfUrl($config) . '?unsubscribe=' . $token;
 
 $text = "Hello,\n\n"
     . "Thank you for signing up for the Respiratory Society of Kenya newsletter. Please confirm your email address to start receiving updates on CMEs, webinars, projects and announcements.\n\n"

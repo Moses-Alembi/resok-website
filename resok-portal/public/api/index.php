@@ -759,7 +759,6 @@ function electionOnlyRouteAllowed(PDO $pdo, string $route, string $method): bool
             || (in_array($route, ['auth/mfa/setup', 'auth/mfa/enable'], true) && $method === 'POST');
     }
     if ($route === 'welfare/me' && $method === 'GET') return true;
-    if ($route === 'welfare/live' && $method === 'GET') return true;
     if ($route === 'elections' && $method === 'GET') return (string)($_GET['electorate'] ?? '') === 'staff';
 
     if (!preg_match('#^elections/([A-Za-z0-9-]+)(?:/(ballot|vote|nominations|nominate))?$#', $route, $m)) return false;
@@ -3179,6 +3178,10 @@ Respiratory Society of Kenya");
             || !electionVisibleTo($pdo, $config, $election, $user)) respond(404, ['error' => 'No such election.']);
         if ($upcoming) { $election['upcoming'] = true; $election['armed'] = !empty($settings['armed_at']); }
         $positions = electionPositions($pdo, (int)$election['id']);
+        if (($election['electorate'] ?? 'members') === 'staff') {
+            foreach ($positions as &$position) unset($position['candidates']);
+            unset($position);
+        }
         if ($upcoming) {
             $positions = array_map(static function (array $position): array {
                 unset($position['candidates']);
@@ -3189,7 +3192,7 @@ Respiratory Society of Kenya");
             'election'  => $election,
             'positions' => $positions,
             'voter'     => electionRollEntry($pdo, (int)$election['id'], (int)$user['userId']),
-            'results'   => $election['status'] === 'published'
+            'results'   => $election['electorate'] !== 'staff' && $election['status'] === 'published'
                 ? electionResults($pdo, (int)$election['id']) : null,
         ]));
     }

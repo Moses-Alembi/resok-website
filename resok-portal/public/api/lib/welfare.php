@@ -235,14 +235,7 @@ function welfareHandle(PDO $pdo, array $config, string $route, string $method): 
         respond(200,['me'=>['name'=>($person['full_name']??'')?:$user['email'],'email'=>$user['email'],'jobTitle'=>$person['job_title']??null,'electionOnly'=>!empty($user['electionOnly'])]]);
     }
     if ($route==='welfare/live' && $method==='GET') {
-        if (!headers_sent()) header('Cache-Control: no-store');
-        welfareRunScheduled($pdo);
-        $feed=welfareLive($pdo,(int)$user['userId']);
-        // Only active staff and super administrators can see a welfare election before it opens.
-        if (!function_exists('electionStaffMayView') || !electionStaffMayView($pdo,$config,$user)) {
-            $feed['elections']=array_values(array_filter($feed['elections'],static fn($entry)=>empty($entry['upcoming'])));
-        }
-        respond(200,$feed);
+        respond(404,['error'=>'Live election updates are disabled.']);
     }
     requireSuperAdmin($user,$config);
     if (!welfareReady($pdo)) respond(503,['error'=>'Apply migration-2026-11-03-welfare-automation.sql first.']);

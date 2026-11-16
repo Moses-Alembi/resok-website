@@ -1224,8 +1224,7 @@
   // direct page visits from landing on a blocked page and never grants access by itself.
   async function enforceElectionOnlyPage() {
     if (isLocalPreview() || ["login", "forgot-password", "two-factor-setup"].includes(pageName())) return;
-    const allowed = (pageName() === "elections" && new URLSearchParams(location.search).get("for") === "staff")
-      || pageName() === "election-live";
+    const allowed = pageName() === "elections" && new URLSearchParams(location.search).get("for") === "staff";
     try {
       const access = await api("/api/auth/access");
       if (access.electionOnly) {
@@ -1274,15 +1273,4 @@
     autoStartIdleWatch();
   }
 
-  // The same aggregate election feed appears on signed-in portal pages.
-  function loadWelfareFeed() {
-    if (["login", "forgot-password", "index", "two-factor-setup"].includes(pageName())) return;
-    if (document.getElementById("resokWelfareLoader")) return;
-    const script = document.createElement("script");
-    script.id = "resokWelfareLoader";
-    script.src = new URL("welfare-live.js?v=20261112-roster1", SELF_SRC || location.href).href;
-    document.body.appendChild(script);
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", loadWelfareFeed);
-  else loadWelfareFeed();
 })();

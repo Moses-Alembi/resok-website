@@ -162,7 +162,6 @@
         <li><a href="staff#location"><i class="fas fa-location-dot"></i> Location access</a></li>
         <li><a href="staff#profile"><i class="fas fa-id-card"></i> My profile</a></li>
         <li><a href="elections?for=staff" class="active"><i class="fas fa-check-to-slot"></i> Welfare elections</a></li>
-        <li><a href="election-live"><i class="fas fa-tower-broadcast"></i> Live election results</a></li>
         <li class="sidebar-divider"></li>
         <li><a href="#" class="sidebar-logout" id="staffLogout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
       </ul>
@@ -198,7 +197,7 @@
         <div class="eyebrow" data-staff-election hidden>Staff welfare</div>
         <h1 id="listTitle">Elections</h1>
         <p class="lede" id="staffLede" hidden>
-          Nominate colleagues, cast your vote and follow live results.
+          Nominate colleagues and cast your vote.
           Staff on the election roll may vote, and eligible employees may stand.
           Welfare nominations are final and cannot be declined.
         </p>
@@ -207,7 +206,6 @@
           when it was drawn &mdash; that is decided by your membership, not by when you sign in.
         </p>
         </div>
-        <a href="election-live" class="btn btn-ghost" data-staff-election hidden><i class="fas fa-tower-broadcast" aria-hidden="true"></i> Live results</a>
         </div>
         <div id="listBody" aria-live="polite" style="margin-top:22px"><div class="empty">Loading&hellip;</div></div>
       </section>
@@ -385,8 +383,8 @@
     }
     function syncElectionStaffLinks(superAdmin) {
       const active = staffElectionOnlyAccount
-        ? ['elections?for=staff', 'election-live']
-        : ['staff', 'staff#home', 'staff#announcements', 'staff#equipment', 'staff#helpdesk', 'elections?for=staff', 'election-live'];
+        ? ['elections?for=staff']
+        : ['staff', 'staff#home', 'staff#announcements', 'staff#equipment', 'staff#helpdesk', 'elections?for=staff'];
       el('staffNav').querySelectorAll('a').forEach((link) => {
         if (link.id === 'staffLogout') return;
         const saved = link.hasAttribute('data-staff-paused-href');
@@ -829,6 +827,8 @@
     function renderCandidates() {
       const mount = el('eCandidates');
       mount.textContent = '';
+      // Staff nominees are shown only on an eligible voter's ballot, never on the overview.
+      if (STAFF) return;
       const positions = current.positions || [];
       if (!positions.length) return;
       const upcoming = !!current.election.upcoming;

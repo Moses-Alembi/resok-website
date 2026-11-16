@@ -9,7 +9,7 @@
     panel = node('section', null, 'panel'); panel.id = 'welfareAdmin';
     const parent = document.getElementById('viewOne'); parent.insertBefore(panel, parent.children[1] || null);
     panel.append(node('h2', 'Automatic welfare election'));
-    panel.append(node('p', 'Every active staff account is eligible and stays on the voter roll, including accounts awaiting email verification. Once verified, staff can sign in and vote. Nominations are final and approved automatically. Live aggregate totals are visible to signed-in portal users.'));
+    panel.append(node('p', 'Every active staff account is eligible and stays on the voter roll, including accounts awaiting email verification. Once verified, staff can sign in and vote. Nominations are final and approved automatically. Vote totals are withheld from staff voters.'));
     const message = node('p'); message.setAttribute('role', 'status');
     async function act(action, body) {
       message.textContent = 'Saving…';
@@ -34,7 +34,7 @@
         const warning = awaitingVerification ? ' ' + awaitingVerification + ' account(s) still need email verification; they will stay on the roll and can vote after activation.' : ' All active staff accounts are verified.';
         if (confirm(r.armed ? 'Disarm the schedule before voting opens?' : 'Freeze the voter roll and arm the schedule?' + warning + ' Nominations, voting, counting and publication will progress automatically.')) act(r.armed ? 'disarm' : 'arm');
       };
-      const live = node('a', 'Open live election screen', 'btn btn-ghost'); live.href = 'election-live'; controls.append(arm, live); panel.append(controls);
+      controls.append(arm); panel.append(controls);
       if (!r.armed && !election.locked) {
         const form = node('form');
         const rowsLabel = node('label', 'Staff roster: full name and email, or employee number, full name and email (one employee per row, separated by tabs or commas)'); rowsLabel.htmlFor = 'welfareImportRows';
@@ -55,7 +55,7 @@
         };
         panel.append(form);
       }
-      panel.append(node('p','Voting is recorded against the voter roll. The live feed exposes aggregate totals only. Keep the scheduled cron job running every minute; portal activity also advances due stages.','lede'),message);
+      panel.append(node('p','Voting is recorded against the voter roll. Results are withheld from staff voters. Keep the scheduled cron job running every minute; portal activity also advances due stages.','lede'),message);
     } catch(e) { panel.append(node('p',e.message||'Could not load welfare setup.','note warn')); }
   }
   document.addEventListener('resok:election-admin-open', e => render(e.detail));

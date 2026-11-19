@@ -1,5 +1,8 @@
 # Welfare nominations: an existing candidate must remain selectable
 
+For the one-position-per-nominee review before voting, also follow
+[welfare-position-review.md](welfare-position-review.md).
+
 The previous staff nomination handler rejected a person who already had a candidate
 entry for that post. This stopped other staff recording their own nomination of that
 person and displayed the error shown in the reported screenshot.

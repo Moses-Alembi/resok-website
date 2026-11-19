@@ -77,6 +77,7 @@ function migrateOrder(): array
         'migration-election-external-nominees.sql', // candidates from outside the membership
         'migration-election-staff.sql',        // staff welfare elections: electorate, staff roll and nominees
         'migration-2026-11-19-welfare-nomination-records.sql', // individual staff nominations share one candidate
+        'migration-2026-11-19-welfare-position-review.sql', // confirm one ballot position per staff nominee
         'migration-2026-11-03-welfare-automation.sql', // welfare schedule, extra voter accounts and live count
         'schema-academy.sql',                  // Virtual Academy; learners are users rows
     ];

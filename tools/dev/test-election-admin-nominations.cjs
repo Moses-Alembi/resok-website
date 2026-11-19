@@ -155,5 +155,22 @@ function check(condition, message) {
   vm.runInContext('renderCount()', context);
   check(!el('voteTallyLede').textContent.includes('Nomination totals') && el('voteTallyLede').textContent.includes('after voting closes'),
     'board vote explanation does not promise nomination totals');
+
+  context.current.election = { id: 5, electorate: 'staff', status: 'closed', nominationsFinal: true, locked: true };
+  context.api = async () => ({ nominations: [{ ...nomination(5, 3), ballotStatus: 'not_contesting' }] });
+  await run();
+  check(el('nominationsBody').textContent.includes('Not contesting this position')
+    && el('nominationsBody').textContent.includes('3 nominations')
+    && !el('nominationsBody').textContent.includes('disqualified'), 'historical nominations preserve counts and clearly mark the unchosen position');
+  const positionsStart = source.indexOf('    function renderPositions() {');
+  const positionsEnd = source.indexOf("    el('eeSave').addEventListener", positionsStart);
+  assert(positionsStart >= 0 && positionsEnd > positionsStart);
+  vm.runInContext(source.slice(positionsStart, positionsEnd), context);
+  context.current.positions = [{ id: 1, title: 'Chairperson', seats: 1, maxChoices: 1,
+    candidates: [{ id: 5, name: 'Candidate 5', status: 'approved', standing: false, ballotStatus: 'not_contesting' }] }];
+  vm.runInContext('renderPositions()', context);
+  check(el('positionsBody').textContent.includes('Not contesting this position')
+    && el('positionsBody').textContent.includes('0 standing')
+    && context.current.positions[0].candidates[0].status === 'approved', 'posts use ballot eligibility without relabelling the candidate as disqualified');
   console.log('\n' + checks + ' election-admin nomination UI checks passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

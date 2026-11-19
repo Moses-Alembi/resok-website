@@ -28,6 +28,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/membership.php';
+require_once __DIR__ . '/election-position-review.php';
 
 /**
  * Every status the column allows, in the order an election passes through them.
@@ -225,6 +226,8 @@ function electionPositions(PDO $pdo, int $electionId): array
 
     $ids = array_map(fn($p) => (int)$p['id'], $positions);
     $staff = (electionFind($pdo, (string)$electionId)['electorate'] ?? '') === 'staff';
+    $review = $staff ? electionStaffPositionReview($pdo, $electionId) : null;
+    $excluded = array_fill_keys($review['excludedCandidateIds'] ?? [], true);
     $stmt = $pdo->prepare('SELECT c.*' . ($staff ? ', s.job_title' : '') . ' FROM election_candidates c'
                           . ($staff ? ' LEFT JOIN staff_accounts s ON s.user_id = c.nominee_user_id' : '') . ' WHERE c.position_id IN ('
                           . implode(',', array_fill(0, count($ids), '?')) . ')
@@ -241,9 +244,12 @@ function electionPositions(PDO $pdo, int $electionId): array
             'manifesto' => $c['manifesto'],
             'photo'     => $c['photo'],
             'status'    => $c['status'],
-            'standing'  => $c['status'] === 'approved',
+            'standing'  => $c['status'] === 'approved' && !isset($excluded[(int)$c['id']]),
         ];
-        if ($staff) $candidate['jobTitle'] = $c['job_title'] ?? null;
+        if ($staff) {
+            $candidate['jobTitle'] = $c['job_title'] ?? null;
+            $candidate['ballotStatus'] = isset($excluded[(int)$c['id']]) ? 'not_contesting' : $c['status'];
+        }
         $byPosition[(int)$c['position_id']][] = $candidate;
     }
     return array_map(fn($p) => [
@@ -630,7 +636,9 @@ function electionTally(PDO $pdo, int $electionId, bool $live = false): array
                 'name'        => $candidate['name'],
                 'status'      => $candidate['status'],
                 'votes'       => $counts[$position['id']][$candidate['id']] ?? 0,
+                'standing'    => $candidate['standing'],
             ];
+            if ($election['electorate'] === 'staff') $row['ballotStatus'] = $candidate['ballotStatus'];
             // Current job titles identify staff during the live count, not historical declarations.
             if ($election['electorate'] === 'staff' && $election['status'] !== 'published') {
                 $row['jobTitle'] = $candidate['jobTitle'] ?? null;
@@ -644,7 +652,7 @@ function electionTally(PDO $pdo, int $electionId, bool $live = false): array
         $abstentions = $counts[$position['id']]['abstain'] ?? 0;
         // Judged on the candidates who were standing, for the same reason: a withdrawn name
         // sitting on zero votes must not be able to create a tie, or mask one.
-        $contenders = array_values(array_filter($rows, fn($r) => $r['status'] === 'approved'));
+        $contenders = array_values(array_filter($rows, fn($r) => $r['standing']));
         $tie = count($contenders) > $position['seats']
                && $contenders[$position['seats'] - 1]['votes'] === $contenders[$position['seats']]['votes']
                && $contenders[$position['seats']]['votes'] > 0;
@@ -737,6 +745,9 @@ function electionCreate(PDO $pdo, array $data, ?int $adminUserId): array
     // arriving for a paper people are already marking.
     $nomOpens = trim((string)($data['nominationsOpenAt'] ?? ''));
     $nomCloses = trim((string)($data['nominationsCloseAt'] ?? ''));
+    if ($electorate === 'staff' && ($nomOpens === '' || $nomCloses === '')) {
+        return [null, 'Staff elections need nomination dates and a review interval before voting.'];
+    }
     if (($nomOpens === '') !== ($nomCloses === '')) {
         return [null, 'Give both nomination dates, or neither.'];
     }
@@ -751,6 +762,9 @@ function electionCreate(PDO $pdo, array $data, ?int $adminUserId): array
         }
         if (strtotime(str_replace('T', ' ', $nomCloses)) > strtotime(str_replace('T', ' ', $opens))) {
             return [null, 'Nominations must close before voting opens.'];
+        }
+        if ($electorate === 'staff' && strtotime(str_replace('T', ' ', $nomCloses)) >= strtotime(str_replace('T', ' ', $opens))) {
+            return [null, 'Voting must open later than nominations close, leaving time to confirm one position per nominee.'];
         }
     }
 
@@ -782,6 +796,11 @@ function electionCreate(PDO $pdo, array $data, ?int $adminUserId): array
 
 /** @return array{0:?array,1:?string} */
 function electionPositionSave(PDO $pdo, int $electionId, array $data, ?int $positionId = null): array
+{
+    return electionWithLock($pdo, (string)$electionId, fn() => electionPositionSaveLocked($pdo, $electionId, $data, $positionId));
+}
+
+function electionPositionSaveLocked(PDO $pdo, int $electionId, array $data, ?int $positionId = null): array
 {
     [$election, $error] = electionRequireUnlocked($pdo, $electionId);
     if ($error) return [null, $error];
@@ -831,6 +850,15 @@ function electionPositionSave(PDO $pdo, int $electionId, array $data, ?int $posi
  * @return array{0:?array,1:?string}
  */
 function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $candidateId = null): array
+{
+    $stmt = $pdo->prepare('SELECT election_id FROM election_positions WHERE id = ?');
+    $stmt->execute([$positionId]);
+    $electionId = (int)$stmt->fetchColumn();
+    if (!$electionId) return [null, 'That post does not exist.'];
+    return electionWithLock($pdo, (string)$electionId, fn() => electionCandidateSaveLocked($pdo, $positionId, $data, $candidateId));
+}
+
+function electionCandidateSaveLocked(PDO $pdo, int $positionId, array $data, ?int $candidateId = null): array
 {
     if (!electionsEnsureTables($pdo)) return [null, 'The election tables are not available.'];
 
@@ -884,6 +912,9 @@ function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $can
         $staff = $stmt->fetch();
         if (!$staff) return [null, 'Choose an active member of staff as the candidate.'];
         $nomineeUserId = (int)$staff['user_id'];
+        $duplicate = $pdo->prepare('SELECT id FROM election_candidates WHERE position_id = ? AND nominee_user_id = ? AND id <> ? LIMIT 1');
+        $duplicate->execute([$positionId, $nomineeUserId, $candidateId ?? 0]);
+        if ($duplicate->fetchColumn()) return [null, 'This member of staff already has a candidate entry for this post.'];
         if ($name === '') $name = (string)($staff['full_name'] ?: $staff['email']);
         if (empty($data['membershipId'])) $data['membershipId'] = $staff['staff_number'];
     }
@@ -943,10 +974,14 @@ function electionCandidateSave(PDO $pdo, int $positionId, array $data, ?int $can
  */
 function electionRandomiseBallot(PDO $pdo, int $electionId): array
 {
+    return electionWithLock($pdo, (string)$electionId, fn() => electionRandomiseBallotLocked($pdo, $electionId));
+}
+
+function electionRandomiseBallotLocked(PDO $pdo, int $electionId): array
+{
     [$election, $error] = electionRequireUnlocked($pdo, $electionId);
     if ($error) return [null, $error];
 
-    $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare('SELECT c.id, c.position_id FROM election_candidates c
                                JOIN election_positions p ON p.id = c.position_id
@@ -960,9 +995,7 @@ function electionRandomiseBallot(PDO $pdo, int $electionId): array
             shuffle($ids);
             foreach ($ids as $i => $id) $update->execute([$i + 1, $id]);
         }
-        $pdo->commit();
     } catch (Throwable $e) {
-        $pdo->rollBack();
         return [null, 'The ballot order was not changed: ' . $e->getMessage()];
     }
     return [electionPositions($pdo, $electionId), null];
@@ -1014,6 +1047,15 @@ function electionSetStatusLocked(PDO $pdo, int $electionId, string $status): arr
 
     } elseif ($status === 'open') {
         if ($election['locked']) return [null, 'This election has already been opened once.'];
+        if ($election['electorate'] === 'staff') {
+            if ($election['status'] !== 'nominations_closed') {
+                return [null, 'Close staff nominations and complete the ballot position review before opening voting.'];
+            }
+            $review = electionStaffPositionReview($pdo, $electionId);
+            if (!$review['ready']) {
+                return [null, implode(' ', $review['blockingReasons']) ?: 'Complete the ballot position review before opening voting.'];
+            }
+        }
 
         // Voting cannot start while names can still be added to the ballot.
         if ($election['status'] === 'nominations') {
@@ -1124,7 +1166,7 @@ function electionDeclareResultLocked(PDO $pdo, int $electionId, ?int $adminUserI
             // and untrue statement - the fact that they were nominated and withdrew belongs
             // in election_candidates, where it already is.
             $standing = array_values(array_filter($position['candidates'],
-                                                  fn($c) => $c['status'] === 'approved'));
+                                                  fn($c) => $c['standing']));
             foreach ($standing as $rank => $candidate) {
                 $elected = $rank < $position['seats'] && $candidate['votes'] > 0;
                 $insert->execute([$electionId, $position['positionId'], $candidate['candidateId'],
@@ -1335,7 +1377,7 @@ function electionNominateLocked(PDO $pdo, string $key, int $userId, array $data)
         $result = [
             'nominated' => true, 'name' => $nominee['name'], 'position' => $position['title'],
             'external' => false, 'accepted' => false, 'final' => true, 'approved' => $candidate['status'] === 'approved',
-            'message' => 'Your nomination of ' . $nominee['name'] . ' for ' . $position['title'] . ' has been recorded. This welfare nomination is final.'
+            'message' => 'Your nomination of ' . $nominee['name'] . ' for ' . $position['title'] . ' has been recorded. Nominees put forward for multiple posts must choose one position before voting.'
         ];
         if ($created && $nomineeUserId !== $userId) {
             $result['_staffNotification'] = [
@@ -1539,6 +1581,8 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
     // Voter-facing nomination responses retain their existing private field shape.
     $nominationCounts = $staffFinal && $viewerUserId === null
         ? electionStaffNominationCounts($pdo, $electionId) : null;
+    $positionReview = $staffFinal && $viewerUserId === null ? electionStaffPositionReview($pdo, $electionId) : null;
+    $excluded = array_fill_keys($positionReview['excludedCandidateIds'] ?? [], true);
 
     return array_map(fn($c) => array_merge([
         'id'           => (int)$c['id'],
@@ -1574,6 +1618,7 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
     ], $staffFinal ? ['jobTitle' => $c['job_title'] ?? null] : [],
         $staffFinal && $viewerUserId === null ? [
             'nominationCount' => $nominationCounts === null ? null : ($nominationCounts[(int)$c['id']] ?? 0),
+            'ballotStatus' => isset($excluded[(int)$c['id']]) ? 'not_contesting' : $c['status'],
         ] : []), $candidates);
 }
 
@@ -1618,6 +1663,19 @@ function electionNominatableMembers(PDO $pdo, int $electionId): array
  */
 function electionDelete(PDO $pdo, string $what, int $id): array
 {
+    if (!in_array($what, ['position', 'candidate'], true)) return [null, 'Unknown thing to delete.'];
+    $sql = $what === 'position'
+        ? 'SELECT election_id FROM election_positions WHERE id = ?'
+        : 'SELECT p.election_id FROM election_candidates c JOIN election_positions p ON p.id = c.position_id WHERE c.id = ?';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$id]);
+    $electionId = (int)$stmt->fetchColumn();
+    if (!$electionId) return [null, 'That election item does not exist.'];
+    return electionWithLock($pdo, (string)$electionId, fn() => electionDeleteLocked($pdo, $what, $id));
+}
+
+function electionDeleteLocked(PDO $pdo, string $what, int $id): array
+{
     if (!electionsEnsureTables($pdo)) return [null, 'The election tables are not available.'];
 
     if ($what === 'position') {
@@ -1628,6 +1686,9 @@ function electionDelete(PDO $pdo, string $what, int $id): array
         $electionId = (int)$row['election_id'];
         [$election, $error] = electionRequireUnlocked($pdo, $electionId);
         if ($error) return [null, $error];
+        if ($election['electorate'] === 'staff' && electionHasStaffNominationHistory($pdo, $electionId, $what, $id)) {
+            return [null, 'Recorded staff nominations must be retained. Confirm ballot positions instead of removing this post.'];
+        }
         $pdo->prepare('DELETE FROM election_positions WHERE id = ?')->execute([$id]);
     } elseif ($what === 'candidate') {
         $stmt = $pdo->prepare('SELECT p.election_id FROM election_candidates c
@@ -1639,11 +1700,27 @@ function electionDelete(PDO $pdo, string $what, int $id): array
         $electionId = (int)$row['election_id'];
         [$election, $error] = electionRequireUnlocked($pdo, $electionId);
         if ($error) return [null, $error];
+        if ($election['electorate'] === 'staff' && electionHasStaffNominationHistory($pdo, $electionId, $what, $id)) {
+            return [null, 'Recorded staff nominations must be retained. Confirm ballot positions instead of removing a nominated candidate.'];
+        }
         $pdo->prepare('DELETE FROM election_candidates WHERE id = ?')->execute([$id]);
     } else {
         return [null, 'Unknown thing to delete.'];
     }
     return [electionPositions($pdo, $electionId), null];
+}
+
+function electionHasStaffNominationHistory(PDO $pdo, int $electionId, string $what, int $id): bool
+{
+    $stmt = $pdo->prepare('SELECT id, nominated_at, nominated_by_roll_id FROM election_candidates WHERE '
+        . ($what === 'position' ? 'position_id' : 'id') . ' = ?');
+    $stmt->execute([$id]);
+    $counts = electionStaffNominationCounts($pdo, $electionId) ?? [];
+    foreach ($stmt->fetchAll() as $candidate) {
+        if ($candidate['nominated_at'] !== null || $candidate['nominated_by_roll_id'] !== null
+            || ($counts[(int)$candidate['id']] ?? 0) > 0) return true;
+    }
+    return false;
 }
 
 /**
@@ -1712,6 +1789,11 @@ function electionRecordExternalAcceptance(PDO $pdo, int $candidateId, ?int $admi
  */
 function electionUpdate(PDO $pdo, int $electionId, array $data): array
 {
+    return electionWithLock($pdo, (string)$electionId, fn() => electionUpdateLocked($pdo, $electionId, $data));
+}
+
+function electionUpdateLocked(PDO $pdo, int $electionId, array $data): array
+{
     [$election, $error] = electionRequireUnlocked($pdo, $electionId);
     if ($error) return [null, $error];
 
@@ -1756,12 +1838,18 @@ function electionUpdate(PDO $pdo, int $electionId, array $data): array
     if (($clean['nominations_open_at'] === null) !== ($clean['nominations_close_at'] === null)) {
         return [null, 'Give both nomination dates, or neither.'];
     }
+    if ($election['electorate'] === 'staff' && (!$clean['nominations_open_at'] || !$clean['nominations_close_at'])) {
+        return [null, 'Staff elections need nomination dates and a review interval before voting.'];
+    }
     if ($clean['nominations_open_at'] !== null) {
         if (strtotime($clean['nominations_close_at']) <= strtotime($clean['nominations_open_at'])) {
             return [null, 'Nominations must close after they open.'];
         }
         if (strtotime($clean['nominations_close_at']) > strtotime($clean['opens_at'])) {
             return [null, 'Nominations must close before voting opens.'];
+        }
+        if ($election['electorate'] === 'staff' && strtotime($clean['nominations_close_at']) >= strtotime($clean['opens_at'])) {
+            return [null, 'Voting must open later than nominations close, leaving time to confirm one position per nominee.'];
         }
     }
     foreach ($clean as $column => $value) {

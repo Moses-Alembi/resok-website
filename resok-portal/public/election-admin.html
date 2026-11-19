@@ -109,6 +109,9 @@
     .step{border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--muted)}
     .step.done{background:var(--note-ok-bg);color:var(--note-ok-fg);border-color:var(--note-ok-line)}
     .step.now{background:var(--brand-primary);color:#fff;border-color:var(--brand-primary);font-weight:700}
+    .position-review-card{border:1px solid var(--line);border-radius:8px;padding:16px;margin-top:14px}
+    .position-review-card form{display:grid;gap:12px;max-width:720px;margin-top:14px}
+    .position-review-list{padding-left:20px;margin-top:9px;line-height:1.7;font-size:13.5px}
 
     @media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
   </style>
@@ -228,12 +231,13 @@
         <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap" id="eTransitions"></div>
 
         <div id="editBox" hidden style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">
-          <h3>Correct the details</h3>
+          <h3 id="editDetailsTitle">Correct the details</h3>
           <p class="lede">
             Titles and dates can be corrected until voting opens. After that they are part of
             what people relied on when they voted, and moving a closing time to admit or
             exclude late ballots is exactly what an election must be unable to do.
           </p>
+          <p class="lede" id="reviewDatesHint" hidden>Leave time between nominations closing and voting opening so staff nominated for multiple positions can confirm one position.</p>
           <div style="display:grid;gap:12px;margin-top:14px;max-width:720px">
             <label><span>Title</span><input class="in" id="eeTitle" /></label>
             <label><span>Description</span><textarea class="in" id="eeDescription" rows="2"></textarea></label>
@@ -250,6 +254,15 @@
           </div>
           <div id="editNotice"></div>
         </div>
+      </section>
+
+      <section class="panel" id="positionReviewPanel" hidden>
+        <h2>Confirm ballot positions</h2>
+        <p class="lede">After nominations close, each staff member nominated for multiple positions must confirm one position before voting opens. Record their choice and how they confirmed it. Nominations for other positions remain in the history and are marked as not contesting.</p>
+        <div id="positionReviewStatus" role="status" aria-live="polite"></div>
+        <div id="positionReviewBody" style="margin-top:16px"></div>
+        <button class="btn btn-ghost" id="refreshPositionReview" type="button" style="margin-top:16px">Refresh position review</button>
+        <div id="positionReviewNotice" role="status" aria-live="polite"></div>
       </section>
 
       <section class="panel">
@@ -411,6 +424,9 @@
     let elections = [];
     let current = null;      // { election, positions, roll }
     let nominationRequest = 0;
+    let positionReviewRequest = 0;
+    let positionReviewSaving = null;
+    let positionReviewControls = [];
 
     function show(view) {
       ['List', 'New', 'One'].forEach((n) => { el('view' + n).hidden = n !== view; });
@@ -495,6 +511,7 @@
         renderRoll();
         renderPositions();
         await renderNominations();
+        await renderPositionReview();
         renderCount();
         document.dispatchEvent(new CustomEvent('resok:election-admin-open', { detail: current.election }));
       } catch (error) {
@@ -536,6 +553,7 @@
       // Editing is offered only while the election can still be changed. The lock notice
       // above already says why it disappears, so this does not repeat it.
       el('editBox').hidden = !!e.locked;
+      el('reviewDatesHint').hidden = e.electorate !== 'staff';
       if (!e.locked) {
         const forDatetime = (v) => v ? String(v).replace(' ', 'T').slice(0, 16) : '';
         el('eeTitle').value = e.title || '';
@@ -552,6 +570,13 @@
       const move = (status, label, style) => {
         const b = make('button', 'btn ' + (style || 'btn-ghost'), label);
         b.type = 'button';
+        if (status === 'open') {
+          b.id = 'openVotingBtn';
+          if (e.electorate === 'staff') {
+            b.disabled = true;
+            b.title = 'Check and confirm ballot positions before opening voting.';
+          }
+        }
         b.addEventListener('click', () => setStatus(status, label));
         actions.appendChild(b);
       };
@@ -783,7 +808,9 @@
           row.style.paddingLeft = '18px';
           const grow2 = make('div', 'grow');
           grow2.appendChild(make('span', null, c.name));
-          grow2.appendChild(make('div', 'sub', c.status + (c.headline ? ' · ' + c.headline : '')));
+          const ballotStatus = current.election.electorate === 'staff' && c.ballotStatus === 'not_contesting'
+            ? 'Not contesting this position' : c.status;
+          grow2.appendChild(make('div', 'sub', ballotStatus + (c.headline ? ' · ' + c.headline : '')));
           row.appendChild(grow2);
           if (!current.election.locked && c.status !== 'approved') {
             const approve = make('button', 'btn btn-primary btn-sm', 'Approve');
@@ -897,6 +924,191 @@
       }
     });
 
+    /* ---------------- ballot position review ---------------- */
+    function setPositionReviewDisabled(disabled) {
+      positionReviewControls.forEach((control) => { control.disabled = disabled; });
+    }
+
+    async function renderPositionReview() {
+      const e = current.election;
+      const request = ++positionReviewRequest;
+      const panel = el('positionReviewPanel');
+      const mount = el('positionReviewBody');
+      const refresh = el('refreshPositionReview');
+      positionReviewControls = [refresh];
+      panel.hidden = e.electorate !== 'staff';
+      mount.textContent = '';
+      notice('positionReviewNotice', '');
+      if (panel.hidden) return;
+      const openVoting = el('openVotingBtn');
+      if (openVoting) {
+        openVoting.disabled = true;
+        openVoting.title = 'Check and confirm ballot positions before opening voting.';
+      }
+      notice('positionReviewStatus', 'Checking ballot positions...', 'info');
+      refresh.disabled = true;
+      mount.setAttribute('aria-busy', 'true');
+      try {
+        const data = await api('/api/admin/elections/' + e.id + '/position-review');
+        if (request !== positionReviewRequest || current.election.id !== e.id) return;
+        const review = data && data.review;
+        if (!review || review.available !== true || String(review.electionId) !== String(e.id)
+          || !Array.isArray(review.conflicts) || !Array.isArray(review.blockedPosts)
+          || !Array.isArray(review.blockingReasons) || typeof review.ready !== 'boolean'
+          || typeof review.canRecord !== 'boolean' || typeof review.reviewPeriodValid !== 'boolean'
+          || review.conflicts.some((c) => !Number.isSafeInteger(c.userId) || c.userId < 1
+            || !Array.isArray(c.positions) || !c.positions.length
+            || c.positions.some((p) => !Number.isSafeInteger(p.positionId) || p.positionId < 1))) {
+          notice('positionReviewStatus', 'Ballot position review is unavailable. Ask ICT to finish the election update, then refresh.', 'warn');
+          return;
+        }
+        const unresolved = review.conflicts.filter((c) => !c.resolved).length;
+        const ready = review.ready && review.reviewPeriodValid && !unresolved && !review.blockedPosts.length;
+        const canRecord = review.canRecord && !e.locked && e.status === 'nominations_closed';
+        if (openVoting) {
+          openVoting.disabled = !ready || !!e.locked;
+          openVoting.title = ready ? 'Open voting when its scheduled opening time is due.'
+            : 'Complete ballot position review and address the blocking issues before opening voting.';
+        }
+        if (e.locked) {
+          notice('positionReviewStatus', 'Voting has opened. Confirmed ballot positions are locked.', 'info');
+        } else if (ready) {
+          notice('positionReviewStatus', 'Ballot positions confirmed. Every standing candidate is contesting one position.', 'ok');
+        } else if (!canRecord) {
+          notice('positionReviewStatus', 'Position choices can be recorded after nominations close and before voting opens.', 'info');
+        } else {
+          notice('positionReviewStatus', unresolved
+            ? unresolved + (unresolved === 1 ? ' nominee still needs' : ' nominees still need') + ' to confirm one position.'
+            : 'Review the issues below before opening voting.', 'warn');
+        }
+        if (!review.reviewPeriodValid && !e.locked) {
+          mount.appendChild(make('p', 'note warn', 'Allow time between nominations closing and voting opening. Use Correct the details above to move voting to a later time.'));
+        }
+        if (review.blockingReasons.length) {
+          const reasons = make('ul', 'position-review-list');
+          review.blockingReasons.forEach((reason) => reasons.appendChild(make('li', null, reason)));
+          mount.appendChild(reasons);
+        }
+        if (review.blockedPosts.length) {
+          const blocked = make('div', 'note warn');
+          blocked.appendChild(make('strong', null, 'Positions needing candidates'));
+          const posts = make('ul', 'position-review-list');
+          review.blockedPosts.forEach((post) => posts.appendChild(make('li', null,
+            post.title + ': ' + post.standing + ' standing for ' + post.seats + (post.seats === 1 ? ' seat.' : ' seats.'))));
+          blocked.appendChild(posts);
+          mount.appendChild(blocked);
+        }
+        if (!review.conflicts.length) {
+          mount.appendChild(make('p', 'lede', 'No staff member currently needs to choose between multiple positions.'));
+        }
+        review.conflicts.forEach((conflict) => {
+          const card = make('div', 'position-review-card');
+          card.appendChild(make('h3', null, conflict.name));
+          const positions = make('ul', 'position-review-list');
+          conflict.positions.forEach((position) => {
+            const known = Number.isSafeInteger(position.nominationCount) && position.nominationCount >= 0;
+            positions.appendChild(make('li', null, position.title + ' — ' + (known
+              ? position.nominationCount + (position.nominationCount === 1 ? ' nomination' : ' nominations')
+              : 'Nomination total unavailable')));
+          });
+          card.appendChild(positions);
+          if (conflict.choice) {
+            card.appendChild(make('p', 'note ' + (conflict.resolved ? 'ok' : 'warn'),
+              'Confirmed choice: ' + conflict.choice.positionTitle
+              + (conflict.choice.confirmedAt ? ' · Recorded ' + fmt(conflict.choice.confirmedAt) : '')));
+            if (conflict.choice.confirmationNote) card.appendChild(make('p', 'lede', 'Confirmation: ' + conflict.choice.confirmationNote));
+          } else {
+            card.appendChild(make('p', 'lede', 'Awaiting the nominee’s confirmed position.'));
+          }
+          if (canRecord) {
+            const form = make('form');
+            const positionLabel = make('label');
+            positionLabel.appendChild(make('span', null, 'Chosen position'));
+            const select = make('select', 'in');
+            select.id = 'position-choice-' + conflict.userId;
+            select.required = true;
+            positionLabel.htmlFor = select.id;
+            const placeholder = make('option', null, 'Choose the position confirmed by this nominee');
+            placeholder.value = '';
+            select.appendChild(placeholder);
+            conflict.positions.forEach((position) => {
+              const option = make('option', null, position.title);
+              option.value = String(position.positionId);
+              select.appendChild(option);
+            });
+            select.value = conflict.choice ? String(conflict.choice.positionId) : '';
+            positionLabel.appendChild(select);
+            const noteLabel = make('label');
+            noteLabel.appendChild(make('span', null, 'How did the nominee confirm this choice?'));
+            const note = make('textarea', 'in');
+            note.id = 'position-confirmation-' + conflict.userId;
+            note.required = true;
+            note.rows = 3;
+            note.maxLength = 1000;
+            note.placeholder = 'Record how and when the nominee confirmed this position.';
+            noteLabel.htmlFor = note.id;
+            noteLabel.appendChild(note);
+            const submit = make('button', 'btn btn-primary', 'Record chosen position');
+            submit.type = 'submit';
+            form.appendChild(positionLabel);
+            form.appendChild(noteLabel);
+            form.appendChild(submit);
+            positionReviewControls.push(select, note, submit);
+            form.addEventListener('submit', async (event) => {
+              event.preventDefault();
+              if (positionReviewSaving || current.election.id !== e.id || request !== positionReviewRequest) return;
+              const positionId = Number(select.value);
+              const confirmationNote = String(note.value || '').trim();
+              if (!conflict.positions.some((p) => p.positionId === positionId)) {
+                notice('positionReviewNotice', 'Choose the position confirmed by the nominee.', 'warn');
+                return;
+              }
+              if (!confirmationNote) {
+                notice('positionReviewNotice', 'Record how the nominee confirmed this choice.', 'warn');
+                return;
+              }
+              const saving = {};
+              positionReviewSaving = saving;
+              setPositionReviewDisabled(true);
+              notice('positionReviewNotice', 'Recording the chosen position...', 'info');
+              try {
+                await api('/api/admin/elections/' + e.id + '/position-review', {
+                  method: 'POST', body: JSON.stringify({ userId: conflict.userId, positionId, confirmationNote })
+                });
+                if (current.election.id !== e.id || request !== positionReviewRequest) return;
+                await openElection(e.id);
+                if (current.election.id === e.id) notice('positionReviewNotice', 'Chosen position recorded. Other nominations remain in the history.', 'ok');
+              } catch (error) {
+                if (current.election.id === e.id && request === positionReviewRequest) {
+                  notice('positionReviewNotice', error.message || 'The chosen position could not be recorded.', 'bad');
+                }
+              } finally {
+                if (positionReviewSaving === saving) {
+                  positionReviewSaving = null;
+                  setPositionReviewDisabled(false);
+                }
+              }
+            });
+            card.appendChild(form);
+          }
+          mount.appendChild(card);
+        });
+      } catch (error) {
+        if (request === positionReviewRequest && current.election.id === e.id) {
+          notice('positionReviewStatus', error.message || 'Ballot position review is unavailable. Try refreshing or contact ICT.', 'warn');
+        }
+      } finally {
+        if (request === positionReviewRequest && current.election.id === e.id) {
+          setPositionReviewDisabled(!!positionReviewSaving);
+          mount.setAttribute('aria-busy', 'false');
+        }
+      }
+    }
+
+    el('refreshPositionReview').addEventListener('click', () => {
+      if (!positionReviewSaving) return renderPositionReview();
+    });
+
     /* ---------------- nominations ---------------- */
     async function renderNominations() {
       const panel = el('nominationsPanel');
@@ -914,7 +1126,7 @@
       const staff = e.electorate === 'staff';
       el('nominationsTitle').textContent = staff ? 'Nomination tally' : 'Nominations';
       el('nominationsLede').textContent = staff
-        ? 'Each total counts distinct staff members who nominated the candidate. Votes are shown separately under Vote tally. Welfare nominations are final.'
+        ? 'Each total counts distinct staff members who nominated the candidate. Votes are shown separately under Vote tally. Nominations stay in the history; staff nominated for several positions confirm one ballot position after nominations close.'
         : 'Nominees accept before the returning officer approves their candidacy.';
       refresh.hidden = !staff;
       refresh.disabled = false;
@@ -945,7 +1157,8 @@
           grow.appendChild(make('strong', null, n.name));
           const bits = [n.position];
           if (n.nominatedBy) bits.push((staff ? 'original nominator: ' : 'nominated by ') + n.nominatedBy);
-          bits.push(n.accepted ? 'accepted' : (n.blocker || n.status));
+          bits.push(staff && n.ballotStatus === 'not_contesting'
+            ? 'Not contesting this position' : (n.accepted ? 'accepted' : (n.blocker || n.status)));
           grow.appendChild(make('div', 'sub', bits.join(' · ')));
 
           // Somebody from outside the membership is marked, and their contact details are

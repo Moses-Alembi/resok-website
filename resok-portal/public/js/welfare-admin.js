@@ -9,7 +9,7 @@
     panel = node('section', null, 'panel'); panel.id = 'welfareAdmin';
     const parent = document.getElementById('viewOne'); parent.insertBefore(panel, parent.children[1] || null);
     panel.append(node('h2', 'Automatic welfare election'));
-    panel.append(node('p', 'Every active staff account is eligible and stays on the voter roll, including accounts awaiting email verification. Once verified, staff can sign in and vote. Nominations are final and approved automatically. Vote totals are withheld from staff voters.'));
+    panel.append(node('p', 'Every active staff account is eligible and stays on the voter roll, including accounts awaiting email verification. Once verified, staff can sign in and vote. Nominations are retained. Before voting, nominees put forward for multiple posts choose one position and the returning officer records the choice under Confirm ballot positions. Leave a review interval after nominations close. Vote totals are withheld from staff voters.'));
     const message = node('p'); message.setAttribute('role', 'status');
     async function act(action, body) {
       message.textContent = 'Saving…';
@@ -32,7 +32,7 @@
       arm.disabled = election.locked || (!r.armed && !r.ready);
       arm.onclick = () => {
         const warning = awaitingVerification ? ' ' + awaitingVerification + ' account(s) still need email verification; they will stay on the roll and can vote after activation.' : ' All active staff accounts are verified.';
-        if (confirm(r.armed ? 'Disarm the schedule before voting opens?' : 'Freeze the voter roll and arm the schedule?' + warning + ' Nominations, voting, counting and publication will progress automatically.')) act(r.armed ? 'disarm' : 'arm');
+        if (confirm(r.armed ? 'Disarm the schedule before voting opens?' : 'Freeze the voter roll and arm the schedule?' + warning + ' Stages progress automatically. Voting waits until every required ballot position choice is confirmed and all posts have enough candidates.')) act(r.armed ? 'disarm' : 'arm');
       };
       controls.append(arm); panel.append(controls);
       if (!r.armed && !election.locked) {

@@ -3290,6 +3290,29 @@ Respiratory Society of Kenya");
         respond(200, $result);
     }
 
+    /** One ballot position per staff nominee, confirmed by the returning officer. */
+    if (preg_match('#^admin/elections/(\d+)/position-review$#', $route, $m)) {
+        $user = auth($config);
+        requireModule('electionFind', 'lib/elections.php');
+        requireSuperAdmin($user, $config);
+        $election = electionFind($pdo, $m[1]);
+        if (!$election || $election['electorate'] !== 'staff') respond(404, ['error' => 'Choose a staff welfare election.']);
+        if ($method === 'GET') respond(200, ['review' => electionStaffPositionReview($pdo, (int)$m[1])]);
+        if ($method !== 'POST') respond(405, ['error' => 'Use POST to record a confirmed position.']);
+        $data = input();
+        $nomineeId = filter_var($data['userId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $positionId = filter_var($data['positionId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($nomineeId === false || $positionId === false || !is_string($data['confirmationNote'] ?? null)) {
+            respond(400, ['error' => 'Choose the nominee and position, and record how they confirmed their choice.']);
+        }
+        [$review, $error] = electionRecordStaffPositionChoice($pdo, (int)$m[1], $nomineeId, $positionId,
+            $data['confirmationNote'], (int)$user['userId']);
+        if ($error) respond(400, ['error' => $error]);
+        logAdminAction($pdo, (int)$user['userId'], 'election_position_choice_recorded', $nomineeId,
+            'Election ' . $m[1] . ', confirmed position ' . $positionId);
+        respond(200, ['review' => $review]);
+    }
+
     /** Every nomination for an election, for the officer reviewing them. */
     if (preg_match('#^admin/elections/(\d+)/nominations$#', $route, $m) && $method === 'GET') {
         $user = auth($config);

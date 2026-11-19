@@ -155,6 +155,9 @@ function welfareArm(PDO $pdo, int $id, bool $arm): array
             if (!$r['ready']) throw new RuntimeException('Add at least one active staff account to the roster before creating the voter roll.');
             if (!electionPositions($pdo,$id)) throw new RuntimeException('Add the contested posts first.');
             if (!$raw['nominations_open_at'] || !$raw['nominations_close_at']) throw new RuntimeException('Set nomination dates and voting dates first.');
+            if (new DateTimeImmutable($raw['opens_at']) <= new DateTimeImmutable($raw['nominations_close_at'])) {
+                throw new RuntimeException('Voting must open later than nominations close, leaving time to confirm one position per nominee.');
+            }
             if (new DateTimeImmutable($raw['closes_at']) <= new DateTimeImmutable('now')) throw new RuntimeException('The voting window has already ended.');
             $pdo->prepare('DELETE FROM election_roll WHERE election_id=?')->execute([$id]);
             $pdo->prepare("INSERT INTO election_roll (election_id,member_profile_id,user_id,name,membership_id,email,standing_at_cutoff)
@@ -194,14 +197,21 @@ function welfareRunScheduled(PDO $pdo): void
             if ($now >= new DateTimeImmutable($raw['closes_at']) && !$e['openedAt']) throw new RuntimeException('The voting window elapsed before voting could open. Review the election; no result was invented.');
             if (in_array($e['status'],['draft','roll_published'],true) && $now >= new DateTimeImmutable($raw['nominations_open_at'])) {
                 [$e,$error]=electionSetStatus($pdo,(int)$id,'nominations'); if($error)throw new RuntimeException($error);
-                welfareEvent($pdo,(int)$id,'Nominations opened automatically. Nominations are final and approved automatically.');
+                welfareEvent($pdo,(int)$id,'Nominations opened automatically. Nominees put forward for multiple posts must choose one position before voting.');
             }
             if ($e['status']==='nominations' && $now >= new DateTimeImmutable($raw['nominations_close_at'])) {
                 [$e,$error]=electionSetStatus($pdo,(int)$id,'nominations_closed');if($error)throw new RuntimeException($error);
                 welfareEvent($pdo,(int)$id,'Nominations closed automatically.');
             }
             if ($e['status']==='nominations_closed' && $now >= new DateTimeImmutable($raw['opens_at'])) {
-                [$e,$error]=electionSetStatus($pdo,(int)$id,'open');if($error)throw new RuntimeException($error);
+                [$e,$error]=electionSetStatus($pdo,(int)$id,'open');
+                if ($error) {
+                    // Keep nomination closure committed so officers can resolve the review.
+                    // Rolling back this transaction would leave the election in nominations.
+                    $pdo->prepare('UPDATE welfare_settings SET last_error=? WHERE election_id=?')->execute([mb_substr($error,0,500),$id]);
+                    $pdo->commit();
+                    continue;
+                }
                 welfareEvent($pdo,(int)$id,'Voting opened automatically. Candidate totals are provisional until voting closes.');
             }
             if ($e['status']==='open' && $now >= new DateTimeImmutable($raw['closes_at'])) {

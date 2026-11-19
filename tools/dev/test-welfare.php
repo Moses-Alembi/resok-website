@@ -44,7 +44,7 @@ function finishWorker(array $w): array {$out=stream_get_contents($w[1][1]);$err=
 $server=connectTest();$db='resok_welfare_test_'.bin2hex(random_bytes(5));$server->exec('CREATE DATABASE '.$db);$p=connectTest($db);
 try {
     $sqlDir=__DIR__.'/../../resok-portal/server/';
-    foreach(['schema.sql','schema-elections.sql','schema-elections-ballot.sql','migration-election-nominations.sql','migration-election-external-nominees.sql','migration-election-staff.sql','migration-2026-11-19-welfare-nomination-records.sql','migration-2026-11-03-welfare-automation.sql','migration-2026-11-03-welfare-staff-total-34.sql'] as $file){foreach(migrateSplit(file_get_contents($sqlDir.$file)) as $sql)$p->exec($sql);}
+    foreach(['schema.sql','schema-elections.sql','schema-elections-ballot.sql','migration-election-nominations.sql','migration-election-external-nominees.sql','migration-election-staff.sql','migration-2026-11-19-welfare-nomination-records.sql','migration-2026-11-19-welfare-position-review.sql','migration-2026-11-03-welfare-automation.sql','migration-2026-11-03-welfare-staff-total-34.sql'] as $file){foreach(migrateSplit(file_get_contents($sqlDir.$file)) as $sql)$p->exec($sql);}
     check(staffPortalEnsureTables($p),'staff schema initializes in the isolated database');
     $p->exec("INSERT INTO users(email,password_hash,email_verified,role) VALUES('officer@welfare.test','unused',1,'admin'),('observer@welfare.test','unused',1,'member')");
     $officer=(int)$p->query("SELECT id FROM users WHERE email='officer@welfare.test'")->fetchColumn();
@@ -72,7 +72,7 @@ try {
     $GLOBALS['testUser']=['userId'=>$titleUser,'role'=>'member','email'=>'employee1@welfare.test'];
     $self=endpoint($p,'welfare/me','GET')->body['me'];
     check($self['jobTitle']==='Programme Officer'&&$self['name']==='Synthetic Employee 1','the election header receives the signed-in employee job title and name');
-    check(array_keys($self)===['name','email','jobTitle'],'the election header does not expose additional HR fields');
+    check(array_keys($self)===['name','email','jobTitle','electionOnly']&&$self['electionOnly']===false,'the election header exposes only identity fields and election-only access status');
     $GLOBALS['testUser']=['userId'=>$observer,'role'=>'member','email'=>'observer@welfare.test'];
     $self=endpoint($p,'welfare/me','GET')->body['me'];
     check($self['jobTitle']===null&&$self['name']==='observer@welfare.test','an account without a staff record keeps its email fallback and no job title');
@@ -158,7 +158,7 @@ try {
     $GLOBALS['route']='staff/payroll';
     check((geoCheck($p,[],(int)$uids[0],'member')['kind']??null)==='hours','the election exception does not open other staff work routes');
     $GLOBALS['testUser']=['userId'=>$observer,'role'=>'member','email'=>'observer@welfare.test'];
-    $live=endpoint($p,'welfare/live','GET');check($live->status===200&&count($live->body['elections'])===1,'a signed-in non-voter sees the live election');
+    $live=endpoint($p,'welfare/live','GET');check($live->status===404,'the disabled live endpoint does not expose election totals to signed-in observers');
     $json=json_encode($live->body);check(!str_contains($json,'@welfare.test')&&!str_contains($json,'TEST-1'),'live results do not expose emails or employee numbers');
     [$unused,$error]=electionCastVote($p,$e['slug'],$observer,[$pos=>[$cid]],null);check($error!==null,'viewing live totals does not confer a vote');
     $p->exec("UPDATE elections SET nominations_close_at=DATE_SUB(NOW(),INTERVAL 2 MINUTE),opens_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE id=$id");
@@ -190,7 +190,7 @@ try {
     check(electionResults($p,$id)['declaration']===1,'a single final declaration is stored');welfareRunScheduled($p);check(electionResults($p,$id)['declaration']===1,'scheduler retries do not duplicate declarations');
     [$unused,$error]=electionCastVote($p,$e['slug'],(int)$uids[0],[$pos=>[$cid]],null);check($error!==null,'closed elections reject further votes');
     // A closing transaction wins against a ballot waiting for the same election lock.
-    [$race,$error]=electionCreate($p,['electorate'=>'staff','title'=>'Synthetic Closing Race','opensAt'=>date('Y-m-d H:i:s',time()-600),'closesAt'=>date('Y-m-d H:i:s',time()+600)],$officer);$rid=$race['id'];
+    [$race,$error]=electionCreate($p,['electorate'=>'staff','title'=>'Synthetic Closing Race','nominationsOpenAt'=>date('Y-m-d H:i:s',time()-1800),'nominationsCloseAt'=>date('Y-m-d H:i:s',time()-1200),'opensAt'=>date('Y-m-d H:i:s',time()-600),'closesAt'=>date('Y-m-d H:i:s',time()+600)],$officer);$rid=$race['id'];
     $p->exec("INSERT INTO election_positions(election_id,title) VALUES($rid,'Chair')");$rpos=(int)$p->lastInsertId();$p->exec("INSERT INTO election_candidates(position_id,name,status) VALUES($rpos,'Synthetic Candidate','approved')");$rc=(int)$p->lastInsertId();
     $p->exec("INSERT INTO election_roll(election_id,user_id,name) VALUES($rid,{$uids[0]},'Synthetic voter')");$p->exec("UPDATE elections SET status='open',opened_at=NOW() WHERE id=$rid");
     $p->beginTransaction();$p->query("SELECT id FROM elections WHERE id=$rid FOR UPDATE");$waiting=worker($db,$race['slug'],(int)$uids[0],$rpos,$rc);

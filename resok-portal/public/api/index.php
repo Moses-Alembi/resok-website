@@ -3263,19 +3263,32 @@ Respiratory Society of Kenya");
                 static fn(array $nomination): bool => !empty($nomination['mine'])
             ));
         }
+        $nominationPositions = electionPositions($pdo, (int)$election['id']);
+        if ($election['electorate'] === 'staff') {
+            foreach ($nominationPositions as &$position) unset($position['candidates']);
+            unset($position);
+        }
         respond(200, electionForVoters($election, [
             'election'    => $election,
-            'positions'   => electionPositions($pdo, (int)$election['id']),
+            'positions'   => $nominationPositions,
             'canNominate' => $entry !== null && $election['nominationsOpen'],
             'members'     => $entry ? electionNominatableMembers($pdo, (int)$election['id']) : [],
             'nominations' => $privateNominations,
+            'ownNominations' => $entry && $election['electorate'] === 'staff'
+                ? electionStaffOwnNominations($pdo, (int)$election['id'], (int)$user['userId']) : [],
         ]));
     }
 
     if (preg_match('#^elections/([A-Za-z0-9-]+)/nominate$#', $route, $m) && $method === 'POST') {
         $user = auth($config);
         requireModule('electionNominate', 'lib/elections.php');
-        [$result, $error] = electionNominate($pdo, $m[1], (int)$user['userId'], input());
+        $data = input();
+        if (array_key_exists('nominations', $data)) {
+            if (!is_array($data['nominations'])) respond(400, ['error' => 'Check the nominations selected for submission.']);
+            [$result, $error] = electionNominateBatch($pdo, $m[1], (int)$user['userId'], $data['nominations']);
+        } else {
+            [$result, $error] = electionNominate($pdo, $m[1], (int)$user['userId'], $data);
+        }
         if ($error) respond(400, ['error' => $error]);
         respond(200, $result);
     }

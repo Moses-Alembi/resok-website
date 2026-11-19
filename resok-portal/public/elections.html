@@ -94,7 +94,7 @@
   </style>
   <link id="staffElectionAdminCss" rel="stylesheet" href="css/admin-shell.css?v=20260921-shell5" media="not all" />
   <link id="staffElectionShellCss" rel="stylesheet" href="css/staff-shell.css?v=20261103-staff6" media="not all" />
-  <link id="staffElectionCss" rel="stylesheet" href="css/staff-elections.css?v=20261110-brand5" media="not all" />
+  <link id="staffElectionCss" rel="stylesheet" href="css/staff-elections.css?v=20261119-batch1" media="not all" />
   <script>
     if (new URLSearchParams(location.search).get('for') === 'staff') {
       document.documentElement.classList.add('staff-elections');
@@ -230,12 +230,12 @@
 
         <!-- Nominations -->
         <div id="eNominateBox" hidden style="margin-top:24px;border:1px solid var(--line);border-radius:11px;padding:20px">
-          <h2>Nominate a candidate</h2>
+          <h2 id="nominationHeading">Nominate a candidate</h2>
           <p class="lede" style="margin-bottom:16px" id="nomIntro">
             You may nominate one member for each post, and you may nominate yourself.
             Nominating someone else asks them to accept before their name goes on the ballot.
           </p>
-          <div style="display:grid;gap:14px;max-width:520px">
+          <div id="memberNominationForm" style="display:grid;gap:14px;max-width:520px">
             <label>
               <span style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">Post</span>
               <select id="nomPosition" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit"></select>
@@ -287,6 +287,21 @@
             <div><button class="btn btn-primary" id="nomSubmit" type="button">
               <i class="fas fa-user-plus"></i> Submit nomination
             </button></div>
+          </div>
+          <div id="staffNominationForm" hidden>
+            <div class="staff-nomination-grid" id="staffNominationFields"></div>
+            <div class="staff-nomination-actions" id="staffNominationActions">
+              <button class="btn btn-primary" id="staffNominationReviewBtn" type="button">Review nominations</button>
+            </div>
+            <section class="staff-nomination-review" id="staffNominationReview" aria-label="Review your nominations" hidden>
+              <h3>Review your nominations</h3>
+              <p class="lede">Check each colleague and position. Submitted choices are final. Positions left blank will receive no nomination; you can nominate for them later while nominations remain open.</p>
+              <div id="staffNominationReviewRows"></div>
+              <div class="staff-nomination-actions">
+                <button class="btn btn-ghost" id="staffNominationEditBtn" type="button">Edit selections</button>
+                <button class="btn btn-primary" id="staffNominationSubmitBtn" type="button">Submit nominations</button>
+              </div>
+            </section>
           </div>
           <div id="nomNotice"></div>
         </div>
@@ -362,9 +377,12 @@
       document.getElementById('memberLede').hidden = true;
       document.getElementById('nomKindRow').hidden = true;
       document.getElementById('nomMemberLabel').textContent = 'Member of staff';
-      document.getElementById('nomIntro').textContent = 'You may nominate one colleague for each post, and you may nominate yourself. '
-        + 'You may choose a colleague who has already been nominated; each candidate appears once on the ballot. '
-        + 'Nominations are final. Before voting, colleagues nominated for multiple posts choose one position to contest; the returning officer records that choice.';
+      document.getElementById('nominationHeading').textContent = 'Nominate colleagues';
+      document.getElementById('memberNominationForm').hidden = true;
+      document.getElementById('staffNominationForm').hidden = false;
+      document.getElementById('nomIntro').textContent = 'Choose a colleague for each position you wish to nominate for, then review and submit your nominations together. '
+        + 'You may nominate yourself or the same colleague for several positions, including a colleague already nominated. '
+        + 'Recorded nominations are final. Before voting, colleagues nominated for several positions choose one position to contest.';
       document.getElementById('nomHeadline').placeholder = 'e.g. Accounts, Nairobi office';
       document.querySelector('.dashboard-logo').href = 'staff';
       document.title = 'Welfare elections - ReSoK Staff Portal';
@@ -456,6 +474,7 @@
     const fmt = electionDate;
 
     let current = null;      // the election being looked at
+    let electionRequest = 0;
     let ballot = null;       // the ballot paper being filled in
 
     function show(view) {
@@ -603,7 +622,11 @@
 
     /* ---------------- one election ---------------- */
     async function openElection(slug) {
+      const request = ++electionRequest;
+      ++nominationRequest;
+      notice('nomNotice', '');
       show('One');
+      el('eNominateBox').hidden = true;
       el('eTitle').textContent = 'Loading…';
       el('eDescription').textContent = '';
       el('eActions').textContent = '';
@@ -613,9 +636,12 @@
       el('eSchedule').hidden = true;
       notice('eNotice', '');
       try {
-        current = await api('/api/elections/' + encodeURIComponent(slug));
+        const data = await api('/api/elections/' + encodeURIComponent(slug));
+        if (request !== electionRequest) return;
+        current = data;
         renderElection();
       } catch (error) {
+        if (request !== electionRequest) return;
         el('eTitle').textContent = 'Not available';
         notice('eNotice', error.message || 'That election could not be opened.', 'bad');
       }
@@ -672,25 +698,41 @@
 
     /* ---------------- nominations ---------------- */
     let nominations = null;
+    let nominationRequest = 0;
+    const staffNominationDrafts = new Map();
+    let staffNominationState = null;
+    let staffNominationSending = false;
 
     async function loadNominations() {
-      el('eNominateBox').hidden = true;
+      const request = ++nominationRequest;
+      const viewRequest = electionRequest;
+      if (!STAFF || !staffNominationState || staffNominationState.slug !== current.election.slug) el('eNominateBox').hidden = true;
       el('eNominations').textContent = '';
       const e = current.election;
       // Only fetched for an election that has reached the nomination phase. Elections set up
       // without one - a slate agreed elsewhere - have nothing to show here.
-      if (!['nominations', 'nominations_closed'].includes(e.status)) return;
+      if (!['nominations', 'nominations_closed'].includes(e.status)) {
+        el('eNominateBox').hidden = true;
+        if (STAFF) staffNominationState = null;
+        return false;
+      }
       try {
-        nominations = await api('/api/elections/' + encodeURIComponent(e.slug) + '/nominations');
+        const data = await api('/api/elections/' + encodeURIComponent(e.slug) + '/nominations');
+        if (request !== nominationRequest || viewRequest !== electionRequest || current.election.slug !== e.slug) return false;
+        nominations = data;
         renderNominationForm();
         renderNominationList();
+        return true;
       } catch (error) {
+        if (request !== nominationRequest || viewRequest !== electionRequest || current.election.slug !== e.slug) return false;
         el('eNominations').appendChild(make('div', 'note bad',
           error.message || 'Nominations could not be loaded.'));
+        return false;
       }
     }
 
     function renderNominationForm() {
+      if (STAFF) { renderStaffNominationForm(); return; }
       if (!nominations.canNominate) return;
       const posts = el('nomPosition');
       const members = el('nomMember');
@@ -713,6 +755,176 @@
       });
       el('eNominateBox').hidden = false;
     }
+
+    /* Staff nominations are reviewed together and saved in one atomic request. */
+    function staffNominationIsCurrent(state) {
+      return state && staffNominationState === state && current
+        && current.election.slug === state.slug && electionRequest === state.viewRequest;
+    }
+
+    function setStaffNominationDisabled(disabled) {
+      if (!staffNominationState) return;
+      staffNominationState.controls.forEach((control) => { control.disabled = disabled; });
+    }
+
+    function renderStaffNominationForm() {
+      const mount = el('staffNominationFields');
+      mount.textContent = '';
+      el('staffNominationReview').hidden = true;
+      el('staffNominationFields').hidden = false;
+      el('staffNominationReviewRows').textContent = '';
+      el('staffNominationActions').hidden = true;
+      if (!Array.isArray(nominations.ownNominations) || !Array.isArray(nominations.positions)
+        || !Array.isArray(nominations.members)) {
+        staffNominationState = null;
+        el('eNominateBox').hidden = false;
+        notice('nomNotice', 'Your recorded nominations are unavailable. Ask ICT to finish the nomination update, then refresh the election.', 'warn');
+        return;
+      }
+      const slug = current.election.slug;
+      if (!staffNominationDrafts.has(slug)) staffNominationDrafts.set(slug, new Map());
+      const drafts = staffNominationDrafts.get(slug);
+      const own = new Map(nominations.ownNominations.map((n) => [Number(n.positionId), n]));
+      const members = new Map(nominations.members.map((m) => [Number(m.userId), m]));
+      const state = { slug, viewRequest: electionRequest, drafts, own, members,
+        positions: nominations.positions, fields: [], controls: [], review: null, canNominate: nominations.canNominate === true };
+      staffNominationState = state;
+      state.positions.forEach((position) => {
+        const positionId = Number(position.id);
+        const recorded = own.get(positionId);
+        const card = make('section', 'staff-nomination-card');
+        const head = make('div', 'staff-nomination-card-head');
+        head.appendChild(make('h3', null, position.title));
+        if (recorded) head.appendChild(make('span', 'staff-nomination-recorded', 'Recorded'));
+        card.appendChild(head);
+        if (recorded) {
+          drafts.delete(positionId);
+          card.appendChild(make('strong', 'staff-nomination-person', recorded.name));
+          card.appendChild(make('p', 'staff-nomination-help', 'Your final nomination for this position.'));
+          if (recorded.headline) card.appendChild(make('p', 'staff-nomination-help', recorded.headline));
+        } else if (!state.canNominate) {
+          card.appendChild(make('p', 'staff-nomination-help', 'No nomination recorded for this position. Nominations are closed.'));
+        } else {
+          const draft = drafts.get(positionId) || { userId: '', headline: '' };
+          const label = make('label', 'staff-nomination-label');
+          label.appendChild(make('span', null, 'Colleague'));
+          const select = make('select', 'staff-nomination-input');
+          select.id = 'staff-nominee-' + positionId;
+          label.htmlFor = select.id;
+          const placeholder = make('option', null, 'Choose a colleague');
+          placeholder.value = '';
+          select.appendChild(placeholder);
+          nominations.members.forEach((member) => {
+            const option = make('option', null, member.name + (member.jobTitle ? ' · ' + member.jobTitle : ''));
+            option.value = String(member.userId);
+            select.appendChild(option);
+          });
+          select.value = members.has(Number(draft.userId)) ? String(draft.userId) : '';
+          label.appendChild(select);
+          card.appendChild(label);
+          const noteLabel = make('label', 'staff-nomination-label');
+          noteLabel.appendChild(make('span', null, 'A short note (optional)'));
+          const note = make('input', 'staff-nomination-input');
+          note.id = 'staff-nomination-note-' + positionId;
+          note.maxLength = 255;
+          note.value = draft.headline;
+          note.placeholder = 'Optional note for this nomination';
+          noteLabel.htmlFor = note.id;
+          noteLabel.appendChild(note);
+          card.appendChild(noteLabel);
+          const remember = () => {
+            if (staffNominationIsCurrent(state)) drafts.set(positionId, { userId: select.value, headline: note.value });
+          };
+          select.addEventListener('change', remember);
+          note.addEventListener('input', remember);
+          state.fields.push({ position, select, note });
+          state.controls.push(select, note);
+        }
+        mount.appendChild(card);
+      });
+      const editable = state.canNominate && state.fields.length > 0;
+      el('staffNominationActions').hidden = !editable;
+      state.controls.push(el('staffNominationReviewBtn'), el('staffNominationEditBtn'), el('staffNominationSubmitBtn'));
+      setStaffNominationDisabled(staffNominationSending);
+      el('eNominateBox').hidden = !state.canNominate && own.size === 0;
+      if (state.canNominate && !state.fields.length) notice('nomNotice', 'Your nominations for all positions have been recorded.', 'ok');
+    }
+
+    function reviewStaffNominations() {
+      const state = staffNominationState;
+      if (!staffNominationIsCurrent(state) || staffNominationSending || !state.canNominate) return;
+      const chosen = [];
+      for (const field of state.fields) {
+        const positionId = Number(field.position.id);
+        state.drafts.set(positionId, { userId: field.select.value, headline: field.note.value });
+        if (!field.select.value) continue;
+        const member = state.members.get(Number(field.select.value));
+        if (!member) { notice('nomNotice', 'Choose an eligible colleague from the list for ' + field.position.title + '.', 'warn'); return; }
+        const headline = String(field.note.value || '').trim();
+        if (headline.length > 255) { notice('nomNotice', 'Keep the note for ' + field.position.title + ' to 255 characters or fewer.', 'warn'); return; }
+        chosen.push({ positionId, userId: Number(member.userId), headline,
+          positionTitle: field.position.title, name: member.name });
+      }
+      if (!chosen.length) { notice('nomNotice', 'Choose at least one colleague before reviewing your nominations.', 'warn'); return; }
+      state.review = chosen;
+      const mount = el('staffNominationReviewRows');
+      mount.textContent = '';
+      state.positions.forEach((position) => {
+        const recorded = state.own.get(Number(position.id));
+        const selected = chosen.find((n) => n.positionId === Number(position.id));
+        if (!recorded && !selected) return;
+        const row = make('div', 'staff-nomination-review-row');
+        row.appendChild(make('strong', null, position.title));
+        row.appendChild(make('span', null, (recorded || selected).name));
+        if (recorded) row.appendChild(make('small', 'staff-nomination-recorded', 'Already recorded'));
+        if ((recorded || selected).headline) row.appendChild(make('p', 'staff-nomination-help', (recorded || selected).headline));
+        mount.appendChild(row);
+      });
+      notice('nomNotice', '');
+      el('staffNominationFields').hidden = true;
+      el('staffNominationActions').hidden = true;
+      el('staffNominationReview').hidden = false;
+    }
+
+    async function submitStaffNominations() {
+      const state = staffNominationState;
+      if (!staffNominationIsCurrent(state) || staffNominationSending || !state.canNominate || !state.review || !state.review.length) return;
+      const selected = state.review.map((n) => ({ ...n }));
+      staffNominationSending = true;
+      setStaffNominationDisabled(true);
+      notice('nomNotice', 'Submitting your nominations...', 'info');
+      try {
+        const result = await api('/api/elections/' + encodeURIComponent(state.slug) + '/nominate', {
+          method: 'POST', body: JSON.stringify({ nominations: selected.map(({ positionId, userId, headline }) => ({ positionId, userId, headline })) })
+        });
+        if (!staffNominationIsCurrent(state)) return;
+        selected.forEach((n) => { state.own.set(n.positionId, n); state.drafts.delete(n.positionId); });
+        nominations.ownNominations = Array.from(state.own.values());
+        renderStaffNominationForm();
+        const refreshed = await loadNominations();
+        if (current.election.slug !== state.slug || electionRequest !== state.viewRequest) return;
+        notice('nomNotice', refreshed
+          ? (result.message || 'Your nominations have been recorded. Each submitted choice is final.')
+          : 'Your nominations were recorded. Refresh the election to check the latest confirmation.', refreshed ? 'ok' : 'info');
+      } catch (error) {
+        if (staffNominationIsCurrent(state)) notice('nomNotice', error.message || 'Your nominations could not be confirmed. Your selections are kept; try submitting them again.', 'bad');
+      } finally {
+        staffNominationSending = false;
+        setStaffNominationDisabled(false);
+      }
+    }
+
+    el('staffNominationReviewBtn').addEventListener('click', reviewStaffNominations);
+    el('staffNominationEditBtn').addEventListener('click', () => {
+      const state = staffNominationState;
+      if (!staffNominationIsCurrent(state) || staffNominationSending) return;
+      state.review = null;
+      el('staffNominationReview').hidden = true;
+      el('staffNominationFields').hidden = false;
+      el('staffNominationActions').hidden = false;
+      notice('nomNotice', '');
+    });
+    el('staffNominationSubmitBtn').addEventListener('click', submitStaffNominations);
 
     function renderNominationList() {
       const mount = el('eNominations');
@@ -793,6 +1005,7 @@
     });
 
     el('nomSubmit').addEventListener('click', async () => {
+      if (STAFF) return;
       const button = el('nomSubmit');
       button.disabled = true;
       notice('nomNotice', '');

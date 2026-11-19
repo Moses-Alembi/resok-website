@@ -1256,6 +1256,95 @@ function electionResults(PDO $pdo, int $electionId): array
  *
  * @return array{0:?array,1:?string}
  */
+/** Save a staff member's selected posts together, or leave all of them unchanged. */
+function electionNominateBatch(PDO $pdo, string $key, int $userId, array $nominations): array
+{
+    if (!$nominations || count($nominations) > 100 || $nominations !== array_values($nominations)) {
+        return [null, 'Choose at least one position, with no more than 100 nominations in one submission.'];
+    }
+    $positions = [];
+    foreach ($nominations as $nomination) {
+        if (!is_array($nomination)) return [null, 'Check the selected positions and nominees.'];
+        $position = filter_var($nomination['positionId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $nominee = filter_var($nomination['userId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($position === false || $nominee === false || (isset($nomination['headline']) && !is_string($nomination['headline']))) {
+            return [null, 'Choose a valid colleague for every selected position.'];
+        }
+        if (isset($positions[$position])) return [null, 'Choose only one colleague for each position.'];
+        $positions[$position] = true;
+    }
+    [$result, $error] = electionWithLock($pdo, $key, static function () use ($pdo, $key, $userId, $nominations): array {
+        $election = electionFind($pdo, $key);
+        if (!$election || $election['electorate'] !== 'staff') return [null, 'Multiple nominations in one submission are available for staff welfare elections.'];
+        // The savepoint also protects callers that already own an outer transaction.
+        $pdo->exec('SAVEPOINT welfare_nomination_batch');
+        $recorded = [];
+        $notifications = [];
+        try {
+            foreach ($nominations as $nomination) {
+                [$item, $error] = electionNominateLocked($pdo, $key, $userId, $nomination);
+                if ($error !== null) {
+                    $pdo->exec('ROLLBACK TO SAVEPOINT welfare_nomination_batch');
+                    $pdo->exec('RELEASE SAVEPOINT welfare_nomination_batch');
+                    return [null, $error . ' None of the choices in this submission were changed.'];
+                }
+                if (isset($item['_staffNotification'])) $notifications[] = $item['_staffNotification'];
+                unset($item['_staffNotification']);
+                $recorded[] = $item;
+            }
+            $pdo->exec('RELEASE SAVEPOINT welfare_nomination_batch');
+        } catch (Throwable $error) {
+            $pdo->exec('ROLLBACK TO SAVEPOINT welfare_nomination_batch');
+            $pdo->exec('RELEASE SAVEPOINT welfare_nomination_batch');
+            throw $error;
+        }
+        return [[
+            'nominated' => true, 'final' => true, 'nominations' => $recorded,
+            'message' => 'Your nominations have been recorded. Each nomination is final.',
+            '_staffNotifications' => $notifications,
+        ], null];
+    });
+    if ($error !== null || $result === null) return [$result, $error];
+    $notifications = $result['_staffNotifications'];
+    unset($result['_staffNotifications']);
+    if (!$pdo->inTransaction() && function_exists('staffNotify')) {
+        foreach ($notifications as $notification) {
+            staffNotify($pdo, $notification['userId'], 'election', $notification['title'], $notification['link']);
+        }
+    }
+    return [$result, null];
+}
+
+/** Only the signed-in staff voter's own recorded choices; never nomination totals. */
+function electionStaffOwnNominations(PDO $pdo, int $electionId, int $userId): array
+{
+    $election = electionFind($pdo, (string)$electionId);
+    if (!$election || $election['electorate'] !== 'staff' || !electionRollEntry($pdo, $electionId, $userId)) return [];
+    $legacySql = 'SELECT c.position_id, c.nominee_user_id, c.name, c.headline
+                    FROM election_candidates c JOIN election_positions p ON p.id = c.position_id
+                    JOIN election_roll r ON r.id = c.nominated_by_roll_id AND r.election_id = p.election_id
+                   WHERE p.election_id = ? AND r.user_id = ? ORDER BY c.id';
+    $legacy = $pdo->prepare($legacySql);
+    $legacy->execute([$electionId, $userId]);
+    $byPosition = [];
+    foreach ($legacy->fetchAll() as $row) $byPosition[(int)$row['position_id']] = $row;
+    try {
+        $stmt = $pdo->prepare('SELECT n.position_id, c.nominee_user_id, c.name, c.headline
+                                FROM election_staff_nominations n
+                                JOIN election_positions p ON p.id = n.position_id
+                                JOIN election_candidates c ON c.id = n.candidate_id AND c.position_id = n.position_id
+                               WHERE p.election_id = ? AND n.nominator_user_id = ? ORDER BY n.position_id');
+        $stmt->execute([$electionId, $userId]);
+        foreach ($stmt->fetchAll() as $row) $byPosition[(int)$row['position_id']] = $row;
+    } catch (PDOException $error) {
+        if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
+    }
+    return array_values(array_map(static fn(array $row): array => [
+        'positionId' => (int)$row['position_id'], 'userId' => (int)$row['nominee_user_id'],
+        'name' => $row['name'], 'headline' => $row['headline'],
+    ], $byPosition));
+}
+
 function electionNominate(PDO $pdo, string $key, int $userId, array $data): array
 {
     [$result, $error] = electionWithLock($pdo, $key, fn() => electionNominateLocked($pdo, $key, $userId, $data));

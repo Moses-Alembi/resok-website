@@ -12,6 +12,33 @@ Several staff may nominate the same person; the ballot still contains that perso
 Submitting the same choice again succeeds without duplicating the nomination. A staff
 member cannot change their nomination to somebody else for the same post.
 
+## All positions and one submission
+
+The staff nomination form shows every post together, with a colleague selector and
+optional note for each. Select the desired nominees, review the complete selection,
+then use **Submit nominations** once. A colleague may be selected for several posts;
+the separate ballot-position review still applies before voting.
+
+Existing nominations are shown as recorded, read-only choices. Positions may be
+left blank; at least one new selection is needed to submit. A failed request keeps
+the draft choices available for correction or retry. Refresh the page to check which
+choices were saved if the connection was interrupted.
+
+The staff bulk request uses the existing `elections/{key}/nominate` endpoint with
+`nominations: [{positionId, userId, headline}]`. Every selected post is validated
+under the election lock and saved in one transaction. A failure leaves all choices
+in that request unchanged. Same-choice retries do not add nominations or repeat
+notifications. The existing single-post endpoint behavior remains available.
+
+The nomination-form response includes only the signed-in staff member's
+`ownNominations`. It does not expose other people's nomination choices, candidate
+nomination totals or the developing staff candidate list. No new database migration
+is needed for this form; it uses the existing nomination-records table.
+
+Deploy `elections.html`, `css/staff-elections.css`, `api/index.php` and
+`api/lib/elections.php` together for this form update. The stylesheet version in
+the HTML changes so browsers fetch the new layout.
+
 ## Deployment order
 
 1. Back up the election database through the normal hosting process.

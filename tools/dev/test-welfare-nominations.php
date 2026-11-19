@@ -74,6 +74,13 @@ function nominationRecordCount(PDO $pdo, int $position, ?int $nominator = null):
     return (int)$query->fetchColumn();
 }
 
+function nominationSummary(PDO $pdo, int $election, int $candidate, ?int $viewer = null): array
+{
+    $rows = array_column(electionNominations($pdo, $election, $viewer), null, 'id');
+    if (!isset($rows[$candidate])) throw new RuntimeException('Expected synthetic nomination missing');
+    return $rows[$candidate];
+}
+
 function nominationWorker(string $database, string $slug, int $user, int $position, int $nominee): array
 {
     $pipes = [];
@@ -129,7 +136,7 @@ try {
     nominationCheck($error === null, 'synthetic staff election creates');
     $electionId = $election['id'];
     $positions = [];
-    foreach (['Chairperson', 'Secretary', 'Treasurer', 'Concurrent Chair', 'Concurrent Secretary', 'Outer Transaction'] as $title) {
+    foreach (['Chairperson', 'Secretary', 'Treasurer', 'Concurrent Chair', 'Concurrent Secretary', 'Outer Transaction', 'Legacy After Migration'] as $title) {
         [$saved, $error] = electionPositionSave($pdo, $electionId, ['title' => $title]);
         nominationCheck($error === null, 'synthetic post creates: ' . $title);
         foreach ($saved as $post) if ($post['title'] === $title) $positions[$title] = $post['id'];
@@ -146,6 +153,11 @@ try {
         VALUES(?,?,?,NOW(),'Synthetic Staff 1','approved')")
         ->execute([$position, $users[1], $legacyRoll['id']]);
     $legacyCandidate = (int)$pdo->lastInsertId();
+    $summary = nominationSummary($pdo, $electionId, $legacyCandidate);
+    nominationCheck(array_key_exists('nominationCount', $summary) && $summary['nominationCount'] === null,
+        'admin nomination total is unavailable rather than zero when the records migration is missing');
+    nominationCheck(!array_key_exists('nominationCount', nominationSummary($pdo, $electionId, $legacyCandidate, $users[1])),
+        'staff viewer responses omit nomination totals even when the records migration is missing');
     [$unused, $error] = electionNominate($pdo, $election['slug'], $users[2], ['positionId' => $position, 'userId' => $users[1]]);
     nominationCheck($error !== null && nominationCandidateCount($pdo, $position) === 1,
         'missing records migration fails without adding or changing a candidate');
@@ -154,6 +166,8 @@ try {
     nominationApply($pdo, 'migration-2026-11-19-welfare-nomination-records.sql');
     nominationCheck(nominationRecordCount($pdo, $position) === $migratedRecords
         && nominationCandidateCount($pdo, $position) === 1, 'migration can be rerun without duplicating existing data');
+    nominationCheck(nominationSummary($pdo, $electionId, $legacyCandidate)['nominationCount'] === 1,
+        'admin total counts the original legacy nominator once when also present in the records table');
 
     [$unused, $error] = electionNominate($pdo, $election['slug'], $users[0], ['positionId' => $position, 'userId' => $users[3]]);
     nominationCheck($error !== null && nominationCandidateCount($pdo, $position) === 1,
@@ -164,10 +178,17 @@ try {
     nominationCheck($error === null && $result['nominated'] && $result['approved'], 'another staff member can nominate an already nominated colleague');
     nominationCheck(nominationCandidateCount($pdo, $position) === 1
         && nominationRecordCount($pdo, $position, $users[2]) === 1, 'shared nominee keeps one candidate and stores the additional nominator');
+    nominationCheck(nominationSummary($pdo, $electionId, $legacyCandidate)['nominationCount'] === 2,
+        'super administrator sees two distinct nominations for the shared candidate');
+    nominationCheck(!array_key_exists('nominationCount', nominationSummary($pdo, $electionId, $legacyCandidate, $users[1]))
+        && !array_key_exists('nominationCount', nominationSummary($pdo, $electionId, $legacyCandidate, $users[2])),
+        'candidate and nominator viewer responses do not expose nomination totals');
     $recordTotal = nominationRecordCount($pdo, $position);
     [$result, $error] = electionNominate($pdo, $election['slug'], $users[2], ['positionId' => $position, 'userId' => $users[1], 'headline' => 'Must not overwrite']);
     nominationCheck($error === null && nominationRecordCount($pdo, $position) === $recordTotal
         && nominationCandidateCount($pdo, $position) === 1, 'same-nominee retry is idempotent');
+    nominationCheck(nominationSummary($pdo, $electionId, $legacyCandidate)['nominationCount'] === 2,
+        'retrying a nomination does not increase its administrative total');
     nominationCheck($pdo->query('SELECT headline FROM election_candidates WHERE id=' . $legacyCandidate)->fetchColumn() === null,
         'additional nominations do not overwrite the original candidate details');
     nominationCheck($pdo->query('SELECT accepted_at FROM election_candidates WHERE id=' . $legacyCandidate)->fetchColumn() === null,
@@ -188,10 +209,27 @@ try {
     nominationCheck($error !== null && nominationRecordCount($pdo, $position, $users[6]) === 0,
         'off-roll nominees are refused without consuming a nomination');
 
+    // An older deployment may write its candidate after the new migration already ran.
+    $latePosition = $positions['Legacy After Migration'];
+    $lateRoll = electionRollEntry($pdo, $electionId, $users[6]);
+    $pdo->prepare("INSERT INTO election_candidates(position_id,nominee_user_id,nominated_by_roll_id,nominated_at,name,status)
+        VALUES(?,?,?,NOW(),'Synthetic Late Legacy Candidate','approved')")
+        ->execute([$latePosition, $users[7], $lateRoll['id']]);
+    $lateCandidate = (int)$pdo->lastInsertId();
+    nominationCheck(nominationRecordCount($pdo, $latePosition) === 0
+        && nominationSummary($pdo, $electionId, $lateCandidate)['nominationCount'] === 1,
+        'legacy nominations written after migration are counted without a records-table entry');
+    [$result, $error] = electionNominate($pdo, $election['slug'], $users[8], ['positionId' => $latePosition, 'userId' => $users[7]]);
+    nominationCheck($error === null && nominationSummary($pdo, $electionId, $lateCandidate)['nominationCount'] === 2,
+        'additional nomination combines with an unbackfilled original legacy nominator');
+
     foreach (['withdrawn' => 'Secretary', 'disqualified' => 'Treasurer'] as $status => $title) {
         $post = $positions[$title];
         $pdo->prepare('INSERT INTO election_candidates(position_id,nominee_user_id,name,status) VALUES(?,?,?,?)')
             ->execute([$post, $users[1], 'Synthetic unavailable candidate', $status]);
+        $adminCandidate = (int)$pdo->lastInsertId();
+        nominationCheck(nominationSummary($pdo, $electionId, $adminCandidate)['nominationCount'] === 0,
+            'admin-added ' . $status . ' candidate has zero staff nominations');
         [$unused, $error] = electionNominate($pdo, $election['slug'], $users[6], ['positionId' => $post, 'userId' => $users[1]]);
         nominationCheck($error !== null && nominationRecordCount($pdo, $post) === 0,
             $status . ' candidates are not revived by an additional nomination');
@@ -243,6 +281,29 @@ try {
     nominationCheck(nominationCandidateCount($pdo, $outerPosition) === 0 && nominationRecordCount($pdo, $outerPosition) === 0,
         'rolling back the caller transaction removes both candidate and nomination record');
 
+    [$otherElection, $error] = electionCreate($pdo, [
+        'electorate' => 'staff', 'title' => 'Synthetic Isolated Nomination Totals',
+        'nominationsOpenAt' => date('Y-m-d H:i:s', time() - 300),
+        'nominationsCloseAt' => date('Y-m-d H:i:s', time() + 1800),
+        'opensAt' => date('Y-m-d H:i:s', time() + 2400),
+        'closesAt' => date('Y-m-d H:i:s', time() + 3600),
+    ], null);
+    nominationCheck($error === null, 'second staff election creates for nomination total isolation');
+    [$saved, $error] = electionPositionSave($pdo, $otherElection['id'], ['title' => 'Chairperson']);
+    $otherPosition = $saved[0]['id'];
+    $pdo->prepare("INSERT INTO election_candidates(position_id,nominee_user_id,name,status)
+        VALUES(?,?,'Synthetic Same Colleague In Another Election','approved')")
+        ->execute([$otherPosition, $users[1]]);
+    $otherCandidate = (int)$pdo->lastInsertId();
+    $recordInsert = $pdo->prepare('INSERT INTO election_staff_nominations(position_id,nominator_user_id,candidate_id,nominated_at) VALUES(?,?,?,NOW())');
+    foreach ([0, 2, 3] as $index) $recordInsert->execute([$otherPosition, $users[$index], $otherCandidate]);
+    nominationCheck(nominationSummary($pdo, $otherElection['id'], $otherCandidate)['nominationCount'] === 3
+        && nominationSummary($pdo, $electionId, $legacyCandidate)['nominationCount'] === 2,
+        'nomination totals remain isolated for the same colleague in different elections');
+    $pdo->exec("UPDATE election_candidates SET status='withdrawn' WHERE id=" . $legacyCandidate);
+    nominationCheck(nominationSummary($pdo, $electionId, $legacyCandidate)['nominationCount'] === 2,
+        'withdrawing a candidate preserves the recorded nomination total');
+
     // The separate board-election rules must continue rejecting a duplicate nominee.
     [$board, $error] = electionCreate($pdo, [
         'title' => 'Synthetic Board Nomination Regression', 'eligibilityCutoff' => date('Y-m-d'),
@@ -265,6 +326,10 @@ try {
     nominationCheck($error === null, 'board nomination window opens');
     [$result, $error] = electionNominate($pdo, $board['slug'], $users[0], ['positionId' => $boardPosition, 'memberProfileId' => $memberIds[1]]);
     nominationCheck($error === null && !$result['accepted'], 'board nominees still need their own acceptance');
+    $boardCandidate = (int)$pdo->query('SELECT id FROM election_candidates WHERE position_id=' . $boardPosition)->fetchColumn();
+    nominationCheck(!array_key_exists('nominationCount', nominationSummary($pdo, $board['id'], $boardCandidate))
+        && !array_key_exists('nominationCount', nominationSummary($pdo, $board['id'], $boardCandidate, $users[1])),
+        'board nomination response fields remain unchanged for administrators and viewers');
     [$unused, $error] = electionNominate($pdo, $board['slug'], $users[1], ['positionId' => $boardPosition, 'memberProfileId' => $memberIds[1]]);
     nominationCheck($error !== null && str_contains($error, 'already been nominated')
         && nominationRecordCount($pdo, $boardPosition) === 0, 'board duplicate rules and staff-record isolation remain unchanged');

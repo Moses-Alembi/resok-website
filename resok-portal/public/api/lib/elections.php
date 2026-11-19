@@ -1478,6 +1478,40 @@ function electionRespondToNomination(PDO $pdo, int $candidateId, int $userId, bo
     return [['accepted' => false, 'position' => $candidate['position_title']], null];
 }
 
+/** Recorded staff nominations per candidate, including known original nominators.
+ * NULL means the nomination-records migration is unavailable; it never means zero.
+ * @return array<int,int>|null
+ */
+function electionStaffNominationCounts(PDO $pdo, int $electionId): ?array
+{
+    try {
+        $stmt = $pdo->prepare('SELECT nominations.candidate_id, COUNT(*) AS nomination_count
+                                FROM (
+                                    SELECT n.candidate_id, n.nominator_user_id
+                                      FROM election_staff_nominations n
+                                      JOIN election_candidates c ON c.id = n.candidate_id AND c.position_id = n.position_id
+                                      JOIN election_positions p ON p.id = n.position_id
+                                     WHERE p.election_id = ?
+                                    UNION
+                                    SELECT c.id AS candidate_id, r.user_id AS nominator_user_id
+                                      FROM election_candidates c
+                                      JOIN election_positions p ON p.id = c.position_id
+                                      JOIN election_roll r ON r.id = c.nominated_by_roll_id AND r.election_id = p.election_id
+                                     WHERE p.election_id = ?
+                                ) nominations
+                               GROUP BY nominations.candidate_id');
+        $stmt->execute([$electionId, $electionId]);
+        $counts = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $counts[(int)$row['candidate_id']] = (int)$row['nomination_count'];
+        }
+        return $counts;
+    } catch (PDOException $error) {
+        if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
+        return null;
+    }
+}
+
 /**
  * Nominations awaiting the returning officer, and what is blocking each one.
  *
@@ -1500,6 +1534,11 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
                            WHERE p.election_id = ?
                            ORDER BY p.position, c.nominated_at, c.id');
     $stmt->execute([$electionId]);
+    $candidates = $stmt->fetchAll();
+    // Only the super-admin call (no voter identity) receives staff nomination totals.
+    // Voter-facing nomination responses retain their existing private field shape.
+    $nominationCounts = $staffFinal && $viewerUserId === null
+        ? electionStaffNominationCounts($pdo, $electionId) : null;
 
     return array_map(fn($c) => array_merge([
         'id'           => (int)$c['id'],
@@ -1532,7 +1571,10 @@ function electionNominations(PDO $pdo, int $electionId, ?int $viewerUserId = nul
                 ? 'Contact them to confirm they will stand'
                 : 'Waiting for the nominee to accept')
             : null,
-    ], $staffFinal ? ['jobTitle' => $c['job_title'] ?? null] : []), $stmt->fetchAll());
+    ], $staffFinal ? ['jobTitle' => $c['job_title'] ?? null] : [],
+        $staffFinal && $viewerUserId === null ? [
+            'nominationCount' => $nominationCounts === null ? null : ($nominationCounts[(int)$c['id']] ?? 0),
+        ] : []), $candidates);
 }
 
 /**

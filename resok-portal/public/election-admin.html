@@ -322,25 +322,29 @@
       </section>
 
       <section class="panel" id="nominationsPanel" hidden>
-        <h2>Nominations</h2>
-        <p class="lede">
+        <h2 id="nominationsTitle">Nominations</h2>
+        <p class="lede" id="nominationsLede">
           Approving a nomination puts that name on the ballot. A nomination the nominee has not
           accepted is shown as waiting &mdash; standing for a board should not happen to somebody
           without their agreement.
         </p>
+        <div class="note info" id="nominationSummary" role="status" aria-live="polite" hidden></div>
         <div id="nominationsBody" style="margin-top:16px"></div>
+        <p class="note warn" id="nominationTotalsNotice" role="status" hidden></p>
+        <button class="btn btn-ghost" id="refreshNominations" type="button" style="margin-top:16px" hidden>Refresh nomination tally</button>
         <div id="nomNotice"></div>
       </section>
 
       <section class="panel" id="countPanel" hidden>
-        <h2>The count</h2>
-        <p class="lede">
-          Scheduled welfare elections show provisional totals live. Other elections are counted after closing. A tie for
+        <h2>Vote tally</h2>
+        <p class="lede" id="voteTallyLede">
+          These totals count submitted voting ballots. Nomination totals appear separately above.
+          Scheduled welfare elections allow provisional vote totals to be read while voting is open. Other elections are counted after closing. A tie for
           the last seat stops a declaration rather than being resolved by a sort order.
         </p>
         <div id="countBody" style="margin-top:16px"></div>
         <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-ghost" id="loadTally" type="button"><i class="fas fa-calculator"></i> Read the count</button>
+          <button class="btn btn-ghost" id="loadTally" type="button"><i class="fas fa-calculator"></i> Read vote tally</button>
           <button class="btn btn-primary" id="declareBtn" type="button" hidden><i class="fas fa-gavel"></i> Declare the result</button>
         </div>
         <div id="countNotice"></div>
@@ -406,6 +410,7 @@
     const STAFF_CONTEXT = new URLSearchParams(location.search).get('for') === 'staff';
     let elections = [];
     let current = null;      // { election, positions, roll }
+    let nominationRequest = 0;
 
     function show(view) {
       ['List', 'New', 'One'].forEach((n) => { el('view' + n).hidden = n !== view; });
@@ -487,10 +492,6 @@
       try {
         current = await api('/api/admin/elections/' + id);
         renderElection();
-        const nominationLede = document.querySelector('#nominationsPanel .lede');
-        if (nominationLede) nominationLede.textContent = current.election.nominationsFinal
-          ? 'Welfare nominations are final and cannot be declined. Automatic welfare setup approves eligible nominations without a separate acceptance step.'
-          : 'Nominees accept before the returning officer approves their candidacy.';
         renderRoll();
         renderPositions();
         await renderNominations();
@@ -900,13 +901,40 @@
     async function renderNominations() {
       const panel = el('nominationsPanel');
       const mount = el('nominationsBody');
+      const summary = el('nominationSummary');
+      const totalsNotice = el('nominationTotalsNotice');
+      const refresh = el('refreshNominations');
+      const request = ++nominationRequest;
       mount.textContent = '';
+      summary.textContent = '';
+      summary.hidden = true;
+      totalsNotice.textContent = '';
+      totalsNotice.hidden = true;
       const e = current.election;
-      if (!['nominations', 'nominations_closed'].includes(e.status)) { panel.hidden = true; return; }
+      const staff = e.electorate === 'staff';
+      el('nominationsTitle').textContent = staff ? 'Nomination tally' : 'Nominations';
+      el('nominationsLede').textContent = staff
+        ? 'Each total counts distinct staff members who nominated the candidate. Votes are shown separately under Vote tally. Welfare nominations are final.'
+        : 'Nominees accept before the returning officer approves their candidacy.';
+      refresh.hidden = !staff;
+      refresh.disabled = false;
+      if (!staff && !['nominations', 'nominations_closed'].includes(e.status)) { panel.hidden = true; return; }
       panel.hidden = false;
+      refresh.disabled = true;
+      mount.setAttribute('aria-busy', 'true');
       try {
         const data = await api('/api/admin/elections/' + e.id + '/nominations');
+        if (request !== nominationRequest || current.election.id !== e.id) return;
         const list = data.nominations || [];
+        if (staff) {
+          const complete = list.every((n) => Number.isSafeInteger(n.nominationCount) && n.nominationCount >= 0);
+          const total = complete ? list.reduce((sum, n) => sum + n.nominationCount, 0) : null;
+          summary.textContent = list.length + (list.length === 1 ? ' candidate' : ' candidates')
+            + (complete ? ' · ' + total + (total === 1 ? ' nomination recorded' : ' nominations recorded') : ' · Totals unavailable');
+          summary.hidden = false;
+          totalsNotice.hidden = complete;
+          if (!complete) totalsNotice.textContent = 'Some nomination totals are unavailable. Ask ICT to finish the nomination update, then refresh this tally.';
+        }
         if (!list.length) {
           mount.appendChild(make('div', 'empty', 'No nominations received yet.'));
           return;
@@ -916,7 +944,7 @@
           const grow = make('div', 'grow');
           grow.appendChild(make('strong', null, n.name));
           const bits = [n.position];
-          if (n.nominatedBy) bits.push('nominated by ' + n.nominatedBy);
+          if (n.nominatedBy) bits.push((staff ? 'original nominator: ' : 'nominated by ') + n.nominatedBy);
           bits.push(n.accepted ? 'accepted' : (n.blocker || n.status));
           grow.appendChild(make('div', 'sub', bits.join(' · ')));
 
@@ -930,6 +958,14 @@
           }
           if (n.acceptanceNote) grow.appendChild(make('div', 'sub', 'Agreed: ' + n.acceptanceNote));
           row.appendChild(grow);
+          if (staff) {
+            const known = Number.isSafeInteger(n.nominationCount) && n.nominationCount >= 0;
+            const count = make('strong', null, known
+              ? n.nominationCount + (n.nominationCount === 1 ? ' nomination' : ' nominations')
+              : 'Total unavailable');
+            count.style.cssText = 'white-space:nowrap;font-variant-numeric:tabular-nums';
+            row.appendChild(count);
+          }
 
           // An external nominee has no account to accept in, so the officer records their
           // agreement and how it was obtained. A member must accept for themselves.
@@ -954,13 +990,24 @@
           mount.appendChild(row);
         });
       } catch (error) {
+        if (request !== nominationRequest || current.election.id !== e.id) return;
         mount.appendChild(make('div', 'empty', error.message || 'Nominations could not be loaded.'));
+      } finally {
+        if (request === nominationRequest && current.election.id === e.id) {
+          refresh.disabled = false;
+          mount.setAttribute('aria-busy', 'false');
+        }
       }
     }
+
+    el('refreshNominations').addEventListener('click', () => renderNominations());
 
     /* ---------------- the count ---------------- */
     function renderCount() {
       const e = current.election;
+      el('voteTallyLede').textContent = e.electorate === 'staff'
+        ? 'These totals count submitted voting ballots. Nomination totals appear separately above. Automatic welfare elections allow provisional vote totals to be read while the schedule is armed. Click Read vote tally again to refresh. A tie for the last seat stops a declaration.'
+        : 'Vote totals are available after voting closes. Click Read vote tally again to refresh. A tie for the last seat stops a declaration rather than being resolved by a sort order.';
       el('countPanel').hidden = e.electorate !== 'staff' && !['closed', 'published'].includes(e.status);
       el('countBody').textContent = '';
       el('declareBtn').hidden = true;

@@ -44,7 +44,7 @@ function finishWorker(array $w): array {$out=stream_get_contents($w[1][1]);$err=
 $server=connectTest();$db='resok_welfare_test_'.bin2hex(random_bytes(5));$server->exec('CREATE DATABASE '.$db);$p=connectTest($db);
 try {
     $sqlDir=__DIR__.'/../../resok-portal/server/';
-    foreach(['schema.sql','schema-elections.sql','schema-elections-ballot.sql','migration-election-nominations.sql','migration-election-external-nominees.sql','migration-election-staff.sql','migration-2026-11-03-welfare-automation.sql','migration-2026-11-03-welfare-staff-total-34.sql'] as $file){foreach(migrateSplit(file_get_contents($sqlDir.$file)) as $sql)$p->exec($sql);}
+    foreach(['schema.sql','schema-elections.sql','schema-elections-ballot.sql','migration-election-nominations.sql','migration-election-external-nominees.sql','migration-election-staff.sql','migration-2026-11-19-welfare-nomination-records.sql','migration-2026-11-03-welfare-automation.sql','migration-2026-11-03-welfare-staff-total-34.sql'] as $file){foreach(migrateSplit(file_get_contents($sqlDir.$file)) as $sql)$p->exec($sql);}
     check(staffPortalEnsureTables($p),'staff schema initializes in the isolated database');
     $p->exec("INSERT INTO users(email,password_hash,email_verified,role) VALUES('officer@welfare.test','unused',1,'admin'),('observer@welfare.test','unused',1,'member')");
     $officer=(int)$p->query("SELECT id FROM users WHERE email='officer@welfare.test'")->fetchColumn();

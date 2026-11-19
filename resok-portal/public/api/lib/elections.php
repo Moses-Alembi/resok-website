@@ -1216,7 +1216,16 @@ function electionResults(PDO $pdo, int $electionId): array
  */
 function electionNominate(PDO $pdo, string $key, int $userId, array $data): array
 {
-    return electionWithLock($pdo, $key, fn() => electionNominateLocked($pdo, $key, $userId, $data));
+    [$result, $error] = electionWithLock($pdo, $key, fn() => electionNominateLocked($pdo, $key, $userId, $data));
+    if ($error !== null || $result === null) return [$result, $error];
+    $notification = $result['_staffNotification'] ?? null;
+    unset($result['_staffNotification']);
+    // Notification setup can issue DDL. Run it only after our election transaction
+    // commits, so it cannot release the nomination lock or commit a caller's transaction.
+    if ($notification && !$pdo->inTransaction() && function_exists('staffNotify')) {
+        staffNotify($pdo, $notification['userId'], 'election', $notification['title'], $notification['link']);
+    }
+    return [$result, null];
 }
 
 function electionNominateLocked(PDO $pdo, string $key, int $userId, array $data): array
@@ -1272,29 +1281,70 @@ function electionNominateLocked(PDO $pdo, string $key, int $userId, array $data)
         $nominee = $stmt->fetch();
         if (!$nominee) return [null, 'Choose a member of staff from the list. Only staff on the roll can stand.'];
         $nomineeUserId = (int)$nominee['user_id'];
-        $dup = $pdo->prepare('SELECT id FROM election_candidates WHERE position_id = ? AND nominee_user_id = ? LIMIT 1');
-        $dup->execute([$positionId, $nomineeUserId]);
-        if ($dup->fetch()) return [null, $nominee['name'] . ' has already been nominated for ' . $position['title'] . '.'];
-        $isSelf = $nomineeUserId === $userId;
+
+        // Each staff member has one final nomination per post. Different nominators may
+        // put forward the same colleague, whose ballot entry is shared rather than copied.
         try {
+            $stmt = $pdo->prepare('SELECT c.id, c.nominee_user_id
+                                    FROM election_staff_nominations n
+                                    JOIN election_candidates c ON c.id = n.candidate_id
+                                   WHERE n.position_id = ? AND n.nominator_user_id = ?');
+            $stmt->execute([$positionId, $userId]);
+            $record = $stmt->fetch();
+        } catch (PDOException $error) {
+            if ((int)($error->errorInfo[1] ?? 0) !== 1146) throw $error;
+            return [null, 'Welfare nominations need migration-2026-11-19-welfare-nomination-records.sql. Ask ICT to apply this update.'];
+        }
+        $previous = $record;
+        if (!$previous) {
+            // Also recognize nominations written by an older deployment after the
+            // migration ran. Never let an existing first nominator switch candidates.
+            $stmt = $pdo->prepare('SELECT c.id, c.nominee_user_id
+                                    FROM election_candidates c
+                                    JOIN election_roll r ON r.id = c.nominated_by_roll_id
+                                   WHERE c.position_id = ? AND r.election_id = ? AND r.user_id = ?
+                                   ORDER BY c.id LIMIT 1');
+            $stmt->execute([$positionId, (int)$election['id'], $userId]);
+            $previous = $stmt->fetch();
+        }
+        if ($previous && (int)$previous['nominee_user_id'] !== $nomineeUserId) {
+            return [null, 'You have already nominated somebody for ' . $position['title'] . '. Your welfare nomination is final.'];
+        }
+
+        $stmt = $pdo->prepare('SELECT id, status FROM election_candidates WHERE position_id = ? AND nominee_user_id = ? LIMIT 1');
+        $stmt->execute([$positionId, $nomineeUserId]);
+        $candidate = $stmt->fetch();
+        if ($candidate && !in_array($candidate['status'], ['nominated', 'approved'], true)) {
+            return [null, 'This candidate is not standing for ' . $position['title'] . '. Contact the returning officer.'];
+        }
+        $created = !$candidate;
+        if ($created) {
             $pdo->prepare('INSERT INTO election_candidates
                             (position_id, member_profile_id, nominee_user_id, nominated_by_roll_id, nominated_at,
                              accepted_at, name, membership_id, headline, status, ballot_order)
                            VALUES (?, NULL, ?, ?, NOW(), NULL, ?, ?, ?, ?, 0)')
                 ->execute([$positionId, $nomineeUserId, $nominator['id'], mb_substr((string)$nominee['name'], 0, 160),
                            $nominee['membership_id'], mb_substr(trim((string)($data['headline'] ?? '')), 0, 255) ?: null, $automatic ? 'approved' : 'nominated']);
-        } catch (Throwable $e) {
-            return [null, 'You have already nominated somebody for ' . $position['title'] . '.'];
+            $candidate = ['id' => (int)$pdo->lastInsertId(), 'status' => $automatic ? 'approved' : 'nominated'];
         }
-        if (!$isSelf && function_exists('staffNotify')) {
-            staffNotify($pdo, $nomineeUserId, 'election', 'You have been nominated for ' . $position['title'] . ' in ' . $election['title'] . '. Welfare nominations are final; no response is required.',
-                        'elections?for=staff#' . $election['slug']);
+        if (!$record) {
+            $pdo->prepare('INSERT INTO election_staff_nominations
+                            (position_id, nominator_user_id, candidate_id, nominated_at)
+                           VALUES (?, ?, ?, NOW())')->execute([$positionId, $userId, (int)$candidate['id']]);
         }
-        return [[
+        $result = [
             'nominated' => true, 'name' => $nominee['name'], 'position' => $position['title'],
-            'external' => false, 'accepted' => false, 'final' => true, 'approved' => $automatic,
-            'message' => $nominee['name'] . ' has been nominated for ' . $position['title'] . '. This welfare nomination is final.'
-        ], null];
+            'external' => false, 'accepted' => false, 'final' => true, 'approved' => $candidate['status'] === 'approved',
+            'message' => 'Your nomination of ' . $nominee['name'] . ' for ' . $position['title'] . ' has been recorded. This welfare nomination is final.'
+        ];
+        if ($created && $nomineeUserId !== $userId) {
+            $result['_staffNotification'] = [
+                'userId' => $nomineeUserId,
+                'title' => 'You have been nominated for ' . $position['title'] . ' in ' . $election['title'] . '. Welfare nominations are final; no response is required.',
+                'link' => 'elections?for=staff#' . $election['slug'],
+            ];
+        }
+        return [$result, null];
     }
 
     if ($memberId > 0) {

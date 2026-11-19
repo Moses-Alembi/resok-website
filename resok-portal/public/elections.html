@@ -655,10 +655,16 @@
       const [cls, label] = statusPill(e);
       el('eStatus').className = 'pill ' + cls;
       el('eStatus').textContent = label;
-      el('eWhen').textContent = e.upcoming
-        ? 'Nominations: ' + fmt(e.nominationsOpenAt) + ' - ' + fmt(e.nominationsCloseAt)
-          + '. Voting: ' + fmt(e.opensAt) + ' - ' + fmt(e.closesAt) + '.'
-        : 'Voting opens ' + fmt(e.opensAt) + ' and closes ' + fmt(e.closesAt) + '.';
+      if (['closed', 'published'].includes(e.status)) {
+        el('eWhen').textContent = 'Voting closed on ' + fmt(e.closesAt) + '.';
+      } else if (e.votingOpen || e.status === 'open') {
+        el('eWhen').textContent = 'Voting is live. Closes on ' + fmt(e.closesAt) + '.';
+      } else {
+        el('eWhen').textContent = e.upcoming
+          ? 'Nominations: ' + fmt(e.nominationsOpenAt) + ' - ' + fmt(e.nominationsCloseAt)
+            + '. Voting: ' + fmt(e.opensAt) + ' - ' + fmt(e.closesAt) + '.'
+          : 'Voting opens ' + fmt(e.opensAt) + ' and closes ' + fmt(e.closesAt) + '.';
+      }
       el('eSchedule').hidden = !e.upcoming;
       if (e.upcoming) el('eSchedule').appendChild(scheduleStages(e));
 

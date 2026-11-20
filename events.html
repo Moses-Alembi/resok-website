@@ -387,7 +387,10 @@
                 <p class="ev-partners">Respiratory Society of Kenya (ReSoK) &middot; Cipla</p>
               </div>
               <div class="ev-foot">
-                <a class="btn btn-primary" href="https://us06web.zoom.us/webinar/register/WN_vKcCHJH2QPucm0AR0bRuRQ" target="_blank" rel="noopener" aria-label="Register on Zoom (opens in a new tab)">Register on Zoom <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                <div class="ev-cta-row">
+                  <a class="btn btn-primary" href="https://us06web.zoom.us/webinar/register/WN_vKcCHJH2QPucm0AR0bRuRQ" target="_blank" rel="noopener" aria-label="Register (opens in a new tab)">Register <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                  <button class="btn ev-cpd is-locked" id="gina-cpd-button" type="button" aria-haspopup="dialog">Collect CPD token</button>
+                </div>
                 <a class="ev-secondary" href="https://wa.me/254717728517" target="_blank" rel="noopener" aria-label="Chat with ReSoK on WhatsApp (opens in a new tab)">WhatsApp: 0717 728 517</a>
               </div>
             </div>
@@ -877,10 +880,9 @@
         askEmail();
       };
 
-      function notReleased() {
+      function notReleased(message = 'CPD points for this event will be out soon. Please check back later.') {
         const modal = shell('Coming soon');
-        modal.appendChild(make('p', null,
-          'CPD points for this event will be out soon. Please check back later.'));
+        modal.appendChild(make('p', null, message));
         const actions = make('div', 'tk-actions');
         const done = make('button', 'btn btn-primary');
         done.type = 'button';
@@ -888,7 +890,13 @@
         done.addEventListener('click', close);
         actions.appendChild(done);
         modal.appendChild(actions);
+        done.focus();
       }
+
+      document.getElementById('gina-cpd-button').addEventListener('click', () => {
+        title = document.getElementById('gina-webinar-title').textContent;
+        notReleased('CPD tokens will be available after the event.');
+      });
 
       /**
        * events?collect=<slug> opens the dialog straight away, so the email announcing that

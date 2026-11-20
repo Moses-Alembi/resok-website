@@ -310,6 +310,20 @@
     .ev-fee b{color:var(--ink);font-weight:800}
     .ev-free{color:var(--brand-primary);font-weight:800}
 
+    .ev-website-listings{display:grid;gap:22px;margin-bottom:22px}
+    .ev-webinar{scroll-margin-top:calc(var(--navbar-height) + 24px);border-top:5px solid var(--brand-primary)}
+    .ev-webinar .ev-body h3{font-size:clamp(1.4rem,2.2vw,2rem);line-height:1.2}
+    .ev-webinar .ev-meta{gap:10px}
+    .ev-webinar-speakers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;margin-top:10px;padding:0}
+    .ev-webinar-speakers li{padding:14px;background:#f5f9f6;border:1px solid #dcebe0;border-radius:10px}
+    .ev-webinar-speakers strong{display:block;color:var(--ink);font-size:.95rem}
+    .ev-webinar-speakers span{display:block;color:#475467;font-size:.85rem;line-height:1.5;margin-top:4px}
+    .ev-webinar .ev-partners{margin-top:18px;font-size:.85rem;color:#475467}
+    .ev-webinar .ev-foot{margin-top:auto}
+    .ev-webinar .ev-secondary{color:var(--brand-primary);font-size:.87rem;font-weight:800;text-underline-offset:4px}
+    .ev-webinar a:focus-visible{outline:3px solid var(--brand-primary);outline-offset:4px}
+    @media(max-width:480px){.ev-webinar-speakers{grid-template-columns:1fr}.ev-webinar .ev-card-top{flex-wrap:wrap}}
+
     .ev-empty{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:52px 28px;text-align:center;box-shadow:var(--shadow)}
     .ev-empty i{font-size:2.1rem;color:#c6d0dc;margin-bottom:14px;display:block}
     .ev-empty h3{font-family:var(--heading);font-weight:800;font-size:1.15rem;margin-bottom:8px;color:var(--ink)}
@@ -343,6 +357,41 @@
         <div class="section-head">
           <div class="section-kicker">What's coming up</div>
           <h2 class="section-title">Upcoming Events</h2>
+        </div>
+        <!-- Website-only announcement: no portal event, registration or token records. -->
+        <div class="ev-website-listings" id="websiteEvents">
+          <article class="ev-card is-featured ev-webinar" id="gina-2026-asthma-practice" aria-labelledby="gina-webinar-title">
+            <a class="ev-poster" href="assets/img/events/2026-11-26-gina-asthma-practice/poster.png" target="_blank" rel="noopener" aria-label="Open the full webinar poster (opens in a new tab)">
+              <img src="assets/img/events/2026-11-26-gina-asthma-practice/poster.png" width="5334" height="6667" loading="lazy" decoding="async" alt="Webinar poster: Translating GINA 2026 into everyday asthma practice, 26 November 2026 at 7 pm, with Dr. Justus Simba and Dr. Valentine Kei">
+            </a>
+            <div class="ev-main">
+              <div class="ev-card-top">
+                <span class="ev-badge is-webinar">Webinar</span>
+                <div class="ev-when"><b>26</b><span>Nov 2026</span></div>
+              </div>
+              <div class="ev-body">
+                <h3 id="gina-webinar-title">From Rescue to Risk Reduction: Translating GINA 2026 into Everyday Asthma Practice</h3>
+                <p>Join the Respiratory Society of Kenya for a webinar with Dr. Justus Simba and Dr. Valentine Kei on translating GINA 2026 into everyday asthma practice.</p>
+                <ul class="ev-meta">
+                  <li><i class="fas fa-calendar-day" aria-hidden="true"></i><time datetime="2026-11-26T19:00:00+03:00">26 November 2026 &middot; 7:00 pm EAT</time></li>
+                  <li><i class="fas fa-video" aria-hidden="true"></i><span>Online via Zoom</span></li>
+                  <li><i class="fas fa-certificate" aria-hidden="true"></i><span>CPD accredited</span></li>
+                </ul>
+                <div class="ev-speakers">
+                  <h4>Speakers</h4>
+                  <ul class="ev-webinar-speakers">
+                    <li><strong>Dr. Justus Simba</strong><span>Consultant Respiratory Paediatrician</span></li>
+                    <li><strong>Dr. Valentine Kei</strong><span>Physician Internist</span></li>
+                  </ul>
+                </div>
+                <p class="ev-partners">Respiratory Society of Kenya (ReSoK) &middot; Cipla</p>
+              </div>
+              <div class="ev-foot">
+                <a class="btn btn-primary" href="https://us06web.zoom.us/webinar/register/WN_vKcCHJH2QPucm0AR0bRuRQ" target="_blank" rel="noopener" aria-label="Register on Zoom (opens in a new tab)">Register on Zoom <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                <a class="ev-secondary" href="tel:+254735700660">Questions? +254 735 700 660</a>
+              </div>
+            </div>
+          </article>
         </div>
         <div class="ev-grid" id="eventsGrid" aria-live="polite" aria-busy="true">
           <div class="ev-skeleton"></div><div class="ev-skeleton"></div><div class="ev-skeleton"></div>
@@ -566,6 +615,17 @@
         return box;
       }
 
+      function showEmpty() {
+        // Keep the website announcement visible if the shared listing is empty or offline.
+        if (document.querySelector('#websiteEvents article')) {
+          grid.hidden = true;
+          grid.style.display = 'none';
+          return;
+        }
+        grid.style.display = 'block';
+        grid.appendChild(empty());
+      }
+
       function renderPast(events) {
         if (!events || !events.length) return;
         const list = document.getElementById('pastList');
@@ -600,8 +660,7 @@
           grid.setAttribute('aria-busy', 'false');
           const events = data.events || [];
           if (!events.length) {
-            grid.style.display = 'block';
-            grid.appendChild(empty());
+            showEmpty();
           } else {
             events.forEach((event) => grid.appendChild(card(event)));
           }
@@ -610,11 +669,10 @@
         })
         .catch(() => {
           // A marketing page must never show a stack trace or an endless shimmer. If the
-          // API cannot be reached, it reads exactly like having nothing scheduled.
+          // API cannot be reached, keep website announcements and hide the loading cards.
           grid.textContent = '';
           grid.setAttribute('aria-busy', 'false');
-          grid.style.display = 'block';
-          grid.appendChild(empty());
+          showEmpty();
         });
     })();
   </script>
